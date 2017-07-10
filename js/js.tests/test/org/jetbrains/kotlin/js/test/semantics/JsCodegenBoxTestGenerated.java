@@ -14785,9 +14785,81 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/contains"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
             }
 
+            @TestMetadata("evaluationOrderForCollection.kt")
+            public void testEvaluationOrderForCollection() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForCollection.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForComparableRange.kt")
+            public void testEvaluationOrderForComparableRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForComparableRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForDownTo.kt")
+            public void testEvaluationOrderForDownTo() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForDownTo.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForRangeLiteral.kt")
+            public void testEvaluationOrderForRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inArray.kt")
+            public void testInArray() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inArray.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inArrayIndices.kt")
+            public void testInArrayIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inArrayIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCharSequence.kt")
+            public void testInCharSequence() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCharSequence.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCharSequenceIndices.kt")
+            public void testInCharSequenceIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCharSequenceIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCollectionIndices.kt")
+            public void testInCollectionIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCollectionIndices.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("inComparableRange.kt")
             public void testInComparableRange() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inComparableRange.kt");
+                try {
+                    doTest(fileName);
+                }
+                catch (Throwable ignore) {
+                    return;
+                }
+                throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+            }
+
+            @TestMetadata("inCustomObjectRange.kt")
+            public void testInCustomObjectRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCustomObjectRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inDoubleRangeLiteralVsComparableRangeLiteral.kt")
+            public void testInDoubleRangeLiteralVsComparableRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inDoubleRangeLiteralVsComparableRangeLiteral.kt");
                 try {
                     doTest(fileName);
                 }
@@ -14819,6 +14891,18 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                     return;
                 }
                 throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+            }
+
+            @TestMetadata("inIterable.kt")
+            public void testInIterable() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inIterable.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inNonMatchingRange.kt")
+            public void testInNonMatchingRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inNonMatchingRange.kt");
+                doTest(fileName);
             }
 
             @TestMetadata("inOptimizableDoubleRange.kt")
@@ -14869,6 +14953,24 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
             }
 
+            @TestMetadata("inPrimitiveProgression.kt")
+            public void testInPrimitiveProgression() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inPrimitiveProgression.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inPrimitiveRange.kt")
+            public void testInPrimitiveRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inPrimitiveRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inRangeLiteralComposition.kt")
+            public void testInRangeLiteralComposition() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inRangeLiteralComposition.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("inRangeWithCustomContains.kt")
             public void testInRangeWithCustomContains() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inRangeWithCustomContains.kt");
@@ -14915,6 +15017,18 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                     return;
                 }
                 throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+            }
+
+            @TestMetadata("inUntil.kt")
+            public void testInUntil() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inUntil.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("nullableInPrimitiveRange.kt")
+            public void testNullableInPrimitiveRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/nullableInPrimitiveRange.kt");
+                doTest(fileName);
             }
 
             @TestMetadata("rangeContainsString.kt")

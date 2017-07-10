@@ -34,11 +34,11 @@ import org.jetbrains.kotlin.cli.jvm.config.JvmContentRoot
 import org.jetbrains.kotlin.cli.jvm.config.JvmModulePathRoot
 import org.jetbrains.kotlin.cli.jvm.index.JavaRoot
 import org.jetbrains.kotlin.cli.jvm.modules.CliJavaModuleFinder
+import org.jetbrains.kotlin.cli.jvm.modules.JavaModuleGraph
 import org.jetbrains.kotlin.config.ContentRoot
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.isValidJavaFqName
 import org.jetbrains.kotlin.resolve.jvm.modules.JavaModule
-import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleGraph
 import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleInfo
 import java.io.File
 import java.io.IOException
@@ -52,7 +52,7 @@ internal class ClasspathRootsResolver(
         private val additionalModules: List<String>,
         private val contentRootToVirtualFile: (JvmContentRoot) -> VirtualFile?
 ) {
-    private val javaModuleFinder = CliJavaModuleFinder(VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.JRT_PROTOCOL))
+    val javaModuleFinder = CliJavaModuleFinder(VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.JRT_PROTOCOL))
     val javaModuleGraph = JavaModuleGraph(javaModuleFinder)
 
     data class RootsAndModules(val roots: List<JavaRoot>, val modules: List<JavaModule>)

@@ -13177,9 +13177,75 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/contains"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
             }
 
+            @TestMetadata("evaluationOrderForCollection.kt")
+            public void testEvaluationOrderForCollection() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForCollection.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForComparableRange.kt")
+            public void testEvaluationOrderForComparableRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForComparableRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForDownTo.kt")
+            public void testEvaluationOrderForDownTo() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForDownTo.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("evaluationOrderForRangeLiteral.kt")
+            public void testEvaluationOrderForRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/evaluationOrderForRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inArray.kt")
+            public void testInArray() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inArray.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inArrayIndices.kt")
+            public void testInArrayIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inArrayIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCharSequence.kt")
+            public void testInCharSequence() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCharSequence.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCharSequenceIndices.kt")
+            public void testInCharSequenceIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCharSequenceIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCollectionIndices.kt")
+            public void testInCollectionIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCollectionIndices.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("inComparableRange.kt")
             public void testInComparableRange() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inComparableRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inCustomObjectRange.kt")
+            public void testInCustomObjectRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inCustomObjectRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inDoubleRangeLiteralVsComparableRangeLiteral.kt")
+            public void testInDoubleRangeLiteralVsComparableRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inDoubleRangeLiteralVsComparableRangeLiteral.kt");
                 doTest(fileName);
             }
 
@@ -13192,6 +13258,18 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("inIntRange.kt")
             public void testInIntRange() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inIntRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inIterable.kt")
+            public void testInIterable() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inIterable.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inNonMatchingRange.kt")
+            public void testInNonMatchingRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inNonMatchingRange.kt");
                 doTest(fileName);
             }
 
@@ -13219,6 +13297,24 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("inPrimitiveProgression.kt")
+            public void testInPrimitiveProgression() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inPrimitiveProgression.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inPrimitiveRange.kt")
+            public void testInPrimitiveRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inPrimitiveRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inRangeLiteralComposition.kt")
+            public void testInRangeLiteralComposition() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inRangeLiteralComposition.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("inRangeWithCustomContains.kt")
             public void testInRangeWithCustomContains() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inRangeWithCustomContains.kt");
@@ -13240,6 +13336,18 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("inRangeWithSmartCast.kt")
             public void testInRangeWithSmartCast() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inRangeWithSmartCast.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inUntil.kt")
+            public void testInUntil() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/inUntil.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("nullableInPrimitiveRange.kt")
+            public void testNullableInPrimitiveRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/contains/nullableInPrimitiveRange.kt");
                 doTest(fileName);
             }
 

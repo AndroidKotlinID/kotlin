@@ -770,6 +770,12 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/coercionToUnitOptimization"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("inRangeCheckWithConst.kt")
+        public void testInRangeCheckWithConst() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/coercionToUnitOptimization/inRangeCheckWithConst.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt14360.kt")
         public void testKt14360() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/coercionToUnitOptimization/kt14360.kt");
@@ -1853,15 +1859,63 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/ranges"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
         }
 
-        @TestMetadata("inNonMatchingRange.kt")
-        public void testInNonMatchingRange() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inNonMatchingRange.kt");
+        @TestMetadata("ifNotInRange.kt")
+        public void testIfNotInRange() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/ifNotInRange.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inArrayIndices.kt")
+        public void testInArrayIndices() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inArrayIndices.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inCharSequenceIndices.kt")
+        public void testInCharSequenceIndices() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inCharSequenceIndices.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inCollectionIndices.kt")
+        public void testInCollectionIndices() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inCollectionIndices.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inComparableRangeLiteral.kt")
+        public void testInComparableRangeLiteral() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inComparableRangeLiteral.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inNonMatchingRangeIntrinsified.kt")
+        public void testInNonMatchingRangeIntrinsified() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inNonMatchingRangeIntrinsified.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inNonMatchingRangeNotIntrinsified.kt")
+        public void testInNonMatchingRangeNotIntrinsified() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inNonMatchingRangeNotIntrinsified.kt");
             doTest(fileName);
         }
 
         @TestMetadata("inOptimizableRange.kt")
         public void testInOptimizableRange() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inOptimizableRange.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inUntil.kt")
+        public void testInUntil() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/inUntil.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("noSwap2ForConstLongRangeTo.kt")
+        public void testNoSwap2ForConstLongRangeTo() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/ranges/noSwap2ForConstLongRangeTo.kt");
             doTest(fileName);
         }
     }
