@@ -410,18 +410,6 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             doTest(fileName);
         }
 
-        @TestMetadata("LateInit.kt")
-        public void testLateInit() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/LateInit.kt");
-            doTest(fileName);
-        }
-
-        @TestMetadata("LateInitSetter.kt")
-        public void testLateInitSetter() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/LateInitSetter.kt");
-            doTest(fileName);
-        }
-
         @TestMetadata("LiteralAsResult.kt")
         public void testLiteralAsResult() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/LiteralAsResult.kt");
@@ -10925,6 +10913,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/subtypeForInvariantWithErrorGenerics.kt");
                     doTest(fileName);
                 }
+
+                @TestMetadata("wrongArgumentExtensionFunction.kt")
+                public void testWrongArgumentExtensionFunction() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/wrongArgumentExtensionFunction.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("wrongArgumentPassedToLocalExtensionFunction.kt")
+                public void testWrongArgumentPassedToLocalExtensionFunction() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/wrongArgumentPassedToLocalExtensionFunction.kt");
+                    doTest(fileName);
+                }
             }
 
             @TestMetadata("compiler/testData/diagnostics/tests/inference/substitutions")
@@ -12573,6 +12573,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("privateCandidatesWithWrongArguments.kt")
+                public void testPrivateCandidatesWithWrongArguments() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/sam/privateCandidatesWithWrongArguments.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("samOnTypeParameter.kt")
                 public void testSamOnTypeParameter() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/sam/samOnTypeParameter.kt");
@@ -12817,6 +12823,27 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("labelsMustBeNamed.kt")
             public void testLabelsMustBeNamed() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/labels/labelsMustBeNamed.kt");
+                doTest(fileName);
+            }
+        }
+
+        @TestMetadata("compiler/testData/diagnostics/tests/lateinit")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Lateinit extends AbstractDiagnosticsTest {
+            public void testAllFilesPresentInLateinit() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/lateinit"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+            }
+
+            @TestMetadata("modifierApplicability.kt")
+            public void testModifierApplicability() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/modifierApplicability.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("setter.kt")
+            public void testSetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/setter.kt");
                 doTest(fileName);
             }
         }
