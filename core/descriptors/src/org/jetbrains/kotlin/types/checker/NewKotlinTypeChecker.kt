@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.resolve.calls.inference.CapturedType
 import org.jetbrains.kotlin.resolve.calls.inference.CapturedTypeConstructor
 import org.jetbrains.kotlin.resolve.constants.IntegerValueTypeConstructor
 import org.jetbrains.kotlin.types.*
+import org.jetbrains.kotlin.types.checker.TypeCheckerContext.SeveralSupertypesWithSameConstructorPolicy.*
 import org.jetbrains.kotlin.types.checker.TypeCheckerContext.SupertypesPolicy
 import org.jetbrains.kotlin.types.typeUtil.asTypeProjection
 import org.jetbrains.kotlin.types.typeUtil.makeNullable
@@ -156,7 +157,13 @@ object NewKotlinTypeChecker : KotlinTypeChecker {
             return StrictEqualityTypeChecker.strictEqualTypes(subType.makeNullableAsSpecified(false), superType.makeNullableAsSpecified(false))
         }
 
-        if (superType is NewCapturedType && superType.lowerType != null && isSubtypeOf(subType, superType.lowerType)) return true
+        if (superType is NewCapturedType &&
+            superType.lowerType != null &&
+            allowSubtypeViaLowerTypeForCapturedType(subType, superType) &&
+            isSubtypeOf(subType, superType.lowerType))
+        {
+            return true
+        }
 
         (superType.constructor as? IntersectionTypeConstructor)?.let {
             assert(!superType.isMarkedNullable) { "Intersection type should not be marked nullable!: $superType" }
@@ -193,7 +200,16 @@ object NewKotlinTypeChecker : KotlinTypeChecker {
             1 -> return isSubtypeForSameConstructor(supertypesWithSameConstructor.first().arguments, superType)
 
             else -> { // at least 2 supertypes with same constructors. Such case is rare
-                if (supertypesWithSameConstructor.any { isSubtypeForSameConstructor(it.arguments, superType) }) return true
+                when (sameConstructorPolicy) {
+                    FORCE_NOT_SUBTYPE -> return false
+                    TAKE_FIRST_FOR_SUBTYPING -> return isSubtypeForSameConstructor(supertypesWithSameConstructor.first().arguments, superType)
+
+                    CHECK_ANY_OF_THEM,
+                    INTERSECT_ARGUMENTS_AND_CHECK_AGAIN ->
+                        if (supertypesWithSameConstructor.any { isSubtypeForSameConstructor(it.arguments, superType) }) return true
+                }
+
+                if (sameConstructorPolicy != INTERSECT_ARGUMENTS_AND_CHECK_AGAIN) return false
 
                 val newArguments = superConstructor.parameters.mapIndexed { index, _ ->
                     val allProjections = supertypesWithSameConstructor.map {
@@ -211,7 +227,8 @@ object NewKotlinTypeChecker : KotlinTypeChecker {
     }
 
     // nullability was checked earlier via nullabilityChecker
-    private fun TypeCheckerContext.findCorrespondingSupertypes(
+    // should be used only if you really sure that it is correct
+    fun TypeCheckerContext.findCorrespondingSupertypes(
             baseType: SimpleType,
             constructor: TypeConstructor
     ): List<SimpleType> {
@@ -250,7 +267,7 @@ object NewKotlinTypeChecker : KotlinTypeChecker {
         var result: MutableList<SimpleType>? = null
 
         anySupertype(baseType, { false }) {
-            val current = captureFromArguments(it, CaptureStatus.FOR_SUBTYPING)
+            val current = captureFromArguments(it, CaptureStatus.FOR_SUBTYPING) ?: it
 
             when {
                 areEqualTypeConstructors(current.constructor, constructor) -> {
@@ -290,7 +307,7 @@ object NewKotlinTypeChecker : KotlinTypeChecker {
         return if (allPureSupertypes.isNotEmpty()) allPureSupertypes else supertypes
     }
 
-    private fun effectiveVariance(declared: Variance, useSite: Variance): Variance? {
+    fun effectiveVariance(declared: Variance, useSite: Variance): Variance? {
         if (declared == Variance.INVARIANT) return useSite
         if (useSite == Variance.INVARIANT) return declared
 
@@ -341,12 +358,15 @@ object NullabilityChecker {
     fun isPossibleSubtype(context: TypeCheckerContext, subType: SimpleType, superType: SimpleType): Boolean =
             context.runIsPossibleSubtype(subType, superType)
 
+    fun isSubtypeOfAny(type: UnwrappedType): Boolean =
+            TypeCheckerContext(false).hasNotNullSupertype(type.lowerIfFlexible(), SupertypesPolicy.LowerIfFlexible)
+
     private fun TypeCheckerContext.runIsPossibleSubtype(subType: SimpleType, superType: SimpleType): Boolean {
         // it makes for case String? & Any <: String
         assert(subType.isIntersectionType || subType.isSingleClassifierType || subType.isAllowedTypeVariable) {
             "Not singleClassifierType superType: $superType"
         }
-        assert(superType.isSingleClassifierType || subType.isAllowedTypeVariable) {
+        assert(superType.isSingleClassifierType || superType.isAllowedTypeVariable) {
             "Not singleClassifierType superType: $superType"
         }
 
@@ -388,10 +408,16 @@ object NullabilityChecker {
 
 }
 
+fun UnwrappedType.hasSupertypeWithGivenTypeConstructor(typeConstructor: TypeConstructor) =
+        TypeCheckerContext(false).anySupertype(lowerIfFlexible(), { it.constructor == typeConstructor }, { SupertypesPolicy.LowerIfFlexible })
+
+fun UnwrappedType.anySuperTypeConstructor(predicate: (TypeConstructor) -> Boolean) =
+        TypeCheckerContext(false).anySupertype(lowerIfFlexible(), { predicate(it.constructor) }, { SupertypesPolicy.LowerIfFlexible })
+
 /**
  * ClassType means that type constructor for this type is type for real class or interface
  */
-private val SimpleType.isClassType: Boolean get() = constructor.declarationDescriptor is ClassDescriptor
+val SimpleType.isClassType: Boolean get() = constructor.declarationDescriptor is ClassDescriptor
 
 /**
  * SingleClassifierType is one of the following types:
@@ -401,10 +427,10 @@ private val SimpleType.isClassType: Boolean get() = constructor.declarationDescr
  *
  * Such types can contains error types in our arguments, but type constructor isn't errorTypeConstructor
  */
-private val SimpleType.isSingleClassifierType: Boolean
+val SimpleType.isSingleClassifierType: Boolean
     get() = !isError &&
             constructor.declarationDescriptor !is TypeAliasDescriptor &&
             (constructor.declarationDescriptor != null || this is CapturedType || this is NewCapturedType)
 
-private val SimpleType.isIntersectionType: Boolean
+val SimpleType.isIntersectionType: Boolean
     get() = constructor is IntersectionTypeConstructor

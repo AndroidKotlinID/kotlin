@@ -10048,6 +10048,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("fixVariableToNothing.kt")
+            public void testFixVariableToNothing() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/fixVariableToNothing.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("flexibleTypesAsUpperBound.kt")
+            public void testFlexibleTypesAsUpperBound() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/flexibleTypesAsUpperBound.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("functionPlaceholderError.kt")
             public void testFunctionPlaceholderError() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/functionPlaceholderError.kt");
@@ -10162,6 +10174,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("nullableTypeArgumentWithNotNullUpperBound.kt")
+            public void testNullableTypeArgumentWithNotNullUpperBound() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/nullableTypeArgumentWithNotNullUpperBound.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("nullableUpperBound.kt")
             public void testNullableUpperBound() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/nullableUpperBound.kt");
@@ -10212,6 +10230,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/capturedTypes"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
                 }
 
+                @TestMetadata("approximateBeforeFixation.kt")
+                public void testApproximateBeforeFixation() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/approximateBeforeFixation.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("cannotCaptureInProjection.kt")
                 public void testCannotCaptureInProjection() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/cannotCaptureInProjection.kt");
@@ -10233,6 +10257,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("captureFromNullableTypeVariable.kt")
                 public void testCaptureFromNullableTypeVariable() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/captureFromNullableTypeVariable.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("captureFromSubtyping.kt")
+                public void testCaptureFromSubtyping() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/captureFromSubtyping.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("captureFromTypeParameterUpperBound.kt")
+                public void testCaptureFromTypeParameterUpperBound() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/captureFromTypeParameterUpperBound.kt");
                     doTest(fileName);
                 }
 
@@ -20017,6 +20053,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("shortIfExprNotNull.kt")
             public void testShortIfExprNotNull() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/smartCasts/shortIfExprNotNull.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("smartCastAndArgumentApproximation.kt")
+            public void testSmartCastAndArgumentApproximation() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/smartCasts/smartCastAndArgumentApproximation.kt");
                 doTest(fileName);
             }
 

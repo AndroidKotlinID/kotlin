@@ -116,10 +116,11 @@ class PropertyReferenceCodegen(
             generateCallableReferenceSignature(this, target, state)
         }
 
+        generateMethod("property reference getOwner", ACC_PUBLIC, method("getOwner", K_DECLARATION_CONTAINER_TYPE)) {
+            ClosureCodegen.generateCallableReferenceDeclarationContainer(this, target, state)
+        }
+
         if (!isLocalDelegatedProperty) {
-            generateMethod("property reference getOwner", ACC_PUBLIC, method("getOwner", K_DECLARATION_CONTAINER_TYPE)) {
-                ClosureCodegen.generateCallableReferenceDeclarationContainer(this, target, state)
-            }
             generateAccessors()
         }
     }
@@ -194,6 +195,17 @@ class PropertyReferenceCodegen(
 
         @JvmStatic
         fun generateCallableReferenceSignature(iv: InstructionAdapter, callable: CallableDescriptor, state: GenerationState) {
+            if (callable is LocalVariableDescriptor) {
+                val asmType = state.bindingContext.get(CodegenBinding.DELEGATED_PROPERTY_METADATA_OWNER, callable)
+                val allDelegatedProperties = state.bindingContext.get(CodegenBinding.DELEGATED_PROPERTIES, asmType)
+                val index = allDelegatedProperties?.indexOf(callable) ?: -1
+                if (index < 0) {
+                    throw AssertionError("Local delegated property is not found in $asmType: $callable")
+                }
+                iv.aconst("<v#$index>") // v = "variable"
+                return
+            }
+
             val accessor = when (callable) {
                 is FunctionDescriptor -> callable
                 is VariableDescriptorWithAccessors ->

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 JetBrains s.r.o.
+ * Copyright 2010-2016 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,12 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.codegen.state;
+package org.jetbrains.kotlin.resolve.calls.tower
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.kotlin.descriptors.CallableDescriptor
+import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
+import org.jetbrains.kotlin.resolve.calls.components.IsDescriptorFromSourcePredicate
 
-import java.io.File;
-import java.util.Collection;
-
-public interface Progress {
-    Progress DEAF = (sourceFiles, outputFile) -> {
-    };
-
-    /**
-     * @param sourceFiles a (possibly empty) collection of source files {@code outputFile} was generated from
-     * @param outputFile an output file
-     */
-    void reportOutput(@NotNull Collection<File> sourceFiles, @Nullable File outputFile);
+object IsDescriptorFromSourcePredicateImpl: IsDescriptorFromSourcePredicate {
+    override fun invoke(p1: CallableDescriptor) = DescriptorToSourceUtils.descriptorToDeclaration(p1) != null
 }
