@@ -2279,6 +2279,18 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createClass/typeReference/traitNotQualifierNoTypeArgs.kt");
                     doTest(fileName);
                 }
+
+                @TestMetadata("typeArgumentWithBound.kt")
+                public void testTypeArgumentWithBound() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createClass/typeReference/typeArgumentWithBound.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("typeArgumentWithMultipleBounds.kt")
+                public void testTypeArgumentWithMultipleBounds() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createClass/typeReference/typeArgumentWithMultipleBounds.kt");
+                    doTest(fileName);
+                }
             }
         }
 
@@ -2433,6 +2445,12 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("callWithClassLiteral.kt")
+                public void testCallWithClassLiteral() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/callWithClassLiteral.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("callWithLambdaArg.kt")
                 public void testCallWithLambdaArg() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/callWithLambdaArg.kt");
@@ -2577,15 +2595,39 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("inAnonymousFunBlockWithExpectedType.kt")
+                public void testInAnonymousFunBlockWithExpectedType() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/inAnonymousFunBlockWithExpectedType.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("inAnonymousFunExprWithExpectedType.kt")
+                public void testInAnonymousFunExprWithExpectedType() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/inAnonymousFunExprWithExpectedType.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("inLambda.kt")
                 public void testInLambda() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/inLambda.kt");
                     doTest(fileName);
                 }
 
+                @TestMetadata("inLambdaWithExpectedType.kt")
+                public void testInLambdaWithExpectedType() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/inLambdaWithExpectedType.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("inconsistentTypes.kt")
                 public void testInconsistentTypes() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/inconsistentTypes.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("insideIfCondition.kt")
+                public void testInsideIfCondition() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createFunction/call/insideIfCondition.kt");
                     doTest(fileName);
                 }
 
@@ -3513,6 +3555,18 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("inAnnotation.kt")
+                public void testInAnnotation() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inAnnotation.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("inSuperTypeEntry.kt")
+                public void testInSuperTypeEntry() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inSuperTypeEntry.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("qualifiedType.kt")
                 public void testQualifiedType() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/qualifiedType.kt");
@@ -3738,6 +3792,24 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("callableRef.kt")
                 public void testCallableRef() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createVariable/parameter/callableRef.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("dataClassPropertyByDestructuringEntry.kt")
+                public void testDataClassPropertyByDestructuringEntry() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createVariable/parameter/dataClassPropertyByDestructuringEntry.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("dataClassPropertyByDestructuringEntryWithSkippedIndex.kt")
+                public void testDataClassPropertyByDestructuringEntryWithSkippedIndex() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createVariable/parameter/dataClassPropertyByDestructuringEntryWithSkippedIndex.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("dataClassPropertyByDestructuringEntryWithType.kt")
+                public void testDataClassPropertyByDestructuringEntryWithType() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createVariable/parameter/dataClassPropertyByDestructuringEntryWithType.kt");
                     doTest(fileName);
                 }
 
@@ -5729,6 +5801,12 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("annotation.kt")
         public void testAnnotation() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/implement/annotation.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("doNotAddHeader.kt")
+        public void testDoNotAddHeader() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/implement/doNotAddHeader.kt");
             doTest(fileName);
         }
 

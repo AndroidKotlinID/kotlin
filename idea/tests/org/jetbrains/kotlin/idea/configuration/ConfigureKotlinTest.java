@@ -16,7 +16,6 @@
 
 package org.jetbrains.kotlin.idea.configuration;
 
-import com.intellij.framework.library.LibraryVersionProperties;
 import com.intellij.openapi.externalSystem.service.project.IdeModifiableModelsProviderImpl;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.libraries.Library;
@@ -26,8 +25,7 @@ import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments;
 import org.jetbrains.kotlin.config.*;
 import org.jetbrains.kotlin.idea.facet.FacetUtilsKt;
 import org.jetbrains.kotlin.idea.facet.KotlinFacet;
-import org.jetbrains.kotlin.idea.framework.JSLibraryStdPresentationProvider;
-import org.jetbrains.kotlin.idea.framework.KotlinLibraryUtilKt;
+import org.jetbrains.kotlin.idea.framework.JsLibraryStdDetectionUtil;
 import org.jetbrains.kotlin.idea.project.PlatformKt;
 import org.jetbrains.kotlin.idea.versions.KotlinRuntimeLibraryUtilKt;
 
@@ -65,13 +63,13 @@ public class ConfigureKotlinTest extends AbstractConfigureKotlinTest {
         Module[] modules = getModules();
         for (Module module : modules) {
             if (module.getName().equals("module1")) {
-                configure(module, KotlinWithLibraryConfigurator.FileState.DO_NOT_COPY, JAVA_CONFIGURATOR);
-                assertConfigured(module, JAVA_CONFIGURATOR);
+                Companion.configure(module, KotlinWithLibraryConfigurator.FileState.DO_NOT_COPY, Companion.getJAVA_CONFIGURATOR());
+                Companion.assertConfigured(module, Companion.getJAVA_CONFIGURATOR());
             }
             else if (module.getName().equals("module2")) {
-                assertNotConfigured(module, JAVA_CONFIGURATOR);
-                configure(module, KotlinWithLibraryConfigurator.FileState.EXISTS, JAVA_CONFIGURATOR);
-                assertConfigured(module, JAVA_CONFIGURATOR);
+                Companion.assertNotConfigured(module, Companion.getJAVA_CONFIGURATOR());
+                Companion.configure(module, KotlinWithLibraryConfigurator.FileState.EXISTS, Companion.getJAVA_CONFIGURATOR());
+                Companion.assertConfigured(module, Companion.getJAVA_CONFIGURATOR());
             }
         }
     }
@@ -82,21 +80,21 @@ public class ConfigureKotlinTest extends AbstractConfigureKotlinTest {
         // Move fake runtime jar to default library path to pretend library is already configured
         FileUtil.copy(
                 new File(getProject().getBasePath() + "/lib/kotlin-runtime.jar"),
-                new File(JAVA_CONFIGURATOR.getDefaultPathToJarFile(getProject()) + "/kotlin-runtime.jar"));
+                new File(Companion.getJAVA_CONFIGURATOR().getDefaultPathToJarFile(getProject()) + "/kotlin-runtime.jar"));
 
-        assertNotConfigured(module, JAVA_CONFIGURATOR);
-        JAVA_CONFIGURATOR.configure(myProject, Collections.<Module>emptyList());
-        assertProperlyConfigured(module, JAVA_CONFIGURATOR);
+        Companion.assertNotConfigured(module, Companion.getJAVA_CONFIGURATOR());
+        Companion.getJAVA_CONFIGURATOR().configure(myProject, Collections.<Module>emptyList());
+        Companion.assertProperlyConfigured(module, Companion.getJAVA_CONFIGURATOR());
     }
 
     public void testTwoModulesWithNonDefaultPath_doNotCopyInDefault() throws IOException {
-        doTestConfigureModulesWithNonDefaultSetup(JAVA_CONFIGURATOR);
-        assertEmpty(ConfigureKotlinInProjectUtilsKt.getCanBeConfiguredModules(myProject, JS_CONFIGURATOR));
+        doTestConfigureModulesWithNonDefaultSetup(Companion.getJAVA_CONFIGURATOR());
+        assertEmpty(ConfigureKotlinInProjectUtilsKt.getCanBeConfiguredModules(myProject, Companion.getJS_CONFIGURATOR()));
     }
 
     public void testTwoModulesWithJSNonDefaultPath_doNotCopyInDefault() throws IOException {
-        doTestConfigureModulesWithNonDefaultSetup(JS_CONFIGURATOR);
-        assertEmpty(ConfigureKotlinInProjectUtilsKt.getCanBeConfiguredModules(myProject, JAVA_CONFIGURATOR));
+        doTestConfigureModulesWithNonDefaultSetup(Companion.getJS_CONFIGURATOR());
+        assertEmpty(ConfigureKotlinInProjectUtilsKt.getCanBeConfiguredModules(myProject, Companion.getJAVA_CONFIGURATOR()));
     }
 
     public void testNewLibrary_jarExists_js() {
@@ -145,14 +143,14 @@ public class ConfigureKotlinTest extends AbstractConfigureKotlinTest {
 
     public void testJsLibraryVersion11() {
         Library jsRuntime = KotlinRuntimeLibraryUtilKt.findAllUsedLibraries(myProject).keySet().iterator().next();
-        LibraryVersionProperties properties = KotlinLibraryUtilKt.getLibraryProperties(JSLibraryStdPresentationProvider.getInstance(), jsRuntime);
-        assertEquals("1.1.0", properties.getVersionString());
+        String version = JsLibraryStdDetectionUtil.INSTANCE.getJsLibraryStdVersion(jsRuntime);
+        assertEquals("1.1.0", version);
     }
 
     public void testJsLibraryVersion106() {
         Library jsRuntime = KotlinRuntimeLibraryUtilKt.findAllUsedLibraries(myProject).keySet().iterator().next();
-        LibraryVersionProperties properties = KotlinLibraryUtilKt.getLibraryProperties(JSLibraryStdPresentationProvider.getInstance(), jsRuntime);
-        assertEquals("1.0.6", properties.getVersionString());
+        String version = JsLibraryStdDetectionUtil.INSTANCE.getJsLibraryStdVersion(jsRuntime);
+        assertEquals("1.0.6", version);
     }
 
     @SuppressWarnings("ConstantConditions")

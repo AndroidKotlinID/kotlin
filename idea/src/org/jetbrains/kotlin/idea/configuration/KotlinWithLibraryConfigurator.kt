@@ -22,8 +22,7 @@ import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.*
-import com.intellij.openapi.roots.libraries.Library
-import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar
+import com.intellij.openapi.roots.libraries.*
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
@@ -47,6 +46,10 @@ abstract class KotlinWithLibraryConfigurator internal constructor() : KotlinProj
     protected abstract val dialogTitle: String
 
     protected abstract val libraryCaption: String
+
+    open val libraryType: LibraryType<DummyLibraryProperties>? = null
+
+    protected  val libraryKind: PersistentLibraryKind<*>? = libraryType?.kind
 
     override fun getStatus(module: Module): ConfigureKotlinStatus {
         if (!isApplicable(module)) {
@@ -222,7 +225,11 @@ abstract class KotlinWithLibraryConfigurator internal constructor() : KotlinProj
     ): Library {
         val table = LibraryTablesRegistrar.getInstance().getLibraryTable(project)
         val library = runWriteAction {
-            table.createLibrary(libraryName)
+            table.modifiableModel.run {
+                val library = createLibrary(libraryName, libraryKind)
+                commit()
+                library
+            }
         }
 
         collector.addMessage(library.name!! + " library was created")
@@ -248,7 +255,7 @@ abstract class KotlinWithLibraryConfigurator internal constructor() : KotlinProj
                !File(defaultPath, getLibraryJarDescriptors(null).first().jarName).exists()
     }
 
-    protected open fun getDefaultPathToJarFile(project: Project): String {
+    open fun getDefaultPathToJarFile(project: Project): String {
         return FileUIUtils.createRelativePath(project, project.baseDir, DEFAULT_LIBRARY_DIR)
     }
 

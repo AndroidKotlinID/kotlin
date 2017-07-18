@@ -117,7 +117,7 @@ abstract class TypeInfo(val variance: Variance) {
             return Collections.singletonList(callableBuilder.currentFileModule.builtIns.anyType)
         }
         val scope = getScopeForTypeApproximation(callableBuilder.config, callableBuilder.placement)
-        val approximations = getResolvableApproximations(scope, false)
+        val approximations = getResolvableApproximations(scope, false, true)
         return when (variance) {
             Variance.IN_VARIANCE -> approximations.toList()
             else -> listOf(approximations.firstOrNull() ?: this)
@@ -220,7 +220,8 @@ class PropertyInfo(name: String,
                    val writable: Boolean,
                    possibleContainers: List<KtElement> = Collections.emptyList(),
                    typeParameterInfos: List<TypeInfo> = Collections.emptyList(),
-                   isAbstract: Boolean = false
+                   isAbstract: Boolean = false,
+                   val isLateinitPreferred: Boolean = false
 ) : CallableInfo(name, receiverTypeInfo, returnTypeInfo, possibleContainers, typeParameterInfos, isAbstract) {
     override val kind: CallableKind get() = CallableKind.PROPERTY
     override val parameterInfos: List<ParameterInfo> get() = Collections.emptyList()
@@ -232,6 +233,7 @@ class PropertyInfo(name: String,
             writable,
             possibleContainers,
             typeParameterInfos,
-            isAbstract
+            isAbstract,
+            isLateinitPreferred
     )
 }

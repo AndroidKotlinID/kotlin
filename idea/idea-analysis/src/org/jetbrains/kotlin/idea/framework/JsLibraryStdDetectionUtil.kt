@@ -34,26 +34,21 @@ object JsLibraryStdDetectionUtil {
     private val IS_JS_LIBRARY_STD_LIB = Key.create<Boolean>("IS_JS_LIBRARY_STD_LIB")
 
     fun hasJsStdlibJar(library: Library): Boolean {
-        if (library is LibraryEx && library.isDisposed) return false
-
-        if (!KotlinJavaScriptLibraryDetectionUtil.isKotlinJavaScriptLibrary(library)) return false
+        if (library !is LibraryEx || library.isDisposed) return false
+        if (library.kind !is JSLibraryKind) return false
 
         val classes = Arrays.asList(*library.getFiles(OrderRootType.CLASSES))
-        return getJsLibraryStdVersion(classes) != null
+        return getJsStdLibJar(classes) != null
     }
 
-    fun getJsLibraryStdVersion(classesRoots: List<VirtualFile>): String? {
-        if (JavaRuntimeDetectionUtil.getJavaRuntimeVersion(classesRoots) != null) {
-            // Prevent clashing with java runtime, in case when library collects all roots.
-            return null
-        }
-
-        val jar = getJsStdLibJar(classesRoots) ?: return null
+    fun getJsLibraryStdVersion(library: Library): String? {
+        if ((library as LibraryEx).kind !is JSLibraryKind) return null
+        val jar = getJsStdLibJar(library.getFiles(OrderRootType.CLASSES).toList()) ?: return null
 
         return JarUtil.getJarAttribute(VfsUtilCore.virtualToIoFile(jar), Attributes.Name.IMPLEMENTATION_VERSION)
     }
 
-    fun getJsStdLibJar(classesRoots: List<VirtualFile>): VirtualFile? {
+    private fun getJsStdLibJar(classesRoots: List<VirtualFile>): VirtualFile? {
         for (root in classesRoots) {
             if (root.fileSystem.protocol !== StandardFileSystems.JAR_PROTOCOL) continue
 
