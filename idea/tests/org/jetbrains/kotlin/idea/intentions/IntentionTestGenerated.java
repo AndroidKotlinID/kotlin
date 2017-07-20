@@ -288,6 +288,69 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         }
     }
 
+    @TestMetadata("idea/testData/intentions/addJvmStatic")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class AddJvmStatic extends AbstractIntentionTest {
+        public void testAllFilesPresentInAddJvmStatic() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/addJvmStatic"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("hasJvmStatic.kt")
+        public void testHasJvmStatic() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/hasJvmStatic.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inAnonymousObject.kt")
+        public void testInAnonymousObject() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/inAnonymousObject.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inClass.kt")
+        public void testInClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/inClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inCompanionObject.kt")
+        public void testInCompanionObject() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/inCompanionObject.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inObjedct.kt")
+        public void testInObjedct() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/inObjedct.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inTopLevel.kt")
+        public void testInTopLevel() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/inTopLevel.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("mainJvmName.kt")
+        public void testMainJvmName() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/mainJvmName.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notMainJvmName.kt")
+        public void testNotMainJvmName() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/notMainJvmName.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notMainMethod.kt")
+        public void testNotMainMethod() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addJvmStatic/notMainMethod.kt");
+            doTest(fileName);
+        }
+    }
+
     @TestMetadata("idea/testData/intentions/addMissingDestructuring")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3986,6 +4049,81 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("unchanged.kt")
         public void testUnchanged() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertCamelCaseTestFunctionToSpaced/unchanged.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/intentions/convertClassToSealedClass")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConvertClassToSealedClass extends AbstractIntentionTest {
+        @TestMetadata("abstract.kt")
+        public void testAbstract() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/abstract.kt");
+            doTest(fileName);
+        }
+
+        public void testAllFilesPresentInConvertClassToSealedClass() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/convertClassToSealedClass"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("noConstructor.kt")
+        public void testNoConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/noConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notOpenAndAbstract.kt")
+        public void testNotOpenAndAbstract() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/notOpenAndAbstract.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notPrivatePrimaryConstructor.kt")
+        public void testNotPrivatePrimaryConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/notPrivatePrimaryConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notPrivateSecondaryConstructor.kt")
+        public void testNotPrivateSecondaryConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/notPrivateSecondaryConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("onlySecondaryConstructor.kt")
+        public void testOnlySecondaryConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/onlySecondaryConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("primaryConstructor.kt")
+        public void testPrimaryConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/primaryConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("primaryConstructorWithAnnotation.kt")
+        public void testPrimaryConstructorWithAnnotation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/primaryConstructorWithAnnotation.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("primaryConstructorWithValueParameter.kt")
+        public void testPrimaryConstructorWithValueParameter() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/primaryConstructorWithValueParameter.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("secondaryConstructor.kt")
+        public void testSecondaryConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/secondaryConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("secondaryConstructorWithAnnotation.kt")
+        public void testSecondaryConstructorWithAnnotation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertClassToSealedClass/secondaryConstructorWithAnnotation.kt");
             doTest(fileName);
         }
     }
@@ -11222,6 +11360,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/movePropertyToClassBody/simple.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("vararg.kt")
+        public void testVararg() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/movePropertyToClassBody/vararg.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("varargWithAnnotation.kt")
+        public void testVarargWithAnnotation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/movePropertyToClassBody/varargWithAnnotation.kt");
             doTest(fileName);
         }
     }

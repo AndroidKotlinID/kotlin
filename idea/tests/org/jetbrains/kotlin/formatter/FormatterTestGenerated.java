@@ -320,6 +320,12 @@ public class FormatterTestGenerated extends AbstractFormatterTest {
             doTest(fileName);
         }
 
+        @TestMetadata("EnumWrapping.after.kt")
+        public void testEnumWrapping() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/EnumWrapping.after.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("ExtendsListWrap.after.kt")
         public void testExtendsListWrap() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/ExtendsListWrap.after.kt");
@@ -494,6 +500,12 @@ public class FormatterTestGenerated extends AbstractFormatterTest {
             doTest(fileName);
         }
 
+        @TestMetadata("LocalVariableAnnotationWrap.after.kt")
+        public void testLocalVariableAnnotationWrap() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/LocalVariableAnnotationWrap.after.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("LoopParameterWithExplicitType.after.kt")
         public void testLoopParameterWithExplicitType() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/LoopParameterWithExplicitType.after.kt");
@@ -596,9 +608,21 @@ public class FormatterTestGenerated extends AbstractFormatterTest {
             doTest(fileName);
         }
 
+        @TestMetadata("PropertyAccessorLineBreak.after.kt")
+        public void testPropertyAccessorLineBreak() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/PropertyAccessorLineBreak.after.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("PropertyAccessors.after.kt")
         public void testPropertyAccessors() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/PropertyAccessors.after.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("PropertyAnnotationWrap.after.kt")
+        public void testPropertyAnnotationWrap() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/PropertyAnnotationWrap.after.kt");
             doTest(fileName);
         }
 
@@ -833,6 +857,12 @@ public class FormatterTestGenerated extends AbstractFormatterTest {
         @TestMetadata("WhenLinesBeforeLbrace.after.kt")
         public void testWhenLinesBeforeLbrace() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/WhenLinesBeforeLbrace.after.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("WhereClause.after.kt")
+        public void testWhereClause() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/formatter/WhereClause.after.kt");
             doTest(fileName);
         }
 

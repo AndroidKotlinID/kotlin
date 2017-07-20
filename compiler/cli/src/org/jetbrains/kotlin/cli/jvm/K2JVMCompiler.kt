@@ -180,7 +180,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
 
                 val scriptDefinitionProvider = KotlinScriptDefinitionProvider.getInstance(environment.project)!!
                 val scriptFile = File(sourcePath)
-                if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(scriptFile)) {
+                if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(scriptFile.name)) {
                     val extensionHint =
                             if (configuration.get(JVMConfigurationKeys.SCRIPT_DEFINITIONS) == listOf(StandardScriptDefinition)) " (.kts)"
                             else ""
@@ -463,7 +463,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                         messageCollector.report(
                                 INFO,
                                 "Added script definition $template to configuration: files pattern = \"${def.scriptFilePattern}\", " +
-                                "resolver = ${def.resolver?.javaClass?.name}"
+                                "resolver = ${def.dependencyResolver.javaClass.name}"
                         )
                     }
                     catch (ex: ClassNotFoundException) {

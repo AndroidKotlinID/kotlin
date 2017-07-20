@@ -23,16 +23,15 @@ import com.intellij.openapi.project.Project
 import org.gradle.tooling.ProjectConnection
 import org.jetbrains.kotlin.lexer.KotlinLexer
 import org.jetbrains.kotlin.lexer.KtTokens
-import org.jetbrains.kotlin.script.KotlinScriptDefinition
-import org.jetbrains.kotlin.script.KotlinScriptDefinitionFromAnnotatedTemplate
 import org.jetbrains.kotlin.script.ScriptTemplatesProvider
 import org.jetbrains.plugins.gradle.service.execution.GradleExecutionHelper
 import org.jetbrains.plugins.gradle.settings.GradleExecutionSettings
 import java.io.File
-import java.net.URLClassLoader
 import java.util.*
 
-class GradleScriptTemplatesProvider(project: Project): ScriptTemplatesProvider {
+abstract class AbstractGradleScriptTemplatesProvider(
+        project: Project, override val id: String, private val templateClass: String, private val dependencySelector: Regex
+): ScriptTemplatesProvider {
 
     private val gradleExeSettings: GradleExecutionSettings? by lazy {
         try {
@@ -43,7 +42,7 @@ class GradleScriptTemplatesProvider(project: Project): ScriptTemplatesProvider {
         }
         catch (e: Throwable) {
             // TODO: consider displaying the warning to the user
-            Logger.getInstance(GradleScriptTemplatesProvider::class.java).warn("[kts] Cannot get gradle execution settings", e)
+            Logger.getInstance(AbstractGradleScriptTemplatesProvider::class.java).warn("[kts] Cannot get gradle execution settings", e)
             null
         }
     }
@@ -57,49 +56,23 @@ class GradleScriptTemplatesProvider(project: Project): ScriptTemplatesProvider {
         } ?: emptyList()
     }
 
-    override val id: String = "Gradle"
-    override val isValid: Boolean get() = templatesData is TemplateDataOrError.Data
+    internal val gradleLibDir: File by lazy {
+        val gradleHome = gradleExeSettings?.gradleHome ?: error("Unable to get Gradle home directory")
 
-    private sealed class TemplateDataOrError {
-        class Data(val templateClassNames: Iterable<String>,
-                   val dependenciesClasspath: Iterable<File>,
-                   val scriptDefinitions: List<KotlinScriptDefinition>) : TemplateDataOrError()
-        class Error(val message: String) : TemplateDataOrError()
-    }
-
-    private val templatesData: TemplateDataOrError by lazy {
-
-        if (gradleExeSettings?.gradleHome == null) return@lazy TemplateDataOrError.Error("Unable to get Gradle home directory")
-
-        val gradleLibDir = File(gradleExeSettings!!.gradleHome, "lib").let {
-            it.takeIf { it.exists() && it.isDirectory }
-            ?: return@lazy TemplateDataOrError.Error("Invalid Gradle libraries directory $it")
+        File(gradleHome, "lib").let {
+            it.takeIf { it.exists() && it.isDirectory } ?: error("Invalid Gradle libraries directory $it")
         }
-
-        for ((template, selector) in templates2DependenciesSelectors) {
-            val cp = gradleLibDir.listFiles { it /* an inference problem without explicit 'it', TODO: remove when fixed */ -> selector.matches(it.name) }.takeIf { it.isNotEmpty() } ?: continue
-
-            val loader = URLClassLoader(cp.map { it.toURI().toURL() }.toTypedArray(), ScriptTemplatesProvider::class.java.classLoader)
-            try {
-                val cl = loader.loadClass(template)
-                val def = KotlinScriptDefinitionFromAnnotatedTemplate(cl.kotlin, resolver, filePattern, environment)
-                return@lazy TemplateDataOrError.Data(listOf(template), cp.asIterable(), listOf(def))
-            }
-            catch (e: ClassNotFoundException) {}
-            catch (e: NoClassDefFoundError) {}
-        }
-
-        return@lazy TemplateDataOrError.Error("Unable to find a suitable template in the Gradle libraries directory $gradleLibDir")
     }
 
-    override val templateClassNames: Iterable<String> get() = when(templatesData) {
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Data -> (templatesData as TemplateDataOrError.Data).templateClassNames
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Error -> throw IllegalStateException((templatesData as TemplateDataOrError.Error).message)
-    }
+    override val isValid: Boolean get() = true
 
-    override val dependenciesClasspath: Iterable<String> get() = when(templatesData) {
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Data -> (templatesData as TemplateDataOrError.Data).dependenciesClasspath.map { it.canonicalPath }
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Error -> throw IllegalStateException((templatesData as TemplateDataOrError.Error).message)
+    override val templateClassNames get() = listOf(templateClass)
+
+    override val templateClasspath: List<File> get() {
+        return gradleLibDir.listFiles { it ->
+            /* an inference problem without explicit 'it', TODO: remove when fixed */
+            dependencySelector.matches(it.name)
+        }.takeIf { it.isNotEmpty() }?.asList() ?: error("Missing jars in gradle directory")
     }
 
     override val environment: Map<String, Any?>? by lazy {
@@ -110,20 +83,30 @@ class GradleScriptTemplatesProvider(project: Project): ScriptTemplatesProvider {
                 GradleExecutionHelper().execute(project.basePath!!, null) { action(it) } },
                 "gradleJavaHome" to gradleExeSettings?.javaHome,
                 "gradleJvmOptions" to gradleJvmOptions,
-                "getScriptSectionTokens" to ::topLevelSectionCodeTextTokens)
-    }
-
-    override val scriptDefinitions: List<KotlinScriptDefinition>? get() = when(templatesData) {
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Data -> (templatesData as TemplateDataOrError.Data).scriptDefinitions
-        is GradleScriptTemplatesProvider.TemplateDataOrError.Error -> throw IllegalStateException((templatesData as TemplateDataOrError.Error).message)
-    }
-
-    companion object {
-        private val templates2DependenciesSelectors = listOf(
-                "org.gradle.kotlin.dsl.KotlinBuildScript" to Regex("^gradle-(?:kotlin-dsl|core).*\\.jar\$"),
-                "org.gradle.script.lang.kotlin.KotlinBuildScript" to Regex("^gradle-(?:script-kotlin|core).*\\.jar\$"))
+                "getScriptSectionTokens" to ::topLevelSectionCodeTextTokens
+        )
     }
 }
+
+class GradleKotlinDSLTemplateProvider(project: Project) : AbstractGradleScriptTemplatesProvider(
+        project,
+        "Gradle Kotlin DSL",
+        "org.gradle.kotlin.dsl.KotlinBuildScript",
+        Regex("^gradle-(?:kotlin-dsl|core).*\\.jar\$")
+) {
+    // TODO_R: check this against kotlin-dsl branch that uses daemon
+    override val additionalResolverClasspath: List<File> get() =
+            // additionally need compiler jar to load gradle resolver
+            gradleLibDir.listFiles { file -> file.name.startsWith("kotlin-compiler-embeddable") }
+                    .firstOrNull()?.let(::listOf).orEmpty()
+}
+
+class LegacyGradleScriptKotlinTemplateProvider(project: Project) : AbstractGradleScriptTemplatesProvider(
+        project,
+        "Gradle Script Kotlin",
+        "org.gradle.script.lang.kotlin.KotlinBuildScript",
+        Regex("^gradle-(?:script-kotlin|core).*\\.jar\$")
+)
 
 class TopLevelSectionTokensEnumerator(script: CharSequence, identifier: String) : Enumeration<KotlinLexer> {
 

@@ -32,6 +32,12 @@ import java.util.regex.Pattern;
 @TestDataPath("$PROJECT_ROOT")
 @RunWith(JUnit3RunnerWithInners.class)
 public class ScriptConfigurationHighlightingTestGenerated extends AbstractScriptConfigurationHighlightingTest {
+    @TestMetadata("acceptedAnnotations")
+    public void testAcceptedAnnotations() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/acceptedAnnotations/");
+        doTest(fileName);
+    }
+
     @TestMetadata("additionalImports")
     public void testAdditionalImports() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/additionalImports/");
@@ -40,6 +46,12 @@ public class ScriptConfigurationHighlightingTestGenerated extends AbstractScript
 
     public void testAllFilesPresentInHighlighting() throws Exception {
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/script/definition/highlighting"), Pattern.compile("^([^\\.]+)$"), TargetBackend.ANY, false);
+    }
+
+    @TestMetadata("asyncResolver")
+    public void testAsyncResolver() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/asyncResolver/");
+        doTest(fileName);
     }
 
     @TestMetadata("customBaseClass")
@@ -54,9 +66,39 @@ public class ScriptConfigurationHighlightingTestGenerated extends AbstractScript
         doTest(fileName);
     }
 
+    @TestMetadata("doNotSpeakAboutJava")
+    public void testDoNotSpeakAboutJava() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/doNotSpeakAboutJava/");
+        doTest(fileName);
+    }
+
+    @TestMetadata("doNotSpeakAboutJavaLegacy")
+    public void testDoNotSpeakAboutJavaLegacy() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/doNotSpeakAboutJavaLegacy/");
+        doTest(fileName);
+    }
+
+    @TestMetadata("emptyAsyncResolver")
+    public void testEmptyAsyncResolver() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/emptyAsyncResolver/");
+        doTest(fileName);
+    }
+
+    @TestMetadata("noResolver")
+    public void testNoResolver() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/noResolver/");
+        doTest(fileName);
+    }
+
     @TestMetadata("simple")
     public void testSimple() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/simple/");
+        doTest(fileName);
+    }
+
+    @TestMetadata("throwingResolver")
+    public void testThrowingResolver() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/script/definition/highlighting/throwingResolver/");
         doTest(fileName);
     }
 }

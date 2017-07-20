@@ -180,6 +180,12 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         doTest(fileName);
     }
 
+    @TestMetadata("InPropertyAccessorWithInferenceInClass.kt")
+    public void testInPropertyAccessorWithInferenceInClass() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/codeInsight/outOfBlock/InPropertyAccessorWithInferenceInClass.kt");
+        doTest(fileName);
+    }
+
     @TestMetadata("InPropertyWithFunctionLiteral.kt")
     public void testInPropertyWithFunctionLiteral() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("idea/testData/codeInsight/outOfBlock/InPropertyWithFunctionLiteral.kt");
@@ -255,6 +261,12 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
     @TestMetadata("PropertyWithType_Initializer_String.kt")
     public void testPropertyWithType_Initializer_String() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("idea/testData/codeInsight/outOfBlock/PropertyWithType_Initializer_String.kt");
+        doTest(fileName);
+    }
+
+    @TestMetadata("StringInSuperConstroctorCall.kt")
+    public void testStringInSuperConstroctorCall() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("idea/testData/codeInsight/outOfBlock/StringInSuperConstroctorCall.kt");
         doTest(fileName);
     }
 }
