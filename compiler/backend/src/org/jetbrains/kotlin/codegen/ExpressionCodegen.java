@@ -39,12 +39,12 @@ import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenForLambda;
 import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenUtilKt;
 import org.jetbrains.kotlin.codegen.coroutines.ResolvedCallWithRealDescriptor;
 import org.jetbrains.kotlin.codegen.extensions.ExpressionCodegenExtension;
-import org.jetbrains.kotlin.codegen.range.forLoop.ForLoopGenerator;
 import org.jetbrains.kotlin.codegen.inline.*;
 import org.jetbrains.kotlin.codegen.intrinsics.*;
 import org.jetbrains.kotlin.codegen.pseudoInsns.PseudoInsnsKt;
 import org.jetbrains.kotlin.codegen.range.RangeValue;
 import org.jetbrains.kotlin.codegen.range.RangeValuesKt;
+import org.jetbrains.kotlin.codegen.range.forLoop.ForLoopGenerator;
 import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter;
 import org.jetbrains.kotlin.codegen.signature.JvmSignatureWriter;
 import org.jetbrains.kotlin.codegen.state.GenerationState;
@@ -2894,6 +2894,20 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         if (isPrimitive(leftType) && right instanceof KtSafeQualifiedExpression) {
             return genCmpPrimitiveToSafeCall(left, leftType, (KtSafeQualifiedExpression) right, opToken);
         }
+
+        if (BoxedToPrimitiveEquality.isApplicable(opToken, leftType, rightType)) {
+            return BoxedToPrimitiveEquality.create(opToken, genLazy(left, leftType), leftType, genLazy(right, rightType), rightType,
+                                                   myFrameMap);
+        }
+
+        if (PrimitiveToBoxedEquality.isApplicable(opToken, leftType, rightType)) {
+            return PrimitiveToBoxedEquality.create(opToken, genLazy(left, leftType), leftType, genLazy(right, rightType), rightType);
+        }
+
+        if (PrimitiveToObjectEquality.isApplicable(opToken, leftType, rightType)) {
+            return PrimitiveToObjectEquality.create(opToken, genLazy(left, leftType), leftType, genLazy(right, rightType), rightType);
+        }
+
 
         if (isPrimitive(leftType) != isPrimitive(rightType)) {
             leftType = boxType(leftType);

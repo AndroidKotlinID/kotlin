@@ -24,7 +24,10 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.builtins.functions.BuiltInFictitiousFunctionClassFactory;
 import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor;
 import org.jetbrains.kotlin.descriptors.*;
-import org.jetbrains.kotlin.descriptors.annotations.*;
+import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget;
+import org.jetbrains.kotlin.descriptors.annotations.Annotations;
+import org.jetbrains.kotlin.descriptors.annotations.KotlinRetention;
+import org.jetbrains.kotlin.descriptors.annotations.KotlinTarget;
 import org.jetbrains.kotlin.descriptors.deserialization.AdditionalClassPartsProvider;
 import org.jetbrains.kotlin.descriptors.deserialization.ClassDescriptorFactory;
 import org.jetbrains.kotlin.descriptors.deserialization.PlatformDependentDeclarationFilter;
@@ -254,7 +257,7 @@ public abstract class KotlinBuiltIns {
         public final FqNameUnsafe any = fqNameUnsafe("Any");
         public final FqNameUnsafe nothing = fqNameUnsafe("Nothing");
         public final FqNameUnsafe cloneable = fqNameUnsafe("Cloneable");
-        public final FqNameUnsafe suppress = fqNameUnsafe("Suppress");
+        public final FqName suppress = fqName("Suppress");
         public final FqNameUnsafe unit = fqNameUnsafe("Unit");
         public final FqNameUnsafe charSequence = fqNameUnsafe("CharSequence");
         public final FqNameUnsafe string = fqNameUnsafe("String");
@@ -283,6 +286,7 @@ public abstract class KotlinBuiltIns {
 
         public final FqName deprecated = fqName("Deprecated");
         public final FqName deprecationLevel = fqName("DeprecationLevel");
+        public final FqName replaceWith = fqName("ReplaceWith");
         public final FqName extensionFunctionType = fqName("ExtensionFunctionType");
         public final FqName parameterName = fqName("ParameterName");
         public final FqName annotation = fqName("Annotation");
@@ -562,11 +566,6 @@ public abstract class KotlinBuiltIns {
         return getBuiltInClassByName("Throwable");
     }
 
-    @NotNull
-    public ClassDescriptor getDeprecatedAnnotation() {
-        return getBuiltInClassByName(FQ_NAMES.deprecated.shortName());
-    }
-
     @Nullable
     private static ClassDescriptor getEnumEntry(@NotNull ClassDescriptor enumDescriptor, @NotNull String entryName) {
         ClassifierDescriptor result = enumDescriptor.getUnsubstitutedInnerClassesScope().getContributedClassifier(
@@ -578,26 +577,6 @@ public abstract class KotlinBuiltIns {
     @Nullable
     public ClassDescriptor getDeprecationLevelEnumEntry(@NotNull String level) {
         return getEnumEntry(getBuiltInClassByName(FQ_NAMES.deprecationLevel.shortName()), level);
-    }
-
-    @NotNull
-    public ClassDescriptor getTargetAnnotation() {
-        return getAnnotationClassByName(FQ_NAMES.target.shortName());
-    }
-
-    @NotNull
-    public ClassDescriptor getRetentionAnnotation() {
-        return getAnnotationClassByName(FQ_NAMES.retention.shortName());
-    }
-
-    @NotNull
-    public ClassDescriptor getRepeatableAnnotation() {
-        return getAnnotationClassByName(FQ_NAMES.repeatable.shortName());
-    }
-
-    @NotNull
-    public ClassDescriptor getMustBeDocumentedAnnotation() {
-        return getAnnotationClassByName(FQ_NAMES.mustBeDocumented.shortName());
     }
 
     @Nullable
@@ -1117,10 +1096,6 @@ public abstract class KotlinBuiltIns {
 
     public static FqName getPrimitiveFqName(@NotNull PrimitiveType primitiveType) {
         return BUILT_INS_PACKAGE_FQ_NAME.child(primitiveType.getTypeName());
-    }
-
-    public static boolean isSuppressAnnotation(@NotNull AnnotationDescriptor annotationDescriptor) {
-        return isConstructedFromGivenClass(annotationDescriptor.getType(), FQ_NAMES.suppress);
     }
 
     private static boolean containsAnnotation(DeclarationDescriptor descriptor, FqName annotationClassFqName) {

@@ -398,15 +398,8 @@ internal class DescriptorRendererImpl(
 
         val excluded = if (annotated is KotlinType) excludedTypeAnnotationClasses else excludedAnnotationClasses
 
-        // Sort is needed just to fix some order when annotations resolved from modifiers
-        // See AnnotationResolver.resolveAndAppendAnnotationsFromModifiers for clarification
-        // This hack can be removed when modifiers will be resolved without annotations
-
-        val sortedAnnotations = annotated.annotations.getAllAnnotations()
-        for ((annotation, target) in sortedAnnotations) {
-            val annotationClass = annotation.annotationClass!!
-
-            if (!excluded.contains(DescriptorUtils.getFqNameSafe(annotationClass))) {
+        for ((annotation, target) in annotated.annotations.getAllAnnotations()) {
+            if (annotation.fqName !in excluded) {
                 append(renderAnnotation(annotation, target)).append(" ")
             }
         }
@@ -436,18 +429,15 @@ internal class DescriptorRendererImpl(
 
     private fun renderAndSortAnnotationArguments(descriptor: AnnotationDescriptor): List<String> {
         val allValueArguments = descriptor.allValueArguments
-        val classDescriptor = if (renderDefaultAnnotationArguments) TypeUtils.getClassDescriptor(descriptor.type) else null
-        val parameterDescriptorsWithDefaultValue = classDescriptor?.unsubstitutedPrimaryConstructor?.valueParameters?.filter {
-            it.declaresDefaultValue()
-        } ?: emptyList()
-        val defaultList = parameterDescriptorsWithDefaultValue.filter { !allValueArguments.containsKey(it) }.map {
-            "${it.name.asString()} = ..."
-        }
+        val classDescriptor = if (renderDefaultAnnotationArguments) descriptor.annotationClass else null
+        val parameterDescriptorsWithDefaultValue = classDescriptor?.unsubstitutedPrimaryConstructor?.valueParameters
+                ?.filter { it.declaresDefaultValue() }
+                ?.map { it.name }
+                .orEmpty()
+        val defaultList = parameterDescriptorsWithDefaultValue.filter { it !in allValueArguments }.map { "${it.asString()} = ..." }
         val argumentList = allValueArguments.entries
-                .map { entry ->
-                    val name = entry.key.name.asString()
-                    val value = if (!parameterDescriptorsWithDefaultValue.contains(entry.key)) renderConstant(entry.value) else "..."
-                    "$name = $value"
+                .map { (name, value) ->
+                    "${name.asString()} = ${if (name !in parameterDescriptorsWithDefaultValue) renderConstant(value) else "..."}"
                 }
         return (defaultList + argumentList).sorted()
     }

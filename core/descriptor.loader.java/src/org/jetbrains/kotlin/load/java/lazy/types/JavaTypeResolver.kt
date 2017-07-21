@@ -87,14 +87,15 @@ class JavaTypeResolver(
         val useFlexible = !attr.isForAnnotationParameter && attr.howThisTypeIsUsed != SUPERTYPE
         val isRaw = javaType.isRaw
         if (!isRaw && !useFlexible) {
-            return computeSimpleJavaClassifierType(javaType, attr) ?: errorType()
+            return computeSimpleJavaClassifierType(javaType, attr, null) ?: errorType()
         }
 
-        fun computeBound(flexibility: JavaTypeFlexibility) =
-                computeSimpleJavaClassifierType(javaType, attr.withFlexibility(flexibility))
-
-        val lower = computeBound(FLEXIBLE_LOWER_BOUND) ?: return errorType()
-        val upper = computeBound(FLEXIBLE_UPPER_BOUND) ?: return errorType()
+        val lower =
+                computeSimpleJavaClassifierType(javaType, attr.withFlexibility(FLEXIBLE_LOWER_BOUND), lowerResult = null)
+                ?: return errorType()
+        val upper =
+                computeSimpleJavaClassifierType(javaType, attr.withFlexibility(FLEXIBLE_UPPER_BOUND), lowerResult = lower)
+                ?: return errorType()
 
         return if (isRaw) {
             RawTypeImpl(lower, upper)
@@ -104,11 +105,20 @@ class JavaTypeResolver(
         }
     }
 
-    private fun computeSimpleJavaClassifierType(javaType: JavaClassifierType, attr: JavaTypeAttributes): SimpleType? {
-        val annotations = LazyJavaAnnotations(c, javaType)
+    private fun computeSimpleJavaClassifierType(
+            javaType: JavaClassifierType, attr: JavaTypeAttributes,
+            lowerResult: SimpleType?
+    ): SimpleType? {
+        val annotations =
+                lowerResult?.annotations ?: LazyJavaAnnotations(c, javaType)
         val constructor = computeTypeConstructor(javaType, attr) ?: return null
-        val arguments = computeArguments(javaType, attr, constructor)
         val isNullable = attr.isNullable()
+
+        if (lowerResult?.constructor == constructor && !javaType.isRaw && isNullable) {
+            return lowerResult.makeNullableAsSpecified(true)
+        }
+
+        val arguments = computeArguments(javaType, attr, constructor)
 
         return KotlinTypeFactory.simpleType(annotations, constructor, arguments, isNullable)
     }
@@ -340,4 +350,3 @@ internal fun TypeParameterDescriptor.getErasedUpperBound(
 
     return defaultValue()
 }
-

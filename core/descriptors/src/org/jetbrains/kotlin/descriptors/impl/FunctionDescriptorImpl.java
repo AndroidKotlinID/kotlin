@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.descriptors.impl;
 
+import kotlin.collections.CollectionsKt;
 import kotlin.jvm.functions.Function0;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,8 +26,7 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationsKt;
 import org.jetbrains.kotlin.name.Name;
 import org.jetbrains.kotlin.resolve.DescriptorFactory;
 import org.jetbrains.kotlin.types.*;
-import kotlin.collections.CollectionsKt;
-import org.jetbrains.kotlin.utils.SmartSet;
+import org.jetbrains.kotlin.utils.SmartList;
 
 import java.util.*;
 
@@ -54,7 +54,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
     private boolean hasStableParameterNames = true;
     private boolean hasSynthesizedParameterNames = false;
     private Collection<? extends FunctionDescriptor> overriddenFunctions = null;
-    private volatile Function0<Set<FunctionDescriptor>> lazyOverriddenFunctionsTask = null;
+    private volatile Function0<Collection<FunctionDescriptor>> lazyOverriddenFunctionsTask = null;
     private final FunctionDescriptor original;
     private final Kind kind;
     @Nullable
@@ -192,7 +192,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
     }
 
     private void performOverriddenLazyCalculationIfNeeded() {
-        Function0<Set<FunctionDescriptor>> overriddenTask = lazyOverriddenFunctionsTask;
+        Function0<Collection<FunctionDescriptor>> overriddenTask = lazyOverriddenFunctionsTask;
         if (overriddenTask != null) {
             overriddenFunctions = overriddenTask.invoke();
             // Here it's important that this assignment is strictly after previous one
@@ -335,7 +335,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
         if (originalSubstitutor.isEmpty()) {
             return this;
         }
-        return newCopyBuilder(originalSubstitutor).setOriginal(getOriginal()).build();
+        return newCopyBuilder(originalSubstitutor).setOriginal(getOriginal()).setJustForTypeSubstitution(true).build();
     }
 
     @Nullable
@@ -371,6 +371,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
         private boolean isHiddenForResolutionEverywhereBesideSupercalls = isHiddenForResolutionEverywhereBesideSupercalls();
         private Map<UserDataKey<?>, Object> userDataMap = new LinkedHashMap<UserDataKey<?>, Object>();
         private Boolean newHasSynthesizedParameterNames = null;
+        protected boolean justForTypeSubstitution = false;
 
         public CopyConfiguration(
                 @NotNull TypeSubstitution substitution,
@@ -554,6 +555,12 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
         public TypeSubstitution getSubstitution() {
             return substitution;
         }
+
+        @NotNull
+        public CopyConfiguration setJustForTypeSubstitution(boolean value) {
+            justForTypeSubstitution = value;
+            return this;
+        }
     }
 
     @Override
@@ -572,6 +579,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
 
     @Nullable
     protected FunctionDescriptor doSubstitute(@NotNull CopyConfiguration configuration) {
+        boolean[] wereChanges = new boolean[1];
         Annotations resultAnnotations =
                 configuration.additionalAnnotations != null
                 ? AnnotationsKt.composeAnnotations(getAnnotations(), configuration.additionalAnnotations)
@@ -584,10 +592,12 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
         List<TypeParameterDescriptor> unsubstitutedTypeParameters =
                 configuration.newTypeParameters == null ? getTypeParameters() : configuration.newTypeParameters;
 
+        wereChanges[0] |= !unsubstitutedTypeParameters.isEmpty();
+
         List<TypeParameterDescriptor> substitutedTypeParameters =
                 new ArrayList<TypeParameterDescriptor>(unsubstitutedTypeParameters.size());
         final TypeSubstitutor substitutor = DescriptorSubstitutor.substituteTypeParameters(
-                unsubstitutedTypeParameters, configuration.substitution, substitutedDescriptor, substitutedTypeParameters
+                unsubstitutedTypeParameters, configuration.substitution, substitutedDescriptor, substitutedTypeParameters, wereChanges
         );
 
         KotlinType substitutedReceiverParameterType = null;
@@ -596,6 +606,8 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
             if (substitutedReceiverParameterType == null) {
                 return null;
             }
+
+            wereChanges[0] |= substitutedReceiverParameterType != configuration.newExtensionReceiverParameterType;
         }
 
         ReceiverParameterDescriptor substitutedExpectedThis = null;
@@ -614,11 +626,13 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
             if (substitutedExpectedThis == null) {
                 return null;
             }
+
+            wereChanges[0] |= substitutedExpectedThis != configuration.dispatchReceiverParameter;
         }
 
         List<ValueParameterDescriptor> substitutedValueParameters = getSubstitutedValueParameters(
                 substitutedDescriptor, configuration.newValueParameterDescriptors, substitutor, configuration.dropOriginalInContainingParts,
-                configuration.preserveSourceElement
+                configuration.preserveSourceElement, wereChanges
         );
         if (substitutedValueParameters == null) {
             return null;
@@ -627,6 +641,12 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
         KotlinType substitutedReturnType = substitutor.substitute(configuration.newReturnType, Variance.OUT_VARIANCE);
         if (substitutedReturnType == null) {
             return null;
+        }
+
+        wereChanges[0] |= substitutedReturnType != configuration.newReturnType;
+
+        if (!wereChanges[0] && configuration.justForTypeSubstitution) {
+            return this;
         }
 
         substitutedDescriptor.initialize(
@@ -683,7 +703,7 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
 
         if (configuration.copyOverrides && !getOriginal().getOverriddenDescriptors().isEmpty()) {
             if (configuration.substitution.isEmpty()) {
-                Function0<Set<FunctionDescriptor>> overriddenFunctionsTask = lazyOverriddenFunctionsTask;
+                Function0<Collection<FunctionDescriptor>> overriddenFunctionsTask = lazyOverriddenFunctionsTask;
                 if (overriddenFunctionsTask != null) {
                     substitutedDescriptor.lazyOverriddenFunctionsTask = overriddenFunctionsTask;
                 }
@@ -692,10 +712,10 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
                 }
             }
             else {
-                substitutedDescriptor.lazyOverriddenFunctionsTask = new Function0<Set<FunctionDescriptor>>() {
+                substitutedDescriptor.lazyOverriddenFunctionsTask = new Function0<Collection<FunctionDescriptor>>() {
                     @Override
-                    public Set<FunctionDescriptor> invoke() {
-                        SmartSet<FunctionDescriptor> result = SmartSet.create();
+                    public Collection<FunctionDescriptor> invoke() {
+                        Collection<FunctionDescriptor> result = new SmartList<FunctionDescriptor>();
                         for (FunctionDescriptor overriddenFunction : getOverriddenDescriptors()) {
                             result.add(overriddenFunction.substitute(substitutor));
                         }
@@ -754,7 +774,8 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
             @NotNull List<ValueParameterDescriptor> unsubstitutedValueParameters,
             @NotNull TypeSubstitutor substitutor,
             boolean dropOriginal,
-            boolean preserveSourceElement
+            boolean preserveSourceElement,
+            @Nullable boolean[] wereChanges
     ) {
         List<ValueParameterDescriptor> result = new ArrayList<ValueParameterDescriptor>(unsubstitutedValueParameters.size());
         for (ValueParameterDescriptor unsubstitutedValueParameter : unsubstitutedValueParameters) {
@@ -764,6 +785,11 @@ public abstract class FunctionDescriptorImpl extends DeclarationDescriptorNonRoo
             KotlinType substituteVarargElementType =
                     varargElementType == null ? null : substitutor.substitute(varargElementType, Variance.IN_VARIANCE);
             if (substitutedType == null) return null;
+            if (substitutedType != unsubstitutedValueParameter.getType() || varargElementType != substituteVarargElementType) {
+                if (wereChanges != null) {
+                    wereChanges[0] = true;
+                }
+            }
             result.add(
                     new ValueParameterDescriptorImpl(
                             substitutedDescriptor,

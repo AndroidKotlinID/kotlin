@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.load.java.typeEnhancement
 
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
+import org.jetbrains.kotlin.descriptors.SourceElement
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationWithTarget
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
@@ -29,7 +30,9 @@ import org.jetbrains.kotlin.load.java.typeEnhancement.MutabilityQualifier.READ_O
 import org.jetbrains.kotlin.load.java.typeEnhancement.NullabilityQualifier.NOT_NULL
 import org.jetbrains.kotlin.load.java.typeEnhancement.NullabilityQualifier.NULLABLE
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.JavaToKotlinClassMap
+import org.jetbrains.kotlin.resolve.constants.ConstantValue
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.typeUtil.createProjection
 import org.jetbrains.kotlin.types.typeUtil.isTypeParameter
@@ -194,8 +197,6 @@ private class EnhancedTypeAnnotations(private val fqNameToMatch: FqName) : Annot
         else -> null
     }
 
-    override fun findExternalAnnotation(fqName: FqName) = null
-
     override fun getAllAnnotations() = this.map { AnnotationWithTarget(it, null) }
 
     override fun getUseSiteTargetedAnnotations() = emptyList<AnnotationWithTarget>()
@@ -207,9 +208,9 @@ private class EnhancedTypeAnnotations(private val fqNameToMatch: FqName) : Annot
 
 private object EnhancedTypeAnnotationDescriptor : AnnotationDescriptor {
     private fun throwError(): Nothing = error("No methods should be called on this descriptor. Only its presence matters")
-    override fun getType() = throwError()
-    override fun getAllValueArguments() = throwError()
-    override fun getSource() = throwError()
+    override val type: KotlinType get() = throwError()
+    override val allValueArguments: Map<Name, ConstantValue<*>> get() = throwError()
+    override val source: SourceElement get() = throwError()
     override fun toString() = "[EnhancedType]"
 }
 

@@ -80,8 +80,8 @@ class DeserializedClassDescriptor(
             if (!Flags.HAS_ANNOTATIONS.get(classProto.flags)) {
                 Annotations.EMPTY
             }
-            else DeserializedAnnotations(c.storageManager) {
-                c.components.annotationAndConstantLoader.loadClassAnnotations(thisAsProtoContainer)
+            else NonEmptyDeserializedAnnotations(c.storageManager) {
+                c.components.annotationAndConstantLoader.loadClassAnnotations(thisAsProtoContainer).toList()
             }
 
     override fun getContainingDeclaration(): DeclarationDescriptor = containingDeclaration
@@ -309,7 +309,7 @@ class DeserializedClassDescriptor(
                 EnumEntrySyntheticClassDescriptor.create(
                         c.storageManager, this@DeserializedClassDescriptor, name, enumMemberNames,
                         DeserializedAnnotations(c.storageManager) {
-                            c.components.annotationAndConstantLoader.loadEnumEntryAnnotations(thisAsProtoContainer, proto)
+                            c.components.annotationAndConstantLoader.loadEnumEntryAnnotations(thisAsProtoContainer, proto).toList()
                         },
                         SourceElement.NO_SOURCE
                 )

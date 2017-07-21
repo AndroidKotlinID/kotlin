@@ -5684,6 +5684,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("asyncIteratorNullMerge.kt")
+        public void testAsyncIteratorNullMerge() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/coroutines/asyncIteratorNullMerge.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("asyncIteratorToList.kt")
         public void testAsyncIteratorToList() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/coroutines/asyncIteratorToList.kt");
@@ -13951,6 +13957,156 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/unboxComparable.kt");
             doTest(fileName);
         }
+
+        @TestMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class EqualityWithObject extends AbstractJsCodegenBoxTest {
+            public void testAllFilesPresentInEqualityWithObject() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/primitiveTypes/equalityWithObject"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("boxedEqPrimitiveEvaluationOrder.kt")
+            public void testBoxedEqPrimitiveEvaluationOrder() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/boxedEqPrimitiveEvaluationOrder.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("boxedLongEqualsLong.kt")
+            public void testBoxedLongEqualsLong() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/boxedLongEqualsLong.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("objectWithAsymmetricEqualsEqPrimitive.kt")
+            public void testObjectWithAsymmetricEqualsEqPrimitive() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/objectWithAsymmetricEqualsEqPrimitive.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Generated extends AbstractJsCodegenBoxTest {
+                public void testAllFilesPresentInGenerated() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+                }
+
+                @TestMetadata("boxedEqPrimitiveBoolean.kt")
+                public void testBoxedEqPrimitiveBoolean() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveBoolean.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("boxedEqPrimitiveByte.kt")
+                public void testBoxedEqPrimitiveByte() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveByte.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("boxedEqPrimitiveChar.kt")
+                public void testBoxedEqPrimitiveChar() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveChar.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("boxedEqPrimitiveInt.kt")
+                public void testBoxedEqPrimitiveInt() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveInt.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("boxedEqPrimitiveLong.kt")
+                public void testBoxedEqPrimitiveLong() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveLong.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("boxedEqPrimitiveShort.kt")
+                public void testBoxedEqPrimitiveShort() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/boxedEqPrimitiveShort.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedBoolean.kt")
+                public void testPrimitiveEqBoxedBoolean() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedBoolean.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedByte.kt")
+                public void testPrimitiveEqBoxedByte() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedByte.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedChar.kt")
+                public void testPrimitiveEqBoxedChar() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedChar.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedInt.kt")
+                public void testPrimitiveEqBoxedInt() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedInt.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedLong.kt")
+                public void testPrimitiveEqBoxedLong() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedLong.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqBoxedShort.kt")
+                public void testPrimitiveEqBoxedShort() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqBoxedShort.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqObjectBoolean.kt")
+                public void testPrimitiveEqObjectBoolean() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectBoolean.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqObjectByte.kt")
+                public void testPrimitiveEqObjectByte() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectByte.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqObjectChar.kt")
+                public void testPrimitiveEqObjectChar() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectChar.kt");
+                    try {
+                        doTest(fileName);
+                    }
+                    catch (Throwable ignore) {
+                        return;
+                    }
+                    throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+                }
+
+                @TestMetadata("primitiveEqObjectInt.kt")
+                public void testPrimitiveEqObjectInt() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectInt.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqObjectLong.kt")
+                public void testPrimitiveEqObjectLong() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectLong.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("primitiveEqObjectShort.kt")
+                public void testPrimitiveEqObjectShort() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/primitiveTypes/equalityWithObject/generated/primitiveEqObjectShort.kt");
+                    doTest(fileName);
+                }
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/private")
@@ -21347,6 +21503,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("implicitToGrandSon.kt")
         public void testImplicitToGrandSon() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/smartCasts/implicitToGrandSon.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt19100.kt")
+        public void testKt19100() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/smartCasts/kt19100.kt");
             doTest(fileName);
         }
 

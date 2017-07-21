@@ -16,51 +16,14 @@
 
 package org.jetbrains.kotlin.idea.intentions
 
-import com.intellij.codeInspection.*
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiElementVisitor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.idea.inspections.AbstractKotlinInspection
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.types.typeUtil.isUnit
-
-class RemoveSetterParameterTypeInspection : AbstractKotlinInspection() {
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
-        return object : KtVisitorVoid() {
-            override fun visitDeclaration(dcl: KtDeclaration) {
-                if (dcl is KtParameter && dcl.typeReference != null && dcl.isSetterParameter) {
-                    holder.registerProblem(dcl,
-                                           "Redundant setter parameter type",
-                                           ProblemHighlightType.LIKE_UNUSED_SYMBOL,
-                                           IntentionWrapper(RemoveExplicitTypeIntention(), dcl.containingKtFile))
-                }
-            }
-        }
-    }
-}
-
-class RedundantUnitReturnTypeInspection : AbstractKotlinInspection() {
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
-        return object : KtVisitorVoid() {
-            override fun visitNamedFunction(function: KtNamedFunction) {
-                super.visitNamedFunction(function)
-                if (function.containingFile is KtCodeFragment) return
-                if ((function.descriptor as? FunctionDescriptor)?.returnType?.isUnit() ?: false) {
-                    function.typeReference?.typeElement?.let {
-                        holder.registerProblem(it,
-                                               "Redundant 'Unit' return type",
-                                               ProblemHighlightType.LIKE_UNUSED_SYMBOL,
-                                               IntentionWrapper(RemoveExplicitTypeIntention(), function.containingKtFile))
-                    }
-                }
-            }
-        }
-    }
-}
 
 class RemoveExplicitTypeIntention : SelfTargetingRangeIntention<KtCallableDeclaration>(
         KtCallableDeclaration::class.java,
@@ -100,4 +63,4 @@ class RemoveExplicitTypeIntention : SelfTargetingRangeIntention<KtCallableDeclar
     }
 }
 
-private val KtParameter.isSetterParameter: Boolean get() = (parent.parent as? KtPropertyAccessor)?.isSetter ?: false
+internal val KtParameter.isSetterParameter: Boolean get() = (parent.parent as? KtPropertyAccessor)?.isSetter ?: false
