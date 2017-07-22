@@ -16,20 +16,25 @@
 
 package org.jetbrains.kotlin.idea
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.util.ProgressIndicatorUtils
 import com.intellij.openapi.project.Project
 
-
-fun <T : Any> runInReadActionWithWriteActionPriority(f: () -> T): T {
+fun <T : Any> runInReadActionWithWriteActionPriorityWithPCE(f: () -> T): T {
     var r: T? = null
-    val complete = ProgressIndicatorUtils.runInReadActionWithWriteActionPriority {
+    if (!with(ApplicationManager.getApplication()) { isDispatchThread && isUnitTestMode }) {
+        val complete = ProgressIndicatorUtils.runInReadActionWithWriteActionPriority {
+            r = f()
+        }
+
+        // There is a write action in progress or pending, so no point in counting the result
+        if (!complete) throw ProcessCanceledException()
+    }
+    else {
         r = f()
     }
-
-    // There is a write action in progress or pending, so no point in counting the result
-    if (!complete) throw ProcessCanceledException()
 
     return r!!
 }
