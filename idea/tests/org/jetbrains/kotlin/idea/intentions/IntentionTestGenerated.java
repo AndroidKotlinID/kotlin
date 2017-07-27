@@ -945,6 +945,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/doubleBangToIfThen/usedInAssignment.kt");
                 doTest(fileName);
             }
+
+            @TestMetadata("withAnnotation.kt")
+            public void testWithAnnotation() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/doubleBangToIfThen/withAnnotation.kt");
+                doTest(fileName);
+            }
         }
 
         @TestMetadata("idea/testData/intentions/branched/elvisToIfThen")
@@ -1980,6 +1986,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 @TestMetadata("whenWithMultipleConditionTypes.kt")
                 public void testWhenWithMultipleConditionTypes() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/ifWhen/ifToWhen/whenWithMultipleConditionTypes.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("withAnnotation.kt")
+                public void testWithAnnotation() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/ifWhen/ifToWhen/withAnnotation.kt");
                     doTest(fileName);
                 }
             }
@@ -13442,6 +13454,24 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("KT-19232-1.kt")
+        public void testKT_19232_1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMaxWithCoerceAtLeast/KT-19232-1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("KT-19232-2.kt")
+        public void testKT_19232_2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMaxWithCoerceAtLeast/KT-19232-2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("maxInMax.kt")
+        public void testMaxInMax() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMaxWithCoerceAtLeast/maxInMax.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("moreThan2ValueArg.kt")
         public void testMoreThan2ValueArg() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMaxWithCoerceAtLeast/moreThan2ValueArg.kt");
@@ -13484,6 +13514,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("doubles.kt")
         public void testDoubles() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMinWithCoerceAtMost/doubles.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("KT-19232-1.kt")
+        public void testKT_19232_1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMinWithCoerceAtMost/KT-19232-1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("KT-19232-2.kt")
+        public void testKT_19232_2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceMathMinWithCoerceAtMost/KT-19232-2.kt");
             doTest(fileName);
         }
 
@@ -14543,6 +14585,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("simpleWithParentheses2.kt")
         public void testSimpleWithParentheses2() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/simplifyBooleanWithConstants/simpleWithParentheses2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("withAnnotation.kt")
+        public void testWithAnnotation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/simplifyBooleanWithConstants/withAnnotation.kt");
             doTest(fileName);
         }
     }

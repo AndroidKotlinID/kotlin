@@ -39,6 +39,49 @@ class DefaultErrorMessagesAndroid : DefaultErrorMessages.Extension {
 
             MAP.put(ErrorsAndroid.UNSAFE_CALL_ON_PARTIALLY_DEFINED_RESOURCE,
                     "Potential NullPointerException. The resource is missing in some of layout versions")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_SHOULD_BE_CLASS,
+                    "'Parcelable' should be a class")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_DELEGATE_IS_NOT_ALLOWED,
+                    "Delegating 'Parcelable' is now allowed")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_SHOULD_NOT_BE_ENUM_CLASS,
+                    "'Parcelable' should not be a 'enum class'")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_SHOULD_BE_INSTANTIABLE,
+                    "'Parcelable' should not be a 'sealed' or 'abstract' class")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_CANT_BE_INNER_CLASS,
+                    "'Parcelable' can't be an inner class")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_CANT_BE_LOCAL_CLASS,
+                    "'Parcelable' can't be a local class")
+
+            MAP.put(ErrorsAndroid.NO_PARCELABLE_SUPERTYPE,
+                    "No 'Parcelable' supertype")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_SHOULD_HAVE_PRIMARY_CONSTRUCTOR,
+                    "'Parcelable' should have a primary constructor")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_PRIMARY_CONSTRUCTOR_IS_EMPTY,
+                    "The primary constructor is empty, no data will be serialized to 'Parcel'")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_CONSTRUCTOR_PARAMETER_SHOULD_BE_VAL_OR_VAR,
+                    "'Parcelable' constructor parameter should be 'val' or 'var'")
+
+            MAP.put(ErrorsAndroid.PROPERTY_WONT_BE_SERIALIZED,
+                    "Property would not be serialized into a 'Parcel'. Add '@Transient' annotation to it")
+
+            MAP.put(ErrorsAndroid.OVERRIDING_WRITE_TO_PARCEL_IS_NOT_ALLOWED,
+                    "Overriding 'writeToParcel' is not allowed. Use 'Parceler' companion object instead.")
+
+            MAP.put(ErrorsAndroid.CREATOR_DEFINITION_IS_NOT_ALLOWED,
+                    "'CREATOR' definition is not allowed. Use 'Parceler' companion object instead.")
+
+            MAP.put(ErrorsAndroid.PARCELABLE_TYPE_NOT_SUPPORTED,
+                    "Type is not directly supported by 'Parcelize'. " +
+                    "Annotate the parameter type with '@RawValue' if you want it to be serialized using 'writeValue()'")
         }
     }
 

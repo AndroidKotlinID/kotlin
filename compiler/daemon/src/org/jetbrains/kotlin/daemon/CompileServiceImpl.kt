@@ -366,7 +366,7 @@ class CompileServiceImpl(
         } as CLICompiler<CommonCompilerArguments>
 
         val k2PlatformArgs = compiler.createArguments()
-        parseCommandLineArguments(compilerArguments, k2PlatformArgs)
+        parseCommandLineArguments(compilerArguments.asList(), k2PlatformArgs)
         val argumentParseError = validateArguments(k2PlatformArgs.errors)
         if (argumentParseError != null) {
             messageCollector.report(CompilerMessageSeverity.ERROR, argumentParseError)
@@ -609,7 +609,7 @@ class CompileServiceImpl(
 
         if (state.delayedShutdownQueued.get()) return
 
-        val anyDead = state.sessions.cleanDead() && state.cleanDeadClients()
+        val anyDead = state.sessions.cleanDead() || state.cleanDeadClients()
 
         ifAliveUnit(minAliveness = Aliveness.LastSession) {
             when {
@@ -619,7 +619,7 @@ class CompileServiceImpl(
                     shutdownWithDelay()
                     return
                 }
-                state.aliveClientsCount == 0 && compilationsCounter.get() > 0 -> {
+                state.aliveClientsCount == 0 -> {
                     log.info("No more clients left")
                     shutdownWithDelay()
                     return
