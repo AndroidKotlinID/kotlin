@@ -1413,11 +1413,6 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.RemoveAtFromAnnotationArgumentIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.RemoveSingleExpressionStringTemplateIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -2038,15 +2033,6 @@
                      language="kotlin"
     />
 
-    <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.RemoveAtFromAnnotationArgumentInspection"
-                     displayName="Unnecessary @"
-                     groupPath="Kotlin"
-                     groupName="Probable bugs"
-                     enabledByDefault="true"
-                     level="WARNING"
-                     language="kotlin"
-    />
-
     <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.ConvertLambdaToReferenceInspection"
                      displayName="Can be replaced with function reference"
                      groupPath="Kotlin"
@@ -2319,7 +2305,7 @@
     />
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.NullableBooleanElvisInspection"
-                     displayName="Equality check can be used instead of elvis"
+                     displayName="Equality check can be used instead of elvis for nullable boolean check"
                      groupPath="Kotlin"
                      groupName="Style issues"
                      enabledByDefault="true"
