@@ -2722,6 +2722,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/checkcastOptimization/kt19128.kt");
             doTest(fileName);
         }
+
+        @TestMetadata("kt19246.kt")
+        public void testKt19246() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/checkcastOptimization/kt19246.kt");
+            doTest(fileName);
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/classLiteral")
@@ -11597,6 +11603,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             doTest(fileName);
         }
 
+        @TestMetadata("kt18982.kt")
+        public void testKt18982() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/objects/kt18982.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt2398.kt")
         public void testKt2398() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/objects/kt2398.kt");
@@ -17257,6 +17269,18 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("filenameFilter.kt")
             public void testFilenameFilter() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/constructors/filenameFilter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt19251.kt")
+            public void testKt19251() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/constructors/kt19251.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt19251_child.kt")
+            public void testKt19251_child() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/constructors/kt19251_child.kt");
                 doTest(fileName);
             }
 

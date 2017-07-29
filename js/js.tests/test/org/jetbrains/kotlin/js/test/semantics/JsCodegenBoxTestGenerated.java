@@ -3274,6 +3274,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/checkcastOptimization/kt19128.kt");
             doTest(fileName);
         }
+
+        @TestMetadata("kt19246.kt")
+        public void testKt19246() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/checkcastOptimization/kt19246.kt");
+            doTest(fileName);
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/classLiteral")
@@ -12951,6 +12957,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 return;
             }
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("kt18982.kt")
+        public void testKt18982() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/objects/kt18982.kt");
+            doTest(fileName);
         }
 
         @TestMetadata("kt2398.kt")

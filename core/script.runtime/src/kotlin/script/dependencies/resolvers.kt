@@ -21,9 +21,7 @@ package kotlin.script.dependencies
 import java.io.File
 import kotlin.script.dependencies.DependenciesResolver.ResolveResult
 
-typealias Environment = Map<String, Any?>
-
-interface DependenciesResolver : @Suppress("DEPRECATION") ScriptDependenciesResolver {
+interface DependenciesResolver : ScriptDependenciesResolver {
     fun resolve(scriptContents: ScriptContents, environment: Environment): ResolveResult
 
     object NoDependencies : DependenciesResolver {
@@ -52,11 +50,10 @@ interface ScriptContents {
     val annotations: Iterable<Annotation>
     val text: CharSequence?
 
-    @Deprecated("Use DependenciesResolver interface")
     data class Position(val line: Int, val col: Int)
 }
 
-data class ScriptReport(val message: String, val severity: Severity = ScriptReport.Severity.ERROR, val position: Position? = null) {
+data class ScriptReport(val message: String, val severity: Severity = Severity.ERROR, val position: Position? = null) {
     data class Position(val startLine: Int, val startColumn: Int, val endLine: Int? = null, val endColumn: Int? = null)
     enum class Severity { ERROR, WARNING, INFO, DEBUG }
 }
