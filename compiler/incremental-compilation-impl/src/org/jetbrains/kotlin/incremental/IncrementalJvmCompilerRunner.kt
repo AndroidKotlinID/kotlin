@@ -92,7 +92,7 @@ class IncrementalJvmCompilerRunner(
         private val artifactChangesProvider: ArtifactChangesProvider? = null,
         private val changesRegistry: ChangesRegistry? = null
 ) {
-    var anyClassesCompiled: Boolean = false
+    private var anyClassesCompiled: Boolean = false
             private set
     private val cacheDirectory = File(workingDir, CACHES_DIR_NAME)
     private val dirtySourcesSinceLastTimeFile = File(workingDir, DIRTY_SOURCES_FILE_NAME)
@@ -104,7 +104,7 @@ class IncrementalJvmCompilerRunner(
             messageCollector: MessageCollector,
             getChangedFiles: (IncrementalCachesManager)->ChangedFiles
     ): ExitCode {
-        val targetId = TargetId(name = args.moduleName, type = "java-production")
+        val targetId = TargetId(name = args.moduleName!!, type = "java-production")
         var caches = IncrementalCachesManager(targetId, cacheDirectory, File(args.destination), reporter)
 
         fun onError(e: Exception): ExitCode {
@@ -411,7 +411,7 @@ class IncrementalJvmCompilerRunner(
         val compiler = K2JVMCompiler()
         val outputDir = args.destinationAsFile
         val classpath = args.classpathAsList
-        val moduleFile = makeModuleFile(args.moduleName,
+        val moduleFile = makeModuleFile(args.moduleName!!,
                 isTest = false,
                 outputDir = outputDir,
                 sourcesToCompile = sourcesToCompile,
@@ -472,5 +472,5 @@ var K2JVMCompilerArguments.destinationAsFile: File
         set(value) { destination = value.path }
 
 var K2JVMCompilerArguments.classpathAsList: List<File>
-    get() = classpath.split(File.pathSeparator).map(::File)
+    get() = classpath!!.split(File.pathSeparator).map(::File)
     set(value) { classpath = value.joinToString(separator = File.pathSeparator, transform = { it.path }) }

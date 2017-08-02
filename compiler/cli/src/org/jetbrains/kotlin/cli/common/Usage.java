@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.cli.common.arguments.Argument;
 import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments;
 import org.jetbrains.kotlin.cli.common.arguments.ParseCommandLineArgumentsKt;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 public class Usage {
     // The magic number 29 corresponds to the similar padding width in javac and scalac command line compilers
@@ -32,14 +32,14 @@ public class Usage {
     public static <A extends CommonToolArguments> String render(@NotNull CLITool<A> tool, @NotNull A arguments) {
         StringBuilder sb = new StringBuilder();
         appendln(sb, "Usage: " + tool.executableScriptFileName() + " <options> <source files>");
-        appendln(sb, "where " + (arguments.extraHelp ? "advanced" : "possible") + " options include:");
+        appendln(sb, "where " + (arguments.getExtraHelp() ? "advanced" : "possible") + " options include:");
         for (Class<?> clazz = arguments.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
-            for (Field field : clazz.getDeclaredFields()) {
-                fieldUsage(sb, field, arguments.extraHelp);
+            for (Method method : clazz.getDeclaredMethods()) {
+                propertyUsage(sb, method, arguments.getExtraHelp());
             }
         }
 
-        if (arguments.extraHelp) {
+        if (arguments.getExtraHelp()) {
             appendln(sb, "");
             appendln(sb, "Advanced options are non-standard and may be changed or removed without any notice.");
         }
@@ -47,8 +47,8 @@ public class Usage {
         return sb.toString();
     }
 
-    private static void fieldUsage(@NotNull StringBuilder sb, @NotNull Field field, boolean extraHelp) {
-        Argument argument = field.getAnnotation(Argument.class);
+    private static void propertyUsage(@NotNull StringBuilder sb, @NotNull Method method, boolean extraHelp) {
+        Argument argument = method.getAnnotation(Argument.class);
         if (argument == null) return;
 
         if (extraHelp != ParseCommandLineArgumentsKt.isAdvanced(argument)) return;
