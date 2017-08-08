@@ -94,7 +94,7 @@ private class AllCommentsBinder(val isTrailing: Boolean) : WhitespacesAndComment
 
         val size = tokens.size
 
-        // Skip comment if needed. Expect that there can't be several consecutive comments
+        // Skip one whitespace if needed. Expect that there can't be several consecutive whitespaces
         val endToken = tokens[if (isTrailing) size - 1 else 0]
         val shift = if (endToken == KtTokens.WHITE_SPACE) 1 else 0
 
@@ -114,3 +114,27 @@ object DoNotBindAnything : WhitespacesAndCommentsBinder {
         return 0
     }
 }
+
+object BindFirstShebangWithWhitespaceOnly : WhitespacesAndCommentsBinder {
+    override fun getEdgePosition(
+            tokens: List<IElementType>, atStreamEdge: Boolean, getter: WhitespacesAndCommentsBinder.TokenTextGetter): Int {
+        if (tokens.firstOrNull() == KtTokens.SHEBANG_COMMENT) {
+            return if (tokens.getOrNull(1) == KtTokens.WHITE_SPACE) 2 else 1
+        }
+
+        return 0
+    }
+}
+
+class BindAll(val isTrailing: Boolean) : WhitespacesAndCommentsBinder {
+    override fun getEdgePosition(
+            tokens: List<IElementType>, atStreamEdge: Boolean, getter: WhitespacesAndCommentsBinder.TokenTextGetter): Int {
+        return if (!isTrailing) 0 else tokens.size
+    }
+}
+
+@JvmField
+val PRECEDING_ALL_BINDER: WhitespacesAndCommentsBinder = BindAll(false)
+
+@JvmField
+val TRAILING_ALL_BINDER: WhitespacesAndCommentsBinder = BindAll(true)
