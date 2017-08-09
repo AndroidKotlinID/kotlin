@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
+ * Copyright 2010-2017 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -342,27 +342,33 @@ class KotlinToResolvedCallTransformer(
             trace: BindingTrace,
             completedCall: CompletedKotlinCall.Simple
     ) {
-        var reported: Boolean
-        val reportTrackedTrace = object : BindingTrace by trace {
-            override fun report(diagnostic: Diagnostic) {
-                trace.report(diagnostic)
-                reported = true
-            }
-        }
-        val diagnosticReporter = DiagnosticReporterByTrackingStrategy(constantExpressionEvaluator, context, reportTrackedTrace, completedCall.kotlinCall.psiKotlinCall)
+        val trackingTrace = TrackingBindingTrace(trace)
+        val diagnosticReporter = DiagnosticReporterByTrackingStrategy(constantExpressionEvaluator, context, trackingTrace, completedCall.kotlinCall.psiKotlinCall)
 
         for (diagnostic in completedCall.resolutionStatus.diagnostics) {
-            reported = false
+            trackingTrace.reported = false
             diagnostic.report(diagnosticReporter)
-            if (!reported && REPORT_MISSING_NEW_INFERENCE_DIAGNOSTIC) {
-                if (diagnostic.candidateApplicability.isSuccess) {
-                    trace.report(Errors.NEW_INFERENCE_DIAGNOSTIC.on(diagnosticReporter.psiKotlinCall.psiCall.callElement, "Missing diagnostic: $diagnostic"))
-                }
-                else {
-                    trace.report(Errors.NEW_INFERENCE_ERROR.on(diagnosticReporter.psiKotlinCall.psiCall.callElement, "Missing diagnostic: $diagnostic"))
-                }
+
+            val dontRecordToTraceAsIs = diagnostic is ResolutionDiagnostic && diagnostic !is VisibilityError
+            val shouldReportMissingDiagnostic = !trackingTrace.reported && !dontRecordToTraceAsIs
+            if (shouldReportMissingDiagnostic && REPORT_MISSING_NEW_INFERENCE_DIAGNOSTIC) {
+                val factory = if (diagnostic.candidateApplicability.isSuccess) Errors.NEW_INFERENCE_DIAGNOSTIC else Errors.NEW_INFERENCE_ERROR
+                trace.report(factory.on(diagnosticReporter.psiKotlinCall.psiCall.callElement, "Missing diagnostic: $diagnostic"))
             }
         }
+    }
+}
+
+class TrackingBindingTrace(val trace: BindingTrace) : BindingTrace by trace {
+    var reported: Boolean = false
+
+    override fun report(diagnostic: Diagnostic) {
+        trace.report(diagnostic)
+        reported = true
+    }
+
+    fun markAsReported() {
+        reported = true
     }
 }
 
