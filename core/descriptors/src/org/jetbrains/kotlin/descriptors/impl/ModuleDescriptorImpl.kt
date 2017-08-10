@@ -47,6 +47,17 @@ class ModuleDescriptorImpl @JvmOverloads constructor(
     private var dependencies: ModuleDependencies? = null
     private var packageFragmentProviderForModuleContent: PackageFragmentProvider? = null
 
+    override var isValid: Boolean = true
+        set(value) {
+            field = value
+        }
+
+    override fun assertValid() {
+        if (!isValid) {
+            throw IllegalStateException("Accessing invalid module descriptor $this")
+        }
+    }
+
     private val packages = storageManager.createMemoizedFunction<FqName, PackageViewDescriptor> {
         fqName: FqName -> LazyPackageViewDescriptorImpl(this, fqName, storageManager)
     }
@@ -60,9 +71,13 @@ class ModuleDescriptorImpl @JvmOverloads constructor(
     override val allImplementingModules: Set<ModuleDescriptor>
         get() = this.dependencies.sure { "Dependencies of module $id were not set" }.allImplementingModules
 
-    override fun getPackage(fqName: FqName): PackageViewDescriptor = packages(fqName)
+    override fun getPackage(fqName: FqName): PackageViewDescriptor {
+        assertValid()
+        return packages(fqName)
+    }
 
     override fun getSubPackagesOf(fqName: FqName, nameFilter: (Name) -> Boolean): Collection<FqName> {
+        assertValid()
         return packageFragmentProvider.getSubPackagesOf(fqName, nameFilter)
     }
 
@@ -117,7 +132,10 @@ class ModuleDescriptorImpl @JvmOverloads constructor(
     }
 
     val packageFragmentProvider: PackageFragmentProvider
-        get() = packageFragmentProviderForWholeModuleWithDependencies
+        get() {
+            assertValid()
+            return packageFragmentProviderForWholeModuleWithDependencies
+        }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T> getCapability(capability: ModuleDescriptor.Capability<T>) = capabilities[capability] as? T
@@ -134,19 +152,4 @@ class ModuleDependenciesImpl(
         override val modulesWhoseInternalsAreVisible: Set<ModuleDescriptorImpl>
 ) : ModuleDependencies {
     override val allImplementingModules: Set<ModuleDescriptorImpl> = emptySet()
-}
-
-class LazyModuleDependencies(
-        storageManager: StorageManager,
-        computeDependencies: () -> List<ModuleDescriptorImpl>,
-        computeModulesWhoseInternalsAreVisible: () -> Set<ModuleDescriptorImpl>,
-        computeImplementingModules: () -> Set<ModuleDescriptorImpl>
-) : ModuleDependencies {
-    private val dependencies = storageManager.createLazyValue(computeDependencies)
-    private val visibleInternals = storageManager.createLazyValue(computeModulesWhoseInternalsAreVisible)
-    private val implementingModules = storageManager.createLazyValue(computeImplementingModules)
-
-    override val allDependencies: List<ModuleDescriptorImpl> get() = dependencies()
-    override val modulesWhoseInternalsAreVisible: Set<ModuleDescriptorImpl> get() = visibleInternals()
-    override val allImplementingModules: Set<ModuleDescriptorImpl> get() = implementingModules()
 }

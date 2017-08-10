@@ -20,7 +20,9 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.analyzer.*
-import org.jetbrains.kotlin.config.*
+import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.config.TargetPlatformVersion
 import org.jetbrains.kotlin.container.StorageComponentContainer
 import org.jetbrains.kotlin.container.get
 import org.jetbrains.kotlin.container.useImpl
@@ -46,7 +48,7 @@ import org.jetbrains.kotlin.serialization.deserialization.MetadataPackageFragmen
  * A facade that is used to analyze common (platform-independent) modules in multi-platform projects.
  * See [TargetPlatform.Default]
  */
-object DefaultAnalyzerFacade : AnalyzerFacade<PlatformAnalysisParameters>() {
+object DefaultAnalyzerFacade : AnalyzerFacade() {
     private class SourceModuleInfo(
             override val name: Name,
             override val capabilities: Map<ModuleDescriptor.Capability<*>, Any?>,
@@ -73,12 +75,12 @@ object DefaultAnalyzerFacade : AnalyzerFacade<PlatformAnalysisParameters>() {
         }
 
         @Suppress("NAME_SHADOWING")
-        val resolver = setupResolverForProject(
+        val resolver = ResolverForProjectImpl   (
                 "sources for metadata serializer",
                 ProjectContext(project), listOf(moduleInfo), { DefaultAnalyzerFacade },
                 { ModuleContent(files, GlobalSearchScope.allScope(project)) },
                 object : PlatformAnalysisParameters {},
-                object : LanguageSettingsProvider {
+                languageSettingsProvider = object : LanguageSettingsProvider {
                     override fun getLanguageVersionSettings(moduleInfo: ModuleInfo, project: Project) = multiplatformLanguageSettings
                     override fun getTargetPlatform(moduleInfo: ModuleInfo) = TargetPlatformVersion.NoVersion
                 },

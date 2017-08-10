@@ -122,6 +122,16 @@ public class ErrorUtils {
             public KotlinBuiltIns getBuiltIns() {
                 return DefaultBuiltIns.getInstance();
             }
+
+            @Override
+            public boolean isValid() {
+                return false;
+            }
+
+            @Override
+            public void assertValid() {
+                throw new IllegalStateException("ERROR_MODULE is not a valid module");
+            }
         };
     }
 
