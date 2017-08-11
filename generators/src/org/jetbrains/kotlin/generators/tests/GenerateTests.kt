@@ -150,7 +150,8 @@ import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterMultiFileTest
 import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterSingleFileTest
 import org.jetbrains.kotlin.jps.build.*
 import org.jetbrains.kotlin.jps.build.android.AbstractAndroidJpsTestCase
-import org.jetbrains.kotlin.jps.incremental.AbstractProtoComparisonTest
+import org.jetbrains.kotlin.jps.incremental.AbstractJsProtoComparisonTest
+import org.jetbrains.kotlin.jps.incremental.AbstractJvmProtoComparisonTest
 import org.jetbrains.kotlin.js.test.AbstractDceTest
 import org.jetbrains.kotlin.js.test.AbstractJsLineNumberTest
 import org.jetbrains.kotlin.js.test.semantics.*
@@ -1193,8 +1194,11 @@ fun main(args: Array<String>) {
             model("incremental/classHierarchyAffected", extension = null, excludeParentDirs = true)
         }
 
-        testClass<AbstractLookupTrackerTest> {
-            model("incremental/lookupTracker", extension = null, recursive = false)
+        testClass<AbstractJvmLookupTrackerTest> {
+            model("incremental/lookupTracker/jvm", extension = null, recursive = false)
+        }
+        testClass<AbstractJsLookupTrackerTest> {
+            model("incremental/lookupTracker/js", extension = null, recursive = false)
         }
 
         testClass(AbstractIncrementalLazyCachesTest::class.java) {
@@ -1211,13 +1215,24 @@ fun main(args: Array<String>) {
         }
     }
 
+
     testGroup("jps-plugin/jps-tests/test", "jps-plugin/testData") {
-        testClass<AbstractProtoComparisonTest> {
+        fun TestGroup.TestClass.commonProtoComparisonTests() {
             model("comparison/classSignatureChange", extension = null, excludeParentDirs = true)
             model("comparison/classPrivateOnlyChange", extension = null, excludeParentDirs = true)
             model("comparison/classMembersOnlyChanged", extension = null, excludeParentDirs = true)
             model("comparison/packageMembers", extension = null, excludeParentDirs = true)
             model("comparison/unchanged", extension = null, excludeParentDirs = true)
+        }
+
+        testClass<AbstractJvmProtoComparisonTest> {
+            commonProtoComparisonTests()
+            model("comparison/jvmOnly", extension = null, excludeParentDirs = true)
+        }
+
+        testClass<AbstractJsProtoComparisonTest> {
+            commonProtoComparisonTests()
+            model("comparison/jsOnly", extension = null, excludeParentDirs = true)
         }
     }
 

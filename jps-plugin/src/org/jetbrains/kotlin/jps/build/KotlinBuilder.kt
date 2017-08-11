@@ -22,6 +22,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.util.containers.ContainerUtil
 import com.intellij.util.containers.MultiMap
 import gnu.trove.THashSet
+import jdk.nashorn.internal.lookup.Lookup
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.builders.BuildTarget
 import org.jetbrains.jps.builders.DirtyFilesHolder
@@ -81,6 +82,19 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         const val JVM_BUILD_META_INFO_FILE_NAME = "jvm-build-meta-info.txt"
         const val SKIP_CACHE_VERSION_CHECK_PROPERTY = "kotlin.jps.skip.cache.version.check"
         const val JPS_KOTLIN_HOME_PROPERTY = "jps.kotlin.home"
+
+        val classesToLoadByParent: ClassCondition
+            get() = ClassCondition { className ->
+                className.startsWith("org.jetbrains.kotlin.load.kotlin.incremental.components.")
+                || className.startsWith("org.jetbrains.kotlin.incremental.components.")
+                || className.startsWith("org.jetbrains.kotlin.incremental.js")
+                || className == "org.jetbrains.kotlin.config.Services"
+                || className.startsWith("org.apache.log4j.") // For logging from compiler
+                || className == "org.jetbrains.kotlin.progress.CompilationCanceledStatus"
+                || className == "org.jetbrains.kotlin.progress.CompilationCanceledException"
+                || className == "org.jetbrains.kotlin.modules.TargetId"
+                || className == "org.jetbrains.kotlin.cli.common.ExitCode"
+            }
     }
 
     private val statisticsLogger = TeamcityStatisticsLogger()
@@ -106,6 +120,8 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
 
     override fun chunkBuildStarted(context: CompileContext, chunk: ModuleChunk) {
         super.chunkBuildStarted(context, chunk)
+
+        if (chunk.isDummy(context)) return
 
         context.testingContext?.buildLogger?.buildStarted(context, chunk)
 
@@ -164,8 +180,10 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         applyActionsOnCacheVersionChange(actions, cacheVersionsProvider, context, dataManager, targets, fsOperations)
     }
 
-    override fun chunkBuildFinished(context: CompileContext?, chunk: ModuleChunk?) {
+    override fun chunkBuildFinished(context: CompileContext, chunk: ModuleChunk) {
         super.chunkBuildFinished(context, chunk)
+
+        if (chunk.isDummy(context)) return
 
         LOG.debug("------------------------------------------")
     }
@@ -176,6 +194,8 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             dirtyFilesHolder: DirtyFilesHolder<JavaSourceRootDescriptor, ModuleBuildTarget>,
             outputConsumer: ModuleLevelBuilder.OutputConsumer
     ): ModuleLevelBuilder.ExitCode {
+        if (chunk.isDummy(context)) return NOTHING_DONE
+
         val messageCollector = MessageCollectorAdapter(context)
         val fsOperations = FSOperationsHelper(context, chunk, LOG)
 
@@ -446,9 +466,9 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             messageCollector: MessageCollectorAdapter
     ): JpsCompilerEnvironment? {
         val compilerServices = with(Services.Builder()) {
+            register(LookupTracker::class.java, lookupTracker)
             register(IncrementalCompilationComponents::class.java,
-                  IncrementalCompilationComponentsImpl(incrementalCaches.mapKeys { TargetId(it.key) },
-                                                       lookupTracker))
+                     IncrementalCompilationComponentsImpl(incrementalCaches.mapKeys { TargetId(it.key) }))
             register(CompilationCanceledStatus::class.java, object : CompilationCanceledStatus {
                 override fun checkCanceled() {
                     if (context.cancelStatus.isCanceled) throw CompilationCanceledException()
@@ -467,15 +487,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         return JpsCompilerEnvironment(
                 paths,
                 compilerServices,
-                ClassCondition { className ->
-                    className.startsWith("org.jetbrains.kotlin.load.kotlin.incremental.components.")
-                    || className.startsWith("org.jetbrains.kotlin.incremental.components.")
-                    || className == "org.jetbrains.kotlin.config.Services"
-                    || className.startsWith("org.apache.log4j.") // For logging from compiler
-                    || className == "org.jetbrains.kotlin.progress.CompilationCanceledStatus"
-                    || className == "org.jetbrains.kotlin.progress.CompilationCanceledException"
-                    || className == "org.jetbrains.kotlin.modules.TargetId"
-                },
+                classesToLoadByParent,
                 messageCollector,
                 OutputItemsCollectorImpl()
         )
