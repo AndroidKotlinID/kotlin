@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.descriptors.annotations.composeAnnotations
 import org.jetbrains.kotlin.load.java.*
 import org.jetbrains.kotlin.load.java.descriptors.JavaCallableMemberDescriptor
 import org.jetbrains.kotlin.load.java.descriptors.JavaMethodDescriptor
+import org.jetbrains.kotlin.load.java.descriptors.JavaPropertyDescriptor
 import org.jetbrains.kotlin.load.java.lazy.LazyJavaResolverContext
 import org.jetbrains.kotlin.load.java.lazy.computeNewDefaultTypeQualifiers
 import org.jetbrains.kotlin.load.java.lazy.descriptors.isJavaField
@@ -81,7 +82,6 @@ class SignatureEnhancement(private val annotationTypeQualifierResolver: Annotati
     }
 
     private fun <D : CallableMemberDescriptor> D.enhanceSignature(c: LazyJavaResolverContext): D {
-        val outerScopeQualifiers = c.computeNewDefaultTypeQualifiers(annotations)
         // TODO type parameters
         // TODO use new type parameters while enhancing other types
         // TODO Propagation into generic type arguments
@@ -91,11 +91,20 @@ class SignatureEnhancement(private val annotationTypeQualifierResolver: Annotati
         // Fake overrides with one overridden has been enhanced before
         if (kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE && original.overriddenDescriptors.size == 1) return this
 
+        val outerScopeQualifiers = c.computeNewDefaultTypeQualifiers(annotations)
+
+        // When loading method as an override for a property, all annotations are stick to its getter
+        val annotationOwnerForMember =
+                if (this is JavaPropertyDescriptor && getter?.isDefault == false)
+                    getter!!
+                else
+                    this
+
         val receiverTypeEnhancement =
                 if (extensionReceiverParameter != null)
                     parts(
                             typeContainer =
-                                this.safeAs<FunctionDescriptor>()
+                                annotationOwnerForMember.safeAs<FunctionDescriptor>()
                                     ?.getUserData(JavaMethodDescriptor.ORIGINAL_VALUE_PARAMETER_FOR_EXTENSION_RECEIVER),
                             isCovariant = false,
                             defaultTopLevelQualifiers =
@@ -117,7 +126,7 @@ class SignatureEnhancement(private val annotationTypeQualifierResolver: Annotati
             }
         }
 
-        val valueParameterEnhancements = valueParameters.map {
+        val valueParameterEnhancements = annotationOwnerForMember.valueParameters.map {
             p ->
             parts(
                     typeContainer = p, isCovariant = false,
@@ -130,7 +139,7 @@ class SignatureEnhancement(private val annotationTypeQualifierResolver: Annotati
 
         val returnTypeEnhancement =
                 parts(
-                        typeContainer = this, isCovariant = true,
+                        typeContainer = annotationOwnerForMember, isCovariant = true,
                         defaultTopLevelQualifiers =
                             outerScopeQualifiers?.get(
                                     if (this.safeAs<PropertyDescriptor>()?.isJavaField == true)

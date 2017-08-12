@@ -12040,6 +12040,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("exceptionMessage.kt")
+            public void testExceptionMessage() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/exceptionMessage.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("fieldOverridesField.kt")
             public void testFieldOverridesField() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/fieldOverridesField.kt");
@@ -22840,6 +22846,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("kt15734.kt")
             public void testKt15734() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/typealias/kt15734.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt19601.kt")
+            public void testKt19601() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/typealias/kt19601.kt");
                 doTest(fileName);
             }
 
