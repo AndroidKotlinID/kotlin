@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.config
 
+import org.jetbrains.kotlin.utils.Jsr305State
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -51,24 +52,6 @@ class AnalysisFlag<out T> internal constructor(
         val multiPlatformDoNotCheckImpl by Flag.Boolean
 
         @JvmStatic
-        val loadJsr305Annotations by Flag.Jsr305StateIgnoreByDefault
-    }
-}
-
-enum class Jsr305State(
-        val description: String,
-        val shouldReportWarning: Boolean = false,
-        val shouldReportError: Boolean = false
-) {
-    IGNORE("ignore"),
-    WARN("warn", shouldReportWarning = true),
-    ENABLE("enable", shouldReportError = true),
-    ;
-
-    companion object {
-        @JvmField
-        val DEFAULT: Jsr305State = IGNORE
-
-        fun findByDescription(description: String?) = values().firstOrNull { it.description == description }
+        val jsr305GlobalState by Flag.Jsr305StateIgnoreByDefault
     }
 }

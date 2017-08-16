@@ -62,7 +62,7 @@ import java.util.*
 
 class KotlinChangeSignatureTest : KotlinLightCodeInsightFixtureTestCase() {
     companion object {
-        private val BUILT_INS = DefaultBuiltIns.Instance
+        internal val BUILT_INS = DefaultBuiltIns.Instance
         private val EXTENSIONS = arrayOf(".kt", ".java")
     }
 
@@ -955,5 +955,9 @@ class KotlinChangeSignatureTest : KotlinLightCodeInsightFixtureTestCase() {
     fun testReturnTypeViaCodeFragment() = doTest {
         newName = "bar"
         newReturnTypeInfo = resolveType("A<T, U>", true, true)
+    }
+
+    fun testChangeReturnTypeToNonUnit() = doTest {
+        newReturnTypeInfo = KotlinTypeInfo(true, BUILT_INS.intType)
     }
 }
