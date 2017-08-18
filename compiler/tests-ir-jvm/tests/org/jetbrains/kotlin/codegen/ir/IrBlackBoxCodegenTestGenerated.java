@@ -7012,6 +7012,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 doTest(fileName);
             }
 
+            @TestMetadata("kt19690.kt")
+            public void testKt19690() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/delegatedProperty/local/kt19690.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("localVal.kt")
             public void testLocalVal() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/delegatedProperty/local/localVal.kt");
@@ -16273,6 +16279,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             public static class LocalDelegated extends AbstractIrBlackBoxCodegenTest {
                 public void testAllFilesPresentInLocalDelegated() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/reflection/properties/localDelegated"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("defaultImpls.kt")
+                public void testDefaultImpls() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/reflection/properties/localDelegated/defaultImpls.kt");
+                    doTest(fileName);
                 }
 
                 @TestMetadata("inlineFun.kt")
