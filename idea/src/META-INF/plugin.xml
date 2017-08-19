@@ -1152,6 +1152,11 @@
     </intentionAction>
 
     <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.SwapStringEqualsIgnoreCaseIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.SplitIfIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -2520,7 +2525,6 @@
                      displayName="Local variable naming convention"
                      level="WEAK WARNING"/>
 
-
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.PackageNameInspection"
                      language="kotlin"
                      groupPath="Kotlin"
@@ -2528,6 +2532,15 @@
                      enabledByDefault="true"
                      displayName="Package naming convention"
                      level="WEAK WARNING"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.KotlinRedundantOverrideInspection"
+                     displayName="Redundant override"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
 
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 

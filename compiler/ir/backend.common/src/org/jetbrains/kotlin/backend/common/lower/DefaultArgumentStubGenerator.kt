@@ -195,7 +195,7 @@ private fun Scope.createTemporaryVariable(symbol: IrVariableSymbol, initializer:
         }
 
 private fun getDefaultParameterExpressionBody(irFunction: IrFunction, valueParameter: ValueParameterDescriptor):IrExpressionBody {
-    return irFunction.getDefault(valueParameter) as? IrExpressionBody ?: TODO("FIXME!!!")
+    return irFunction.getDefault(valueParameter) ?: TODO("FIXME!!!")
 }
 
 private fun maskParameterDescriptor(function: IrFunction, number: Int) =
@@ -350,7 +350,7 @@ private fun FunctionDescriptor.generateDefaultsFunction(context: CommonBackendCo
                         /* annotations           = */ annotations,
                         /* isPrimary             = */ false,
                         /* source                = */ source)
-            is FunctionDescriptor -> {
+            else -> {
                 val name = Name.identifier("$name\$default")
 
                 SimpleFunctionDescriptorImpl.create(
@@ -360,7 +360,6 @@ private fun FunctionDescriptor.generateDefaultsFunction(context: CommonBackendCo
                         /* kind                  = */ CallableMemberDescriptor.Kind.SYNTHESIZED,
                         /* source                = */ source)
             }
-            else -> TODO("FIXME: $this")
         }
 
         val syntheticParameters = MutableList(valueParameters.size / 32 + 1) { i ->

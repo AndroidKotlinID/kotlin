@@ -953,7 +953,7 @@ fun checkSuperMethodsWithPopup(
             .setResizable(false)
             .setRequestFocus(true)
             .setItemChoosenCallback {
-                val value = list.selectedValue as? String ?: return@setItemChoosenCallback
+                val value = list.selectedValue ?: return@setItemChoosenCallback
                 val chosenElements = if (value == renameBase) deepestSuperMethods + declaration else listOf(declaration)
                 action(chosenElements)
             }
@@ -968,7 +968,7 @@ fun KtNamedDeclaration.isCompanionMemberOf(klass: KtClassOrObject): Boolean {
 
 internal fun KtDeclaration.withHeaderImplementations(): List<KtDeclaration> {
     val header = liftToHeader() ?: return listOf(this)
-    val implementations = header.headerImplementations() ?: emptySet()
+    val implementations = header.headerImplementations()
     return listOf(header) + implementations
 }
 
