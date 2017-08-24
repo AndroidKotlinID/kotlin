@@ -146,6 +146,10 @@
                 text="Local scenario"/>
       </group>
 
+      <action id="HighlightingBenchmarkAction"
+              class="org.jetbrains.kotlin.idea.actions.internal.benchmark.HighlightingBenchmarkAction"
+              text="Benchmark highlighting"/>
+
       <action id="CompletionBindingContextCachingToggleAction"
               class="org.jetbrains.kotlin.idea.actions.internal.CompletionBindingContextCachingToggleAction"
               text="Enable completion binding context caching"/>
@@ -2537,6 +2541,15 @@
                      displayName="Redundant override"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.SuspiciousEqualsCombination"
+                     displayName="Suspicious combination of == and ==="
+                     groupPath="Kotlin"
+                     groupName="Probable bugs"
                      enabledByDefault="true"
                      level="WEAK WARNING"
                      language="kotlin"

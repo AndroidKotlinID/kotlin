@@ -6099,6 +6099,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("typeOfLazyDelegatedPropertyWithObject.kt")
+                public void testTypeOfLazyDelegatedPropertyWithObject() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/typeOfLazyDelegatedPropertyWithObject.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("useCompleterWithoutExpectedType.kt")
                 public void testUseCompleterWithoutExpectedType() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/useCompleterWithoutExpectedType.kt");
@@ -16702,6 +16708,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("correctResultSubstitutorForErrorCandidate.kt")
+            public void testCorrectResultSubstitutorForErrorCandidate() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/regressions/correctResultSubstitutorForErrorCandidate.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("delegationWithReceiver.kt")
+            public void testDelegationWithReceiver() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/regressions/delegationWithReceiver.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("DoubleDefine.kt")
             public void testDoubleDefine() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/regressions/DoubleDefine.kt");
@@ -17467,6 +17485,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("OverrideResolution.kt")
             public void testOverrideResolution() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/regressions/OverrideResolution.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertyWithExtensionTypeInvoke.kt")
+            public void testPropertyWithExtensionTypeInvoke() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/regressions/propertyWithExtensionTypeInvoke.kt");
                 doTest(fileName);
             }
 
