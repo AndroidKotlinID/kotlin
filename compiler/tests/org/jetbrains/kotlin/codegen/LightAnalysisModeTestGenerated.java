@@ -17018,6 +17018,18 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             doTest(fileName);
         }
 
+        @TestMetadata("lambdaPostponeConstruction.kt")
+        public void testLambdaPostponeConstruction() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/regressions/lambdaPostponeConstruction.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("lambdaWrongReturnType.kt")
+        public void testLambdaWrongReturnType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/regressions/lambdaWrongReturnType.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("nestedIntersection.kt")
         public void testNestedIntersection() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/regressions/nestedIntersection.kt");
@@ -17063,6 +17075,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("referenceToSelfInLocal.kt")
         public void testReferenceToSelfInLocal() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/regressions/referenceToSelfInLocal.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("resolvedCallForGetOperator.kt")
+        public void testResolvedCallForGetOperator() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/regressions/resolvedCallForGetOperator.kt");
             doTest(fileName);
         }
 
