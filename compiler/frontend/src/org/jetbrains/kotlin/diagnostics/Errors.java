@@ -37,7 +37,7 @@ import org.jetbrains.kotlin.resolve.VarianceConflictDiagnosticData;
 import org.jetbrains.kotlin.resolve.calls.inference.InferenceErrorData;
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall;
 import org.jetbrains.kotlin.resolve.calls.tower.WrongResolutionToClassifier;
-import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker;
+import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker.Compatibility.Incompatible;
 import org.jetbrains.kotlin.serialization.deserialization.IncompatibleVersionErrorData;
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.SinceKotlinInfo;
 import org.jetbrains.kotlin.types.KotlinType;
@@ -560,9 +560,16 @@ public interface Errors {
     DiagnosticFactory0<KtTypeAlias> IMPL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION = DiagnosticFactory0.create(ERROR, DECLARATION_SIGNATURE);
 
     DiagnosticFactory3<KtDeclaration, MemberDescriptor, ModuleDescriptor,
-            Map<HeaderImplDeclarationChecker.Compatibility.Incompatible, Collection<MemberDescriptor>>> HEADER_WITHOUT_IMPLEMENTATION =
+            Map<Incompatible, Collection<MemberDescriptor>>> HEADER_WITHOUT_IMPLEMENTATION =
             DiagnosticFactory3.create(ERROR, DECLARATION_SIGNATURE);
-    DiagnosticFactory0<PsiElement> IMPLEMENTATION_WITHOUT_HEADER = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory2<KtDeclaration, MemberDescriptor,
+            Map<Incompatible, Collection<MemberDescriptor>>> IMPLEMENTATION_WITHOUT_HEADER =
+            DiagnosticFactory2.create(ERROR, DECLARATION_SIGNATURE);
+
+    DiagnosticFactory2<KtDeclaration, ClassDescriptor,
+            List<Pair<MemberDescriptor, Map<Incompatible, Collection<MemberDescriptor>>>>> HEADER_CLASS_MEMBERS_ARE_NOT_IMPLEMENTED =
+            DiagnosticFactory2.create(ERROR, DECLARATION_SIGNATURE);
+    DiagnosticFactory0<KtDeclaration> IMPL_MISSING = DiagnosticFactory0.create(ERROR, DECLARATION_SIGNATURE);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

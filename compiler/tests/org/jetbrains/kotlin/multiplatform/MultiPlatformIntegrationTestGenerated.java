@@ -96,9 +96,21 @@ public class MultiPlatformIntegrationTestGenerated extends AbstractMultiPlatform
         doTest(fileName);
     }
 
+    @TestMetadata("missingOverload")
+    public void testMissingOverload() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/missingOverload/");
+        doTest(fileName);
+    }
+
     @TestMetadata("simple")
     public void testSimple() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/simple/");
+        doTest(fileName);
+    }
+
+    @TestMetadata("simpleNoImplKeywordOnTopLevelFunction")
+    public void testSimpleNoImplKeywordOnTopLevelFunction() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/simpleNoImplKeywordOnTopLevelFunction/");
         doTest(fileName);
     }
 
@@ -131,6 +143,12 @@ public class MultiPlatformIntegrationTestGenerated extends AbstractMultiPlatform
         @TestMetadata("functionIncorrectSignature")
         public void testFunctionIncorrectSignature() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/classScopes/functionIncorrectSignature/");
+            doTest(fileName);
+        }
+
+        @TestMetadata("functionIncorrectSignatureFromSuperclass")
+        public void testFunctionIncorrectSignatureFromSuperclass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/classScopes/functionIncorrectSignatureFromSuperclass/");
             doTest(fileName);
         }
 

@@ -270,9 +270,14 @@ public class DefaultErrorMessages {
         MAP.put(IMPL_TYPE_ALIAS_WITH_USE_SITE_VARIANCE, "Right-hand side of 'impl' type alias cannot contain use-site variance or star projections");
         MAP.put(IMPL_TYPE_ALIAS_WITH_COMPLEX_SUBSTITUTION, "Type arguments in the right-hand side of 'impl' type alias should be its type parameters in the same order, e.g. 'impl typealias Foo<A, B> = Bar<A, B>'");
 
-        MAP.put(HEADER_WITHOUT_IMPLEMENTATION, "Header declaration ''{0}'' has no implementation in module{1}{2}", NAME,
-                PLATFORM, PlatformIncompatibilityDiagnosticRenderer.INSTANCE);
-        MAP.put(IMPLEMENTATION_WITHOUT_HEADER, "Modifier 'impl' is only applicable to members that are initially declared in platform-independent code");
+        MAP.put(HEADER_WITHOUT_IMPLEMENTATION, "''header'' {0} has no implementation in module{1}{2}", DECLARATION_NAME_WITH_KIND,
+                PLATFORM, PlatformIncompatibilityDiagnosticRenderer.TEXT);
+        MAP.put(IMPLEMENTATION_WITHOUT_HEADER, "''impl'' {0} has no corresponding ''header'' declaration{1}", DECLARATION_NAME_WITH_KIND,
+                PlatformIncompatibilityDiagnosticRenderer.TEXT);
+
+        MAP.put(HEADER_CLASS_MEMBERS_ARE_NOT_IMPLEMENTED, "''impl'' class ''{0}'' has no implementation of ''header'' class members:{1}",
+                NAME, IncompatibleHeaderImplClassScopesRenderer.TEXT);
+        MAP.put(IMPL_MISSING, "Declaration should be marked with 'impl' (suppress with -Xno-check-impl)");
 
         MAP.put(PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT, "Projections are not allowed on type arguments of functions and properties");
         MAP.put(SUPERTYPE_NOT_INITIALIZED, "This type has a constructor, and thus must be initialized here");

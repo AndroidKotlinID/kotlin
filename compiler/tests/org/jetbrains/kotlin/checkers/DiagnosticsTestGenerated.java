@@ -13630,6 +13630,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
             }
 
+            @TestMetadata("headerFunInNonHeaderClass.kt")
+            public void testHeaderFunInNonHeaderClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerFunInNonHeaderClass.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("implDelegatedMember.kt")
             public void testImplDelegatedMember() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/implDelegatedMember.kt");
@@ -13734,6 +13740,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("extraHeaderOnMembers.kt")
+                public void testExtraHeaderOnMembers() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/extraHeaderOnMembers.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("genericClassImplTypeAlias.kt")
                 public void testGenericClassImplTypeAlias() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/genericClassImplTypeAlias.kt");
@@ -13767,6 +13779,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("nestedClasses.kt")
                 public void testNestedClasses() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/nestedClasses.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("nestedClassesWithErrors.kt")
+                public void testNestedClassesWithErrors() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/nestedClassesWithErrors.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("noImplKeywordOnMember.kt")
+                public void testNoImplKeywordOnMember() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/noImplKeywordOnMember.kt");
                     doTest(fileName);
                 }
 
@@ -13881,6 +13905,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("simpleHeaderFun.kt")
                 public void testSimpleHeaderFun() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/topLevelFun/simpleHeaderFun.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("valueParameterModifiers.kt")
+                public void testValueParameterModifiers() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/topLevelFun/valueParameterModifiers.kt");
                     doTest(fileName);
                 }
             }

@@ -17,7 +17,6 @@
 package org.jetbrains.kotlin.resolve;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,67 +32,14 @@ import org.jetbrains.kotlin.resolve.checkers.DeclarationChecker;
 import org.jetbrains.kotlin.resolve.checkers.PublishedApiUsageChecker;
 import org.jetbrains.kotlin.resolve.checkers.UnderscoreChecker;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
-import static org.jetbrains.kotlin.diagnostics.Errors.NESTED_CLASS_NOT_ALLOWED;
-import static org.jetbrains.kotlin.diagnostics.Errors.NESTED_OBJECT_NOT_ALLOWED;
+import static org.jetbrains.kotlin.diagnostics.Errors.*;
 import static org.jetbrains.kotlin.lexer.KtTokens.*;
-import static org.jetbrains.kotlin.psi.KtStubbedPsiUtil.getContainingDeclaration;
 
 public class ModifiersChecker {
-    private static final Set<KtModifierKeywordToken> MODIFIERS_ILLEGAL_ON_PARAMETERS;
-
-    static {
-        MODIFIERS_ILLEGAL_ON_PARAMETERS = Sets.newHashSet();
-        MODIFIERS_ILLEGAL_ON_PARAMETERS.addAll(Arrays.asList(KtTokens.MODIFIER_KEYWORDS_ARRAY));
-        MODIFIERS_ILLEGAL_ON_PARAMETERS.remove(KtTokens.VARARG_KEYWORD);
-    }
-
-    public static boolean isIllegalInner(@NotNull DeclarationDescriptor descriptor) {
-        return checkIllegalInner(descriptor) != InnerModifierCheckResult.ALLOWED;
-    }
-
-    private enum InnerModifierCheckResult {
-        ALLOWED,
-        ILLEGAL_POSITION,
-        IN_INTERFACE,
-        IN_OBJECT,
-    }
-
-
-    // NOTE: just checks if this is legal context for companion modifier (Companion object descriptor can be created)
-    // COMPANION_OBJECT_NOT_ALLOWED can be reported later
-    public static boolean isCompanionModifierAllowed(@NotNull KtDeclaration declaration) {
-        if (declaration instanceof KtObjectDeclaration) {
-            KtDeclaration containingDeclaration = getContainingDeclaration(declaration);
-            if (containingDeclaration instanceof KtClassOrObject) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @NotNull
-    private static InnerModifierCheckResult checkIllegalInner(@NotNull DeclarationDescriptor descriptor) {
-        if (!(descriptor instanceof ClassDescriptor)) return InnerModifierCheckResult.ILLEGAL_POSITION;
-        ClassDescriptor classDescriptor = (ClassDescriptor) descriptor;
-
-        if (classDescriptor.getKind() != ClassKind.CLASS) return InnerModifierCheckResult.ILLEGAL_POSITION;
-
-        DeclarationDescriptor containingDeclaration = classDescriptor.getContainingDeclaration();
-        if (!(containingDeclaration instanceof ClassDescriptor)) return InnerModifierCheckResult.ILLEGAL_POSITION;
-
-        if (DescriptorUtils.isInterface(containingDeclaration)) {
-            return InnerModifierCheckResult.IN_INTERFACE;
-        }
-        else if (DescriptorUtils.isObject(containingDeclaration)) {
-            return InnerModifierCheckResult.IN_OBJECT;
-        }
-        else {
-            return InnerModifierCheckResult.ALLOWED;
-        }
-    }
-
     private static boolean isIllegalNestedClass(@NotNull DeclarationDescriptor descriptor) {
         if (!(descriptor instanceof ClassDescriptor)) return false;
         DeclarationDescriptor containingDeclaration = descriptor.getContainingDeclaration();
@@ -192,20 +138,11 @@ public class ModifiersChecker {
         return defaultVisibility;
     }
 
-    public static boolean isInnerClass(@Nullable KtModifierList modifierList) {
-        return modifierList != null && modifierList.hasModifier(INNER_KEYWORD);
-    }
-
     public class ModifiersCheckingProcedure {
-
-        @NotNull
         private final BindingTrace trace;
-        @NotNull
-        private final LanguageVersionSettings languageVersionSettings;
 
-        private ModifiersCheckingProcedure(@NotNull BindingTrace trace, LanguageVersionSettings languageVersionSettings) {
+        private ModifiersCheckingProcedure(@NotNull BindingTrace trace) {
             this.trace = trace;
-            this.languageVersionSettings = languageVersionSettings;
         }
 
         public void checkParameterHasNoValOrVar(
@@ -223,6 +160,7 @@ public class ModifiersChecker {
             checkObjectInsideInnerClass(modifierListOwner, descriptor);
             checkTypeParametersModifiers(modifierListOwner);
             checkModifierListCommon(modifierListOwner, descriptor);
+            checkIllegalHeader(modifierListOwner, descriptor);
         }
 
         private void checkObjectInsideInnerClass(@NotNull KtDeclaration modifierListOwner, @NotNull MemberDescriptor descriptor) {
@@ -255,6 +193,16 @@ public class ModifiersChecker {
                 annotationChecker.check(multiEntry, trace, null);
                 ModifierCheckerCore.INSTANCE.check(multiEntry, trace, null, languageVersionSettings);
                 UnderscoreChecker.INSTANCE.checkNamed(multiEntry, trace, languageVersionSettings, /* allowSingleUnderscore = */ true);
+            }
+        }
+
+        private void checkIllegalHeader(@NotNull KtModifierListOwner modifierListOwner, @NotNull DeclarationDescriptor descriptor) {
+            // Most cases are already handled by ModifierCheckerCore, only check nested classes here
+            KtModifierList modifierList = modifierListOwner.getModifierList();
+            PsiElement keyword = modifierList != null ? modifierList.getModifier(HEADER_KEYWORD) : null;
+            if (keyword != null &&
+                descriptor instanceof ClassDescriptor && descriptor.getContainingDeclaration() instanceof ClassDescriptor) {
+                trace.report(WRONG_MODIFIER_TARGET.on(keyword, KtTokens.HEADER_KEYWORD, "nested class"));
             }
         }
 
@@ -325,6 +273,6 @@ public class ModifiersChecker {
 
     @NotNull
     public ModifiersCheckingProcedure withTrace(@NotNull BindingTrace trace) {
-        return new ModifiersCheckingProcedure(trace, languageVersionSettings);
+        return new ModifiersCheckingProcedure(trace);
     }
 }
