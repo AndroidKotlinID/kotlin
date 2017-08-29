@@ -109,18 +109,16 @@ fun isModuleConfigured(moduleSourceRootGroup: ModuleSourceRootGroup): Boolean {
 }
 
 fun getModulesWithKotlinFiles(project: Project): Collection<Module> {
-    if (project.isDisposed) {
-        return emptyList()
-    }
-
-    if (!runReadAction { FileTypeIndex.containsFileOfType (KotlinFileType.INSTANCE, GlobalSearchScope.projectScope(project)) }) {
+    if (!runReadAction {
+        !project.isDisposed && FileTypeIndex.containsFileOfType (KotlinFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+    }) {
         return emptyList()
     }
 
     return project.allModules()
             .filter { module ->
                 runReadAction {
-                    FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, module.getModuleScope(true))
+                    !project.isDisposed && FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, module.getModuleScope(true))
                 }
             }
 }
@@ -206,8 +204,8 @@ fun getCanBeConfiguredModulesWithKotlinFiles(project: Project, excludeModules: C
 }
 
 fun hasAnyKotlinRuntimeInScope(module: Module): Boolean {
-    val scope = module.getModuleWithDependenciesAndLibrariesScope(hasKotlinFilesOnlyInTests(module))
     return runReadAction {
+        val scope = module.getModuleWithDependenciesAndLibrariesScope(hasKotlinFilesOnlyInTests(module))
         getKotlinJvmRuntimeMarkerClass(module.project, scope) != null ||
         hasKotlinJsKjsmFile(module.project, LibraryKindSearchScope(module, scope, JSLibraryKind) ) ||
         hasKotlinCommonRuntimeInScope(scope)
