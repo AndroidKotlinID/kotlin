@@ -242,6 +242,9 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                                       arguments: K2JVMCompilerArguments): Boolean {
         if (arguments.useJavac) {
             environment.configuration.put(JVMConfigurationKeys.USE_JAVAC, true)
+            if (arguments.compileJava) {
+                environment.configuration.put(JVMConfigurationKeys.COMPILE_JAVA, true)
+            }
             return environment.registerJavac(arguments = arguments.javacArguments)
         }
 
@@ -250,7 +253,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
 
     private fun compileJavaFilesIfNeeded(environment: KotlinCoreEnvironment,
                                          arguments: K2JVMCompilerArguments): Boolean  {
-        if (arguments.useJavac) {
+        if (arguments.compileJava) {
             return JavacWrapper.getInstance(environment.project).use { it.compile() }
         }
         return true
