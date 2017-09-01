@@ -26,10 +26,12 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
 import org.jetbrains.kotlin.builtins.PrimitiveType;
 import org.jetbrains.kotlin.codegen.intrinsics.IntrinsicMethods;
+import org.jetbrains.kotlin.codegen.pseudoInsns.PseudoInsnsKt;
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper;
 import org.jetbrains.kotlin.descriptors.*;
 import org.jetbrains.kotlin.descriptors.impl.SyntheticFieldDescriptor;
 import org.jetbrains.kotlin.load.java.JvmAbi;
+import org.jetbrains.kotlin.name.Name;
 import org.jetbrains.kotlin.psi.KtExpression;
 import org.jetbrains.kotlin.psi.ValueArgument;
 import org.jetbrains.kotlin.resolve.BindingContext;
@@ -147,6 +149,11 @@ public abstract class StackValue {
     }
 
     @NotNull
+    public static Local local(int index, @NotNull Type type, @NotNull VariableDescriptor descriptor) {
+        return new Local(index, type, descriptor.isLateInit(), descriptor.getName());
+    }
+
+    @NotNull
     public static Delegate delegate(
             @NotNull Type type,
             @NotNull StackValue delegateValue,
@@ -160,6 +167,11 @@ public abstract class StackValue {
     @NotNull
     public static StackValue shared(int index, @NotNull Type type) {
         return new Shared(index, type);
+    }
+
+    @NotNull
+    public static StackValue shared(int index, @NotNull Type type, @NotNull VariableDescriptor descriptor) {
+        return new Shared(index, type, descriptor.isLateInit(), descriptor.getName());
     }
 
     @NotNull
@@ -434,16 +446,18 @@ public abstract class StackValue {
             @NotNull Type localType,
             @NotNull Type classType,
             @NotNull String fieldName,
-            @NotNull Field refWrapper
+            @NotNull Field refWrapper,
+            @NotNull VariableDescriptor variableDescriptor
     ) {
-        return new FieldForSharedVar(localType, classType, fieldName, refWrapper);
+        return new FieldForSharedVar(localType, classType, fieldName, refWrapper,
+                                     variableDescriptor.isLateInit(), variableDescriptor.getName());
     }
 
     @NotNull
     public static FieldForSharedVar fieldForSharedVar(@NotNull FieldForSharedVar field, @NotNull StackValue newReceiver) {
         Field oldReceiver = (Field) field.receiver;
         Field newSharedVarReceiver = field(oldReceiver, newReceiver);
-        return new FieldForSharedVar(field.type, field.owner, field.name, newSharedVarReceiver);
+        return new FieldForSharedVar(field.type, field.owner, field.name, newSharedVarReceiver, field.isLateinit, field.variableName);
     }
 
     public static StackValue coercion(@NotNull StackValue value, @NotNull Type castType) {
@@ -623,19 +637,35 @@ public abstract class StackValue {
 
     public static class Local extends StackValue {
         public final int index;
+        private final boolean isLateinit;
+        private final Name name;
 
-        private Local(int index, Type type) {
+        private Local(int index, Type type, boolean isLateinit, Name name) {
             super(type, false);
-            this.index = index;
 
             if (index < 0) {
                 throw new IllegalStateException("local variable index must be non-negative");
             }
+
+            if (isLateinit && name == null) {
+                throw new IllegalArgumentException("Lateinit local variable should have name: #" + index + " " + type.getDescriptor());
+            }
+
+            this.index = index;
+            this.isLateinit = isLateinit;
+            this.name = name;
+        }
+
+        private Local(int index, Type type) {
+            this(index, type, false, null);
         }
 
         @Override
         public void putSelector(@NotNull Type type, @NotNull InstructionAdapter v) {
             v.load(index, this.type);
+            if (isLateinit) {
+                StackValue.genNonNullAssertForLateinit(v, name.asString());
+            }
             coerceTo(type, v);
             // TODO unbox
         }
@@ -644,6 +674,9 @@ public abstract class StackValue {
         public void storeSelector(@NotNull Type topOfStackType, @NotNull InstructionAdapter v) {
             coerceFrom(topOfStackType, v);
             v.store(index, this.type);
+            if (isLateinit) {
+                PseudoInsnsKt.storeNotNull(v);
+            }
         }
     }
 
@@ -1258,12 +1291,7 @@ public abstract class StackValue {
         private void genNotNullAssertionForLateInitIfNeeded(@NotNull InstructionAdapter v) {
             if (!descriptor.isLateInit()) return;
 
-            v.dup();
-            Label ok = new Label();
-            v.ifnonnull(ok);
-            v.visitLdcInsn(descriptor.getName().asString());
-            v.invokestatic(IntrinsicMethods.INTRINSICS_CLASS_NAME, "throwUninitializedPropertyAccessException", "(Ljava/lang/String;)V", false);
-            v.mark(ok);
+            StackValue.genNonNullAssertForLateinit(v, descriptor.getName().asString());
         }
 
         @Override
@@ -1327,6 +1355,15 @@ public abstract class StackValue {
         }
     }
 
+    private static void genNonNullAssertForLateinit(@NotNull InstructionAdapter v, @NotNull String name) {
+        v.dup();
+        Label ok = new Label();
+        v.ifnonnull(ok);
+        v.visitLdcInsn(name);
+        v.invokestatic(IntrinsicMethods.INTRINSICS_CLASS_NAME, "throwUninitializedPropertyAccessException", "(Ljava/lang/String;)V", false);
+        v.mark(ok);
+    }
+
     private static class Expression extends StackValue {
         private final KtExpression expression;
         private final ExpressionCodegen generator;
@@ -1345,10 +1382,23 @@ public abstract class StackValue {
 
     public static class Shared extends StackValueWithSimpleReceiver {
         private final int index;
+        private final boolean isLateinit;
+        private final Name name;
 
-        public Shared(int index, Type type) {
+        public Shared(int index, Type type, boolean isLateinit, Name name) {
             super(type, false, false, local(index, OBJECT_TYPE), false);
             this.index = index;
+
+            if (isLateinit && name == null) {
+                throw new IllegalArgumentException("Lateinit shared local variable should have name: #" + index + " " + type.getDescriptor());
+            }
+
+            this.isLateinit = isLateinit;
+            this.name = name;
+        }
+
+        public Shared(int index, Type type) {
+            this(index, type, false, null);
         }
 
         public int getIndex() {
@@ -1360,6 +1410,9 @@ public abstract class StackValue {
             Type refType = refType(this.type);
             Type sharedType = sharedTypeForType(this.type);
             v.visitFieldInsn(GETFIELD, sharedType.getInternalName(), "element", refType.getDescriptor());
+            if (isLateinit) {
+                StackValue.genNonNullAssertForLateinit(v, name.asString());
+            }
             coerceFrom(refType, v);
             coerceTo(type, v);
         }
@@ -1397,11 +1450,23 @@ public abstract class StackValue {
     public static class FieldForSharedVar extends StackValueWithSimpleReceiver {
         final Type owner;
         final String name;
+        final boolean isLateinit;
+        final Name variableName;
 
-        public FieldForSharedVar(Type type, Type owner, String name, StackValue.Field receiver) {
+        public FieldForSharedVar(
+                Type type, Type owner, String name, StackValue.Field receiver,
+                boolean isLateinit, Name variableName
+        ) {
             super(type, false, false, receiver, receiver.canHaveSideEffects());
+
+            if (isLateinit && variableName == null) {
+                throw new IllegalArgumentException("variableName should be non-null for captured lateinit variable " + name);
+            }
+
             this.owner = owner;
             this.name = name;
+            this.isLateinit = isLateinit;
+            this.variableName = variableName;
         }
 
         @Override
@@ -1409,6 +1474,9 @@ public abstract class StackValue {
             Type sharedType = sharedTypeForType(this.type);
             Type refType = refType(this.type);
             v.visitFieldInsn(GETFIELD, sharedType.getInternalName(), "element", refType.getDescriptor());
+            if (isLateinit) {
+                StackValue.genNonNullAssertForLateinit(v, variableName.asString());
+            }
             coerceFrom(refType, v);
             coerceTo(type, v);
         }

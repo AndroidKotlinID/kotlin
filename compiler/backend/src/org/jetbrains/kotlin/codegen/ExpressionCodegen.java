@@ -52,6 +52,7 @@ import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper;
 import org.jetbrains.kotlin.codegen.when.SwitchCodegen;
 import org.jetbrains.kotlin.codegen.when.SwitchCodegenProvider;
 import org.jetbrains.kotlin.config.ApiVersion;
+import org.jetbrains.kotlin.config.LanguageFeature;
 import org.jetbrains.kotlin.descriptors.*;
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor;
 import org.jetbrains.kotlin.descriptors.impl.LocalVariableDescriptor;
@@ -61,6 +62,7 @@ import org.jetbrains.kotlin.diagnostics.Errors;
 import org.jetbrains.kotlin.lexer.KtTokens;
 import org.jetbrains.kotlin.load.java.JvmAbi;
 import org.jetbrains.kotlin.load.java.sam.SamConstructorDescriptor;
+import org.jetbrains.kotlin.load.kotlin.MethodSignatureMappingKt;
 import org.jetbrains.kotlin.load.kotlin.TypeSignatureMappingKt;
 import org.jetbrains.kotlin.name.Name;
 import org.jetbrains.kotlin.psi.*;
@@ -433,11 +435,6 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     @NotNull
     public Type expressionType(@Nullable KtExpression expression) {
         return CodegenUtilKt.asmType(expression, typeMapper, bindingContext);
-    }
-
-    @Nullable
-    private KotlinType expressionJetType(@Nullable KtExpression expression) {
-        return CodegenUtilKt.kotlinType(expression, bindingContext);
     }
 
     @Override
@@ -1289,8 +1286,19 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         KotlinType varType = isDelegatedLocalVariable(variableDescriptor)
                              ? JvmCodegenUtil.getPropertyDelegateType((VariableDescriptorWithAccessors) variableDescriptor, bindingContext)
                              : variableDescriptor.getType();
-        //noinspection ConstantConditions
-        return asmType(varType);
+
+        if (variableDescriptor instanceof ValueParameterDescriptor &&
+                MethodSignatureMappingKt.forceSingleValueParameterBoxing(
+                        (CallableDescriptor) variableDescriptor.getContainingDeclaration()
+                )
+        ) {
+            //noinspection ConstantConditions
+            return asmType(TypeUtils.makeNullable(varType));
+        }
+        else {
+            //noinspection ConstantConditions
+            return asmType(varType);
+        }
     }
 
     private void putDescriptorIntoFrameMap(@NotNull KtElement statement) {
@@ -1828,10 +1836,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             Type sharedVarType = typeMapper.getSharedVarType(descriptor);
             Type varType = getVariableTypeNoSharing(variableDescriptor);
             if (sharedVarType != null) {
-                return StackValue.shared(index, varType);
+                return StackValue.shared(index, varType, variableDescriptor);
             }
             else {
-                return adjustVariableValue(StackValue.local(index, varType), variableDescriptor);
+                return adjustVariableValue(StackValue.local(index, varType, variableDescriptor), variableDescriptor);
             }
         }
         else {
@@ -2459,7 +2467,14 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             return generateExtensionReceiver(((ExtensionReceiver) receiverValue).getDeclarationDescriptor());
         }
         else if (receiverValue instanceof ExpressionReceiver) {
-            return gen(((ExpressionReceiver) receiverValue).getExpression());
+            ExpressionReceiver expressionReceiver = (ExpressionReceiver) receiverValue;
+            StackValue stackValue = gen(expressionReceiver.getExpression());
+            if (!state.isReceiverAssertionsDisabled()) {
+                RuntimeAssertionInfo runtimeAssertionInfo =
+                        bindingContext.get(JvmBindingContextSlices.RECEIVER_RUNTIME_ASSERTION_INFO, expressionReceiver);
+                stackValue = genNotNullAssertions(state, stackValue, runtimeAssertionInfo);
+            }
+            return stackValue;
         }
         else {
             throw new UnsupportedOperationException("Unsupported receiver value: " + receiverValue);
@@ -3496,6 +3511,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         else if (delegateExpression != null) {
             initializeLocalVariable(property, gen(delegateExpression));
         }
+        else if (property.hasModifier(KtTokens.LATEINIT_KEYWORD)) {
+            initializeLocalVariable(property, null);
+        }
 
         return StackValue.none();
     }
@@ -3592,7 +3610,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
     private void initializeLocalVariable(
             @NotNull KtVariableDeclaration variableDeclaration,
-            @NotNull StackValue initializer
+            @Nullable StackValue initializer
     ) {
         LocalVariableDescriptor variableDescriptor = (LocalVariableDescriptor) getVariableDescriptorNotNull(variableDeclaration);
 
@@ -3612,6 +3630,14 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         StackValue storeTo = sharedVarType == null ? StackValue.local(index, varType) : StackValue.shared(index, varType);
 
         storeTo.putReceiver(v, false);
+        if (variableDescriptor.isLateInit()) {
+            assert initializer == null : "Initializer should be null for lateinit var " + variableDescriptor + ": " + initializer;
+            v.aconst(null);
+            storeTo.storeSelector(storeTo.type, v);
+            return;
+        }
+
+        assert initializer != null : "Initializer should be not null for " + variableDescriptor;
         initializer.put(initializer.type, v);
 
         markLineNumber(variableDeclaration, false);

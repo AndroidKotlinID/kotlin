@@ -11040,6 +11040,18 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     doTest(fileName);
                 }
 
+                @TestMetadata("typeInferenceFailedOnComponentN.kt")
+                public void testTypeInferenceFailedOnComponentN() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/typeInferenceFailedOnComponentN.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("typeInferenceFailedOnIteratorCall.kt")
+                public void testTypeInferenceFailedOnIteratorCall() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/typeInferenceFailedOnIteratorCall.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("wrongArgumentExtensionFunction.kt")
                 public void testWrongArgumentExtensionFunction() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/wrongArgumentExtensionFunction.kt");
@@ -13052,6 +13064,33 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             public void testSetter() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/setter.kt");
                 doTest(fileName);
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/tests/lateinit/local")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Local extends AbstractDiagnosticsUsingJavacTest {
+                public void testAllFilesPresentInLocal() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/lateinit/local"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("inapplicableLateinitModifier.kt")
+                public void testInapplicableLateinitModifier() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/local/inapplicableLateinitModifier.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("localLateinit.kt")
+                public void testLocalLateinit() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/local/localLateinit.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("uninitialized.kt")
+                public void testUninitialized() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/lateinit/local/uninitialized.kt");
+                    doTest(fileName);
+                }
             }
         }
 
@@ -16171,6 +16210,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("extensionPropertyMustHaveAccessorsOrBeAbstract.kt")
             public void testExtensionPropertyMustHaveAccessorsOrBeAbstract() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/properties/extensionPropertyMustHaveAccessorsOrBeAbstract.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("lateinitOnTopLevel.kt")
+            public void testLateinitOnTopLevel() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/properties/lateinitOnTopLevel.kt");
                 doTest(fileName);
             }
 

@@ -69,22 +69,8 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             if (it != OK) return it
         }
 
-        try {
-            PluginCliParser.loadPlugins(arguments, configuration)
-        }
-        catch (e: PluginCliOptionProcessingException) {
-            val message = e.message + "\n\n" + cliPluginUsageString(e.pluginId, e.options)
-            messageCollector.report(ERROR, message)
-            return INTERNAL_ERROR
-        }
-        catch (e: CliOptionProcessingException) {
-            messageCollector.report(ERROR, e.message!!)
-            return INTERNAL_ERROR
-        }
-        catch (t: Throwable) {
-            MessageCollectorUtil.reportException(messageCollector, t)
-            return INTERNAL_ERROR
-        }
+        val plugLoadResult = PluginCliParser.loadPluginsSafe(arguments, configuration)
+        if (plugLoadResult != ExitCode.OK) return plugLoadResult
 
         if (!arguments.script && arguments.buildFile == null) {
             for (arg in arguments.freeArgs) {
@@ -355,6 +341,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
 
         private fun putAdvancedOptions(configuration: CompilerConfiguration, arguments: K2JVMCompilerArguments) {
             configuration.put(JVMConfigurationKeys.DISABLE_CALL_ASSERTIONS, arguments.noCallAssertions)
+            configuration.put(JVMConfigurationKeys.DISABLE_RECEIVER_ASSERTIONS, arguments.noReceiverAssertions)
             configuration.put(JVMConfigurationKeys.DISABLE_PARAM_ASSERTIONS, arguments.noParamAssertions)
             configuration.put(JVMConfigurationKeys.DISABLE_OPTIMIZATION, arguments.noOptimize)
             configuration.put(JVMConfigurationKeys.INHERIT_MULTIFILE_PARTS, arguments.inheritMultifileParts)
@@ -371,6 +358,8 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             configuration.put(JVMConfigurationKeys.USE_SINGLE_MODULE, arguments.singleModule)
             configuration.put(JVMConfigurationKeys.ADD_BUILT_INS_FROM_COMPILER_TO_DEPENDENCIES, arguments.addCompilerBuiltIns)
             configuration.put(JVMConfigurationKeys.CREATE_BUILT_INS_FROM_MODULE_DEPENDENCIES, arguments.loadBuiltInsFromDependencies)
+
+
 
             arguments.declarationsOutputPath?.let { configuration.put(JVMConfigurationKeys.DECLARATIONS_JSON_PATH, it) }
         }

@@ -74,7 +74,7 @@ object ModifierCheckerCore {
             REIFIED_KEYWORD   to EnumSet.of(TYPE_PARAMETER),
             VARARG_KEYWORD    to EnumSet.of(VALUE_PARAMETER, PROPERTY_PARAMETER),
             COMPANION_KEYWORD to EnumSet.of(OBJECT),
-            LATEINIT_KEYWORD to EnumSet.of(MEMBER_PROPERTY),
+            LATEINIT_KEYWORD  to EnumSet.of(MEMBER_PROPERTY, TOP_LEVEL_PROPERTY, LOCAL_VARIABLE),
             DATA_KEYWORD      to EnumSet.of(CLASS_ONLY, LOCAL_CLASS),
             INLINE_KEYWORD    to EnumSet.of(FUNCTION, PROPERTY, PROPERTY_GETTER, PROPERTY_SETTER),
             NOINLINE_KEYWORD  to EnumSet.of(VALUE_PARAMETER),
@@ -91,14 +91,17 @@ object ModifierCheckerCore {
     )
 
     private val featureDependencies = mapOf(
-            SUSPEND_KEYWORD   to LanguageFeature.Coroutines,
-            INLINE_KEYWORD    to LanguageFeature.InlineProperties,
-            HEADER_KEYWORD    to LanguageFeature.MultiPlatformProjects,
-            IMPL_KEYWORD      to LanguageFeature.MultiPlatformProjects
+            SUSPEND_KEYWORD   to listOf(LanguageFeature.Coroutines),
+            INLINE_KEYWORD    to listOf(LanguageFeature.InlineProperties),
+            HEADER_KEYWORD    to listOf(LanguageFeature.MultiPlatformProjects),
+            IMPL_KEYWORD      to listOf(LanguageFeature.MultiPlatformProjects),
+            LATEINIT_KEYWORD  to listOf(LanguageFeature.LateinitTopLevelProperties, LanguageFeature.LateinitLocalVariables)
     )
 
     private val featureDependenciesTargets = mapOf(
-            LanguageFeature.InlineProperties to setOf(PROPERTY, PROPERTY_GETTER, PROPERTY_SETTER)
+            LanguageFeature.InlineProperties to setOf(PROPERTY, PROPERTY_GETTER, PROPERTY_SETTER),
+            LanguageFeature.LateinitLocalVariables to setOf(LOCAL_VARIABLE),
+            LanguageFeature.LateinitTopLevelProperties to setOf(TOP_LEVEL_PROPERTY)
     )
 
     // NOTE: deprecated targets must be possible!
@@ -165,6 +168,9 @@ object ModifierCheckerCore {
         // 2. subclasses of a non-top-level sealed class must be declared inside the class
         // (see the KEEP https://github.com/Kotlin/KEEP/blob/master/proposals/sealed-class-inheritance.md)
         result += incompatibilityRegister(SEALED_KEYWORD, INNER_KEYWORD)
+
+        // lateinit is incompatible with header
+        result += incompatibilityRegister(LATEINIT_KEYWORD, HEADER_KEYWORD)
 
         return result
     }
@@ -269,28 +275,29 @@ object ModifierCheckerCore {
     ): Boolean {
         val modifier = node.elementType as KtModifierKeywordToken
 
-        val dependency = featureDependencies[modifier] ?: return true
+        val dependencies = featureDependencies[modifier] ?: return true
+        for (dependency in dependencies) {
+            val featureSupport = languageVersionSettings.getFeatureSupport(dependency)
 
-        val featureSupport = languageVersionSettings.getFeatureSupport(dependency)
+            val diagnosticData = dependency to languageVersionSettings
+            if (featureSupport == LanguageFeature.State.ENABLED_WITH_ERROR || featureSupport == LanguageFeature.State.DISABLED) {
+                val restrictedTargets = featureDependenciesTargets[dependency]
+                if (restrictedTargets != null && actualTargets.intersect(restrictedTargets).isEmpty()) {
+                    continue
+                }
 
-        val diagnosticData = dependency to languageVersionSettings
-        if (featureSupport == LanguageFeature.State.ENABLED_WITH_ERROR || featureSupport == LanguageFeature.State.DISABLED) {
-            val restrictedTargets = featureDependenciesTargets[dependency]
-            if (restrictedTargets != null && actualTargets.intersect(restrictedTargets).isEmpty()) {
-                return true
+                if (featureSupport == LanguageFeature.State.DISABLED) {
+                    trace.report(Errors.UNSUPPORTED_FEATURE.on(node.psi, diagnosticData))
+                }
+                else {
+                    trace.report(Errors.EXPERIMENTAL_FEATURE_ERROR.on(node.psi, diagnosticData))
+                }
+                return false
             }
 
-            if (featureSupport == LanguageFeature.State.DISABLED) {
-                trace.report(Errors.UNSUPPORTED_FEATURE.on(node.psi, diagnosticData))
+            if (featureSupport == LanguageFeature.State.ENABLED_WITH_WARNING) {
+                trace.report(Errors.EXPERIMENTAL_FEATURE_WARNING.on(node.psi, diagnosticData))
             }
-            else {
-                trace.report(Errors.EXPERIMENTAL_FEATURE_ERROR.on(node.psi, diagnosticData))
-            }
-            return false
-        }
-
-        if (featureSupport == LanguageFeature.State.ENABLED_WITH_WARNING) {
-            trace.report(Errors.EXPERIMENTAL_FEATURE_WARNING.on(node.psi, diagnosticData))
         }
 
         return true
