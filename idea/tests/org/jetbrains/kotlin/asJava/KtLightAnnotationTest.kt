@@ -21,13 +21,12 @@ import com.intellij.testFramework.LightProjectDescriptor
 import junit.framework.TestCase
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
-import org.jetbrains.uast.java.annotations
 
 class KtLightAnnotationTest : KotlinLightCodeInsightFixtureTestCase() {
 
     override fun getProjectDescriptor(): LightProjectDescriptor = KotlinWithJdkAndRuntimeLightProjectDescriptor.INSTANCE
 
-    fun testBooleanAnnotation() {
+    fun testBooleanAnnotationDefaultValue() {
         myFixture.addClass("""
             import java.lang.annotation.ElementType;
             import java.lang.annotation.Target;
@@ -70,9 +69,10 @@ class KtLightAnnotationTest : KotlinLightCodeInsightFixtureTestCase() {
         """.trimIndent())
         myFixture.testHighlighting("Qualifier.java", "AnnotatedClass.kt")
 
-        val annotations = myFixture.findClass("AnnotatedClass").methods.first { it.name == "bar" }.parameterList.parameters.single()
+        val annotation = myFixture.findClass("AnnotatedClass").methods.first { it.name == "bar" }.parameterList.parameters.single()
                 .expectAnnotations(2).single { it.qualifiedName == "Qualifier" }
-        val annotationAttributeVal = annotations.findAttributeValue("value") as PsiElement
+        val annotationAttributeVal = annotation.findAttributeValue("value") as PsiElement
+        TestCase.assertTrue(annotationAttributeVal.isPhysical)
         assertTextRangeAndValue("\"foo\"", "foo", annotationAttributeVal)
     }
 
@@ -240,13 +240,7 @@ class KtLightAnnotationTest : KotlinLightCodeInsightFixtureTestCase() {
             class MyAnnotated {}
         """.trimIndent())
 
-        val annotations = listOf(myFixture.findClass("MyAnnotated")).let {
-            assertEquals(1, it.size)
-            it.first().annotations.apply {
-                assertEquals(1, it.size)
-            }
-        }
-
+        val annotations = myFixture.findClass("MyAnnotated").expectAnnotations(1)
         annotations[0].let { annotation ->
             val annotationAttributeVal = annotation.findAttributeValue("value") as PsiElement
             assertTextAndRange("@Outer(Inner())", annotationAttributeVal)
@@ -372,10 +366,12 @@ class KtLightAnnotationTest : KotlinLightCodeInsightFixtureTestCase() {
         assertTextAndRange(expected, psiElement)
         val result = JavaPsiFacade.getInstance(project).constantEvaluationHelper.computeConstantExpression(psiElement)
         TestCase.assertEquals(value, result)
+        val smartPointer = SmartPointerManager.getInstance(psiElement.project).createSmartPsiElementPointer(psiElement)
+        assertTextAndRange(expected, smartPointer.element!!)
     }
 
     private fun PsiModifierListOwner.expectAnnotations(number: Int): Array<PsiAnnotation> =
-            this.annotations.apply {
+            this.modifierList!!.annotations.apply {
                 TestCase.assertEquals("expected one annotation, found ${this.joinToString(", ") { it.qualifiedName ?: "unknown" }}",
                                       number, size)
             }

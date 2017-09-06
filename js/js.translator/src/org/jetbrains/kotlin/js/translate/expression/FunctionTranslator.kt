@@ -18,19 +18,15 @@ package org.jetbrains.kotlin.js.translate.expression
 
 import com.intellij.openapi.vfs.VfsUtilCore
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.descriptors.impl.PropertyAccessorDescriptorImpl
-import org.jetbrains.kotlin.js.backend.ast.JsExpression
-import org.jetbrains.kotlin.js.backend.ast.JsFunction
-import org.jetbrains.kotlin.js.backend.ast.JsParameter
-import org.jetbrains.kotlin.js.backend.ast.JsScope
+import org.jetbrains.kotlin.js.backend.ast.*
 import org.jetbrains.kotlin.js.backend.ast.metadata.descriptor
 import org.jetbrains.kotlin.js.backend.ast.metadata.functionDescriptor
 import org.jetbrains.kotlin.js.backend.ast.metadata.hasDefaultValue
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
-import org.jetbrains.kotlin.js.config.JsConfig
+import org.jetbrains.kotlin.js.descriptorUtils.shouldBeExported
+import org.jetbrains.kotlin.js.inline.util.FunctionWithWrapper
 import org.jetbrains.kotlin.js.translate.context.Namer
 import org.jetbrains.kotlin.js.translate.context.TranslationContext
-import org.jetbrains.kotlin.js.translate.reference.CallExpressionTranslator.shouldBeInlined
 import org.jetbrains.kotlin.js.translate.utils.BindingUtils
 import org.jetbrains.kotlin.js.translate.utils.FunctionBodyTranslator.translateFunctionBody
 import org.jetbrains.kotlin.js.translate.utils.JsAstUtils
@@ -39,8 +35,8 @@ import org.jetbrains.kotlin.psi.KtDeclarationWithBody
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.hasDefaultValue
-import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyPublicApi
 import org.jetbrains.kotlin.resolve.source.PsiSourceFile
+import org.jetbrains.kotlin.resolve.source.getPsi
 
 fun TranslationContext.translateAndAliasParameters(
         descriptor: FunctionDescriptor,
@@ -104,29 +100,42 @@ fun TranslationContext.translateFunction(declaration: KtDeclarationWithBody, fun
     function.functionDescriptor = descriptor
 }
 
-fun TranslationContext.wrapWithInlineMetadata(function: JsFunction, descriptor: FunctionDescriptor, config: JsConfig): JsExpression {
-    return if (shouldBeInlined(descriptor, this) && descriptor.isEffectivelyPublicApi) {
-        val metadata = InlineMetadata.compose(function, descriptor, config)
-        val functionWithMetadata = metadata.functionWithMetadata
+fun TranslationContext.wrapWithInlineMetadata(
+        outerContext: TranslationContext,
+        function: JsFunction, descriptor: FunctionDescriptor
+): JsExpression {
+    val sourceInfo = descriptor.source.getPsi()
+    return if (descriptor.isInline) {
+        if (descriptor.shouldBeExported(config)) {
+            val metadata = InlineMetadata.compose(function, descriptor, this)
+            val functionWithMetadata = metadata.functionWithMetadata(outerContext, sourceInfo)
+                config.configuration[JSConfigurationKeys.INCREMENTAL_RESULTS_CONSUMER]?.apply {
+                val psiFile = (descriptor.source.containingFile as? PsiSourceFile)?.psiFile ?: return@apply
+                val file = VfsUtilCore.virtualToIoFile(psiFile.virtualFile)
 
-        config.configuration[JSConfigurationKeys.INCREMENTAL_RESULTS_CONSUMER]?.apply {
-            val psiFile = (descriptor.source.containingFile as? PsiSourceFile)?.psiFile ?: return@apply
-            val file = VfsUtilCore.virtualToIoFile(psiFile.virtualFile)
+                val fqName = when (descriptor) {
+                    is PropertyGetterDescriptor -> {
+                        "<get>" + descriptor.correspondingProperty.fqNameSafe.asString()
+                    }
+                    is PropertySetterDescriptor -> {
+                        "<set>" + descriptor.correspondingProperty.fqNameSafe.asString()
+                    }
+                    else -> descriptor.fqNameSafe.asString()
+                }
 
-            val fqName = when (descriptor) {
-                is PropertyGetterDescriptor -> {
-                    "<get>" + descriptor.correspondingProperty.fqNameSafe.asString()
-                }
-                is PropertySetterDescriptor -> {
-                    "<set>" + descriptor.correspondingProperty.fqNameSafe.asString()
-                }
-                else -> descriptor.fqNameSafe.asString()
+                processInlineFunction(file, fqName, functionWithMetadata)
             }
 
-            processInlineFunction(file, fqName, functionWithMetadata)
+            functionWithMetadata
         }
-
-        functionWithMetadata
+        else {
+            val block =
+                inlineFunctionContext!!.let {
+                    JsBlock(it.importBlock.statements + it.prototypeBlock.statements + it.declarationsBlock.statements +
+                        JsReturn(function))
+                }
+            InlineMetadata.wrapFunction(outerContext, FunctionWithWrapper(function, block), sourceInfo)
+        }
     }
     else {
         function

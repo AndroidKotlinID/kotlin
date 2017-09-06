@@ -2580,6 +2580,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("innerClassConstructorOnOuterClassInstance.kt")
+                public void testInnerClassConstructorOnOuterClassInstance() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/callableReference/resolve/innerClassConstructorOnOuterClassInstance.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("intersectionTypeOverloadWithWrongParameter.kt")
+                public void testIntersectionTypeOverloadWithWrongParameter() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/callableReference/resolve/intersectionTypeOverloadWithWrongParameter.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("kt10036.kt")
                 public void testKt10036() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/callableReference/resolve/kt10036.kt");
@@ -8668,6 +8680,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("kt9203.kt")
+            public void testKt9203() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/generics/kt9203.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt9203_1.kt")
+            public void testKt9203_1() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/generics/kt9203_1.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("kt9985.kt")
             public void testKt9985() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/generics/kt9985.kt");
@@ -10201,6 +10225,24 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("intersectionTypeMultipleBoundsAsReceiver.kt")
             public void testIntersectionTypeMultipleBoundsAsReceiver() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/intersectionTypeMultipleBoundsAsReceiver.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("invokeLambdaAsFunction.kt")
+            public void testInvokeLambdaAsFunction() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/invokeLambdaAsFunction.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt11963.kt")
+            public void testKt11963() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/kt11963.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt12399.kt")
+            public void testKt12399() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/kt12399.kt");
                 doTest(fileName);
             }
 

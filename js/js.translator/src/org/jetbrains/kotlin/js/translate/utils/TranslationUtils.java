@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.js.translate.utils;
 
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
@@ -24,6 +25,8 @@ import org.jetbrains.kotlin.descriptors.impl.LocalVariableAccessorDescriptor;
 import org.jetbrains.kotlin.descriptors.impl.LocalVariableDescriptor;
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation;
 import org.jetbrains.kotlin.js.backend.ast.*;
+import org.jetbrains.kotlin.js.backend.ast.metadata.MetadataProperties;
+import org.jetbrains.kotlin.js.backend.ast.metadata.SpecialFunction;
 import org.jetbrains.kotlin.js.translate.context.Namer;
 import org.jetbrains.kotlin.js.translate.context.TemporaryConstVariable;
 import org.jetbrains.kotlin.js.translate.context.TranslationContext;
@@ -39,6 +42,7 @@ import org.jetbrains.kotlin.resolve.BindingContextUtils;
 import org.jetbrains.kotlin.resolve.DescriptorUtils;
 import org.jetbrains.kotlin.resolve.descriptorUtil.DescriptorUtilsKt;
 import org.jetbrains.kotlin.resolve.inline.InlineUtil;
+import org.jetbrains.kotlin.resolve.source.KotlinSourceElementKt;
 import org.jetbrains.kotlin.types.KotlinType;
 import org.jetbrains.kotlin.types.TypeUtils;
 
@@ -49,6 +53,7 @@ import static org.jetbrains.kotlin.js.backend.ast.JsBinaryOperator.*;
 import static org.jetbrains.kotlin.js.translate.utils.BindingUtils.getCallableDescriptorForOperationExpression;
 import static org.jetbrains.kotlin.js.translate.utils.JsAstUtils.assignment;
 import static org.jetbrains.kotlin.js.translate.utils.JsAstUtils.createDataDescriptor;
+import static org.jetbrains.kotlin.js.translate.utils.JsAstUtils.pureFqn;
 
 public final class TranslationUtils {
 
@@ -56,13 +61,15 @@ public final class TranslationUtils {
     }
 
     @NotNull
-    public static JsPropertyInitializer translateFunctionAsEcma5PropertyDescriptor(@NotNull JsFunction function,
-            @NotNull FunctionDescriptor descriptor,
-            @NotNull TranslationContext context) {
+    public static JsPropertyInitializer translateFunctionAsEcma5PropertyDescriptor(
+            @NotNull JsFunction function, @NotNull FunctionDescriptor descriptor,
+            @NotNull TranslationContext context
+    ) {
         JsExpression functionExpression = function;
         if (InlineUtil.isInline(descriptor)) {
-            InlineMetadata metadata = InlineMetadata.compose(function, descriptor, context.getConfig());
-            functionExpression = metadata.getFunctionWithMetadata();
+            InlineMetadata metadata = InlineMetadata.compose(function, descriptor, context);
+            PsiElement sourceInfo = KotlinSourceElementKt.getPsi(descriptor.getSource());
+            functionExpression = metadata.functionWithMetadata(context, sourceInfo);
         }
 
         if (DescriptorUtils.isExtension(descriptor) ||
@@ -201,7 +208,7 @@ public final class TranslationUtils {
             KotlinType propertyType = BindingContextUtils.getNotNull(context.bindingContext(), BindingContext.VARIABLE, declaration).getType();
             KotlinType initType = context.bindingContext().getType(initializer);
 
-            jsInitExpression = boxCastIfNeeded(jsInitExpression, initType, propertyType);
+            jsInitExpression = boxCastIfNeeded(context, jsInitExpression, initType, propertyType);
         }
         return jsInitExpression;
     }
@@ -403,12 +410,58 @@ public final class TranslationUtils {
     }
 
     @NotNull
-    public static JsExpression boxCastIfNeeded(@NotNull JsExpression e, @Nullable KotlinType castFrom, @Nullable KotlinType castTo) {
+    public static JsExpression boxCastIfNeeded(
+            @NotNull TranslationContext context,
+            @NotNull JsExpression e,
+            @Nullable KotlinType castFrom, @Nullable KotlinType castTo
+    ) {
         if (castFrom != null && KotlinBuiltIns.isCharOrNullableChar(castFrom) &&
             castTo != null && !KotlinBuiltIns.isCharOrNullableChar(castTo)
         ) {
-            return JsAstUtils.charToBoxedChar(e);
+            return charToBoxedChar(context, e);
         }
         return e;
+    }
+
+    @NotNull
+    public static JsExpression charToBoxedChar(@NotNull TranslationContext context, @NotNull JsExpression expression) {
+        JsInvocation invocation = invokeSpecialFunction(context, SpecialFunction.TO_BOXED_CHAR, unnestBoxing(expression));
+        invocation.setSource(expression.getSource());
+        return withBoxingMetadata(invocation);
+    }
+
+    @NotNull
+    public static JsExpression boxedCharToChar(@NotNull TranslationContext context, @NotNull JsExpression expression) {
+        JsInvocation invocation = invokeSpecialFunction(context, SpecialFunction.UNBOX_CHAR, unnestBoxing(expression));
+        invocation.setSource(expression.getSource());
+        return withBoxingMetadata(invocation);
+    }
+
+    @NotNull
+    private static JsExpression unnestBoxing(@NotNull JsExpression expression) {
+        if (expression instanceof JsInvocation && MetadataProperties.getBoxing((JsInvocation) expression)) {
+            return ((JsInvocation) expression).getArguments().get(0);
+        }
+        return expression;
+    }
+
+    @NotNull
+    private static JsInvocation withBoxingMetadata(@NotNull JsInvocation call) {
+        MetadataProperties.setBoxing(call, true);
+        return call;
+    }
+
+    @NotNull
+    private static JsInvocation invokeSpecialFunction(
+            @NotNull TranslationContext context,
+            @NotNull SpecialFunction function, @NotNull JsExpression... arguments
+    ) {
+        JsName name = context.getNameForSpecialFunction(function);
+        return new JsInvocation(pureFqn(name, null), arguments);
+    }
+
+    @NotNull
+    public static String getTagForSpecialFunction(@NotNull SpecialFunction specialFunction) {
+        return "special:" + specialFunction.name();
     }
 }

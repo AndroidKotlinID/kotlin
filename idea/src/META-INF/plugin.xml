@@ -367,6 +367,9 @@
     <projectService serviceInterface="org.jetbrains.kotlin.idea.caches.resolve.ScriptBinariesScopeCache"
                     serviceImplementation="org.jetbrains.kotlin.idea.caches.resolve.ScriptBinariesScopeCache"/>
 
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.core.util.ProjectJob"
+                    serviceImplementation="org.jetbrains.kotlin.idea.core.util.ProjectJob"/>
+
     <errorHandler implementation="org.jetbrains.kotlin.idea.reporter.KotlinReportSubmitter"/>
 
     <internalFileTemplate name="Kotlin File"/>
@@ -2553,6 +2556,26 @@
                      groupPath="Kotlin"
                      groupName="Probable bugs"
                      enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantGetterInspection"
+                     displayName="Redundant property getter"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     cleanupTool="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantSetterInspection"
+                     displayName="Redundant property setter"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     cleanupTool="true"
                      level="WEAK WARNING"
                      language="kotlin"
     />
