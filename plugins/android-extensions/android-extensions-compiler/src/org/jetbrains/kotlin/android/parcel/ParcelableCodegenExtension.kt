@@ -210,7 +210,9 @@ open class ParcelableCodegenExtension : ExpressionCodegenExtension {
 
     private fun writeCreatorAccessField(codegen: ImplementationBodyCodegen, parcelableClass: ClassDescriptor) {
         val parcelableAsmType = codegen.typeMapper.mapType(parcelableClass.defaultType)
-        val creatorAsmType = Type.getObjectType(parcelableAsmType.internalName + "\$Creator")
+        val creatorAsmType = Type.getObjectType(
+                codegen.typeMapper.typeMappingConfiguration.innerClassNameFactory(parcelableAsmType.internalName, "Creator"))
+
         codegen.v.newField(JvmDeclarationOrigin.NO_ORIGIN, ACC_STATIC or ACC_PUBLIC or ACC_FINAL, "CREATOR",
                            creatorAsmType.descriptor, null, null)
     }
@@ -224,7 +226,8 @@ open class ParcelableCodegenExtension : ExpressionCodegenExtension {
             properties: List<Pair<String, KotlinType>>
     ) {
         val containerAsmType = codegen.typeMapper.mapType(parcelableClass.defaultType)
-        val creatorAsmType = Type.getObjectType(containerAsmType.internalName + "\$Creator")
+        val creatorAsmType = Type.getObjectType(
+                codegen.typeMapper.typeMappingConfiguration.innerClassNameFactory(containerAsmType.internalName, "Creator"))
 
         val creatorClass = ClassDescriptorImpl(
                 parcelableClass.containingDeclaration, Name.identifier("Creator"), Modality.FINAL, ClassKind.CLASS, emptyList(),
@@ -243,6 +246,9 @@ open class ParcelableCodegenExtension : ExpressionCodegenExtension {
                 codegen.typeMapper, creatorClass, OwnerKind.IMPLEMENTATION, codegen.context.parentContext, null)
         val codegenForCreator = ImplementationBodyCodegen(
                 codegen.myClass, classContextForCreator, classBuilderForCreator, codegen.state, codegen.parentCodegen, false)
+
+        codegen.v.visitInnerClass(creatorAsmType.internalName, containerAsmType.internalName, "Creator", ACC_PUBLIC or ACC_STATIC)
+        codegenForCreator.v.visitInnerClass(creatorAsmType.internalName, containerAsmType.internalName, "Creator", ACC_PUBLIC or ACC_STATIC)
 
         classBuilderForCreator.defineClass(null, V1_6, ACC_PUBLIC or ACC_STATIC,
                               creatorAsmType.internalName, null, "java/lang/Object",
