@@ -153,4 +153,10 @@ class QuickFixMultiModuleTest : AbstractQuickFixMultiModuleTest() {
 
     @Test
     fun testFunctionTypeReceiverToParameterByImpl() = doTestHeaderWithJvmAndJs()
+
+    @Test
+    fun testImplementMembersInHeaderClass() = doMultiPlatformTest(impls = *arrayOf())
+
+    @Test
+    fun testImplementMembersInImplClassNonImplInheritor() = doMultiPlatformTest()
 }

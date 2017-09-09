@@ -853,6 +853,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("header.kt")
+            public void testHeader() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addPropertyAccessors/getter/header.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("lateinit.kt")
             public void testLateinit() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/addPropertyAccessors/getter/lateinit.kt");
@@ -7979,6 +7985,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("invisible.kt")
+        public void testInvisible() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/destructuringInLambda/invisible.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("last.kt")
         public void testLast() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/destructuringInLambda/last.kt");
@@ -8048,6 +8060,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("variables.kt")
         public void testVariables() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/destructuringInLambda/variables.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("visible.kt")
+        public void testVisible() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/destructuringInLambda/visible.kt");
             doTest(fileName);
         }
     }
