@@ -1,3 +1,4 @@
+// !LANGUAGE: -LateinitTopLevelProperties -LateinitLocalVariables
 import kotlin.reflect.KProperty
 
 class CustomDelegate {

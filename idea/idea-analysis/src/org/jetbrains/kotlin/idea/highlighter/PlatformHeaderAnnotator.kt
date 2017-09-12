@@ -58,7 +58,7 @@ class PlatformHeaderAnnotator : Annotator {
         val declaration = element as? KtDeclaration ?: return
         if (!isHeaderDeclaration(declaration)) return
 
-        if (TargetPlatformDetector.getPlatform(declaration.containingKtFile) !is TargetPlatform.Default) return
+        if (TargetPlatformDetector.getPlatform(declaration.containingKtFile) !is TargetPlatform.Common) return
 
         val implementingModules = declaration.findModuleDescriptor().allImplementingCompatibleModules
         if (implementingModules.isEmpty()) return
@@ -68,7 +68,7 @@ class PlatformHeaderAnnotator : Annotator {
 
         val trace = BindingTraceContext()
         for (module in implementingModules) {
-            HeaderImplDeclarationChecker.checkHeaderDeclarationHasImplementation(declaration, descriptor, trace, module, checkImpl = false)
+            HeaderImplDeclarationChecker.checkHeaderDeclarationHasImplementation(declaration, descriptor, trace, module)
         }
 
         val suppressionCache = KotlinCacheService.getInstance(declaration.project).getSuppressionCache()

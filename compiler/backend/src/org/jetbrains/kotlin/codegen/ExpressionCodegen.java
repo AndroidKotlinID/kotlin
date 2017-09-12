@@ -52,7 +52,6 @@ import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper;
 import org.jetbrains.kotlin.codegen.when.SwitchCodegen;
 import org.jetbrains.kotlin.codegen.when.SwitchCodegenProvider;
 import org.jetbrains.kotlin.config.ApiVersion;
-import org.jetbrains.kotlin.config.LanguageFeature;
 import org.jetbrains.kotlin.descriptors.*;
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor;
 import org.jetbrains.kotlin.descriptors.impl.LocalVariableDescriptor;
@@ -1741,7 +1740,12 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 return StackValue.singleton(classDescriptor, typeMapper);
             }
             if (isEnumEntry(classDescriptor)) {
-                return StackValue.enumEntry(classDescriptor, typeMapper);
+                if (isInsideEnumEntry(classDescriptor)) {
+                    return generateThisOrOuterFromContext(classDescriptor, false, false);
+                }
+                else {
+                    return StackValue.enumEntry(classDescriptor, typeMapper);
+                }
             }
             ClassDescriptor companionObjectDescriptor = classDescriptor.getCompanionObjectDescriptor();
             if (companionObjectDescriptor != null) {
@@ -2534,6 +2538,25 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         return generateThisOrOuter(calleeContainingClass, isSuper, false);
     }
 
+    private boolean isInsideEnumEntry(@NotNull ClassDescriptor enumEntryDescriptor) {
+        assert DescriptorUtils.isEnumEntry(enumEntryDescriptor) :
+                "Enum entry reference expected: " + enumEntryDescriptor;
+
+        DeclarationDescriptor descriptor = context.getContextDescriptor();
+        while (descriptor != null) {
+            if (descriptor == enumEntryDescriptor) return true;
+
+            if (descriptor instanceof ClassDescriptor &&
+                !(((ClassDescriptor) descriptor).isInner() || DescriptorUtils.isAnonymousObject(descriptor))) {
+                return false;
+            }
+
+            descriptor = descriptor.getContainingDeclaration();
+        }
+
+        return false;
+    }
+
     @NotNull
     public StackValue generateThisOrOuter(@NotNull ClassDescriptor calleeContainingClass, boolean isSuper, boolean forceOuter) {
         boolean isSingleton = calleeContainingClass.getKind().isSingleton();
@@ -2543,13 +2566,20 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 return StackValue.local(0, typeMapper.mapType(calleeContainingClass));
             }
             else if (isEnumEntry(calleeContainingClass)) {
-                return StackValue.enumEntry(calleeContainingClass, typeMapper);
+                if (!isInsideEnumEntry(calleeContainingClass)) {
+                    return StackValue.enumEntry(calleeContainingClass, typeMapper);
+                }
+                // else fall-through
             }
             else {
                 return StackValue.singleton(calleeContainingClass, typeMapper);
             }
         }
 
+        return generateThisOrOuterFromContext(calleeContainingClass, isSuper, forceOuter);
+    }
+
+    private StackValue generateThisOrOuterFromContext(@NotNull ClassDescriptor calleeContainingClass, boolean isSuper, boolean forceOuter) {
         CodegenContext cur = context;
         Type type = asmType(calleeContainingClass.getDefaultType());
         StackValue result = StackValue.local(0, type);

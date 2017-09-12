@@ -59,9 +59,11 @@ enum class LanguageFeature(
     CapturedInClosureSmartCasts(KOTLIN_1_2),
     LateinitTopLevelProperties(KOTLIN_1_2),
     LateinitLocalVariables(KOTLIN_1_2),
+    InnerClassInEnumEntryClass(KOTLIN_1_2),
     CallableReferencesToClassMembersWithEmptyLHS(KOTLIN_1_2),
 
     RestrictionOfValReassignmentViaBackingField(KOTLIN_1_3),
+    NestedClassesInEnumEntryShouldBeInner(KOTLIN_1_3),
 
     // Experimental features
 
