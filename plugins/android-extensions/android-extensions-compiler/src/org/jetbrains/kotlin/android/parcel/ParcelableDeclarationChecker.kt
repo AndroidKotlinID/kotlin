@@ -183,11 +183,16 @@ class ParcelableDeclarationChecker : SimpleDeclarationChecker {
                 /* isJvm8TargetWithDefaults */ false)
 
         for (parameter in primaryConstructor?.valueParameters.orEmpty()) {
-            checkParcelableClassProperty(parameter, diagnosticHolder, typeMapper)
+            checkParcelableClassProperty(parameter, descriptor, diagnosticHolder, typeMapper)
         }
     }
 
-    private fun checkParcelableClassProperty(parameter: KtParameter, diagnosticHolder: DiagnosticSink, typeMapper: KotlinTypeMapper) {
+    private fun checkParcelableClassProperty(
+            parameter: KtParameter,
+            containerClass: ClassDescriptor,
+            diagnosticHolder: DiagnosticSink,
+            typeMapper: KotlinTypeMapper
+    ) {
         if (!parameter.hasValOrVar()) {
             val reportElement = parameter.nameIdentifier ?: parameter
             diagnosticHolder.reportFromPlugin(
@@ -197,11 +202,12 @@ class ParcelableDeclarationChecker : SimpleDeclarationChecker {
         val descriptor = typeMapper.bindingContext[BindingContext.PRIMARY_CONSTRUCTOR_PARAMETER, parameter] ?: return
         val type = descriptor.type
 
-        if (!type.isError) {
+        if (!type.isError && !containerClass.hasCustomParceler()) {
             val asmType = typeMapper.mapType(type)
 
             try {
-                ParcelSerializer.get(type, asmType, typeMapper, strict = true)
+                val context = ParcelSerializer.ParcelSerializerContext(typeMapper, typeMapper.mapType(containerClass.defaultType))
+                ParcelSerializer.get(type, asmType, context, strict = true)
             }
             catch (e: IllegalArgumentException) {
                 // get() throws IllegalArgumentException on unknown types
@@ -209,5 +215,10 @@ class ParcelableDeclarationChecker : SimpleDeclarationChecker {
                 diagnosticHolder.reportFromPlugin(ErrorsAndroid.PARCELABLE_TYPE_NOT_SUPPORTED.on(reportElement), DefaultErrorMessagesAndroid)
             }
         }
+    }
+
+    private fun ClassDescriptor.hasCustomParceler(): Boolean {
+        val companionObjectSuperTypes = companionObjectDescriptor?.let { TypeUtils.getAllSupertypes(it.defaultType) } ?: return false
+        return companionObjectSuperTypes.any { it.isParceler }
     }
 }
