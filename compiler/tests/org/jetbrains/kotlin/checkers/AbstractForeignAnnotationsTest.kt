@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.test.TestJdkKind
 import org.jetbrains.kotlin.utils.Jsr305State
 import java.io.File
 
-val FOREIGN_ANNOTATIONS_SOURCES_PATH = "compiler/testData/foreignAnnotations/annotations"
+val FOREIGN_ANNOTATIONS_SOURCES_PATH = "third-party/annotations"
 val TEST_ANNOTATIONS_SOURCE_PATH = "compiler/testData/foreignAnnotations/testAnnotations"
 
 abstract class AbstractForeignAnnotationsTest : AbstractDiagnosticsTest() {
@@ -54,9 +54,9 @@ abstract class AbstractForeignAnnotationsTest : AbstractDiagnosticsTest() {
             InTextDirectivesUtils.isDirectiveDefined(it.expectedText, WARNING_FOR_JSR305_ANNOTATIONS_DIRECTIVE)
         }
 
-        val jsr305State = if (hasWarningDirective) Jsr305State.WARN else Jsr305State.ENABLE
+        val jsr305State = if (hasWarningDirective) Jsr305State.WARN else Jsr305State.STRICT
         return LanguageVersionSettingsImpl(LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE,
-                                           mapOf(AnalysisFlag.jsr305GlobalState to jsr305State)
+                                           mapOf(AnalysisFlag.jsr305 to jsr305State)
         )
     }
 }

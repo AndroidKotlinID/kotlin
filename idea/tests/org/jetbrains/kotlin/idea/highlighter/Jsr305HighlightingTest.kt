@@ -32,7 +32,7 @@ import org.jetbrains.kotlin.utils.Jsr305State
 
 class Jsr305HighlightingTest : KotlinLightCodeInsightFixtureTestCase() {
     override fun getProjectDescriptor(): LightProjectDescriptor {
-        val foreignAnnotationsJar = MockLibraryUtil.compileJvmLibraryToJar("compiler/testData/foreignAnnotations/annotations", "foreign-annotations")
+        val foreignAnnotationsJar = MockLibraryUtil.compileJvmLibraryToJar("third-party/annotations", "foreign-annotations")
         val libraryJar = MockLibraryUtil.compileJvmLibraryToJar("idea/testData/highlighterJsr305/library", "jsr305-library",
                                                                 extraClasspath = listOf(foreignAnnotationsJar.absolutePath))
         return object : KotlinJdkAndLibraryProjectDescriptor(
@@ -46,7 +46,7 @@ class Jsr305HighlightingTest : KotlinLightCodeInsightFixtureTestCase() {
                 super.configureModule(module, model)
                 module.createFacet(TargetPlatformKind.Jvm(JvmTarget.JVM_1_8))
                 val facetSettings = KotlinFacetSettingsProvider.getInstance(project).getInitializedSettings(module)
-                (facetSettings.compilerArguments as K2JVMCompilerArguments).jsr305GlobalState = Jsr305State.ENABLE.description
+                (facetSettings.compilerArguments as K2JVMCompilerArguments).jsr305 = Jsr305State.STRICT.description
             }
         }
     }

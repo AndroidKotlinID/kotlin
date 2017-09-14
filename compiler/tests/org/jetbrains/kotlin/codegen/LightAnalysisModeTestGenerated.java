@@ -11846,6 +11846,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             doTest(fileName);
         }
 
+        @TestMetadata("interfaceCompanionObjectReference.kt")
+        public void testInterfaceCompanionObjectReference() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/objects/interfaceCompanionObjectReference.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt1047.kt")
         public void testKt1047() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/objects/kt1047.kt");
@@ -12385,6 +12391,24 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("equals.kt")
             public void testEquals() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/platformTypes/primitives/equals.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("equalsNull_lv11.kt")
+            public void testEqualsNull_lv11() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/platformTypes/primitives/equalsNull_lv11.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("equalsNull_lv12.kt")
+            public void testEqualsNull_lv12() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/platformTypes/primitives/equalsNull_lv12.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("equalsNull_withExplicitFlag.kt")
+            public void testEqualsNull_withExplicitFlag() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/platformTypes/primitives/equalsNull_withExplicitFlag.kt");
                 doTest(fileName);
             }
 
@@ -13561,6 +13585,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("privateSetterFromLambda.kt")
             public void testPrivateSetterFromLambda() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/properties/lateinit/privateSetterFromLambda.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("privateSetterViaSubclass.kt")
+            public void testPrivateSetterViaSubclass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/properties/lateinit/privateSetterViaSubclass.kt");
                 doTest(fileName);
             }
 

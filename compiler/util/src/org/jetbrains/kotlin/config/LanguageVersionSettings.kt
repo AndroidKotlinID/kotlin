@@ -61,9 +61,12 @@ enum class LanguageFeature(
     LateinitLocalVariables(KOTLIN_1_2),
     InnerClassInEnumEntryClass(KOTLIN_1_2),
     CallableReferencesToClassMembersWithEmptyLHS(KOTLIN_1_2),
+    ThrowNpeOnExplicitEqualsForBoxedNull(KOTLIN_1_2),
+    JvmPackageName(KOTLIN_1_2),
 
     RestrictionOfValReassignmentViaBackingField(KOTLIN_1_3),
     NestedClassesInEnumEntryShouldBeInner(KOTLIN_1_3),
+    ProhibitDataClassesOverridingCopy(KOTLIN_1_3),
     RestrictionOfWrongAnnotationsWithUseSiteTargetsOnTypes(KOTLIN_1_3),
 
     // Experimental features
