@@ -24,16 +24,16 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.diagnostics.DiagnosticSink
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
-import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
+import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker.Compatibility.Compatible
-import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker.Compatibility.Incompatible
+import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker.Compatibility.Compatible
+import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker.Compatibility.Incompatible
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
@@ -49,7 +49,7 @@ import org.jetbrains.kotlin.types.typeUtil.asTypeProjection
 import org.jetbrains.kotlin.utils.SmartList
 import org.jetbrains.kotlin.utils.keysToMap
 
-object HeaderImplDeclarationChecker : DeclarationChecker {
+object ExpectedActualDeclarationChecker : DeclarationChecker {
     override fun check(
             declaration: KtDeclaration,
             descriptor: DeclarationDescriptor,
@@ -61,78 +61,78 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
 
         if (descriptor !is MemberDescriptor || DescriptorUtils.isEnumEntry(descriptor)) return
 
-        if (descriptor.isHeader) {
-            checkHeaderDeclarationHasImplementation(declaration, descriptor, diagnosticHolder, descriptor.module)
+        if (descriptor.isExpect) {
+            checkExpectedDeclarationHasActual(declaration, descriptor, diagnosticHolder, descriptor.module)
         }
         else {
-            val checkImpl = !languageVersionSettings.getFlag(AnalysisFlag.multiPlatformDoNotCheckImpl)
-            checkImplementationHasHeaderDeclaration(declaration, descriptor, diagnosticHolder, checkImpl)
+            val checkExpected = !languageVersionSettings.getFlag(AnalysisFlag.multiPlatformDoNotCheckImpl)
+            checkActualDeclarationHasExpected(declaration, descriptor, diagnosticHolder, checkExpected)
         }
     }
 
-    fun checkHeaderDeclarationHasImplementation(
+    fun checkExpectedDeclarationHasActual(
             reportOn: KtDeclaration,
             descriptor: MemberDescriptor,
             diagnosticHolder: DiagnosticSink,
             platformModule: ModuleDescriptor
     ) {
-        // Only look for implementations of top level members; class members will be handled as a part of that header class
+        // Only look for top level actual members; class members will be handled as a part of that expected class
         if (descriptor.containingDeclaration !is PackageFragmentDescriptor) return
 
-        val compatibility = findImplForHeader(descriptor, platformModule) ?: return
+        val compatibility = findActualForExpected(descriptor, platformModule) ?: return
 
         val shouldReportError =
                 compatibility.isEmpty() ||
-                Compatible !in compatibility && compatibility.values.flatMapTo(hashSetOf()) { it }.all { impl ->
-                    val headers = findHeaderForImpl(impl, descriptor.module)
-                    headers != null && Compatible in headers.keys
+                Compatible !in compatibility && compatibility.values.flatMapTo(hashSetOf()) { it }.all { actual ->
+                    val expectedOnes = findExpectedForActual(actual, descriptor.module)
+                    expectedOnes != null && Compatible in expectedOnes.keys
                 }
 
         if (shouldReportError) {
             assert(compatibility.keys.all { it is Incompatible })
             @Suppress("UNCHECKED_CAST")
             val incompatibility = compatibility as Map<Incompatible, Collection<MemberDescriptor>>
-            diagnosticHolder.report(Errors.HEADER_WITHOUT_IMPLEMENTATION.on(reportOn, descriptor, platformModule, incompatibility))
+            diagnosticHolder.report(Errors.NO_ACTUAL_FOR_EXPECT.on(reportOn, descriptor, platformModule, incompatibility))
         }
     }
 
-    private fun findImplForHeader(header: MemberDescriptor, platformModule: ModuleDescriptor): Map<Compatibility, List<MemberDescriptor>>? {
-        return when (header) {
+    private fun findActualForExpected(expected: MemberDescriptor, platformModule: ModuleDescriptor): Map<Compatibility, List<MemberDescriptor>>? {
+        return when (expected) {
             is CallableMemberDescriptor -> {
-                header.findNamesakesFromModule(platformModule).filter { impl ->
-                    header != impl && !impl.isHeader &&
+                expected.findNamesakesFromModule(platformModule).filter { actual ->
+                    expected != actual && !actual.isExpect &&
                     // TODO: support non-source definitions (e.g. from Java)
-                    DescriptorToSourceUtils.getSourceFromDescriptor(impl) is KtElement
-                }.groupBy { impl ->
-                    areCompatibleCallables(header, impl)
+                    DescriptorToSourceUtils.getSourceFromDescriptor(actual) is KtElement
+                }.groupBy { actual ->
+                    areCompatibleCallables(expected, actual)
                 }
             }
             is ClassDescriptor -> {
-                header.findClassifiersFromModule(platformModule).filter { impl ->
-                    header != impl && !impl.isHeader &&
-                    DescriptorToSourceUtils.getSourceFromDescriptor(impl) is KtElement
-                }.groupBy { impl ->
-                    areCompatibleClassifiers(header, impl)
+                expected.findClassifiersFromModule(platformModule).filter { actual ->
+                    expected != actual && !actual.isExpect &&
+                    DescriptorToSourceUtils.getSourceFromDescriptor(actual) is KtElement
+                }.groupBy { actual ->
+                    areCompatibleClassifiers(expected, actual)
                 }
             }
             else -> null
         }
     }
 
-    private fun checkImplementationHasHeaderDeclaration(
-            reportOn: KtDeclaration, descriptor: MemberDescriptor, diagnosticHolder: DiagnosticSink, checkImpl: Boolean
+    private fun checkActualDeclarationHasExpected(
+            reportOn: KtDeclaration, descriptor: MemberDescriptor, diagnosticHolder: DiagnosticSink, checkExpected: Boolean
     ) {
         // Using the platform module instead of the common module is sort of fine here because the former always depends on the latter.
-        // However, it would be clearer to find the common module this platform module implements and look for headers there instead.
+        // However, it would be clearer to find the common module this platform module implements and look for expected there instead.
         // TODO: use common module here
-        val compatibility = findHeaderForImpl(descriptor, descriptor.module) ?: return
+        val compatibility = findExpectedForActual(descriptor, descriptor.module) ?: return
 
-        val hasImplModifier = descriptor.isImpl && reportOn.hasModifier(KtTokens.IMPL_KEYWORD)
-        if (!hasImplModifier) {
+        val hasExpectedModifier = descriptor.isActual && reportOn.hasActualModifier()
+        if (!hasExpectedModifier) {
             if (Compatible !in compatibility) return
 
-            if (checkImpl) {
-                diagnosticHolder.report(Errors.IMPL_MISSING.on(reportOn))
+            if (checkExpected) {
+                diagnosticHolder.report(Errors.ACTUAL_MISSING.on(reportOn))
             }
         }
 
@@ -144,28 +144,28 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
                 "Incompatible.ClassScopes is only possible for a class or a typealias: $descriptor"
             }
 
-            // Do not report "header members are not implemented" for those header members, for which there's a clear
-            // (albeit maybe incompatible) single implementation suspect, declared in the impl class.
+            // Do not report "expected members have no actual ones" for those expected members, for which there's a clear
+            // (albeit maybe incompatible) single actual suspect, declared in the actual class.
             // This is needed only to reduce the number of errors. Incompatibility errors for those members will be reported
             // later when this checker is called for them
-            fun hasSingleImplSuspect(
-                    headerWithIncompatibility: Pair<MemberDescriptor, Map<Incompatible, Collection<MemberDescriptor>>>
+            fun hasSingleActualSuspect(
+                    expectedWithIncompatibility: Pair<MemberDescriptor, Map<Incompatible, Collection<MemberDescriptor>>>
             ): Boolean {
-                val (headerMember, incompatibility) = headerWithIncompatibility
-                val implMember = incompatibility.values.singleOrNull()?.singleOrNull()
-                return implMember != null &&
-                       implMember.isExplicitImplDeclaration() &&
-                       findHeaderForImpl(implMember, headerMember.module)?.values?.singleOrNull()?.singleOrNull() == headerMember
+                val (expectedMember, incompatibility) = expectedWithIncompatibility
+                val actualMember = incompatibility.values.singleOrNull()?.singleOrNull()
+                return actualMember != null &&
+                       actualMember.isExplicitActualDeclaration() &&
+                       findExpectedForActual(actualMember, expectedMember.module)?.values?.singleOrNull()?.singleOrNull() == expectedMember
             }
 
-            val nonTrivialUnimplemented = singleIncompatibility.unimplemented.filterNot(::hasSingleImplSuspect)
+            val nonTrivialUnfulfilled = singleIncompatibility.unfulfilled.filterNot(::hasSingleActualSuspect)
 
-            if (nonTrivialUnimplemented.isNotEmpty()) {
+            if (nonTrivialUnfulfilled.isNotEmpty()) {
                 val classDescriptor =
                         (descriptor as? TypeAliasDescriptor)?.expandedType?.constructor?.declarationDescriptor as? ClassDescriptor
                         ?: (descriptor as ClassDescriptor)
-                diagnosticHolder.report(Errors.HEADER_CLASS_MEMBERS_ARE_NOT_IMPLEMENTED.on(
-                        reportOn, classDescriptor, nonTrivialUnimplemented
+                diagnosticHolder.report(Errors.NO_ACTUAL_CLASS_MEMBER_FOR_EXPECTED_CLASS.on(
+                        reportOn, classDescriptor, nonTrivialUnfulfilled
                 ))
             }
         }
@@ -173,71 +173,71 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
             assert(compatibility.keys.all { it is Incompatible })
             @Suppress("UNCHECKED_CAST")
             val incompatibility = compatibility as Map<Incompatible, Collection<MemberDescriptor>>
-            diagnosticHolder.report(Errors.IMPLEMENTATION_WITHOUT_HEADER.on(reportOn, descriptor, incompatibility))
+            diagnosticHolder.report(Errors.ACTUAL_WITHOUT_EXPECT.on(reportOn, descriptor, incompatibility))
         }
     }
 
     // This should ideally be handled by CallableMemberDescriptor.Kind, but default constructors have kind DECLARATION and non-empty source.
     // Their source is the containing KtClass instance though, as opposed to explicit constructors, whose source is KtConstructor
-    private fun MemberDescriptor.isExplicitImplDeclaration(): Boolean =
+    private fun MemberDescriptor.isExplicitActualDeclaration(): Boolean =
             when (this) {
                 is ConstructorDescriptor -> DescriptorToSourceUtils.getSourceFromDescriptor(this) is KtConstructor<*>
                 is CallableMemberDescriptor -> kind == CallableMemberDescriptor.Kind.DECLARATION
                 else -> true
             }
 
-    private fun findHeaderForImpl(impl: MemberDescriptor, commonModule: ModuleDescriptor): Map<Compatibility, List<MemberDescriptor>>? {
-        return when (impl) {
+    private fun findExpectedForActual(actual: MemberDescriptor, commonModule: ModuleDescriptor): Map<Compatibility, List<MemberDescriptor>>? {
+        return when (actual) {
             is CallableMemberDescriptor -> {
-                val container = impl.containingDeclaration
+                val container = actual.containingDeclaration
                 val candidates = when (container) {
                     is ClassDescriptor -> {
                         // TODO: replace with 'singleOrNull' as soon as multi-module diagnostic tests are refactored
-                        val headerClass = findHeaderForImpl(container, commonModule)?.values?.firstOrNull()?.firstOrNull() as? ClassDescriptor
-                        headerClass?.getMembers(impl.name)?.filterIsInstance<CallableMemberDescriptor>().orEmpty()
+                        val expectedClass = findExpectedForActual(container, commonModule)?.values?.firstOrNull()?.firstOrNull() as? ClassDescriptor
+                        expectedClass?.getMembers(actual.name)?.filterIsInstance<CallableMemberDescriptor>().orEmpty()
                     }
-                    is PackageFragmentDescriptor -> impl.findNamesakesFromModule(commonModule)
-                    else -> return null // do not report anything for incorrect code, e.g. 'impl' local function
+                    is PackageFragmentDescriptor -> actual.findNamesakesFromModule(commonModule)
+                    else -> return null // do not report anything for incorrect code, e.g. 'actual' local function
                 }
 
                 candidates.filter { declaration ->
-                    impl != declaration && declaration.isHeader
+                    actual != declaration && declaration.isExpect
                 }.groupBy { declaration ->
-                    // TODO: optimize by caching this per impl-header class pair, do not create a new substitutor for each impl member
+                    // TODO: optimize by caching this per actual-expected class pair, do not create a new substitutor for each actual member
                     val substitutor =
                             if (container is ClassDescriptor) {
-                                val headerClass = declaration.containingDeclaration as ClassDescriptor
+                                val expectedClass = declaration.containingDeclaration as ClassDescriptor
                                 // TODO: this might not work for members of inner generic classes
-                                Substitutor(headerClass.declaredTypeParameters, container.declaredTypeParameters)
+                                Substitutor(expectedClass.declaredTypeParameters, container.declaredTypeParameters)
                             }
                             else null
-                    areCompatibleCallables(declaration, impl, parentSubstitutor = substitutor)
+                    areCompatibleCallables(declaration, actual, parentSubstitutor = substitutor)
                 }
             }
             is ClassifierDescriptorWithTypeParameters -> {
-                impl.findClassifiersFromModule(commonModule).filter { declaration ->
-                    impl != declaration &&
-                    declaration is ClassDescriptor && declaration.isHeader
-                }.groupBy { header ->
-                    areCompatibleClassifiers(header as ClassDescriptor, impl)
+                actual.findClassifiersFromModule(commonModule).filter { declaration ->
+                    actual != declaration &&
+                    declaration is ClassDescriptor && declaration.isExpect
+                }.groupBy { expected ->
+                    areCompatibleClassifiers(expected as ClassDescriptor, actual)
                 }
             }
             else -> null
         }
     }
 
-    fun MemberDescriptor.findCompatibleImplForHeader(platformModule: ModuleDescriptor): List<MemberDescriptor> =
-            findImplForHeader(this, platformModule)?.get(Compatible).orEmpty()
+    fun MemberDescriptor.findCompatibleActualForExpected(platformModule: ModuleDescriptor): List<MemberDescriptor> =
+            findActualForExpected(this, platformModule)?.get(Compatible).orEmpty()
 
-    fun MemberDescriptor.findAnyImplForHeader(platformModule: ModuleDescriptor): List<MemberDescriptor> {
-        val implsGroupedByCompatibility = findImplForHeader(this, platformModule)
-        return implsGroupedByCompatibility?.get(Compatible)
-               ?: implsGroupedByCompatibility?.values?.flatten()
+    fun MemberDescriptor.findAnyActualForExpected(platformModule: ModuleDescriptor): List<MemberDescriptor> {
+        val actualsGroupedByCompatibility = findActualForExpected(this, platformModule)
+        return actualsGroupedByCompatibility?.get(Compatible)
+               ?: actualsGroupedByCompatibility?.values?.flatten()
                ?: emptyList()
     }
 
-    fun MemberDescriptor.findCompatibleHeaderForImpl(commonModule: ModuleDescriptor): List<MemberDescriptor> =
-            findHeaderForImpl(this, commonModule)?.get(Compatible).orEmpty()
+    fun MemberDescriptor.findCompatibleExpectedForActual(commonModule: ModuleDescriptor): List<MemberDescriptor> =
+            findExpectedForActual(this, commonModule)?.get(Compatible).orEmpty()
 
     private fun CallableMemberDescriptor.findNamesakesFromModule(module: ModuleDescriptor): Collection<CallableMemberDescriptor> {
         val containingDeclaration = containingDeclaration
@@ -308,7 +308,7 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
             // Functions
 
             object FunctionModifiersDifferent : Incompatible("modifiers are different (suspend)")
-            object FunctionModifiersNotSubset : Incompatible("some modifiers on header declaration are missing on the implementation (external, infix, inline, operator, tailrec)")
+            object FunctionModifiersNotSubset : Incompatible("some modifiers on expected declaration are missing on the actual one (external, infix, inline, operator, tailrec)")
 
             // Properties
 
@@ -321,13 +321,13 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
 
             object ClassModifiers : Incompatible("modifiers are different (companion, inner)")
 
-            object Supertypes : Incompatible("some supertypes are missing in the implementation")
+            object Supertypes : Incompatible("some supertypes are missing in the actual declaration")
 
             class ClassScopes(
-                    val unimplemented: List<Pair<MemberDescriptor, Map<Incompatible, Collection<MemberDescriptor>>>>
-            ) : Incompatible("some members are not implemented")
+                    val unfulfilled: List<Pair<MemberDescriptor, Map<Incompatible, Collection<MemberDescriptor>>>>
+            ) : Incompatible("some expected members have no actual ones")
 
-            object EnumEntries : Incompatible("some entries from header enum are missing in the impl enum")
+            object EnumEntries : Incompatible("some entries from expected enum are missing in the actual enum")
 
             // Common
 
@@ -386,7 +386,7 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
         if (!equalsBy(aParams, bParams, ValueParameterDescriptor::declaresDefaultValue)) return Incompatible.ValueParameterHasDefault
         if (!equalsBy(aParams, bParams, { p -> listOf(p.varargElementType != null) })) return Incompatible.ValueParameterVararg
 
-        // Adding noinline/crossinline to parameters is disallowed, except if the header declaration was not inline at all
+        // Adding noinline/crossinline to parameters is disallowed, except if the expected declaration was not inline at all
         if (a is FunctionDescriptor && a.isInline) {
             if (aParams.indices.any { i -> !aParams[i].isNoinline && bParams[i].isNoinline }) return Incompatible.ValueParameterNoinline
             if (aParams.indices.any { i -> !aParams[i].isCrossinline && bParams[i].isCrossinline }) return Incompatible.ValueParameterCrossinline
@@ -408,8 +408,8 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
         with(NewKotlinTypeChecker) {
             val context = object : TypeCheckerContext(false) {
                 override fun areEqualTypeConstructors(a: TypeConstructor, b: TypeConstructor): Boolean {
-                    return isHeaderClassAndImplTypeAlias(a, b, platformModule) ||
-                           isHeaderClassAndImplTypeAlias(b, a, platformModule) ||
+                    return isExpectedClassAndActualTypeAlias(a, b, platformModule) ||
+                           isExpectedClassAndActualTypeAlias(b, a, platformModule) ||
                            super.areEqualTypeConstructors(a, b)
                 }
             }
@@ -417,25 +417,25 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
         }
     }
 
-    // For example, headerTypeConstructor may be the header class kotlin.text.StringBuilder, while implTypeConstructor
+    // For example, expectedTypeConstructor may be the expected class kotlin.text.StringBuilder, while actualTypeConstructor
     // is java.lang.StringBuilder. For the purposes of type compatibility checking, we must consider these types equal here.
-    // Note that the case of an "impl class" works as expected though, because the impl class by definition has the same FQ name
-    // as the corresponding header class, so their type constructors are equal as per AbstractClassTypeConstructor#equals
-    private fun isHeaderClassAndImplTypeAlias(
-            headerTypeConstructor: TypeConstructor,
-            implTypeConstructor: TypeConstructor,
+    // Note that the case of an "actual class" works as expected though, because the actual class by definition has the same FQ name
+    // as the corresponding expected class, so their type constructors are equal as per AbstractClassTypeConstructor#equals
+    private fun isExpectedClassAndActualTypeAlias(
+            expectedTypeConstructor: TypeConstructor,
+            actualTypeConstructor: TypeConstructor,
             platformModule: ModuleDescriptor
     ): Boolean {
-        val header = headerTypeConstructor.declarationDescriptor
-        val impl = implTypeConstructor.declarationDescriptor
-        return header is ClassifierDescriptorWithTypeParameters &&
-               header.isHeader &&
-               impl is ClassifierDescriptorWithTypeParameters &&
-               header.findClassifiersFromModule(platformModule).any { classifier ->
-                   // Note that it's fine to only check that this "impl typealias" expands to the expected class, without checking
+        val expected = expectedTypeConstructor.declarationDescriptor
+        val actual = actualTypeConstructor.declarationDescriptor
+        return expected is ClassifierDescriptorWithTypeParameters &&
+               expected.isExpect &&
+               actual is ClassifierDescriptorWithTypeParameters &&
+               expected.findClassifiersFromModule(platformModule).any { classifier ->
+                   // Note that it's fine to only check that this "actual typealias" expands to the expected class, without checking
                    // whether the type arguments in the expansion are in the correct order or have the correct variance, because we only
-                   // allow simple cases like "impl typealias Foo<A, B> = FooImpl<A, B>", see DeclarationsChecker#checkImplTypeAlias
-                   (classifier as? TypeAliasDescriptor)?.classDescriptor == impl
+                   // allow simple cases like "actual typealias Foo<A, B> = FooImpl<A, B>", see DeclarationsChecker#checkActualTypeAlias
+                   (classifier as? TypeAliasDescriptor)?.classDescriptor == actual
                }
     }
 
@@ -456,7 +456,7 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
             return Incompatible.TypeParameterUpperBounds
         if (!equalsBy(a, b, TypeParameterDescriptor::getVariance)) return Incompatible.TypeParameterVariance
 
-        // Removing "reified" from a header function's type parameter is fine
+        // Removing "reified" from an expected function's type parameter is fine
         if (a.indices.any { i -> !a[i].isReified && b[i].isReified }) return Incompatible.TypeParameterReified
 
         return Compatible
@@ -482,13 +482,13 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
     }
 
     private fun areCompatibleClassifiers(a: ClassDescriptor, other: ClassifierDescriptor): Compatibility {
-        // Can't check FQ names here because nested header class may be implemented via impl typealias's expansion with the other FQ name
+        // Can't check FQ names here because nested expected class may be implemented via actual typealias's expansion with the other FQ name
         assert(a.name == other.name) { "This function should be invoked only for declarations with the same name: $a, $other" }
 
         val b = when (other) {
             is ClassDescriptor -> other
             is TypeAliasDescriptor -> other.classDescriptor ?: return Compatible // do not report extra error on erroneous typealias
-            else -> throw AssertionError("Incorrect impl classifier for $a: $other")
+            else -> throw AssertionError("Incorrect actual classifier for $a: $other")
         }
 
         if (a.kind != b.kind) return Incompatible.ClassKind
@@ -527,7 +527,7 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
             platformModule: ModuleDescriptor,
             substitutor: Substitutor
     ): Compatibility {
-        val unimplemented = arrayListOf<Pair<MemberDescriptor, Map<Incompatible, MutableCollection<MemberDescriptor>>>>()
+        val unfulfilled = arrayListOf<Pair<MemberDescriptor, Map<Incompatible, MutableCollection<MemberDescriptor>>>>()
 
         val bMembersByName = b.getMembers().groupBy { it.name }
 
@@ -558,7 +558,7 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
                 }
             }
 
-            unimplemented.add(aMember to incompatibilityMap)
+            unfulfilled.add(aMember to incompatibilityMap)
         }
 
         if (a.kind == ClassKind.ENUM_CLASS) {
@@ -572,9 +572,9 @@ object HeaderImplDeclarationChecker : DeclarationChecker {
 
         // TODO: check static scope?
 
-        if (unimplemented.isEmpty()) return Compatible
+        if (unfulfilled.isEmpty()) return Compatible
 
-        return Incompatible.ClassScopes(unimplemented)
+        return Incompatible.ClassScopes(unfulfilled)
     }
 
     private fun ClassDescriptor.getMembers(name: Name? = null): Collection<MemberDescriptor> {

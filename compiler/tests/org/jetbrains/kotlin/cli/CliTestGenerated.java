@@ -218,6 +218,48 @@ public class CliTestGenerated extends AbstractCliTest {
             doJvmTest(fileName);
         }
 
+        @TestMetadata("jsr305DeprecatedEnable.args")
+        public void testJsr305DeprecatedEnable() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305DeprecatedEnable.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305DeprecatedIgnore.args")
+        public void testJsr305DeprecatedIgnore() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305DeprecatedIgnore.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305DeprecatedWarn.args")
+        public void testJsr305DeprecatedWarn() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305DeprecatedWarn.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305Ignore.args")
+        public void testJsr305Ignore() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305Ignore.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305NoFlag.args")
+        public void testJsr305NoFlag() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305NoFlag.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305Strict.args")
+        public void testJsr305Strict() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305Strict.args");
+            doJvmTest(fileName);
+        }
+
+        @TestMetadata("jsr305Warn.args")
+        public void testJsr305Warn() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jsr305Warn.args");
+            doJvmTest(fileName);
+        }
+
         @TestMetadata("jvm8Target.args")
         public void testJvm8Target() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/cli/jvm/jvm8Target.args");

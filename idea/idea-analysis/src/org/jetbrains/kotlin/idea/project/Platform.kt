@@ -25,6 +25,7 @@ import com.intellij.openapi.roots.ProjectFileIndex
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.cli.common.arguments.Argument
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.compiler.configuration.Kotlin2JvmCompilerArgumentsHolder
@@ -90,7 +91,7 @@ fun Project.getLanguageVersionSettings(contextModule: Module? = null,
             null
     )
     return LanguageVersionSettingsImpl(languageVersion, apiVersion,
-                                       arguments.configureAnalysisFlags() + extraAnalysisFlags,
+                                       arguments.configureAnalysisFlags(MessageCollector.NONE) + extraAnalysisFlags,
                                        extraLanguageFeatures)
 }
 
@@ -113,7 +114,7 @@ val Module.languageVersionSettings: LanguageVersionSettings
         return LanguageVersionSettingsImpl(
                 languageVersion,
                 ApiVersion.createByLanguageVersion(apiVersion),
-                facetSettings.mergedCompilerArguments?.configureAnalysisFlags().orEmpty(),
+                facetSettings.mergedCompilerArguments?.configureAnalysisFlags(MessageCollector.NONE).orEmpty(),
                 extraLanguageFeatures
         )
     }
@@ -151,7 +152,7 @@ private fun getExtraLanguageFeatures(
 
 val KtElement.languageVersionSettings: LanguageVersionSettings
     get() {
-        if (ServiceManager.getService(containingKtFile.project, ProjectFileIndex::class.java) == null) {
+        if (ServiceManager.getService(project, ProjectFileIndex::class.java) == null) {
             return LanguageVersionSettingsImpl.DEFAULT
         }
         return ModuleUtilCore.findModuleForPsiElement(this)?.languageVersionSettings ?: LanguageVersionSettingsImpl.DEFAULT
@@ -159,7 +160,7 @@ val KtElement.languageVersionSettings: LanguageVersionSettings
 
 val KtElement.jvmTarget: JvmTarget
     get() {
-        if (ServiceManager.getService(containingKtFile.project, ProjectFileIndex::class.java) == null) {
+        if (ServiceManager.getService(project, ProjectFileIndex::class.java) == null) {
             return JvmTarget.DEFAULT
         }
         return ModuleUtilCore.findModuleForPsiElement(this)?.targetPlatform?.version as? JvmTarget ?: JvmTarget.DEFAULT

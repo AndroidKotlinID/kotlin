@@ -13843,6 +13843,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("incompatibles.kt")
+            public void testIncompatibles() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/incompatibles.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("modifierApplicability.kt")
             public void testModifierApplicability() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/modifierApplicability.kt");
@@ -13853,6 +13859,21 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             public void testNamedArguments() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/namedArguments.kt");
                 doTest(fileName);
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/deprecated")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Deprecated extends AbstractDiagnosticsTest {
+                public void testAllFilesPresentInDeprecated() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/deprecated"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("header.kt")
+                public void testHeader() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/deprecated/header.kt");
+                    doTest(fileName);
+                }
             }
 
             @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/enum")
@@ -23776,6 +23797,24 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("assigningArraysToVarargsInAnnotations.kt")
+            public void testAssigningArraysToVarargsInAnnotations() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/assigningArraysToVarargsInAnnotations.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("assigningSingleElementsInNamedFormAnnDeprecation.kt")
+            public void testAssigningSingleElementsInNamedFormAnnDeprecation() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/assigningSingleElementsInNamedFormAnnDeprecation.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("assigningSingleElementsInNamedFormFunDeprecation.kt")
+            public void testAssigningSingleElementsInNamedFormFunDeprecation() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/assigningSingleElementsInNamedFormFunDeprecation.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("kt1781.kt")
             public void testKt1781() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/kt1781.kt");
@@ -23827,6 +23866,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("NilaryVsVararg.kt")
             public void testNilaryVsVararg() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/NilaryVsVararg.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("noAssigningArraysToVarargsFeature.kt")
+            public void testNoAssigningArraysToVarargsFeature() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/noAssigningArraysToVarargsFeature.kt");
                 doTest(fileName);
             }
 

@@ -18,7 +18,7 @@ package org.jetbrains.kotlin.diagnostics.rendering
 
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.MemberDescriptor
-import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker.Compatibility.Incompatible
+import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker.Compatibility.Incompatible
 
 class PlatformIncompatibilityDiagnosticRenderer(
         private val mode: MultiplatformDiagnosticRenderingMode
@@ -103,7 +103,7 @@ private fun StringBuilder.renderIncompatibilityInformation(
             append(indent)
             append("No implementations are found for members listed below:")
             mode.newLine(this)
-            renderIncompatibleClassScopes(incompatibility.unimplemented, indent, context, mode)
+            renderIncompatibleClassScopes(incompatibility.unfulfilled, indent, context, mode)
         }
     }
 }

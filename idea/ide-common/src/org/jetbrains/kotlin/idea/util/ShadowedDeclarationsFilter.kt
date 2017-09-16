@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
+ * Copyright 2010-2017 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.idea.util
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.idea.imports.importableFqName
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
@@ -24,7 +25,6 @@ import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
-import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoAfter
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoBefore
 import org.jetbrains.kotlin.resolve.calls.CallResolver
 import org.jetbrains.kotlin.resolve.calls.context.BasicCallResolutionContext
@@ -203,7 +203,7 @@ class ShadowedDeclarationsFilter(
         val dataFlowInfo = bindingContext.getDataFlowInfoBefore(context)
         val context = BasicCallResolutionContext.create(bindingTrace, scope, newCall, TypeUtils.NO_EXPECTED_TYPE, dataFlowInfo,
                                                         ContextDependency.INDEPENDENT, CheckArgumentTypesMode.CHECK_VALUE_ARGUMENTS,
-                                                        false)
+                                                        false, resolutionFacade.frontendService<LanguageVersionSettings>())
         val callResolver = resolutionFacade.frontendService<CallResolver>()
         val results = if (isFunction) callResolver.resolveFunctionCall(context) else callResolver.resolveSimpleProperty(context)
         val resultingDescriptors = results.resultingCalls.map { it.resultingDescriptor }

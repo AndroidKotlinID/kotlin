@@ -28,13 +28,13 @@ import org.jetbrains.kotlin.idea.caches.resolve.ModuleTestSourceInfo
 import org.jetbrains.kotlin.idea.caches.resolve.findModuleDescriptor
 import org.jetbrains.kotlin.idea.core.toDescriptor
 import org.jetbrains.kotlin.idea.project.TargetPlatformDetector
-import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtPsiUtil
+import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
 import org.jetbrains.kotlin.resolve.BindingTraceContext
 import org.jetbrains.kotlin.resolve.TargetPlatform
-import org.jetbrains.kotlin.resolve.checkers.HeaderImplDeclarationChecker
+import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker
 import org.jetbrains.kotlin.resolve.diagnostics.SimpleDiagnostics
 
 val ModuleDescriptor.sourceKind: SourceKind
@@ -53,10 +53,10 @@ val ModuleDescriptor.allImplementingCompatibleModules
         other.sourceKind == this.sourceKind
     }
 
-class PlatformHeaderAnnotator : Annotator {
+class PlatformExpectedAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         val declaration = element as? KtDeclaration ?: return
-        if (!isHeaderDeclaration(declaration)) return
+        if (!isExpectedDeclaration(declaration)) return
 
         if (TargetPlatformDetector.getPlatform(declaration.containingKtFile) !is TargetPlatform.Common) return
 
@@ -64,11 +64,11 @@ class PlatformHeaderAnnotator : Annotator {
         if (implementingModules.isEmpty()) return
 
         val descriptor = declaration.toDescriptor() as? MemberDescriptor ?: return
-        if (!descriptor.isHeader) return
+        if (!descriptor.isExpect) return
 
         val trace = BindingTraceContext()
         for (module in implementingModules) {
-            HeaderImplDeclarationChecker.checkHeaderDeclarationHasImplementation(declaration, descriptor, trace, module)
+            ExpectedActualDeclarationChecker.checkExpectedDeclarationHasActual(declaration, descriptor, trace, module)
         }
 
         val suppressionCache = KotlinCacheService.getInstance(declaration.project).getSuppressionCache()
@@ -80,8 +80,8 @@ class PlatformHeaderAnnotator : Annotator {
         KotlinPsiChecker().annotateElement(declaration, holder, SimpleDiagnostics(filteredList))
     }
 
-    private fun isHeaderDeclaration(declaration: KtDeclaration): Boolean {
-        return declaration.hasModifier(KtTokens.HEADER_KEYWORD) ||
-               declaration is KtClassOrObject && KtPsiUtil.getOutermostClassOrObject(declaration)?.hasModifier(KtTokens.HEADER_KEYWORD) == true
+    private fun isExpectedDeclaration(declaration: KtDeclaration): Boolean {
+        return declaration.hasExpectModifier() ||
+               declaration is KtClassOrObject && KtPsiUtil.getOutermostClassOrObject(declaration)?.hasExpectModifier() == true
     }
 }

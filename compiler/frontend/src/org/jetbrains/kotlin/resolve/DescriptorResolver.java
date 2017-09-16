@@ -337,7 +337,7 @@ public class DescriptorResolver {
                                 scope,
                                 destructuringDeclaration, new TransientReceiver(type), /* initializer = */ null,
                                 ExpressionTypingContext.newContext(
-                                        trace, scopeForDestructuring, DataFlowInfoFactory.EMPTY, TypeUtils.NO_EXPECTED_TYPE
+                                        trace, scopeForDestructuring, DataFlowInfoFactory.EMPTY, TypeUtils.NO_EXPECTED_TYPE, languageVersionSettings
                                 )
                         );
 
@@ -782,7 +782,7 @@ public class DescriptorResolver {
         KtExpression initializer = destructuringDeclaration.getInitializer();
 
         ExpressionTypingContext context = ExpressionTypingContext.newContext(
-                trace, scopeForDeclarationResolution, dataFlowInfo, TypeUtils.NO_EXPECTED_TYPE
+                trace, scopeForDeclarationResolution, dataFlowInfo, TypeUtils.NO_EXPECTED_TYPE, languageVersionSettings
         );
 
         ExpressionReceiver receiver = createReceiverForDestructuringDeclaration(destructuringDeclaration, context);
@@ -874,9 +874,9 @@ public class DescriptorResolver {
                 KotlinSourceElementKt.toSourceElement(variableDeclaration),
                 modifierList != null && modifierList.hasModifier(KtTokens.LATEINIT_KEYWORD),
                 modifierList != null && modifierList.hasModifier(KtTokens.CONST_KEYWORD),
-                modifierList != null && modifierList.hasModifier(KtTokens.HEADER_KEYWORD) && container instanceof PackageFragmentDescriptor ||
-                container instanceof ClassDescriptor && ((ClassDescriptor) container).isHeader(),
-                modifierList != null && modifierList.hasModifier(KtTokens.IMPL_KEYWORD),
+                modifierList != null && PsiUtilsKt.hasExpectModifier(modifierList) && container instanceof PackageFragmentDescriptor ||
+                container instanceof ClassDescriptor && ((ClassDescriptor) container).isExpect(),
+                modifierList != null && PsiUtilsKt.hasActualModifier(modifierList),
                 modifierList != null && modifierList.hasModifier(KtTokens.EXTERNAL_KEYWORD),
                 propertyInfo.getHasDelegate()
         );
@@ -1201,8 +1201,8 @@ public class DescriptorResolver {
                 KotlinSourceElementKt.toSourceElement(parameter),
                 false,
                 false,
-                classDescriptor.isHeader(),
-                modifierList != null && modifierList.hasModifier(KtTokens.IMPL_KEYWORD),
+                classDescriptor.isExpect(),
+                modifierList != null && PsiUtilsKt.hasActualModifier(modifierList),
                 false,
                 false
         );

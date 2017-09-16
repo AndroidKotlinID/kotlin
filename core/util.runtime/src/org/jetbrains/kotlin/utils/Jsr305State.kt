@@ -17,18 +17,16 @@
 package org.jetbrains.kotlin.utils
 
 enum class Jsr305State(
-        val description: String,
-        val shouldReportWarning: Boolean = false,
-        val shouldReportError: Boolean = false
+        val description: String
 ) {
     IGNORE("ignore"),
-    WARN("warn", shouldReportWarning = true),
-    STRICT("enable", shouldReportError = true),
+    WARN("warn"),
+    STRICT("strict"),
     ;
 
     companion object {
         @JvmField
-        val DEFAULT: Jsr305State = IGNORE
+        val DEFAULT: Jsr305State = WARN
 
         fun findByDescription(description: String?) = values().firstOrNull { it.description == description }
     }

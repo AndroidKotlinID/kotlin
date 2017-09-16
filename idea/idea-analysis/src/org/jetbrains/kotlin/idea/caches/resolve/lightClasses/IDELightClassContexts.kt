@@ -23,6 +23,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.stubs.StubIndex
 import org.jetbrains.kotlin.asJava.builder.LightClassConstructionContext
 import org.jetbrains.kotlin.config.JvmTarget
+import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.container.get
 import org.jetbrains.kotlin.container.useImpl
 import org.jetbrains.kotlin.container.useInstance
@@ -334,6 +335,7 @@ object IDELightClassContexts {
     class AdHocAnnotationResolver(
             private val moduleDescriptor: ModuleDescriptor,
             private val callResolver: CallResolver,
+            private val languageVersionSettings: LanguageVersionSettings,
             constantExpressionEvaluator: ConstantExpressionEvaluator,
             storageManager: StorageManager
     ) : AnnotationResolverImpl(callResolver, constantExpressionEvaluator, storageManager) {
@@ -364,7 +366,7 @@ object IDELightClassContexts {
                     BasicCallResolutionContext.create(
                             trace, scope, CallMaker.makeCall(null, null, annotationEntry), TypeUtils.NO_EXPECTED_TYPE,
                             DataFlowInfoFactory.EMPTY, ContextDependency.INDEPENDENT, CheckArgumentTypesMode.CHECK_VALUE_ARGUMENTS,
-                            true
+                            true, languageVersionSettings
                     ),
                     annotationEntry.calleeExpression!!.constructorReferenceExpression!!,
                     annotationConstructor.returnType

@@ -309,22 +309,29 @@ internal class DescriptorRendererImpl(
         }
         val hasAnnotations = length != lengthBefore
 
+        val isSuspend = type.isSuspendFunctionType
         val isNullable = type.isMarkedNullable
         val receiverType = type.getReceiverTypeFromFunctionType()
 
         val needParenthesis = isNullable || (hasAnnotations && receiverType != null)
+        if (needParenthesis) {
+            if (isSuspend) {
+                insert(lengthBefore, '(')
+            }
+            else {
+                if (hasAnnotations) {
+                    assert(last() == ' ')
+                    if (get(lastIndex - 1) != ')') {
+                        // last annotation rendered without parenthesis - need to add them otherwise parsing will be incorrect
+                        insert(lastIndex, "()")
+                    }
+                }
 
-        if (needParenthesis && hasAnnotations) {
-            assert(last() == ' ')
-            if (get(lastIndex - 1) != ')') {
-                // last annotation rendered without parenthesis - need to add them otherwise parsing will be incorrect
-                insert(lastIndex, "()")
+                append("(")
             }
         }
 
-        if (needParenthesis) append("(")
-
-        renderModifier(this, type.isSuspendFunctionType, "suspend")
+        renderModifier(this, isSuspend, "suspend")
 
         if (receiverType != null) {
             val surroundReceiver = shouldRenderAsPrettyFunctionType(receiverType) && !receiverType.isMarkedNullable ||
@@ -502,8 +509,8 @@ internal class DescriptorRendererImpl(
 
     private fun renderMemberModifiers(descriptor: MemberDescriptor, builder: StringBuilder) {
         renderModifier(builder, descriptor.isExternal, "external")
-        renderModifier(builder, DescriptorRendererModifier.HEADER in modifiers && descriptor.isHeader, "header")
-        renderModifier(builder, DescriptorRendererModifier.IMPL in modifiers && descriptor.isImpl, "impl")
+        renderModifier(builder, DescriptorRendererModifier.EXPECT in modifiers && descriptor.isExpect, "expect")
+        renderModifier(builder, DescriptorRendererModifier.ACTUAL in modifiers && descriptor.isActual, "actual")
     }
 
     private fun renderAdditionalModifiers(functionDescriptor: FunctionDescriptor, builder: StringBuilder) {
