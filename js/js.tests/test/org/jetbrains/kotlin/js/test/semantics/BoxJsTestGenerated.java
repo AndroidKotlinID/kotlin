@@ -893,6 +893,12 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             doTest(fileName);
         }
 
+        @TestMetadata("unitNullCheck.kt")
+        public void testUnitNullCheck() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/coercion/unitNullCheck.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("unitSafeCall.kt")
         public void testUnitSafeCall() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/coercion/unitSafeCall.kt");
@@ -2329,6 +2335,12 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             @TestMetadata("secondaryConstructorTemporaryVars.kt")
             public void testSecondaryConstructorTemporaryVars() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/expression/evaluationOrder/secondaryConstructorTemporaryVars.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("singleComponentDestructuring.kt")
+            public void testSingleComponentDestructuring() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/expression/evaluationOrder/singleComponentDestructuring.kt");
                 doTest(fileName);
             }
 
