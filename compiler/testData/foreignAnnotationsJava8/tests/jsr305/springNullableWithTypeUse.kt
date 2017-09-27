@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
 import javax.annotation.Nonnull;
 import javax.annotation.meta.TypeQualifierDefault;
 
-@Target(ElementType.CLASS)
+@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Nonnull
@@ -78,5 +78,5 @@ fun main(a: A) {
 
     a.baz()<!UNSAFE_CALL!>.<!>get(0)
     a.baz()!!.get(0).get(0)
-    a.baz()!!.get(0)?.get(0)
+    a.baz()!!.get(0)<!UNNECESSARY_SAFE_CALL!>?.<!>get(0)
 }
