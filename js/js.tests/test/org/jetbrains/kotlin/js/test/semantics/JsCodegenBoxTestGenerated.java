@@ -7619,6 +7619,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
         }
 
+        @TestMetadata("genericSetValueViaSyntheticAccessor.kt")
+        public void testGenericSetValueViaSyntheticAccessor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/delegatedProperty/genericSetValueViaSyntheticAccessor.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("getAsExtensionFun.kt")
         public void testGetAsExtensionFun() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/delegatedProperty/getAsExtensionFun.kt");
@@ -13451,6 +13457,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("kt14201_2.kt")
         public void testKt14201_2() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/operatorConventions/kt14201_2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt20387.kt")
+        public void testKt20387() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/operatorConventions/kt20387.kt");
             doTest(fileName);
         }
 
@@ -22849,6 +22861,24 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
     public static class SyntheticAccessors extends AbstractJsCodegenBoxTest {
+        @TestMetadata("accessorForGenericConstructor.kt")
+        public void testAccessorForGenericConstructor() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/accessorForGenericConstructor.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("accessorForGenericMethod.kt")
+        public void testAccessorForGenericMethod() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/accessorForGenericMethod.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("accessorForGenericMethodWithDefaults.kt")
+        public void testAccessorForGenericMethodWithDefaults() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/accessorForGenericMethodWithDefaults.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("accessorForProtected.kt")
         public void testAccessorForProtected() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/accessorForProtected.kt");
@@ -23664,6 +23694,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 return;
             }
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("doNotCopyImmediatelyCreatedArrays.kt")
+        public void testDoNotCopyImmediatelyCreatedArrays() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/vararg/doNotCopyImmediatelyCreatedArrays.kt");
+            doTest(fileName);
         }
 
         @TestMetadata("kt1978.kt")

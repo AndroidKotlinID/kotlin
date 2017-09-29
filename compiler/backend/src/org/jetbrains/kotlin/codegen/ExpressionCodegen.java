@@ -2656,6 +2656,15 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         return cur;
     }
 
+    private boolean canSkipArrayCopyForSpreadArgument(KtExpression spreadArgument) {
+        ResolvedCall<? extends CallableDescriptor> resolvedCall = CallUtilKt.getResolvedCall(spreadArgument, bindingContext);
+        if (resolvedCall == null) return false;
+
+        CallableDescriptor calleeDescriptor = resolvedCall.getResultingDescriptor();
+        return (calleeDescriptor instanceof ConstructorDescriptor) ||
+               CompileTimeConstantUtils.isArrayFunctionCall(resolvedCall) ||
+               (DescriptorUtils.getFqName(calleeDescriptor).asString().equals("kotlin.arrayOfNulls"));
+    }
 
     @NotNull
     public StackValue genVarargs(@NotNull VarargValueArgument valueArgument, @NotNull KotlinType outType) {
@@ -2678,10 +2687,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             if (size == 1) {
                 Type arrayType = getArrayType(arrayOfReferences ? AsmTypes.OBJECT_TYPE : elementType);
                 return StackValue.operation(type, adapter -> {
-                    gen(arguments.get(0).getArgumentExpression(), type);
-                    v.dup();
-                    v.arraylength();
-                    v.invokestatic("java/util/Arrays", "copyOf", Type.getMethodDescriptor(arrayType, arrayType, Type.INT_TYPE), false);
+                    KtExpression spreadArgument = arguments.get(0).getArgumentExpression();
+                    gen(spreadArgument, type);
+                    if (!canSkipArrayCopyForSpreadArgument(spreadArgument)) {
+                        v.dup();
+                        v.arraylength();
+                        v.invokestatic("java/util/Arrays", "copyOf", Type.getMethodDescriptor(arrayType, arrayType, Type.INT_TYPE), false);
+                    }
                     if (arrayOfReferences) {
                         v.checkcast(type);
                     }
@@ -3902,7 +3914,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             boolean isGetter = OperatorNameConventions.GET.equals(operationDescriptor.getName());
 
-            Callable callable = resolveToCallable(operationDescriptor, false, isGetter ? resolvedGetCall : resolvedSetCall);
+            ResolvedCall<FunctionDescriptor> resolvedCall = isGetter ? resolvedGetCall : resolvedSetCall;
+            assert resolvedCall != null : "No resolved call for " + operationDescriptor;
+            Callable callable = resolveToCallable(accessibleFunctionDescriptor(resolvedCall), false, resolvedCall);
             Callable callableMethod = resolveToCallableMethod(operationDescriptor, false);
             Type[] argumentTypes = callableMethod.getParameterTypes();
 
