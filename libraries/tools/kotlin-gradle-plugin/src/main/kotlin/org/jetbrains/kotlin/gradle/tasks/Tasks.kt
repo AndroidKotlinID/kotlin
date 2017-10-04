@@ -316,7 +316,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         val environment = when {
             !incremental -> GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
             else -> {
-                logger.warn(USING_INCREMENTAL_COMPILATION_MESSAGE)
+                logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
                 val friendTask = friendTaskName?.let { project.tasks.findByName(it) as? KotlinCompile }
                 GradleIncrementalCompilerEnvironment(computedCompilerClasspath, changedFiles, reporter, taskBuildDirectory,
                         messageCollector, outputItemCollector, args, kaptAnnotationsFileUpdater,
@@ -457,7 +457,7 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
 
         args.friendModules = friendDependency
 
-        args.sourceMapSourceRoots = source.orEmpty()
+        args.sourceMapBaseDirs = source.orEmpty()
                 .asSequence()
                 .filterIsInstance<SourceDirectorySet>()
                 .flatMap { it.srcDirs.asSequence() }
