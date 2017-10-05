@@ -6,13 +6,15 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 
 buildscript {
+    extra["defaultSnapshotVersion"] = "1.1-SNAPSHOT"
+
+    kotlinBootstrapFrom(BootstrapOption.BintrayDev("1.1.50-dev-1451"))
+
     val repos = listOfNotNull(
-            System.getProperty("bootstrap.kotlin.repo"),
-            "https://repo.gradle.org/gradle/repo",
+            bootstrapKotlinRepo,
+            "https://jcenter.bintray.com/",
             "https://plugins.gradle.org/m2",
             "http://repository.jetbrains.com/utils/")
-
-    extra["bootstrapKotlinVersion"] = bootstrapKotlinVersion
 
     extra["repos"] = repos
 
@@ -26,7 +28,7 @@ buildscript {
 
     dependencies {
         classpath("com.gradle.publish:plugin-publish-plugin:0.9.7")
-        classpath(kotlinDep("gradle-plugin"))
+        classpath(kotlinDep("gradle-plugin", bootstrapKotlinVersion))
     }
 }
 
@@ -46,7 +48,7 @@ val configuredJdks: List<JdkId> =
             }
         }
 
-val defaultSnapshotVersion = "1.1-SNAPSHOT"
+val defaultSnapshotVersion: String by extra
 val buildNumber by extra(findProperty("build.number")?.toString() ?: defaultSnapshotVersion)
 val kotlinVersion by extra(findProperty("deployVersion")?.toString() ?: buildNumber)
 
@@ -70,7 +72,7 @@ repositories {
 }
 
 dependencies {
-    bootstrapCompileCfg(kotlinDep("compiler-embeddable"))
+    bootstrapCompileCfg(kotlinDep("compiler-embeddable", bootstrapKotlinVersion))
 }
 
 val commonBuildDir = File(rootDir, "build")
