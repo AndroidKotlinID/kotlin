@@ -22,6 +22,7 @@ import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.BasePluginConvention
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.AbstractCompile
@@ -59,14 +60,16 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCo
     var compilerJarFile: File? = null
     var compilerClasspath: List<File>? = null
 
+    @get:InputFiles
     internal val computedCompilerClasspath: List<File>
         get() = compilerClasspath?.takeIf { it.isNotEmpty() }
                 ?: compilerJarFile?.let {
                     // a hack to remove compiler jar from the cp, will be dropped when compilerJarFile will be removed
-                    listOf(it) + findKotlinCompilerClasspath(project).filter { it.name.startsWith("kotlin-compiler") }
+                    listOf(it) + findKotlinCompilerClasspath(project).filter { !it.name.startsWith("kotlin-compiler") }
                 }
                 ?: findKotlinCompilerClasspath(project).takeIf { it.isNotEmpty() }
                 ?: throw IllegalStateException("Could not find Kotlin Compiler classpath. Please specify $name.compilerClasspath")
+
     protected abstract fun findKotlinCompilerClasspath(project: Project): List<File>
 }
 
@@ -105,6 +108,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         get() = (classpath + additionalClasspath)
                 .filterTo(LinkedHashSet(), File::exists)
 
+    @get:Input
     override val serializedCompilerArguments: List<String>
         get() {
             val arguments = createCompilerArgs()

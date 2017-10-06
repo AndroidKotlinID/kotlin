@@ -137,7 +137,8 @@ sealed class CreateActualFix<out D : KtNamedDeclaration>(
             val d = DiagnosticFactory.cast(diagnostic, Errors.NO_ACTUAL_FOR_EXPECT)
             val declaration = d.psiElement as? KtNamedDeclaration ?: return null
             val compatibility = d.c
-            if (compatibility.isNotEmpty()) return null
+            // For function we allow it, because overloads are possible
+            if (compatibility.isNotEmpty() && declaration !is KtFunction) return null
             val actualPlatform = d.b.getMultiTargetPlatform() as? MultiTargetPlatform.Specific ?: return null
             return when (declaration) {
                 is KtClassOrObject -> CreateActualClassFix(declaration, actualPlatform)
@@ -156,7 +157,19 @@ class CreateActualClassFix(
     generateClassOrObject(project, element, actualNeeded = true)
 }) {
 
-    override val elementType = if ((element as? KtClass)?.isInterface() == true) "interface" else "class"
+    override val elementType = run {
+        val element = element
+        when (element) {
+            is KtObjectDeclaration -> "object"
+            is KtClass -> when {
+                element.isInterface() -> "interface"
+                element.isEnum() -> "enum class"
+                element.isAnnotation() -> "annotation class"
+                else -> "class"
+            }
+            else -> "class"
+        }
+    }
 }
 
 class CreateActualPropertyFix(
@@ -198,24 +211,53 @@ private fun KtPsiFactory.generateClassOrObject(
 ): KtClassOrObject {
     val expectedText = expectedClass.text
     val actualClass = if (expectedClass is KtObjectDeclaration) createObject(expectedText) else createClass(expectedText)
-    if (expectedClass !is KtClass || !expectedClass.isInterface()) {
-        actualClass.declarations.forEach {
-            if (it !is KtEnumEntry &&
-                it !is KtClassOrObject &&
-                !it.hasModifier(KtTokens.ABSTRACT_KEYWORD)) {
-                it.delete()
+    val isInterface = expectedClass is KtClass && expectedClass.isInterface()
+    actualClass.declarations.forEach {
+        when (it) {
+            is KtEnumEntry -> return@forEach
+            is KtClassOrObject -> it.delete()
+            is KtCallableDeclaration -> {
+                if (!isInterface && !it.hasModifier(KtTokens.ABSTRACT_KEYWORD)) {
+                    it.delete()
+                }
+                else {
+                    it.addModifier(KtTokens.ACTUAL_KEYWORD)
+                }
             }
         }
+    }
 
-        declLoop@ for (expectedDeclaration in expectedClass.declarations) {
-            if (expectedDeclaration.hasModifier(KtTokens.ABSTRACT_KEYWORD)) continue
-            val descriptor = expectedDeclaration.toDescriptor() ?: continue
-            val actualDeclaration: KtDeclaration = when (expectedDeclaration) {
-                is KtFunction -> generateFunction(project, expectedDeclaration, descriptor as FunctionDescriptor, actualNeeded = true)
-                is KtProperty -> generateProperty(project, expectedDeclaration, descriptor as PropertyDescriptor, actualNeeded = true)
-                else -> continue@declLoop
+    declLoop@ for (expectedDeclaration in expectedClass.declarations) {
+        val descriptor = expectedDeclaration.toDescriptor() ?: continue
+        val actualDeclaration: KtDeclaration = when (expectedDeclaration) {
+            is KtClassOrObject ->
+                if (expectedDeclaration !is KtEnumEntry) {
+                    generateClassOrObject(project, expectedDeclaration, actualNeeded = true)
+                }
+                else {
+                    continue@declLoop
+                }
+            is KtCallableDeclaration -> {
+                if (isInterface || expectedDeclaration.hasModifier(KtTokens.ABSTRACT_KEYWORD)) {
+                    continue@declLoop
+                }
+                when (expectedDeclaration) {
+                    is KtFunction -> generateFunction(project, expectedDeclaration, descriptor as FunctionDescriptor, actualNeeded = true)
+                    is KtProperty -> generateProperty(project, expectedDeclaration, descriptor as PropertyDescriptor, actualNeeded = true)
+                    else -> continue@declLoop
+                }
             }
-            actualClass.addDeclaration(actualDeclaration)
+            else -> continue@declLoop
+        }
+        actualClass.addDeclaration(actualDeclaration)
+    }
+
+    actualClass.primaryConstructor?.let {
+        it.addModifier(KtTokens.ACTUAL_KEYWORD)
+        for (parameter in it.valueParameters) {
+            if (parameter.hasValOrVar()) {
+                parameter.addModifier(KtTokens.ACTUAL_KEYWORD)
+            }
         }
     }
 
@@ -247,15 +289,15 @@ private fun KtPsiFactory.generateFunction(
         }
     }
 
-    return if (expectedFunction is KtSecondaryConstructor) {
+    return (if (expectedFunction is KtSecondaryConstructor) {
         createSecondaryConstructor(expectedFunction.text + " " + body)
     }
     else {
-        createFunction(expectedFunction.text + " " + body).apply {
-            replaceExpectModifier(actualNeeded)
-            if (returnType != null && KotlinBuiltIns.isUnit(returnType)) {
-                typeReference = null
-            }
+        createFunction(expectedFunction.text + " " + body)
+    } as KtFunction).apply {
+        replaceExpectModifier(actualNeeded)
+        if (returnType != null && KotlinBuiltIns.isUnit(returnType)) {
+            typeReference = null
         }
     }
 }

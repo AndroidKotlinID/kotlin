@@ -50,6 +50,11 @@ class QuickFixMultiModuleTest : AbstractQuickFixMultiModuleTest() {
     }
 
     @Test
+    fun testAnnotation() {
+        doMultiPlatformTest()
+    }
+
+    @Test
     fun testClass() {
         doMultiPlatformTest()
     }
@@ -121,6 +126,11 @@ class QuickFixMultiModuleTest : AbstractQuickFixMultiModuleTest() {
 
     @Test
     fun testNested() {
+        doMultiPlatformTest()
+    }
+
+    @Test
+    fun testPrimaryConstructor() {
         doMultiPlatformTest()
     }
 
