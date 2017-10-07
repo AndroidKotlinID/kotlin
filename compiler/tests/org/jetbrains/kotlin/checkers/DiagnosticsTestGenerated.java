@@ -13003,6 +13003,93 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 }
             }
 
+            @TestMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class SignatureAnnotations extends AbstractDiagnosticsTest {
+                public void testAllFilesPresentInSignatureAnnotations() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/j+k/signatureAnnotations"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("defaultEnum.kt")
+                public void testDefaultEnum() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/defaultEnum.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("defaultLongLiteral.kt")
+                public void testDefaultLongLiteral() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/defaultLongLiteral.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("defaultNull.kt")
+                public void testDefaultNull() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/defaultNull.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("defaultNullAndParameter.kt")
+                public void testDefaultNullAndParameter() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/defaultNullAndParameter.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("defaultParameter.kt")
+                public void testDefaultParameter() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/defaultParameter.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("emptyParameterName.kt")
+                public void testEmptyParameterName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/emptyParameterName.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("overridesDefaultValue.kt")
+                public void testOverridesDefaultValue() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/overridesDefaultValue.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("overridesParameterName.kt")
+                public void testOverridesParameterName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/overridesParameterName.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("reorderedParameterNames.kt")
+                public void testReorderedParameterNames() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/reorderedParameterNames.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("sameParameterName.kt")
+                public void testSameParameterName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/sameParameterName.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("specialCharsParameterName.kt")
+                public void testSpecialCharsParameterName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/specialCharsParameterName.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("stableParameterName.kt")
+                public void testStableParameterName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/stableParameterName.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("staticMethodWithDefaultValue.kt")
+                public void testStaticMethodWithDefaultValue() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/staticMethodWithDefaultValue.kt");
+                    doTest(fileName);
+                }
+            }
+
             @TestMetadata("compiler/testData/diagnostics/tests/j+k/specialBuiltIns")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
