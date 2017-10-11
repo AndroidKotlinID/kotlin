@@ -22,31 +22,30 @@ import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PackageViewDescriptor
-import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.jvm.compiler.LoadDescriptorUtil
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.lazy.JvmResolveUtil
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedClassDescriptor
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedMemberDescriptor
-import org.jetbrains.kotlin.serialization.deserialization.descriptors.SinceKotlinInfo
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.VersionRequirement
 import org.jetbrains.kotlin.test.ConfigurationKind
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.jetbrains.kotlin.test.TestCaseWithTmpdir
 import org.jetbrains.kotlin.test.TestJdkKind
 import java.io.File
 
-class SinceKotlinInfoTest : TestCaseWithTmpdir() {
+class VersionRequirementTest : TestCaseWithTmpdir() {
     fun doTest(
-            fileName: String,
-            expectedSinceKotlinInfoVersion: SinceKotlinInfo.Version,
+            expectedVersionRequirement: VersionRequirement.Version,
             expectedLevel: DeprecationLevel,
             expectedMessage: String?,
+            expectedVersionKind: ProtoBuf.VersionRequirement.VersionKind,
             expectedErrorCode: Int?,
             vararg fqNames: String
     ) {
         LoadDescriptorUtil.compileKotlinToDirAndGetModule(
-                listOf(File(fileName)), tmpdir,
+                listOf(File("compiler/testData/versionRequirement/${getTestName(true)}.kt")), tmpdir,
                 KotlinTestUtils.createEnvironmentWithMockJdkAndIdeaAnnotations(testRootDisposable)
         )
 
@@ -59,16 +58,17 @@ class SinceKotlinInfoTest : TestCaseWithTmpdir() {
         )
 
         fun check(descriptor: DeclarationDescriptor) {
-            if (descriptor !is DeserializedMemberDescriptor) {
-                throw AssertionError("Not a deserialized descriptor: $descriptor")
-            }
+            val requirement = when (descriptor) {
+                is DeserializedMemberDescriptor -> descriptor.versionRequirement
+                is DeserializedClassDescriptor -> descriptor.versionRequirement
+                else -> throw AssertionError("Unknown descriptor: $descriptor")
+            } ?: throw AssertionError("No VersionRequirement for $descriptor")
 
-            val sinceKotlinInfo = descriptor.sinceKotlinInfo ?: throw AssertionError("No SinceKotlinInfo for $descriptor")
-
-            assertEquals(expectedSinceKotlinInfoVersion, sinceKotlinInfo.version)
-            assertEquals(expectedLevel, sinceKotlinInfo.level)
-            assertEquals(expectedMessage, sinceKotlinInfo.message)
-            assertEquals(expectedErrorCode, sinceKotlinInfo.errorCode)
+            assertEquals(expectedVersionRequirement, requirement.version)
+            assertEquals(expectedLevel, requirement.level)
+            assertEquals(expectedMessage, requirement.message)
+            assertEquals(expectedVersionKind, requirement.kind)
+            assertEquals(expectedErrorCode, requirement.errorCode)
         }
 
         for (fqName in fqNames) {
@@ -98,8 +98,7 @@ class SinceKotlinInfoTest : TestCaseWithTmpdir() {
     }
 
     fun testSuspendFun() {
-        doTest("compiler/testData/sinceKotlinInfo/suspendFun.kt",
-               SinceKotlinInfo.Version(1, 1), DeprecationLevel.ERROR, null, null,
+        doTest(VersionRequirement.Version(1, 1), DeprecationLevel.ERROR, null, ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION, null,
                "test.topLevel",
                "test.Foo.member",
                "test.Foo.<init>",
@@ -109,5 +108,41 @@ class SinceKotlinInfoTest : TestCaseWithTmpdir() {
                "test.async4",
                "test.asyncVal"
        )
+    }
+
+    fun testLanguageVersionViaAnnotation() {
+        doTest(VersionRequirement.Version(1, 1), DeprecationLevel.WARNING, "message", ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION, 42,
+               "test.Klass",
+               "test.Konstructor.<init>",
+               "test.Typealias",
+               "test.function",
+               "test.property"
+       )
+    }
+
+    fun testApiVersionViaAnnotation() {
+        doTest(VersionRequirement.Version(1, 1), DeprecationLevel.WARNING, "message", ProtoBuf.VersionRequirement.VersionKind.API_VERSION, 42,
+               "test.Klass",
+               "test.Konstructor.<init>",
+               "test.Typealias",
+               "test.function",
+               "test.property"
+       )
+    }
+
+    fun testCompilerVersionViaAnnotation() {
+        doTest(VersionRequirement.Version(1, 1), DeprecationLevel.WARNING, "message", ProtoBuf.VersionRequirement.VersionKind.COMPILER_VERSION, 42,
+               "test.Klass",
+               "test.Konstructor.<init>",
+               "test.Typealias",
+               "test.function",
+               "test.property"
+       )
+    }
+
+    fun testPatchVersion() {
+        doTest(VersionRequirement.Version(1, 1, 50), DeprecationLevel.HIDDEN, null, ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION, null,
+               "test.Klass"
+        )
     }
 }
