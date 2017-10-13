@@ -571,6 +571,9 @@ public interface Errors {
     DiagnosticFactory0<KtPropertyDelegate> EXPECTED_DELEGATED_PROPERTY = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> EXPECTED_LATEINIT_PROPERTY = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> SUPERTYPE_INITIALIZED_IN_EXPECTED_CLASS = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> EXPECTED_PRIVATE_DECLARATION = DiagnosticFactory0.create(ERROR);
+
+    DiagnosticFactory0<KtDelegatedSuperTypeEntry> IMPLEMENTATION_BY_DELEGATION_IN_EXPECT_CLASS = DiagnosticFactory0.create(ERROR);
 
     DiagnosticFactory0<KtTypeAlias> ACTUAL_TYPE_ALIAS_NOT_TO_CLASS = DiagnosticFactory0.create(ERROR, DECLARATION_SIGNATURE);
     DiagnosticFactory0<KtTypeAlias>
@@ -982,6 +985,10 @@ public interface Errors {
     DiagnosticFactory2<PsiElement, String, String> PLUGIN_ERROR = DiagnosticFactory2.create(ERROR);
     DiagnosticFactory2<PsiElement, String, String> PLUGIN_WARNING = DiagnosticFactory2.create(WARNING);
     DiagnosticFactory2<PsiElement, String, String> PLUGIN_INFO = DiagnosticFactory2.create(INFO);
+
+    // Function contracts
+    DiagnosticFactory1<KtElement, String> ERROR_IN_CONTRACT_DESCRIPTION = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory0<KtElement> CONTRACT_NOT_ALLOWED = DiagnosticFactory0.create(ERROR);
 
     // Error sets
     ImmutableSet<? extends DiagnosticFactory<?>> UNRESOLVED_REFERENCE_DIAGNOSTICS = ImmutableSet.of(

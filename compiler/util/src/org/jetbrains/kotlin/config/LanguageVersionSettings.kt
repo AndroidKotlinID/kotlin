@@ -64,7 +64,10 @@ enum class LanguageFeature(
     ThrowNpeOnExplicitEqualsForBoxedNull(KOTLIN_1_2),
     JvmPackageName(KOTLIN_1_2),
     AssigningArraysToVarargsInNamedFormInAnnotations(KOTLIN_1_2),
+    ExpectedTypeFromCast(KOTLIN_1_2),
 
+    ReturnsEffect(KOTLIN_1_3),
+    CallsInPlaceEffect(KOTLIN_1_3),
     RestrictionOfValReassignmentViaBackingField(KOTLIN_1_3),
     NestedClassesInEnumEntryShouldBeInner(KOTLIN_1_3),
     ProhibitDataClassesOverridingCopy(KOTLIN_1_3),

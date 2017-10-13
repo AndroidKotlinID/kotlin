@@ -10222,6 +10222,36 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("expectedTypeAdditionalTest.kt")
+            public void testExpectedTypeAdditionalTest() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/expectedTypeAdditionalTest.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("expectedTypeFromCast.kt")
+            public void testExpectedTypeFromCast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/expectedTypeFromCast.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("expectedTypeFromCastComplexExpression.kt")
+            public void testExpectedTypeFromCastComplexExpression() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/expectedTypeFromCastComplexExpression.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("expectedTypeWithGenerics.kt")
+            public void testExpectedTypeWithGenerics() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/expectedTypeWithGenerics.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("findViewById.kt")
+            public void testFindViewById() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/findViewById.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("fixVariableToNothing.kt")
             public void testFixVariableToNothing() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/fixVariableToNothing.kt");
@@ -13972,6 +14002,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("privateTopLevelDeclarations.kt")
+            public void testPrivateTopLevelDeclarations() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/privateTopLevelDeclarations.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/deprecated")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -14067,6 +14103,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("dontOverrideMethodsFromInterfaceInCommonCode.kt")
+                public void testDontOverrideMethodsFromInterfaceInCommonCode() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/dontOverrideMethodsFromInterfaceInCommonCode.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("expectClassWithExplicitAbstractMember.kt")
+                public void testExpectClassWithExplicitAbstractMember() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/expectClassWithExplicitAbstractMember.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("expectClassWithoutConstructor.kt")
                 public void testExpectClassWithoutConstructor() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/expectClassWithoutConstructor.kt");
@@ -14076,6 +14124,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("explicitConstructorDelegation.kt")
                 public void testExplicitConstructorDelegation() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/explicitConstructorDelegation.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("extendExpectedClassWithoutExplicitOverrideOfMethod.kt")
+                public void testExtendExpectedClassWithoutExplicitOverrideOfMethod() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/extendExpectedClassWithoutExplicitOverrideOfMethod.kt");
                     doTest(fileName);
                 }
 
@@ -14115,6 +14169,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("inheritanceByDelegationInExpectClass.kt")
+                public void testInheritanceByDelegationInExpectClass() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/inheritanceByDelegationInExpectClass.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("memberPropertyKinds.kt")
                 public void testMemberPropertyKinds() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/memberPropertyKinds.kt");
@@ -14136,6 +14196,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("noImplKeywordOnMember.kt")
                 public void testNoImplKeywordOnMember() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/noImplKeywordOnMember.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("privateMembers.kt")
+                public void testPrivateMembers() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/privateMembers.kt");
                     doTest(fileName);
                 }
 

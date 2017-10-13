@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 buildscript {
     extra["defaultSnapshotVersion"] = "1.2-SNAPSHOT"
 
-    kotlinBootstrapFrom(BootstrapOption.BintrayDev("1.1.60-dev-277"))
+    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.2.0-dev-9", onlySuccessBootstrap = false))
 
     val repos = listOfNotNull(
             bootstrapKotlinRepo,
@@ -155,6 +155,8 @@ val coreLibProjects = listOf(
         ":kotlin-stdlib-js",
         ":kotlin-stdlib-jre7",
         ":kotlin-stdlib-jre8",
+        ":kotlin-stdlib-jdk7",
+        ":kotlin-stdlib-jdk8",
         ":kotlin-test:kotlin-test-common",
         ":kotlin-test:kotlin-test-jvm",
         ":kotlin-test:kotlin-test-junit",
@@ -238,7 +240,7 @@ allprojects {
         kotlinOptions {
             languageVersion = kotlinLanguageVersion
             apiVersion = kotlinLanguageVersion
-            freeCompilerArgs = listOf("-Xallow-kotlin-package")
+            freeCompilerArgs = listOf("-Xallow-kotlin-package", "-Xnormalize-constructor-calls=enable")
         }
     }
 

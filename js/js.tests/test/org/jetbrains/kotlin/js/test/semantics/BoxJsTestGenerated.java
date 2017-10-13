@@ -7193,6 +7193,12 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             doTest(fileName);
         }
 
+        @TestMetadata("simpleLateInitIsInitialized.kt")
+        public void testSimpleLateInitIsInitialized() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/propertyAccess/simpleLateInitIsInitialized.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("staticAccessorsWithJsName.kt")
         public void testStaticAccessorsWithJsName() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/propertyAccess/staticAccessorsWithJsName.kt");
@@ -7664,6 +7670,12 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("onNativeObject.kt")
         public void testOnNativeObject() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/rtti/onNativeObject.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("prototypeUsedToFindInterface.kt")
+        public void testPrototypeUsedToFindInterface() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/rtti/prototypeUsedToFindInterface.kt");
             doTest(fileName);
         }
 
