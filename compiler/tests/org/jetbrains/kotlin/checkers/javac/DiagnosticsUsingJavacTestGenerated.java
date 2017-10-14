@@ -14087,6 +14087,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     doTest(fileName);
                 }
 
+                @TestMetadata("actualClassWithDifferentConstructors.kt")
+                public void testActualClassWithDifferentConstructors() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/actualClassWithDifferentConstructors.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("actualMissing.kt")
                 public void testActualMissing() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/actualMissing.kt");
@@ -14118,6 +14124,18 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("expectClassWithoutConstructor.kt")
                 public void testExpectClassWithoutConstructor() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/expectClassWithoutConstructor.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("expectDeclarationWithStrongIncompatibilities.kt")
+                public void testExpectDeclarationWithStrongIncompatibilities() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/expectDeclarationWithStrongIncompatibilities.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("expectDeclarationWithWeakIncompatibilities.kt")
+                public void testExpectDeclarationWithWeakIncompatibilities() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/expectDeclarationWithWeakIncompatibilities.kt");
                     doTest(fileName);
                 }
 
@@ -14178,6 +14196,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("memberPropertyKinds.kt")
                 public void testMemberPropertyKinds() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/memberPropertyKinds.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("modalityCheckForExplicitAndImplicitOverride.kt")
+                public void testModalityCheckForExplicitAndImplicitOverride() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/modalityCheckForExplicitAndImplicitOverride.kt");
                     doTest(fileName);
                 }
 

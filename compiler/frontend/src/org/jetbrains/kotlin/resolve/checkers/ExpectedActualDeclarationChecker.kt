@@ -84,7 +84,7 @@ object ExpectedActualDeclarationChecker : DeclarationChecker {
         val compatibility = findActualForExpected(descriptor, platformModule) ?: return
 
         val shouldReportError =
-                compatibility.isEmpty() ||
+                compatibility.allStrongIncompatibilities() ||
                 Compatible !in compatibility && compatibility.values.flatMapTo(hashSetOf()) { it }.all { actual ->
                     val expectedOnes = findExpectedForActual(actual, descriptor.module)
                     expectedOnes != null && Compatible in expectedOnes.keys
@@ -97,6 +97,9 @@ object ExpectedActualDeclarationChecker : DeclarationChecker {
             diagnosticHolder.report(Errors.NO_ACTUAL_FOR_EXPECT.on(reportOn, descriptor, platformModule, incompatibility))
         }
     }
+
+    fun Map<out Compatibility, Collection<MemberDescriptor>>.allStrongIncompatibilities(): Boolean =
+            this.keys.all { it is Incompatible && it.kind == Compatibility.IncompatibilityKind.STRONG }
 
     private fun findActualForExpected(expected: MemberDescriptor, platformModule: ModuleDescriptor): Map<Compatibility, List<MemberDescriptor>>? {
         return when (expected) {
@@ -131,12 +134,16 @@ object ExpectedActualDeclarationChecker : DeclarationChecker {
 
         val hasActualModifier = descriptor.isActual && reportOn.hasActualModifier()
         if (!hasActualModifier) {
-            if (Compatible !in compatibility) return
+            if (compatibility.allStrongIncompatibilities()) return
 
-            // we suppress error, because annotation classes can only have one constructor and it's a 100% boilerplate
-            // to require every annotation constructor with additional parameters with default values be marked with the `actual` modifier
-            if (checkActual && !descriptor.isAnnotationConstructor()) {
-                diagnosticHolder.report(Errors.ACTUAL_MISSING.on(reportOn))
+            if (Compatible in compatibility) {
+                // we suppress error, because annotation classes can only have one constructor and it's a 100% boilerplate
+                // to require every annotation constructor with additional parameters with default values be marked with the `actual` modifier
+                if (checkActual && !descriptor.isAnnotationConstructor()) {
+                    diagnosticHolder.report(Errors.ACTUAL_MISSING.on(reportOn))
+                }
+
+                return
             }
         }
 
@@ -159,6 +166,7 @@ object ExpectedActualDeclarationChecker : DeclarationChecker {
                 val actualMember = incompatibility.values.singleOrNull()?.singleOrNull()
                 return actualMember != null &&
                        actualMember.isExplicitActualDeclaration() &&
+                       !incompatibility.allStrongIncompatibilities() &&
                        findExpectedForActual(actualMember, expectedMember.module)?.values?.singleOrNull()?.singleOrNull() == expectedMember
             }
 
@@ -289,17 +297,22 @@ object ExpectedActualDeclarationChecker : DeclarationChecker {
     }
 
     sealed class Compatibility {
+        // For IncompatibilityKind.STRONG `actual` declaration is considered as overload and error reports on expected declaration
+        enum class IncompatibilityKind {
+            WEAK, STRONG
+        }
+
         // Note that the reason is used in the diagnostic output, see PlatformIncompatibilityDiagnosticRenderer
-        sealed class Incompatible(val reason: String?) : Compatibility() {
+        sealed class Incompatible(val reason: String?, val kind: IncompatibilityKind = IncompatibilityKind.WEAK) : Compatibility() {
             // Callables
 
-            object ParameterShape : Incompatible("parameter shapes are different (extension vs non-extension)")
+            object ParameterShape : Incompatible("parameter shapes are different (extension vs non-extension)", IncompatibilityKind.STRONG)
 
-            object ParameterCount : Incompatible("number of value parameters is different")
-            object TypeParameterCount : Incompatible("number of type parameters is different")
+            object ParameterCount : Incompatible("number of value parameters is different", IncompatibilityKind.STRONG)
+            object TypeParameterCount : Incompatible("number of type parameters is different", IncompatibilityKind.STRONG)
 
-            object ParameterTypes : Incompatible("parameter types are different")
-            object ReturnType : Incompatible("return type is different")
+            object ParameterTypes : Incompatible("parameter types are different", IncompatibilityKind.STRONG)
+            object ReturnType : Incompatible("return type is different", IncompatibilityKind.STRONG)
 
             object ParameterNames : Incompatible("parameter names are different")
             object TypeParameterNames : Incompatible("names of type parameters are different")
