@@ -449,7 +449,7 @@ tasks {
     "check" { dependsOn("test") }
 }
 
-the<IdeaModel>().apply {
+configure<IdeaModel> {
     module {
         excludeDirs = files(
                 project.buildDir,
@@ -478,6 +478,7 @@ fun jdkPath(version: String): String = jdkPathIfFound(version)
 fun Project.configureJvmProject(javaHome: String, javaVersion: String) {
 
     tasks.withType<JavaCompile> {
+        options.isFork = true
         options.forkOptions.javaHome = file(javaHome)
     }
 

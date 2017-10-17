@@ -55,7 +55,6 @@ enum class LanguageFeature(
     DeprecatedFieldForInvisibleCompanionObject(KOTLIN_1_2),
     NullabilityAssertionOnExtensionReceiver(KOTLIN_1_2),
     SafeCastCheckBoundSmartCasts(KOTLIN_1_2),
-    BooleanElvisBoundSmartCasts(KOTLIN_1_2),
     CapturedInClosureSmartCasts(KOTLIN_1_2),
     LateinitTopLevelProperties(KOTLIN_1_2),
     LateinitLocalVariables(KOTLIN_1_2),
@@ -66,6 +65,7 @@ enum class LanguageFeature(
     AssigningArraysToVarargsInNamedFormInAnnotations(KOTLIN_1_2),
     ExpectedTypeFromCast(KOTLIN_1_2),
 
+    BooleanElvisBoundSmartCasts(KOTLIN_1_3),
     ReturnsEffect(KOTLIN_1_3),
     CallsInPlaceEffect(KOTLIN_1_3),
     RestrictionOfValReassignmentViaBackingField(KOTLIN_1_3),
@@ -183,4 +183,13 @@ class LanguageVersionSettingsImpl @JvmOverloads constructor(
         @JvmField
         val DEFAULT = LanguageVersionSettingsImpl(LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE)
     }
+}
+
+fun LanguageVersionSettings.shouldWritePreReleaseFlag(): Boolean =
+        languageVersion.shouldWritePreReleaseFlag()
+
+fun LanguageVersion.shouldWritePreReleaseFlag(): Boolean {
+    if (!isStable) return true
+
+    return KotlinCompilerVersion.isPreRelease() && this == LanguageVersion.LATEST_STABLE
 }

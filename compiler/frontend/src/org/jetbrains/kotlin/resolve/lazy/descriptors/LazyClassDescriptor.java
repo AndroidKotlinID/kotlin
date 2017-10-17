@@ -651,18 +651,13 @@ public class LazyClassDescriptor extends ClassDescriptorBase implements ClassDes
         }
 
         @Override
-        public boolean isFinal() {
-            return getModality() == Modality.FINAL;
-        }
-
-        @Override
         public boolean isDenotable() {
             return true;
         }
 
         @Override
         @NotNull
-        public ClassifierDescriptor getDeclarationDescriptor() {
+        public ClassDescriptor getDeclarationDescriptor() {
             return LazyClassDescriptor.this;
         }
 

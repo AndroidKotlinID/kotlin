@@ -1,14 +1,12 @@
 @file:Suppress("unused") // usages in build scripts are not tracked properly
 
 import org.gradle.api.*
-import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.*
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.artifacts.publish.ArchivePublishArtifact
 import org.gradle.api.plugins.BasePluginConvention
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -61,18 +59,13 @@ fun<T> Project.runtimeJarArtifactBy(task: Task, artifactRef: T, body: Configurab
     addArtifact("runtimeJar", task, artifactRef, body)
 }
 
-fun Project.buildVersion(): Dependency {
-    val cfg = configurations.create("build-version")
-    return dependencies.add(cfg.name, dependencies.project(":prepare:build.version", configuration = "buildVersion"))
-}
-
 fun<T: Jar> Project.runtimeJar(task: T, body: T.() -> Unit = {}): T {
-    val buildVersionCfg = configurations.create("buildVersion")
-    dependencies.add(buildVersionCfg.name, dependencies.project(":prepare:build.version", configuration = "buildVersion"))
     extra["runtimeJarTask"] = task
+    tasks.findByName("jar")?.let { defaultJarTask ->
+        configurations.getOrCreate("archives").artifacts.removeAll { (it as? ArchivePublishArtifact)?.archiveTask?.let { it == defaultJarTask } ?: false }
+    }
     return task.apply {
         setupPublicJar()
-        from(buildVersionCfg) { into("META-INF") }
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         body()
         project.runtimeJarArtifactBy(this, this)
@@ -139,7 +132,7 @@ fun Project.ideaPlugin(subdir: String = "lib", body: AbstractCopyTask.() -> Unit
 
     task("idea-plugin") {
         dependsOn(pluginTask)
-}
+    }
 
     return pluginTask
 }

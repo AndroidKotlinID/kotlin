@@ -255,11 +255,9 @@ class LazyJavaClassDescriptor(
         override val supertypeLoopChecker: SupertypeLoopChecker
             get() = c.components.supertypeLoopChecker
 
-        override fun isFinal(): Boolean = isFinalClass
+        override fun isDenotable(): Boolean = true
 
-        override fun isDenotable() = true
-
-        override fun getDeclarationDescriptor() = this@LazyJavaClassDescriptor
+        override fun getDeclarationDescriptor(): ClassDescriptor = this@LazyJavaClassDescriptor
 
         override fun toString(): String = name.asString()
     }
