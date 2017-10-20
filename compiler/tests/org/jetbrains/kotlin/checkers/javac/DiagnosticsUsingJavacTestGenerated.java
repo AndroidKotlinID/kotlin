@@ -2776,6 +2776,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 doTest(fileName);
             }
 
+            @TestMetadata("AsInExpressionBody.kt")
+            public void testAsInExpressionBody() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/cast/AsInExpressionBody.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("AsInPropertyAndPropertyAccessor.kt")
             public void testAsInPropertyAndPropertyAccessor() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/cast/AsInPropertyAndPropertyAccessor.kt");
@@ -3055,6 +3061,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt614.kt")
             public void testKt614() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/cast/kt614.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("nothingAs.kt")
+            public void testNothingAs() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/cast/nothingAs.kt");
                 doTest(fileName);
             }
 
