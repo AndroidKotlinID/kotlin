@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
+ * Copyright 2010-2017 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.resolve
+package org.jetbrains.kotlin.diagnostics
 
-import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
+import org.jetbrains.kotlin.diagnostics.rendering.DiagnosticRenderer
 
-interface OverridesBackwardCompatibilityHelper {
-    fun overrideCanBeOmitted(overridingDescriptor: CallableMemberDescriptor): Boolean
+class RenderedDiagnostic<D : Diagnostic>(
+        val diagnostic: D,
+        val renderer: DiagnosticRenderer<D>
+) {
+    val text = renderer.render(diagnostic)
 
-    object Default : OverridesBackwardCompatibilityHelper {
-        override fun overrideCanBeOmitted(overridingDescriptor: CallableMemberDescriptor): Boolean =
-                false
-    }
+    val factory: DiagnosticFactory<*> get() = diagnostic.factory
+
+    override fun toString() = text
 }
