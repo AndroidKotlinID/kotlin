@@ -8600,6 +8600,24 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("enumEntryReferenceFromInnerClassConstructor1.kt")
+        public void testEnumEntryReferenceFromInnerClassConstructor1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/enumEntryReferenceFromInnerClassConstructor1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("enumEntryReferenceFromInnerClassConstructor2.kt")
+        public void testEnumEntryReferenceFromInnerClassConstructor2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/enumEntryReferenceFromInnerClassConstructor2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("enumEntryReferenceFromInnerClassConstructor3.kt")
+        public void testEnumEntryReferenceFromInnerClassConstructor3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/enumEntryReferenceFromInnerClassConstructor3.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("enumInheritedFromTrait.kt")
         public void testEnumInheritedFromTrait() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/enumInheritedFromTrait.kt");
@@ -8675,6 +8693,18 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("kt20651_inlineLambda.kt")
         public void testKt20651_inlineLambda() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/kt20651_inlineLambda.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt20651a.kt")
+        public void testKt20651a() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/kt20651a.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt20651b.kt")
+        public void testKt20651b() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/kt20651b.kt");
             doTest(fileName);
         }
 
@@ -15250,6 +15280,18 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 public void testInnerSubclass() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/properties/lateinit/isInitializedAndDeinitialize/innerSubclass.kt");
                     doTest(fileName);
+                }
+
+                @TestMetadata("propertyImportedFromObject.kt")
+                public void testPropertyImportedFromObject() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/properties/lateinit/isInitializedAndDeinitialize/propertyImportedFromObject.kt");
+                    try {
+                        doTest(fileName);
+                    }
+                    catch (Throwable ignore) {
+                        return;
+                    }
+                    throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
                 }
 
                 @TestMetadata("sideEffects.kt")
