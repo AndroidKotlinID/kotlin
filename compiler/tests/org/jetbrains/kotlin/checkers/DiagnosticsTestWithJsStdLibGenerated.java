@@ -374,6 +374,12 @@ public class DiagnosticsTestWithJsStdLibGenerated extends AbstractDiagnosticsTes
             doTest(fileName);
         }
 
+        @TestMetadata("badAssignment.kt")
+        public void testBadAssignment() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithJsStdLib/jsCode/badAssignment.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("deleteOperation.kt")
         public void testDeleteOperation() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithJsStdLib/jsCode/deleteOperation.kt");
@@ -425,6 +431,12 @@ public class DiagnosticsTestWithJsStdLibGenerated extends AbstractDiagnosticsTes
         @TestMetadata("dualModuleFromUmd.kt")
         public void testDualModuleFromUmd() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithJsStdLib/module/dualModuleFromUmd.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("incompleteReifiedArg.kt")
+        public void testIncompleteReifiedArg() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithJsStdLib/module/incompleteReifiedArg.kt");
             doTest(fileName);
         }
 

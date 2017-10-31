@@ -4337,6 +4337,18 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             doTest(fileName);
         }
 
+        @TestMetadata("loopInInlineFunInSuperConstructorCallWithEnabledNormalization.kt")
+        public void testLoopInInlineFunInSuperConstructorCallWithEnabledNormalization() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/constructorCall/loopInInlineFunInSuperConstructorCallWithEnabledNormalization.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("loopInInlineFunWithEnabledNormalization.kt")
+        public void testLoopInInlineFunWithEnabledNormalization() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/constructorCall/loopInInlineFunWithEnabledNormalization.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("nestedConstructorCallWithJumpOutInConstructorArguments.kt")
         public void testNestedConstructorCallWithJumpOutInConstructorArguments() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/constructorCall/nestedConstructorCallWithJumpOutInConstructorArguments.kt");
@@ -9324,6 +9336,48 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/localFunctionInConstructor.kt");
                 doTest(fileName);
             }
+
+            @TestMetadata("localFunctionVsLocalVariable.kt")
+            public void testLocalFunctionVsLocalVariable() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/localFunctionVsLocalVariable.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("overloadedLocalFunWithoutClosure.kt")
+            public void testOverloadedLocalFunWithoutClosure() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/overloadedLocalFunWithoutClosure.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("overloadedLocalFunction.kt")
+            public void testOverloadedLocalFunction() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/overloadedLocalFunction.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("overloadedLocalFunction1.kt")
+            public void testOverloadedLocalFunction1() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/overloadedLocalFunction1.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("overloadedLocalFunction2.kt")
+            public void testOverloadedLocalFunction2() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/overloadedLocalFunction2.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("overloadedLocalFunction3.kt")
+            public void testOverloadedLocalFunction3() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/overloadedLocalFunction3.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("parameterAsDefaultValue.kt")
+            public void testParameterAsDefaultValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/functions/localFunctions/parameterAsDefaultValue.kt");
+                doTest(fileName);
+            }
         }
     }
 
@@ -11252,24 +11306,39 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             doTest(fileName);
         }
 
+        @TestMetadata("recaptureVarCapturedInLocalClass1.kt")
+        public void testRecaptureVarCapturedInLocalClass1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localClasses/recaptureVarCapturedInLocalClass1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recaptureVarCapturedInLocalClass2.kt")
+        public void testRecaptureVarCapturedInLocalClass2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localClasses/recaptureVarCapturedInLocalClass2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recaptureVarCapturedInLocalClass3.kt")
+        public void testRecaptureVarCapturedInLocalClass3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localClasses/recaptureVarCapturedInLocalClass3.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("subclassingExtensionReceiverClass.kt")
+        public void testSubclassingExtensionReceiverClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localClasses/subclassingExtensionReceiverClass.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
         @TestMetadata("withclosure.kt")
         public void testWithclosure() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localClasses/withclosure.kt");
-            doTest(fileName);
-        }
-    }
-
-    @TestMetadata("compiler/testData/codegen/box/localFunctions")
-    @TestDataPath("$PROJECT_ROOT")
-    @RunWith(JUnit3RunnerWithInners.class)
-    public static class LocalFunctions extends AbstractBlackBoxCodegenTest {
-        public void testAllFilesPresentInLocalFunctions() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/localFunctions"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
-        }
-
-        @TestMetadata("parameterAsDefaultValue.kt")
-        public void testParameterAsDefaultValue() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/localFunctions/parameterAsDefaultValue.kt");
             doTest(fileName);
         }
     }

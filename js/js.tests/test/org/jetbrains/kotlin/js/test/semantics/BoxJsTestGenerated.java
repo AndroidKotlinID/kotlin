@@ -8105,9 +8105,21 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             doTest(fileName);
         }
 
+        @TestMetadata("intrinsic.kt")
+        public void testIntrinsic() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/superCall/intrinsic.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("nativeSuperClass.kt")
         public void testNativeSuperClass() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/superCall/nativeSuperClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("propertySuperAccess.kt")
+        public void testPropertySuperAccess() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/superCall/propertySuperAccess.kt");
             doTest(fileName);
         }
 

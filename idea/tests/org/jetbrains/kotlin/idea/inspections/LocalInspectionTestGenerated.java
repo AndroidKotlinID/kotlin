@@ -1493,6 +1493,12 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("dataClass.kt")
+        public void testDataClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantOverride/dataClass.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("delegatedMemberHidesSuperTypeOverride.kt")
         public void testDelegatedMemberHidesSuperTypeOverride() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantOverride/delegatedMemberHidesSuperTypeOverride.kt");
@@ -1619,6 +1625,63 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("sameVisibility3.kt")
         public void testSameVisibility3() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/sameVisibility3.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/redundantUnitExpression")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantUnitExpression extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInRedundantUnitExpression() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantUnitExpression"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("notRedundant1.kt")
+        public void testNotRedundant1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/notRedundant1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notRedundant2.kt")
+        public void testNotRedundant2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/notRedundant2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("notRedundant3.kt")
+        public void testNotRedundant3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/notRedundant3.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("redundant1.kt")
+        public void testRedundant1() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/redundant1.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("redundant2.kt")
+        public void testRedundant2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/redundant2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("redundant3.kt")
+        public void testRedundant3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/redundant3.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("redundant4.kt")
+        public void testRedundant4() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/redundant4.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("redundant5.kt")
+        public void testRedundant5() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/redundant5.kt");
             doTest(fileName);
         }
     }
@@ -1916,6 +1979,33 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("varCopy.kt")
         public void testVarCopy() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unnecessaryVariable/varCopy.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/unusedReceiverParameter")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class UnusedReceiverParameter extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInUnusedReceiverParameter() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/unusedReceiverParameter"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("companion.kt")
+        public void testCompanion() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unusedReceiverParameter/companion.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("infix.kt")
+        public void testInfix() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unusedReceiverParameter/infix.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("operator.kt")
+        public void testOperator() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unusedReceiverParameter/operator.kt");
             doTest(fileName);
         }
     }

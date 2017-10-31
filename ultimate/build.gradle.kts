@@ -54,12 +54,12 @@ dependencies {
     compile(ideaUltimatePluginDeps("*.jar", plugin = "JavaScriptDebugger"))
 
     testCompile(projectDist(":kotlin-test:kotlin-test-jvm"))
-    testCompile(project(":compiler.tests-common")) { isTransitive = false }
     testCompile(project(":idea:idea-test-framework")) { isTransitive = false }
     testCompile(project(":plugins:lint")) { isTransitive = false }
     testCompile(project(":idea:idea-jvm")) { isTransitive = false }
-    testCompile(project(":generators")) { isTransitive = false }
+    testCompile(projectTests(":compiler:tests-common"))
     testCompile(projectTests(":idea"))
+    testCompile(projectTests(":generators:test-generator"))
     testCompile(commonDep("junit:junit"))
     testCompile(ideaUltimateSdkDeps("gson"))
     testCompile(preloadedDeps("kotlinx-coroutines-core"))
@@ -165,3 +165,5 @@ projectTest {
     dependsOn(preparePluginXml)
     workingDir = rootDir
 }
+
+val generateTests by generator("org.jetbrains.kotlin.tests.GenerateUltimateTestsKt")
