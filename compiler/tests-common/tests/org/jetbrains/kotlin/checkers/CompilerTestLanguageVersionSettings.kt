@@ -16,7 +16,9 @@
 
 package org.jetbrains.kotlin.checkers
 
+import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.config.*
+import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.junit.Assert
 import java.util.*
 import java.util.regex.Pattern
@@ -25,16 +27,26 @@ const val LANGUAGE_DIRECTIVE = "LANGUAGE"
 const val API_VERSION_DIRECTIVE = "API_VERSION"
 
 data class CompilerTestLanguageVersionSettings(
-        private val languageFeatures: Map<LanguageFeature, LanguageFeature.State>,
+        private val initialLanguageFeatures: Map<LanguageFeature, LanguageFeature.State>,
         override val apiVersion: ApiVersion,
-        override val languageVersion: LanguageVersion
+        override val languageVersion: LanguageVersion,
+        private val analysisFlags: Map<AnalysisFlag<*>, Any?> = emptyMap()
 ) : LanguageVersionSettings {
+    private val languageFeatures = initialLanguageFeatures + specificFeaturesForTests()
     private val delegate = LanguageVersionSettingsImpl(languageVersion, apiVersion)
 
     override fun getFeatureSupport(feature: LanguageFeature): LanguageFeature.State =
             languageFeatures[feature] ?: delegate.getFeatureSupport(feature)
 
-    override fun <T> getFlag(flag: AnalysisFlag<T>): T = flag.defaultValue
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> getFlag(flag: AnalysisFlag<T>): T = analysisFlags[flag] as T? ?: flag.defaultValue
+}
+
+private fun specificFeaturesForTests(): Map<LanguageFeature, LanguageFeature.State> {
+    return if (System.getProperty("kotlin.ni") == "true")
+        mapOf(LanguageFeature.NewInference to LanguageFeature.State.ENABLED)
+    else
+        emptyMap()
 }
 
 fun parseLanguageVersionSettings(directiveMap: Map<String, String>): LanguageVersionSettings? {
@@ -48,6 +60,13 @@ fun parseLanguageVersionSettings(directiveMap: Map<String, String>): LanguageVer
     val languageFeatures = directives?.let(::collectLanguageFeatureMap).orEmpty()
 
     return CompilerTestLanguageVersionSettings(languageFeatures, apiVersion, LanguageVersion.LATEST_STABLE)
+}
+
+fun setupLanguageVersionSettingsForCompilerTests(originalFileText: String, environment: KotlinCoreEnvironment) {
+    val directives = KotlinTestUtils.parseDirectives(originalFileText)
+    val languageVersionSettings = parseLanguageVersionSettings(directives) ?:
+                                  CompilerTestLanguageVersionSettings(emptyMap(), ApiVersion.LATEST_STABLE, LanguageVersion.LATEST_STABLE)
+    environment.configuration.languageVersionSettings = languageVersionSettings
 }
 
 private val languagePattern = Pattern.compile("(\\+|\\-|warn:)(\\w+)\\s*")

@@ -280,8 +280,8 @@
     <projectService serviceInterface="org.jetbrains.kotlin.resolve.CodeAnalyzerInitializer"
                     serviceImplementation="org.jetbrains.kotlin.resolve.DummyCodeAnalyzerInitializer"/>
 
-    <projectService serviceInterface="org.jetbrains.kotlin.script.KotlinScriptDefinitionProvider"
-                    serviceImplementation="org.jetbrains.kotlin.script.KotlinScriptDefinitionProvider"/>
+    <projectService serviceInterface="org.jetbrains.kotlin.script.ScriptDefinitionProvider"
+                    serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptDefinitionsManager"/>
 
     <projectService serviceInterface="org.jetbrains.kotlin.script.ScriptDependenciesProvider"
                     serviceImplementation="org.jetbrains.kotlin.idea.core.script.IdeScriptDependenciesProvider"/>
@@ -2708,8 +2708,6 @@
 
     <codeInsight.intention.jvmCommonIntentionActionsFactory language="kotlin" implementationClass="org.jetbrains.kotlin.idea.intentions.KotlinCommonIntentionActionsFactory"/>
 
-    <moduleBuilder builderClass="org.jetbrains.kotlin.gradle.kdsl.GradleModuleBuilder" />
-
     <projectService serviceInterface="org.jetbrains.uast.kotlin.KotlinUastBindingContextProviderService"
                   serviceImplementation="org.jetbrains.uast.kotlin.internal.IdeaKotlinUastBindingContextProviderService"/>
   </extensions>
@@ -2738,11 +2736,6 @@
     <expressionCodegenExtension implementation="org.jetbrains.kotlin.noarg.NoArgExpressionCodegenExtension"/>
     <storageComponentContainerContributor implementation="org.jetbrains.kotlin.noarg.ide.IdeNoArgComponentContainerContributor"/>
     <versionInfoProvider implementation="org.jetbrains.kotlin.idea.facet.KotlinVersionInfoProviderByModuleDependencies"/>
-
-    <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleJavaFrameworkSupportProvider" />
-    <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleKotlinDSLKotlinJavaFrameworkSupportProvider" />
-    <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleKotlinDSLKotlinJSFrameworkSupportProvider" />
-    <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleGroovyFrameworkSupportProvider" />
   </extensions>
 
 </idea-plugin>

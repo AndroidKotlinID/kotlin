@@ -19,6 +19,7 @@
         <externalProjectDataService implementation="org.jetbrains.kotlin.idea.configuration.KotlinGradleSourceSetDataService"/>
         <externalProjectDataService implementation="org.jetbrains.kotlin.idea.configuration.KotlinGradleProjectDataService"/>
         <externalProjectDataService implementation="org.jetbrains.kotlin.idea.configuration.KotlinGradleLibraryDataService"/>
+        <externalSystemTaskNotificationListener implementation="org.jetbrains.kotlin.idea.core.script.ReloadGradleTemplatesOnSync"/>
 
         <localInspection
             implementationClass="org.jetbrains.kotlin.idea.inspections.gradle.DifferentKotlinGradleVersionInspection"
@@ -43,6 +44,8 @@
 
         <projectTaskRunner implementation="org.jetbrains.kotlin.idea.run.MultiplatformGradleProjectTaskRunner" order="first"/>
         <orderEnumerationHandlerFactory implementation="org.jetbrains.kotlin.idea.run.MultiplatformGradleOrderEnumeratorHandler$FactoryImpl" order="first"/>
+
+        <moduleBuilder builderClass="org.jetbrains.kotlin.gradle.kdsl.GradleModuleBuilder" />
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
@@ -55,15 +58,13 @@
         <projectConfigurator implementation="org.jetbrains.kotlin.idea.configuration.KotlinJsGradleModuleConfigurator"/>
         <gradleModelFacade implementation="org.jetbrains.kotlin.idea.inspections.gradle.DefaultGradleModelFacade"/>
 
-        <scriptTemplatesProvider
-            implementation="org.jetbrains.kotlin.idea.core.script.GradleSettingsKotlinDSLTemplateProvider"/>
-
-        <scriptTemplatesProvider
-            implementation="org.jetbrains.kotlin.idea.core.script.GradleKotlinDSLTemplateProvider"/>
-
-        <scriptTemplatesProvider
-            implementation="org.jetbrains.kotlin.idea.core.script.LegacyGradleScriptKotlinTemplateProvider"/>
+        <scriptDefinitionContributor implementation="org.jetbrains.kotlin.idea.core.script.GradleScriptDefinitionsContributor"/>
 
         <moduleBuilder implementation="org.jetbrains.kotlin.idea.configuration.KotlinGradleMultiplatformModuleBuilder"/>
+
+        <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleJavaFrameworkSupportProvider" />
+        <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleKotlinDSLKotlinJavaFrameworkSupportProvider" />
+        <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleKotlinDSLKotlinJSFrameworkSupportProvider" />
+        <gradleFrameworkSupport implementation="org.jetbrains.kotlin.gradle.kdsl.frameworkSupport.GradleGroovyFrameworkSupportProvider" />
     </extensions>
 </idea-plugin>

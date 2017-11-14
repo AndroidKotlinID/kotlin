@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.resolve.calls
+package org.jetbrains.kotlin.checkers
 
-val USE_NEW_INFERENCE
-    get() = false
-
-val REPORT_MISSING_NEW_INFERENCE_DIAGNOSTIC
-    get() = false
+data class PositionalTextDiagnostic(val diagnostic: CheckerTestUtil.TextDiagnostic, val start: Int, val end: Int)

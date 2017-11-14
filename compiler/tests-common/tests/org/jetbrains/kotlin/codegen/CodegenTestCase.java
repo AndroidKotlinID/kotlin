@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
+ * Copyright 2010-2017 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.backend.common.output.OutputFile;
 import org.jetbrains.kotlin.backend.common.output.SimpleOutputFileCollection;
 import org.jetbrains.kotlin.checkers.CheckerTestUtil;
+import org.jetbrains.kotlin.checkers.CompilerTestLanguageVersionSettings;
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys;
 import org.jetbrains.kotlin.cli.common.output.outputUtils.OutputUtilsKt;
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles;
@@ -79,7 +80,7 @@ import java.util.regex.Pattern;
 import static org.jetbrains.kotlin.checkers.CompilerTestLanguageVersionSettingsKt.parseLanguageVersionSettings;
 import static org.jetbrains.kotlin.cli.common.output.outputUtils.OutputUtilsKt.writeAllTo;
 import static org.jetbrains.kotlin.codegen.CodegenTestUtil.*;
-import static org.jetbrains.kotlin.codegen.TestUtilsKt.*;
+import static org.jetbrains.kotlin.codegen.TestUtilsKt.extractUrls;
 import static org.jetbrains.kotlin.test.KotlinTestUtils.getAnnotationsJar;
 import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getBoxMethodOrNull;
 import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getGeneratedClass;
@@ -195,9 +196,15 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
             CommonConfigurationKeysKt.setLanguageVersionSettings(configuration, explicitLanguageVersionSettings);
         }
         else if (explicitLanguageVersion != null) {
+            CompilerTestLanguageVersionSettings compilerLanguageVersionSettings = new CompilerTestLanguageVersionSettings(
+                    Collections.emptyMap(),
+                    ApiVersion.createByLanguageVersion(explicitLanguageVersion),
+                    explicitLanguageVersion,
+                    Collections.emptyMap()
+            );
             CommonConfigurationKeysKt.setLanguageVersionSettings(
                     configuration,
-                    new LanguageVersionSettingsImpl(explicitLanguageVersion, ApiVersion.createByLanguageVersion(explicitLanguageVersion))
+                    compilerLanguageVersionSettings
             );
         }
 

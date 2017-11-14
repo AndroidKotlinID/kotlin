@@ -392,13 +392,6 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         ClassContext objectContext = context.intoAnonymousClass(descriptor, this, OwnerKind.IMPLEMENTATION);
         new ImplementationBodyCodegen(declaration, objectContext, classBuilder, state, getParentCodegen(), /* isLocal = */ true).generate();
 
-        if (declaration instanceof KtClass && ((KtClass) declaration).isInterface()) {
-            Type traitImplType = state.getTypeMapper().mapDefaultImpls(descriptor);
-            ClassBuilder traitImplBuilder = state.getFactory().newVisitor(JvmDeclarationOriginKt.DefaultImpls(declaration, descriptor), traitImplType, declaration.getContainingFile());
-            ClassContext traitImplContext = context.intoAnonymousClass(descriptor, this, OwnerKind.DEFAULT_IMPLS);
-            new InterfaceImplBodyCodegen(declaration, traitImplContext, traitImplBuilder, state, parentCodegen).generate();
-        }
-
         return StackValue.none();
     }
 
@@ -1868,8 +1861,17 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     @Override
-    public boolean lookupLocal(DeclarationDescriptor descriptor) {
-        return lookupLocalIndex(descriptor) != -1;
+    public boolean isLocal(DeclarationDescriptor descriptor) {
+        if (lookupLocalIndex(descriptor) != -1) return true;
+
+        if (context.isContextWithUninitializedThis()) {
+            LocalLookup outerLookup = context.getParentContext().getEnclosingLocalLookup();
+            if (outerLookup != null) {
+                return outerLookup.isLocal(descriptor);
+            }
+        }
+
+        return false;
     }
 
     public int lookupLocalIndex(DeclarationDescriptor descriptor) {
@@ -2169,15 +2171,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                         resolvedCall, state.getProject(), state.getBindingContext()
                 );
         if (callWithRealDescriptor != null) {
-            StackValue coroutineInstanceValueForSuspensionPoint = getCoroutineInstanceValueForSuspensionPoint(resolvedCall);
-            StackValue coroutineInstanceValue =
-                    coroutineInstanceValueForSuspensionPoint != null
-                    ? coroutineInstanceValueForSuspensionPoint
-                    : getContinuationParameterFromEnclosingSuspendFunction(resolvedCall);
-            tempVariables.put(callWithRealDescriptor.getFakeContinuationExpression(), coroutineInstanceValue);
-
+            prepareCoroutineArgumentForSuspendCall(resolvedCall, callWithRealDescriptor.getFakeContinuationExpression());
             return invokeFunction(callWithRealDescriptor.getResolvedCall(), receiver);
         }
+
         FunctionDescriptor fd = accessibleFunctionDescriptor(resolvedCall);
         ClassDescriptor superCallTarget = getSuperCallTarget(call);
 
@@ -2195,6 +2192,18 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         Callable callable = resolveToCallable(fd, superCallTarget != null, resolvedCall);
 
         return callable.invokeMethodWithArguments(resolvedCall, receiver, this);
+    }
+
+    private void prepareCoroutineArgumentForSuspendCall(
+            @NotNull ResolvedCall<?> resolvedCall,
+            @NotNull KtExpression continuationExpression
+    ) {
+        StackValue coroutineInstanceValueForSuspensionPoint = getCoroutineInstanceValueForSuspensionPoint(resolvedCall);
+        StackValue coroutineInstanceValue =
+                coroutineInstanceValueForSuspensionPoint != null
+                ? coroutineInstanceValueForSuspensionPoint
+                : getContinuationParameterFromEnclosingSuspendFunction(resolvedCall);
+        tempVariables.put(continuationExpression, coroutineInstanceValue);
     }
 
     private StackValue getContinuationParameterFromEnclosingSuspendFunction(@NotNull ResolvedCall<?> resolvedCall) {
@@ -2615,40 +2624,40 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     @NotNull
-    public StackValue generateThisOrOuter(@NotNull ClassDescriptor calleeContainingClass, boolean isSuper, boolean forceOuter) {
-        if (!calleeContainingClass.getKind().isSingleton()) {
-            return generateThisOrOuterFromContext(calleeContainingClass, isSuper, forceOuter);
+    public StackValue generateThisOrOuter(@NotNull ClassDescriptor thisOrOuterClass, boolean isSuper, boolean forceOuter) {
+        if (!thisOrOuterClass.getKind().isSingleton()) {
+            return generateThisOrOuterFromContext(thisOrOuterClass, isSuper, forceOuter);
         }
 
-        if (calleeContainingClass.equals(context.getThisDescriptor()) &&
+        if (thisOrOuterClass.equals(context.getThisDescriptor()) &&
             !CodegenUtilKt.isJvmStaticInObjectOrClass(context.getFunctionDescriptor())) {
-            return StackValue.local(0, typeMapper.mapType(calleeContainingClass));
+            return StackValue.local(0, typeMapper.mapType(thisOrOuterClass));
         }
-        else if (shouldGenerateSingletonAsThisOrOuterFromContext(calleeContainingClass)) {
-            return generateThisOrOuterFromContext(calleeContainingClass, isSuper, forceOuter);
+        else if (shouldGenerateSingletonAsThisOrOuterFromContext(thisOrOuterClass)) {
+            return generateThisOrOuterFromContext(thisOrOuterClass, isSuper, forceOuter);
         }
-        else if (isEnumEntry(calleeContainingClass)) {
-            return StackValue.enumEntry(calleeContainingClass, typeMapper);
+        else if (isEnumEntry(thisOrOuterClass)) {
+            return StackValue.enumEntry(thisOrOuterClass, typeMapper);
         }
         else {
-            return StackValue.singleton(calleeContainingClass, typeMapper);
+            return StackValue.singleton(thisOrOuterClass, typeMapper);
         }
     }
 
-    private StackValue generateThisOrOuterFromContext(@NotNull ClassDescriptor calleeContainingClass, boolean isSuper, boolean forceOuter) {
+    private StackValue generateThisOrOuterFromContext(@NotNull ClassDescriptor thisOrOuterClass, boolean isSuper, boolean forceOuter) {
         CodegenContext cur = context;
-        Type type = asmType(calleeContainingClass.getDefaultType());
+        Type type = asmType(thisOrOuterClass.getDefaultType());
         StackValue result = StackValue.local(0, type);
         boolean inStartConstructorContext = cur instanceof ConstructorContext;
         while (cur != null) {
             ClassDescriptor thisDescriptor = cur.getThisDescriptor();
 
-            if (!isSuper && thisDescriptor == calleeContainingClass) {
+            if (!isSuper && thisDescriptor == thisOrOuterClass) {
                 return result;
             }
 
-            if (!forceOuter && isSuper && DescriptorUtils.isSubclass(thisDescriptor, calleeContainingClass)) {
-                return castToRequiredTypeOfInterfaceIfNeeded(result, thisDescriptor, calleeContainingClass);
+            if (!forceOuter && isSuper && DescriptorUtils.isSubclass(thisDescriptor, thisOrOuterClass)) {
+                return castToRequiredTypeOfInterfaceIfNeeded(result, thisDescriptor, thisOrOuterClass);
             }
 
             forceOuter = false;
@@ -2664,7 +2673,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 result = cur.getOuterExpression(result, false);
             }
 
-            cur = cur.getParentContext();
+            cur = cur.getEnclosingClassContext();
         }
 
         throw new UnsupportedOperationException();
@@ -3403,6 +3412,16 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     private StackValue generateAugmentedAssignment(KtBinaryExpression expression) {
         return StackValue.operation(Type.VOID_TYPE, adapter -> {
             ResolvedCall<?> resolvedCall = CallUtilKt.getResolvedCallWithAssert(expression, bindingContext);
+
+            ResolvedCallWithRealDescriptor callWithRealDescriptor =
+                    CoroutineCodegenUtilKt.replaceSuspensionFunctionWithRealDescriptor(
+                            resolvedCall, state.getProject(), state.getBindingContext()
+                    );
+            if (callWithRealDescriptor != null) {
+                prepareCoroutineArgumentForSuspendCall(resolvedCall, callWithRealDescriptor.getFakeContinuationExpression());
+                resolvedCall = callWithRealDescriptor.getResolvedCall();
+            }
+
             FunctionDescriptor descriptor = accessibleFunctionDescriptor(resolvedCall);
             Callable callable = resolveToCallable(descriptor, false, resolvedCall);
             KtExpression lhs = expression.getLeft();

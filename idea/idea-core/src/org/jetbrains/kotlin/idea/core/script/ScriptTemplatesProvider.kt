@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.script
+package org.jetbrains.kotlin.idea.core.script
 
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.ExtensionPointName
-import com.intellij.openapi.extensions.Extensions
-import com.intellij.openapi.project.Project
+import org.jetbrains.kotlin.script.KotlinScriptDefinition
 import java.io.File
-import java.net.URLClassLoader
 import kotlin.script.experimental.dependencies.DependenciesResolver
 
+@Deprecated("Use ScriptDefinitionContributor EP and loadDefinitionsFromTemplates top level function")
 interface ScriptTemplatesProvider {
 
     // for resolving ambiguities
@@ -32,7 +30,8 @@ interface ScriptTemplatesProvider {
     @Deprecated("Parameter isn't used for resolving priorities anymore. " +
                 "com.intellij.openapi.extensions.LoadingOrder constants can be used to order providers when registered from Intellij plugin.",
                 ReplaceWith("0"))
-    val version: Int get() = 0
+    val version: Int
+        get() = 0
 
     val isValid: Boolean
 
@@ -60,36 +59,13 @@ interface ScriptTemplatesProvider {
     }
 }
 
-fun makeScriptDefsFromTemplatesProviderExtensions(project: Project,
-                                                  errorsHandler: ((ScriptTemplatesProvider, Throwable) -> Unit)
-): List<KotlinScriptDefinition> =
-        makeScriptDefsFromTemplatesProviders(Extensions.getArea(project).getExtensionPoint(ScriptTemplatesProvider.EP_NAME).extensions.asIterable(),
-                                             errorsHandler)
+class ScriptTemplatesProviderAdapter(private val templatesProvider: ScriptTemplatesProvider) : ScriptDefinitionContributor {
+    override val id: String
+        get() = templatesProvider.id
 
-fun makeScriptDefsFromTemplatesProviders(providers: Iterable<ScriptTemplatesProvider>,
-                                         errorsHandler: ((ScriptTemplatesProvider, Throwable) -> Unit) = { _, ex -> throw ex }
-): List<KotlinScriptDefinition> = providers.flatMap { provider ->
-    try {
-        val loader = createClassLoader(provider)
-        provider.templateClassNames.map {
-            KotlinScriptDefinitionFromAnnotatedTemplate(
-                    loader.loadClass(it).kotlin, provider.resolver,
-                    provider.filePattern, provider.environment, provider.templateClasspath
-            )
-        }
-    }
-    catch (ex: Throwable) {
-        LOG.info("Templates provider ${provider.id} is invalid: ${ex.message}")
-        errorsHandler(provider, ex)
-        emptyList<KotlinScriptDefinition>()
+    override fun getDefinitions(): List<KotlinScriptDefinition> {
+        return loadDefinitionsFromTemplates(
+                templatesProvider.templateClassNames.toList(), templatesProvider.templateClasspath,
+                templatesProvider.environment.orEmpty(), templatesProvider.additionalResolverClasspath)
     }
 }
-
-private fun createClassLoader(provider: ScriptTemplatesProvider): ClassLoader {
-    val classpath = provider.templateClasspath + provider.additionalResolverClasspath
-    LOG.info("[kts] loading script definitions ${provider.templateClassNames} using cp: ${classpath.joinToString(File.pathSeparator)}")
-    val baseLoader = ScriptTemplatesProvider::class.java.classLoader
-    return if (classpath.isEmpty()) baseLoader else URLClassLoader(classpath.map { it.toURI().toURL() }.toTypedArray(), baseLoader)
-}
-
-private val LOG = Logger.getInstance("ScriptTemplatesProviders")

@@ -49,7 +49,6 @@ import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.platform.JvmBuiltIns
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.*
-import org.jetbrains.kotlin.resolve.calls.USE_NEW_INFERENCE
 import org.jetbrains.kotlin.resolve.calls.model.MutableResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.jvm.JavaDescriptorResolver
@@ -126,7 +125,7 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
             }
 
             moduleBindings[testModule] = result.bindingContext
-            checkAllResolvedCallsAreCompleted(ktFiles, result.bindingContext)
+            checkAllResolvedCallsAreCompleted(ktFiles, result.bindingContext, languageVersionSettings)
         }
 
         // We want to always create a test data file (txt) if it was missing,
@@ -141,13 +140,18 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
         }
 
         var exceptionFromDescriptorValidation: Throwable? = null
+        val originalTestFile = testDataFile.readText()
         try {
-            val expectedFile = if (InTextDirectivesUtils.isDirectiveDefined(testDataFile.readText(), "// JAVAC_EXPECTED_FILE")
-                                   && environment.configuration.getBoolean(JVMConfigurationKeys.USE_JAVAC)) {
-                File(FileUtil.getNameWithoutExtension(testDataFile.absolutePath) + ".javac.txt")
-            } else {
-                File(FileUtil.getNameWithoutExtension(testDataFile.absolutePath) + ".txt")
+            val postfix = when {
+                InTextDirectivesUtils.isDirectiveDefined(originalTestFile, "// JAVAC_EXPECTED_FILE") &&
+                environment.configuration.getBoolean(JVMConfigurationKeys.USE_JAVAC) -> ".javac.txt"
+
+                InTextDirectivesUtils.isDirectiveDefined(originalTestFile, "// NI_EXPECTED_FILE") &&
+                files.any { it.newInferenceEnabled } && !USE_OLD_INFERENCE_DIAGNOSTICS_FOR_NI -> ".ni.txt"
+
+                else -> ".txt"
             }
+            val expectedFile = File(FileUtil.getNameWithoutExtension(testDataFile.absolutePath) + postfix)
             validateAndCompareDescriptorWithFile(expectedFile, files, modules)
         }
         catch (e: Throwable) {
@@ -223,7 +227,7 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
         }
 
         return result ?: CompilerTestLanguageVersionSettings(
-                BaseDiagnosticsTest.DEFAULT_DIAGNOSTIC_TESTS_FEATURES,
+                DEFAULT_DIAGNOSTIC_TESTS_FEATURES,
                 LanguageVersionSettingsImpl.DEFAULT.apiVersion,
                 LanguageVersionSettingsImpl.DEFAULT.languageVersion
         )
@@ -524,7 +528,11 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
                 setDependencies(this, builtIns.builtInsModule)
             }
 
-    private fun checkAllResolvedCallsAreCompleted(ktFiles: List<KtFile>, bindingContext: BindingContext) {
+    private fun checkAllResolvedCallsAreCompleted(
+            ktFiles: List<KtFile>,
+            bindingContext: BindingContext,
+            configuredLanguageVersionSettings: LanguageVersionSettings
+    ) {
         if (ktFiles.any { file -> AnalyzingUtils.getSyntaxErrorRanges(file).isNotEmpty() }) return
 
         val resolvedCallsEntries = bindingContext.getSliceContents(BindingContext.RESOLVED_CALL)
@@ -533,16 +541,16 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
 
             val lineAndColumn = DiagnosticUtils.getLineAndColumnInPsiFile(element.containingFile, element.textRange)
 
-            if (!USE_NEW_INFERENCE) {
+            if (!configuredLanguageVersionSettings.supportsFeature(LanguageFeature.NewInference)) {
                 assertTrue("Resolved call for '${element.text}'$lineAndColumn is not completed",
                            (resolvedCall as MutableResolvedCall<*>).isCompleted)
             }
         }
 
-        checkResolvedCallsInDiagnostics(bindingContext)
+        checkResolvedCallsInDiagnostics(bindingContext, configuredLanguageVersionSettings)
     }
 
-    private fun checkResolvedCallsInDiagnostics(bindingContext: BindingContext) {
+    private fun checkResolvedCallsInDiagnostics(bindingContext: BindingContext, configuredLanguageVersionSettings: LanguageVersionSettings) {
         val diagnosticsStoringResolvedCalls1 = setOf(
                 OVERLOAD_RESOLUTION_AMBIGUITY, NONE_APPLICABLE, CANNOT_COMPLETE_RESOLVE, UNRESOLVED_REFERENCE_WRONG_RECEIVER,
                 ASSIGN_OPERATOR_AMBIGUITY, ITERATOR_AMBIGUITY
@@ -554,19 +562,23 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
         for (diagnostic in bindingContext.diagnostics) {
             when (diagnostic.factory) {
                 in diagnosticsStoringResolvedCalls1 -> assertResolvedCallsAreCompleted(
-                        diagnostic, DiagnosticFactory.cast(diagnostic, diagnosticsStoringResolvedCalls1).a
+                        diagnostic, DiagnosticFactory.cast(diagnostic, diagnosticsStoringResolvedCalls1).a, configuredLanguageVersionSettings
                 )
                 in diagnosticsStoringResolvedCalls2 -> assertResolvedCallsAreCompleted(
-                        diagnostic, DiagnosticFactory.cast(diagnostic, diagnosticsStoringResolvedCalls2).b
+                        diagnostic, DiagnosticFactory.cast(diagnostic, diagnosticsStoringResolvedCalls2).b, configuredLanguageVersionSettings
                 )
             }
         }
     }
 
-    private fun assertResolvedCallsAreCompleted(diagnostic: Diagnostic, resolvedCalls: Collection<ResolvedCall<*>>) {
+    private fun assertResolvedCallsAreCompleted(
+            diagnostic: Diagnostic,
+            resolvedCalls: Collection<ResolvedCall<*>>,
+            configuredLanguageVersionSettings: LanguageVersionSettings
+    ) {
         val element = diagnostic.psiElement
         val lineAndColumn = DiagnosticUtils.getLineAndColumnInPsiFile(element.containingFile, element.textRange)
-        if (USE_NEW_INFERENCE) return
+        if (configuredLanguageVersionSettings.supportsFeature(LanguageFeature.NewInference)) return
 
         assertTrue("Resolved calls stored in ${diagnostic.factory.name}\nfor '${element.text}'$lineAndColumn are not completed",
                    resolvedCalls.all { (it as MutableResolvedCall<*>).isCompleted })

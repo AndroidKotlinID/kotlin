@@ -60,7 +60,12 @@ public class ConstructorContext extends MethodContext {
     }
 
     @Override
+    public boolean isContextWithUninitializedThis() {
+        return !isThisInitialized();
+    }
+
+    @Override
     public String toString() {
-        return "Constructor: " + getContextDescriptor();
+        return "Constructor: " + (isThisInitialized() ? "" : "UNINITIALIZED ") + getContextDescriptor();
     }
 }

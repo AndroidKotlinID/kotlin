@@ -2969,6 +2969,12 @@ public class JavaToKotlinConverterForWebDemoTestGenerated extends AbstractJavaTo
             doTest(fileName);
         }
 
+        @TestMetadata("kt-19943.java")
+        public void testKt_19943() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("j2k/testData/fileOrElement/issues/kt-19943.java");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt-5294.java")
         public void testKt_5294() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("j2k/testData/fileOrElement/issues/kt-5294.java");
@@ -3356,6 +3362,18 @@ public class JavaToKotlinConverterForWebDemoTestGenerated extends AbstractJavaTo
         @TestMetadata("charOctal.java")
         public void testCharOctal() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("j2k/testData/fileOrElement/literalExpression/charOctal.java");
+            doTest(fileName);
+        }
+
+        @TestMetadata("charToNumber.java")
+        public void testCharToNumber() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("j2k/testData/fileOrElement/literalExpression/charToNumber.java");
+            doTest(fileName);
+        }
+
+        @TestMetadata("charToString.java")
+        public void testCharToString() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("j2k/testData/fileOrElement/literalExpression/charToString.java");
             doTest(fileName);
         }
 
