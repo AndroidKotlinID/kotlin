@@ -18,20 +18,20 @@ package org.jetbrains.kotlin.codegen.range.inExpression
 
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.range.BoundedValue
-import org.jetbrains.kotlin.codegen.range.comparison.ObjectComparisonGenerator
+import org.jetbrains.kotlin.codegen.range.comparison.ComparisonGenerator
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
-class InContinuousRangeOfComparableExpressionGenerator(
+class InIntegralContinuousRangeExpressionGenerator(
         operatorReference: KtSimpleNameExpression,
         private val boundedValue: BoundedValue,
+        private val comparisonGenerator: ComparisonGenerator,
         private val frameMap: FrameMap
 ) : InExpressionGenerator {
     private val isNotIn = operatorReference.getReferencedNameElementType() == KtTokens.NOT_IN
-    private val comparisonGenerator = ObjectComparisonGenerator
 
     override fun generate(argument: StackValue): BranchedValue =
             gen(argument).let { if (isNotIn) Invert(it) else it }
@@ -49,7 +49,6 @@ class InContinuousRangeOfComparableExpressionGenerator(
 
                 private fun genJumpIfTrue(v: InstructionAdapter, jumpLabel: Label) {
                     // if (arg is in range) goto jumpLabel
-
                     frameMap.useTmpVar(operandType) { arg1Var ->
                         val exitLabel1 = Label()
                         val exitLabel2 = Label()
@@ -63,28 +62,24 @@ class InContinuousRangeOfComparableExpressionGenerator(
                         // On stack: high low arg
                         // if (low bound is NOT satisfied) goto exitLabel1
                         if (boundedValue.isLowInclusive) {
-                            // arg < low
-                            v.swap()
-                            comparisonGenerator.jumpIfLess(v, exitLabel1)
+                            // low > arg
+                            comparisonGenerator.jumpIfGreater(v, exitLabel1)
                         }
                         else {
-                            // arg <= low
-                            v.swap()
-                            comparisonGenerator.jumpIfLessOrEqual(v, exitLabel1)
+                            // low >= arg
+                            comparisonGenerator.jumpIfGreaterOrEqual(v, exitLabel1)
                         }
 
                         v.load(arg1Var, operandType)
                         // On stack: high arg
                         // if (high bound is satisfied) goto jumpLabel
                         if (boundedValue.isHighInclusive) {
-                            // arg <= high
-                            v.swap()
-                            comparisonGenerator.jumpIfLessOrEqual(v, jumpLabel)
+                            // high >= arg
+                            comparisonGenerator.jumpIfGreaterOrEqual(v, jumpLabel)
                         }
                         else {
-                            // arg < high
-                            v.swap()
-                            comparisonGenerator.jumpIfLess(v, jumpLabel)
+                            // high > arg
+                            comparisonGenerator.jumpIfGreater(v, jumpLabel)
                         }
                         v.goTo(exitLabel2)
 
@@ -93,7 +88,6 @@ class InContinuousRangeOfComparableExpressionGenerator(
 
                         v.mark(exitLabel2)
                     }
-
                 }
 
                 private fun genJumpIfFalse(v: InstructionAdapter, jumpLabel: Label) {
@@ -111,14 +105,12 @@ class InContinuousRangeOfComparableExpressionGenerator(
                         // On stack: high low arg
                         // if ([low bound is satisfied]) goto cmpHighLabel
                         if (boundedValue.isLowInclusive) {
-                            // arg >= low
-                            v.swap()
-                            comparisonGenerator.jumpIfGreaterOrEqual(v, cmpHighLabel)
+                            // low <= arg
+                            comparisonGenerator.jumpIfLessOrEqual(v, cmpHighLabel)
                         }
                         else {
-                            // arg > low
-                            v.swap()
-                            comparisonGenerator.jumpIfGreater(v, cmpHighLabel)
+                            // low < arg
+                            comparisonGenerator.jumpIfLess(v, cmpHighLabel)
                         }
 
                         // Low bound is NOT satisfied, clear stack and goto jumpLabel
@@ -130,16 +122,15 @@ class InContinuousRangeOfComparableExpressionGenerator(
                         // On stack: high arg
                         // if ([high bound is NOT satisfied]) goto jumpLabel
                         if (boundedValue.isHighInclusive) {
-                            // arg > high
-                            v.swap()
-                            comparisonGenerator.jumpIfGreater(v, jumpLabel)
+                            // high < arg
+                            comparisonGenerator.jumpIfLess(v, jumpLabel)
                         }
                         else {
-                            // arg >= high
-                            v.swap()
-                            comparisonGenerator.jumpIfGreaterOrEqual(v, jumpLabel)
+                            // high <= arg
+                            comparisonGenerator.jumpIfLessOrEqual(v, jumpLabel)
                         }
                     }
+
                 }
             }
 }

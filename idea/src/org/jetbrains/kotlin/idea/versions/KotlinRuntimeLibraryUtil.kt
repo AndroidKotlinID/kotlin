@@ -41,6 +41,7 @@ import com.intellij.util.indexing.ScalarIndexExtension
 import com.intellij.util.text.VersionComparatorUtil
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.config.JvmTarget
+import org.jetbrains.kotlin.config.KotlinCompilerVersion
 import org.jetbrains.kotlin.idea.KotlinPluginUtil
 import org.jetbrains.kotlin.idea.configuration.*
 import org.jetbrains.kotlin.idea.framework.JavaRuntimeDetectionUtil
@@ -213,40 +214,8 @@ enum class LibraryJarDescriptor(val jarName: String,
     fun getPathInPlugin() = getPath(PathUtil.kotlinPathsForIdeaPlugin)
 }
 
-fun bundledRuntimeVersion(): String {
-    return bundledRuntimeBuildNumber ?: pluginRuntimeVersion(KotlinPluginUtil.getPluginVersion())
-}
+fun bundledRuntimeVersion(): String = KotlinCompilerVersion.VERSION
 
-private val bundledRuntimeBuildNumber: String? by lazy {
-    val file = PathUtil.kotlinPathsForIdeaPlugin.buildNumberFile
-    if (file.exists()) file.readText().trim() else null
-}
-
-private val PLUGIN_VERSIONS_SEPARATORS = arrayOf("Idea", "IJ", "release", "dev", "Studio")
-
-fun pluginRuntimeVersion(pluginVersion: String): String {
-    var placeToSplit = -1
-
-    for (separator in PLUGIN_VERSIONS_SEPARATORS) {
-        val ideaPatternIndex = StringUtil.indexOf(pluginVersion, separator)
-        if (ideaPatternIndex >= 2 && Character.isDigit(pluginVersion[ideaPatternIndex - 2])) {
-            placeToSplit = ideaPatternIndex - 1
-            break
-        }
-    }
-
-    if (placeToSplit == -1) {
-        for (i in 1..pluginVersion.length - 1) {
-            val ch = pluginVersion[i]
-            if (Character.isLetter(ch) && pluginVersion[i - 1] == '.') {
-                placeToSplit = i - 1
-                break
-            }
-        }
-    }
-
-    return if (placeToSplit != -1) pluginVersion.substring(0, placeToSplit) else pluginVersion
-}
 
 fun getLocalJar(kotlinRuntimeJar: VirtualFile?): VirtualFile? {
     if (kotlinRuntimeJar == null) return null

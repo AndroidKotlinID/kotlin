@@ -74,12 +74,16 @@ import java.util.regex.Pattern
 
 abstract class BasicBoxTest(
         protected val pathToTestDir: String,
-        private val pathToOutputDir: String,
+        testGroupOutputDirPrefix: String,
+        pathToRootOutputDir: String = BasicBoxTest.TEST_DATA_DIR_PATH,
         private val typedArraysEnabled: Boolean = true,
         private val generateSourceMap: Boolean = false,
         private val generateNodeJsRunner: Boolean = true
 ) : KotlinTestWithEnvironment() {
     val additionalCommonFileDirectories = mutableListOf<String>()
+
+    private val testGroupOutputDirForCompilation = File(pathToRootOutputDir + "out/" + testGroupOutputDirPrefix)
+    private val testGroupOutputDirForMinification = File(pathToRootOutputDir + "out-min/" + testGroupOutputDirPrefix)
 
     protected open fun getOutputPrefixFile(testFilePath: String): File? = null
     protected open fun getOutputPostfixFile(testFilePath: String): File? = null
@@ -196,8 +200,9 @@ abstract class BasicBoxTest(
                     }
                 }
 
+                val outputDirForMinification = getOutputDir(file, testGroupOutputDirForMinification)
                 minifyAndRun(
-                        workDir = File(File(outputDir, "min"), file.nameWithoutExtension),
+                        workDir = File(outputDirForMinification, file.nameWithoutExtension),
                         allJsFiles = allJsFiles,
                         generatedJsFiles = generatedJsFiles,
                         expectedResult = expectedResult,
@@ -254,13 +259,13 @@ abstract class BasicBoxTest(
         return sb.toString()
     }
 
-    protected fun getOutputDir(file: File): File {
+    protected fun getOutputDir(file: File, testGroupOutputDir: File = testGroupOutputDirForCompilation): File {
         val stopFile = File(pathToTestDir)
         return generateSequence(file.parentFile) { it.parentFile }
                 .takeWhile { it != stopFile }
                 .map { it.name }
                 .toList().asReversed()
-                .fold(File(pathToOutputDir), ::File)
+                .fold(testGroupOutputDir, ::File)
     }
 
     private fun TestModule.outputFileSimpleName(): String {
@@ -268,9 +273,7 @@ abstract class BasicBoxTest(
         return getTestName(true) + outputFileSuffix
     }
 
-    private fun TestModule.outputFileName(directory: File): String {
-        return directory.absolutePath + "/" + outputFileSimpleName() + "_v5"
-    }
+    private fun TestModule.outputFileName(directory: File) = directory.absolutePath + "/" + outputFileSimpleName() + "_v5"
 
     private fun generateJavaScriptFile(
             directory: String,
@@ -377,7 +380,7 @@ abstract class BasicBoxTest(
 
     class IncrementalData(var header: ByteArray? = null, val translatedFiles: MutableMap<File, TranslationResultValue> = hashMapOf())
 
-    protected fun translateFiles(
+    private fun translateFiles(
             units: List<TranslationUnit>,
             outputFile: File,
             config: JsConfig,
@@ -430,7 +433,7 @@ abstract class BasicBoxTest(
         checkSourceMap(outputFile, translationResult.program)
     }
 
-    protected fun processJsProgram(program: JsProgram, psiFiles: List<KtFile>) {
+    private fun processJsProgram(program: JsProgram, psiFiles: List<KtFile>) {
         psiFiles.asSequence()
                 .map { it.text }
                 .forEach { DirectiveTestUtils.processDirectives(program, it) }
@@ -593,7 +596,7 @@ abstract class BasicBoxTest(
             val boxFunction = ktFile.declarations.find { it is KtNamedFunction && it.name == TEST_FUNCTION  }
             if (boxFunction != null) {
                 testPackage = ktFile.packageFqName.asString()
-                if (testPackage?.isEmpty() ?: false) {
+                if (testPackage?.isEmpty() == true) {
                     testPackage = null
                 }
             }
@@ -624,9 +627,8 @@ abstract class BasicBoxTest(
             return TestFile(temporaryFile.absolutePath, currentModule, recompile = RECOMPILE_PATTERN.matcher(text).find())
         }
 
-        override fun createModule(name: String, dependencies: List<String>, friends: List<String>): TestModule? {
-            return TestModule(name, dependencies, friends)
-        }
+        override fun createModule(name: String, dependencies: List<String>, friends: List<String>) =
+                TestModule(name, dependencies, friends)
 
         override fun close() {
             FileUtil.delete(tmpDir)
@@ -655,9 +657,8 @@ abstract class BasicBoxTest(
         val hasFilesToRecompile get() = files.any { it.recompile }
     }
 
-    override fun createEnvironment(): KotlinCoreEnvironment {
-        return KotlinCoreEnvironment.createForTests(testRootDisposable, CompilerConfiguration(), EnvironmentConfigFiles.JS_CONFIG_FILES)
-    }
+    override fun createEnvironment() =
+            KotlinCoreEnvironment.createForTests(testRootDisposable, CompilerConfiguration(), EnvironmentConfigFiles.JS_CONFIG_FILES)
 
     companion object {
         val METADATA_CACHE = (JsConfig.JS_STDLIB.asSequence() + JsConfig.JS_KOTLIN_TEST)
