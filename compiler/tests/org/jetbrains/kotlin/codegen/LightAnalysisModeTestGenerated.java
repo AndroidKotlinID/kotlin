@@ -2999,6 +2999,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             doTest(fileName);
         }
 
+        @TestMetadata("delegateConstructorCallWithKeywords.kt")
+        public void testDelegateConstructorCallWithKeywords() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/classes/delegateConstructorCallWithKeywords.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("delegation2.kt")
         public void testDelegation2() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/classes/delegation2.kt");
@@ -20738,6 +20744,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("switchOptimizationUnordered.kt")
         public void testSwitchOptimizationUnordered() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/when/switchOptimizationUnordered.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("switchOptimizationWithGap.kt")
+        public void testSwitchOptimizationWithGap() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/when/switchOptimizationWithGap.kt");
             doTest(fileName);
         }
 
