@@ -316,9 +316,17 @@ fun getStdlibArtifactId(sdk: Sdk?, version: String): String {
     }
 
     val sdkVersion = sdk?.version
-    return when (sdkVersion) {
-        JavaSdkVersion.JDK_1_8, JavaSdkVersion.JDK_1_9 -> MAVEN_STDLIB_ID_JDK8
-        JavaSdkVersion.JDK_1_7 -> MAVEN_STDLIB_ID_JDK7
+    if (hasJdkLikeUpdatedRuntime(version)) {
+        return when {
+            sdkVersion != null && sdkVersion.isAtLeast(JavaSdkVersion.JDK_1_8) -> MAVEN_STDLIB_ID_JDK8
+            sdkVersion == JavaSdkVersion.JDK_1_7 -> MAVEN_STDLIB_ID_JDK7
+            else -> MAVEN_STDLIB_ID
+        }
+    }
+
+    return when {
+        sdkVersion != null && sdkVersion.isAtLeast(JavaSdkVersion.JDK_1_8) -> MAVEN_STDLIB_ID_JRE8
+        sdkVersion == JavaSdkVersion.JDK_1_7 -> MAVEN_STDLIB_ID_JRE7
         else -> MAVEN_STDLIB_ID
     }
 }
@@ -334,24 +342,30 @@ fun getDefaultJvmTarget(sdk: Sdk?, version: String): JvmTarget? {
     return null
 }
 
+fun hasJdkLikeUpdatedRuntime(version: String): Boolean =
+        VersionComparatorUtil.compare(version, "1.2.0-rc-39") >= 0 ||
+        isSnapshot(version) ||
+        version == "default_version" /* for tests */
+
 fun hasJreSpecificRuntime(version: String): Boolean =
         VersionComparatorUtil.compare(version, "1.1.0") >= 0 ||
         isSnapshot(version) ||
         version == "default_version" /* for tests */
 
-val MAVEN_STDLIB_ID = "kotlin-stdlib"
+val MAVEN_STDLIB_ID = PathUtil.KOTLIN_JAVA_STDLIB_NAME
 
-val MAVEN_STDLIB_ID_JRE7 = "kotlin-stdlib-jre7"
-val MAVEN_STDLIB_ID_JDK7 = "kotlin-stdlib-jdk7"
+val MAVEN_STDLIB_ID_JRE7 = PathUtil.KOTLIN_JAVA_RUNTIME_JRE7_NAME
+val MAVEN_STDLIB_ID_JDK7 = PathUtil.KOTLIN_JAVA_RUNTIME_JDK7_NAME
 
-val MAVEN_STDLIB_ID_JRE8 = "kotlin-stdlib-jre8"
-val MAVEN_STDLIB_ID_JDK8 = "kotlin-stdlib-jdk8"
+val MAVEN_STDLIB_ID_JRE8 = PathUtil.KOTLIN_JAVA_RUNTIME_JRE8_NAME
+val MAVEN_STDLIB_ID_JDK8 = PathUtil.KOTLIN_JAVA_RUNTIME_JDK8_NAME
 
-val MAVEN_JS_STDLIB_ID = "kotlin-stdlib-js"
-val MAVEN_JS_TEST_ID = "kotlin-test-js"
+val MAVEN_JS_STDLIB_ID = PathUtil.JS_LIB_NAME
+val MAVEN_JS_TEST_ID = PathUtil.KOTLIN_TEST_JS_NAME
+
 val MAVEN_OLD_JS_STDLIB_ID = "kotlin-js-library"
 val MAVEN_COMMON_STDLIB_ID = "kotlin-stdlib-common" // TODO: KotlinCommonMavenConfigurator
-val MAVEN_TEST_ID = "kotlin-test"
+val MAVEN_TEST_ID = PathUtil.KOTLIN_TEST_NAME
 val MAVEN_TEST_JUNIT_ID = "kotlin-test-junit"
 val MAVEN_COMMON_TEST_ID = "kotlin-test-common"
 val MAVEN_COMMON_TEST_ANNOTATIONS_ID = "kotlin-test-annotations-common"
