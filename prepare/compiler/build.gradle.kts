@@ -13,7 +13,7 @@ buildscript {
 
     dependencies {
         classpath("com.github.jengelman.gradle.plugins:shadow:${property("versions.shadow")}")
-        classpath("net.sf.proguard:proguard-gradle:5.3.1")
+        classpath("net.sf.proguard:proguard-gradle:${property("versions.proguard")}")
     }
 }
 
@@ -69,7 +69,6 @@ dependencies {
     fatJarContents(protobufFull())
     fatJarContents(commonDep("com.google.code.findbugs", "jsr305"))
     fatJarContents(commonDep("io.javaslang", "javaslang"))
-    fatJarContents(preloadedDeps("json-org"))
     fatJarContents(preloadedDeps("kotlinx-coroutines-core"))
 
     proguardLibraryJars(files(firstFromJavaHomeThatExists("lib/rt.jar", "../Classes/classes.jar"),

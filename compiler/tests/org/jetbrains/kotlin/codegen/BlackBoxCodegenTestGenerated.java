@@ -14537,6 +14537,18 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             doTest(fileName);
         }
 
+        @TestMetadata("forInArrayWithArrayPropertyUpdatedInLoopBody.kt")
+        public void testForInArrayWithArrayPropertyUpdatedInLoopBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInArrayWithArrayPropertyUpdatedInLoopBody.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("forInArrayWithArrayVarUpdatedInLoopBody.kt")
+        public void testForInArrayWithArrayVarUpdatedInLoopBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInArrayWithArrayVarUpdatedInLoopBody.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("forInRangeLiteralWithMixedTypeBounds.kt")
         public void testForInRangeLiteralWithMixedTypeBounds() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInRangeLiteralWithMixedTypeBounds.kt");
@@ -14552,6 +14564,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("forInRangeWithImplicitReceiver.kt")
         public void testForInRangeWithImplicitReceiver() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInRangeWithImplicitReceiver.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("forInStringVarUpdatedInLoopBody.kt")
+        public void testForInStringVarUpdatedInLoopBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInStringVarUpdatedInLoopBody.kt");
             doTest(fileName);
         }
 
