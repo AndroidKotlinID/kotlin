@@ -18,20 +18,31 @@ package org.jetbrains.uast.kotlin
 
 import com.intellij.psi.*
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
+import org.jetbrains.kotlin.asJava.classes.KtLightClassForLocalDeclaration
 import org.jetbrains.kotlin.asJava.classes.KtLightClassForScript
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
-import org.jetbrains.kotlin.asJava.toLightMethods
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.utils.SmartList
+import org.jetbrains.kotlin.utils.addIfNotNull
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.uast.*
 import org.jetbrains.uast.java.AbstractJavaUClass
 import org.jetbrains.uast.kotlin.declarations.KotlinUMethod
 import org.jetbrains.uast.kotlin.declarations.UastLightIdentifier
 
 abstract class AbstractKotlinUClass(private val givenParent: UElement?) : AbstractJavaUClass() {
-    override val uastParent: UElement? by lz {
-        givenParent ?: KotlinUastLanguagePlugin().convertElementWithParent(psi.parent ?: psi.containingFile, null)
-    }
+    override val uastParent: UElement? by lz { givenParent ?: convertParent() }
+
+    //TODO: should be merged with KotlinAbstractUElement.convertParent() after detaching from AbstractJavaUClass
+    open fun convertParent(): UElement? =
+            (this.psi as? KtLightClassForLocalDeclaration)?.kotlinOrigin?.parent?.let {
+                when (it) {
+                    is KtClassBody -> it.parent.toUElement() // TODO: it seems that `class_body`-s are never created in kotlin uast in top-down walk, probably they should be completely skipped and always unwrapped
+                    else -> it.toUElement()
+                }
+            } ?: (psi.parent ?: psi.containingFile).toUElement()
+
 }
 
 open class KotlinUClass private constructor(
@@ -70,13 +81,11 @@ open class KotlinUClass private constructor(
     override fun getInitializers(): Array<UClassInitializer> = super.getInitializers()
 
     override fun getMethods(): Array<UMethod> {
-        val primaryConstructor = ktClass?.primaryConstructor?.toLightMethods()?.firstOrNull()
 
         fun createUMethod(psiMethod: PsiMethod): UMethod {
             return if (psiMethod is KtLightMethod &&
-                       psiMethod.isConstructor &&
-                       (primaryConstructor == null || psiMethod == primaryConstructor)) {
-                KotlinPrimaryConstructorUMethod(ktClass, psiMethod, this)
+                       psiMethod.isConstructor) {
+                KotlinConstructorUMethod(ktClass, psiMethod, this)
             } else {
                 getLanguagePlugin().convert(psiMethod, this)
             }
@@ -102,15 +111,36 @@ open class KotlinUClass private constructor(
     }
 }
 
-class KotlinPrimaryConstructorUMethod(
+class KotlinConstructorUMethod(
         private val ktClass: KtClassOrObject?,
         override val psi: KtLightMethod,
-        override val uastParent: UElement?
-): KotlinUMethod(psi, uastParent) {
+        givenParent: UElement?
+) : KotlinUMethod(psi, givenParent) {
+
+    val isPrimary: Boolean
+        get() = psi.kotlinOrigin.let { it is KtPrimaryConstructor || it is KtClassOrObject }
+
     override val uastBody: UExpression? by lz {
-        ktClass?.getAnonymousInitializers()
-                ?.takeIf { it.isNotEmpty() }
-                ?.let { KotlinUBlockExpression.create(it, this) }
+        val delegationCall: KtCallElement? = psi.kotlinOrigin.let {
+            when {
+                isPrimary -> ktClass?.superTypeListEntries?.firstIsInstanceOrNull<KtSuperTypeCallEntry>()
+                it is KtSecondaryConstructor -> it.getDelegationCall()
+                else -> null
+            }
+        }
+        val initializers = ktClass?.getAnonymousInitializers().orEmpty()
+        if (delegationCall == null && initializers.isEmpty()) return@lz null
+        KotlinUBlockExpression.KotlinLazyUBlockExpression(this) { uastParent ->
+            SmartList<UExpression>().apply {
+                delegationCall?.let {
+                    add(KotlinUFunctionCallExpression(it, uastParent))
+                }
+                val languagePlugin = uastParent.getLanguagePlugin()
+                initializers.forEach {
+                    addIfNotNull(languagePlugin.convertOpt(it.body, uastParent))
+                }
+            }
+        }
     }
 }
 
@@ -136,6 +166,7 @@ class KotlinUAnonymousClass(
             val ktClassOrObject = (psi.originalElement as? KtLightClass)?.kotlinOrigin as? KtObjectDeclaration ?: return null 
             return UIdentifier(ktClassOrObject.getObjectKeyword(), this)
         }
+
 }
 
 class KotlinScriptUClass(

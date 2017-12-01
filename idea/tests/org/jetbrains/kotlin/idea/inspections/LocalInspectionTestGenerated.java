@@ -1500,6 +1500,75 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RecursiveEqualsCall extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInRecursiveEqualsCall() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/recursiveEqualsCall"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("recursive.kt")
+        public void testRecursive() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursive.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveDirect.kt")
+        public void testRecursiveDirect() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveDirect.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveDirectFake.kt")
+        public void testRecursiveDirectFake() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveDirectFake.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveDirectSafe.kt")
+        public void testRecursiveDirectSafe() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveDirectSafe.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveFake.kt")
+        public void testRecursiveFake() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveFake.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveFakeNested.kt")
+        public void testRecursiveFakeNested() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveFakeNested.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveFakeNoOther.kt")
+        public void testRecursiveFakeNoOther() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveFakeNoOther.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveImplicit.kt")
+        public void testRecursiveImplicit() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveImplicit.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveNested.kt")
+        public void testRecursiveNested() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveNested.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("recursiveNot.kt")
+        public void testRecursiveNot() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/recursiveEqualsCall/recursiveNot.kt");
+            doTest(fileName);
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/redundantExplicitType")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
