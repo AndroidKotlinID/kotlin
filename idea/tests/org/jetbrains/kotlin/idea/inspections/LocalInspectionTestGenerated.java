@@ -1833,6 +1833,57 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/redundantSemicolon")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantSemicolon extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInRedundantSemicolon() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantSemicolon"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("companionBeforeFun.kt")
+        public void testCompanionBeforeFun() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionBeforeFun.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionBeforeInit.kt")
+        public void testCompanionBeforeInit() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionBeforeInit.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionBeforePrivateFun.kt")
+        public void testCompanionBeforePrivateFun() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionBeforePrivateFun.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionBeforeVal.kt")
+        public void testCompanionBeforeVal() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionBeforeVal.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionInLast.kt")
+        public void testCompanionInLast() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionInLast.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionWithBody.kt")
+        public void testCompanionWithBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionWithBody.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("companionWithName.kt")
+        public void testCompanionWithName() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSemicolon/companionWithName.kt");
+            doTest(fileName);
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/redundantSetter")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -2138,6 +2189,51 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("vararg.kt")
         public void testVararg() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replaceArrayOfWithLiteral/vararg.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ReplacePutWithAssignment extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInReplacePutWithAssignment() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/replacePutWithAssignment"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("nonMap.kt")
+        public void testNonMap() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/nonMap.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("putAsExpression.kt")
+        public void testPutAsExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/putAsExpression.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("putOnParameter.kt")
+        public void testPutOnParameter() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/putOnParameter.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("putOnThis.kt")
+        public void testPutOnThis() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/putOnThis.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("putOnVal.kt")
+        public void testPutOnVal() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/putOnVal.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("putOnVar.kt")
+        public void testPutOnVar() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replacePutWithAssignment/putOnVar.kt");
             doTest(fileName);
         }
     }
@@ -2459,9 +2555,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("it.kt")
+        public void testIt() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unnecessaryVariable/it.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("paramCopy.kt")
         public void testParamCopy() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unnecessaryVariable/paramCopy.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("parameterWithSameNameBelow.kt")
+        public void testParameterWithSameNameBelow() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unnecessaryVariable/parameterWithSameNameBelow.kt");
             doTest(fileName);
         }
 
@@ -2570,6 +2678,12 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("internal.kt")
         public void testInternal() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unusedSymbol/internal.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("withJvmNameUsedFromKotlin.kt")
+        public void testWithJvmNameUsedFromKotlin() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/unusedSymbol/withJvmNameUsedFromKotlin.kt");
             doTest(fileName);
         }
     }
