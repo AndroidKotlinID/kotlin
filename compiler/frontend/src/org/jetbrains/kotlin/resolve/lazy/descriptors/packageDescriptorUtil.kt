@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.codegen.range.forLoop
+package org.jetbrains.kotlin.resolve.lazy.descriptors
 
-import org.jetbrains.kotlin.codegen.ExpressionCodegen
-import org.jetbrains.kotlin.psi.KtForExpression
-import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
+import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
+import org.jetbrains.kotlin.psi.KtFile
 
-class ForInCollectionIndicesRangeLoopGenerator(
-        codegen: ExpressionCodegen,
-        forExpression: KtForExpression,
-        loopRangeCall: ResolvedCall<*>
-) : ForInOptimizedIndicesLoopGenerator(codegen, forExpression, loopRangeCall) {
-    override fun getReceiverSizeAsInt() {
-        v.invokeinterface("java/util/Collection", "size", "()I")
-    }
-}
+fun ModuleDescriptor.findPackageFragmentForFile(ktFile: KtFile): PackageFragmentDescriptor? =
+        getPackage(ktFile.packageFqName).fragments
+                .filterIsInstance<LazyPackageDescriptor>()
+                .firstOrNull { it.declarationProvider.containsFile(ktFile) }

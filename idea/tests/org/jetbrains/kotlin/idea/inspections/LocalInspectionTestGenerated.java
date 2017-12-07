@@ -1694,6 +1694,24 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("hasType.kt")
+        public void testHasType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantGetter/hasType.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("hasTypeWithPropertyExplicitType.kt")
+        public void testHasTypeWithPropertyExplicitType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantGetter/hasTypeWithPropertyExplicitType.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("hasTypeWithPropertyInitializer.kt")
+        public void testHasTypeWithPropertyInitializer() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantGetter/hasTypeWithPropertyInitializer.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("notFieldExpression.kt")
         public void testNotFieldExpression() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantGetter/notFieldExpression.kt");
@@ -1955,6 +1973,27 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("sameVisibility3.kt")
         public void testSameVisibility3() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/sameVisibility3.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/redundantSuspend")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantSuspend extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInRedundantSuspend() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantSuspend"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("getterDelegate.kt")
+        public void testGetterDelegate() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSuspend/getterDelegate.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("setterDelegate.kt")
+        public void testSetterDelegate() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSuspend/setterDelegate.kt");
             doTest(fileName);
         }
     }
