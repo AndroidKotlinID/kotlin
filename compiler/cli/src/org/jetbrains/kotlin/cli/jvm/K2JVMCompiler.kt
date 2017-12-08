@@ -73,8 +73,8 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             if (it != OK) return it
         }
 
-        val plugLoadResult = PluginCliParser.loadPluginsSafe(arguments, configuration)
-        if (plugLoadResult != ExitCode.OK) return plugLoadResult
+        val pluginLoadResult = PluginCliParser.loadPluginsSafe(arguments, configuration)
+        if (pluginLoadResult != ExitCode.OK) return pluginLoadResult
 
         if (!arguments.script && arguments.buildFile == null) {
             for (arg in arguments.freeArgs) {
@@ -91,17 +91,19 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             }
         }
 
-        configureContentRoots(paths, arguments, configuration)
-
         configuration.put(CommonConfigurationKeys.MODULE_NAME, arguments.moduleName ?: JvmAbi.DEFAULT_MODULE_NAME)
 
-        if (arguments.buildFile == null && arguments.freeArgs.isEmpty() && !arguments.version) {
-            if (arguments.script) {
-                messageCollector.report(ERROR, "Specify script source path to evaluate")
-                return COMPILATION_ERROR
+        if (arguments.buildFile == null) {
+            configureContentRoots(paths, arguments, configuration)
+
+            if (arguments.freeArgs.isEmpty() && !arguments.version) {
+                if (arguments.script) {
+                    messageCollector.report(ERROR, "Specify script source path to evaluate")
+                    return COMPILATION_ERROR
+                }
+                ReplFromTerminal.run(rootDisposable, configuration)
+                return ExitCode.OK
             }
-            ReplFromTerminal.run(rootDisposable, configuration)
-            return ExitCode.OK
         }
 
         if (arguments.includeRuntime) {
@@ -166,7 +168,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                 val environment = createEnvironmentWithScriptingSupport(rootDisposable, configuration, arguments, messageCollector)
                                   ?: return COMPILATION_ERROR
 
-                val scriptDefinitionProvider = ScriptDefinitionProvider.getInstance(environment.project)!!
+                val scriptDefinitionProvider = ScriptDefinitionProvider.getInstance(environment.project)
                 val scriptFile = File(sourcePath)
                 if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(scriptFile.name)) {
                     val extensionHint =
@@ -358,7 +360,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             configuration.put(JVMConfigurationKeys.DISABLE_CALL_ASSERTIONS, arguments.noCallAssertions)
             configuration.put(JVMConfigurationKeys.DISABLE_RECEIVER_ASSERTIONS, arguments.noReceiverAssertions)
             configuration.put(JVMConfigurationKeys.DISABLE_PARAM_ASSERTIONS, arguments.noParamAssertions)
-            configuration.put(JVMConfigurationKeys.NO_EXCEPTION_ON_EXPLICIT_EQUALS_FOR_BOXED_NULL, arguments.noExceptionOnExplicitEqualsForBoxedNull);
+            configuration.put(JVMConfigurationKeys.NO_EXCEPTION_ON_EXPLICIT_EQUALS_FOR_BOXED_NULL, arguments.noExceptionOnExplicitEqualsForBoxedNull)
             configuration.put(JVMConfigurationKeys.DISABLE_OPTIMIZATION, arguments.noOptimize)
 
             val constructorCallNormalizationMode = JVMConstructorCallNormalizationMode.fromStringOrNull(arguments.constructorCallNormalizationMode)
