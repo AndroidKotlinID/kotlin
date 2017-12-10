@@ -2701,6 +2701,17 @@
                      language="kotlin"
     />
 
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.SortModifiersInspection"
+                     displayName="Non-canonical modifier order"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+                     cleanupTool="true"
+    />
+
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 
     <fileType.fileViewProviderFactory filetype="KJSM" implementationClass="com.intellij.psi.ClassFileViewProviderFactory"/>
