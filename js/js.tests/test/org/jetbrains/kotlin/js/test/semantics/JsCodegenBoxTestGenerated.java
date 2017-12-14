@@ -15872,12 +15872,6 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
-        @TestMetadata("forInRangeToConstWithOverflow.kt")
-        public void testForInRangeToConstWithOverflow() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInRangeToConstWithOverflow.kt");
-            doTest(fileName);
-        }
-
         @TestMetadata("forInRangeWithImplicitReceiver.kt")
         public void testForInRangeWithImplicitReceiver() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInRangeWithImplicitReceiver.kt");
@@ -16525,6 +16519,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("forIntInDownToWithNonConstBounds.kt")
+            public void testForIntInDownToWithNonConstBounds() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInDownTo/forIntInDownToWithNonConstBounds.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("forIntInNonOptimizedDownTo.kt")
             public void testForIntInNonOptimizedDownTo() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInDownTo/forIntInNonOptimizedDownTo.kt");
@@ -16649,6 +16649,126 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/ranges/forInReversed")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ForInReversed extends AbstractJsCodegenBoxTest {
+            public void testAllFilesPresentInForInReversed() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/forInReversed"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("forInReversedArrayIndices.kt")
+            public void testForInReversedArrayIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedArrayIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedCharSequenceIndices.kt")
+            public void testForInReversedCharSequenceIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedCharSequenceIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedCollectionIndices.kt")
+            public void testForInReversedCollectionIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedCollectionIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedDownTo.kt")
+            public void testForInReversedDownTo() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedDownTo.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedEmptyRange.kt")
+            public void testForInReversedEmptyRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedEmptyRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedEmptyRangeLiteral.kt")
+            public void testForInReversedEmptyRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedEmptyRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedEmptyRangeLiteralWithNonConstBounds.kt")
+            public void testForInReversedEmptyRangeLiteralWithNonConstBounds() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedEmptyRangeLiteralWithNonConstBounds.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedRange.kt")
+            public void testForInReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedRangeLiteral.kt")
+            public void testForInReversedRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedRangeLiteralWithNonConstBounds.kt")
+            public void testForInReversedRangeLiteralWithNonConstBounds() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedRangeLiteralWithNonConstBounds.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("ForInReversedReversedRange.kt")
+            public void testForInReversedReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/ForInReversedReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedReversedReversedRange.kt")
+            public void testForInReversedReversedReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedReversedReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedUntil.kt")
+            public void testForInReversedUntil() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedUntil.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedUntilWithNonConstBounds.kt")
+            public void testForInReversedUntilWithNonConstBounds() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/forInReversedUntilWithNonConstBounds.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class EvaluationOrder extends AbstractJsCodegenBoxTest {
+                public void testAllFilesPresentInEvaluationOrder() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+                }
+
+                @TestMetadata("forInReversedDownToEvaluationOrder.kt")
+                public void testForInReversedDownToEvaluationOrder() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedDownToEvaluationOrder.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("forInReversedRangeLiteralEvaluationOrder.kt")
+                public void testForInReversedRangeLiteralEvaluationOrder() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedRangeLiteralEvaluationOrder.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("forInReversedUntilEvaluationOrder.kt")
+                public void testForInReversedUntilEvaluationOrder() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedUntilEvaluationOrder.kt");
+                    doTest(fileName);
+                }
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/ranges/forInUntil")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -16708,6 +16828,93 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             @TestMetadata("forIntInIntUntilSmartcastInt.kt")
             public void testForIntInIntUntilSmartcastInt() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forInUntil/forIntInIntUntilSmartcastInt.kt");
+                doTest(fileName);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ForWithPossibleOverflow extends AbstractJsCodegenBoxTest {
+            public void testAllFilesPresentInForWithPossibleOverflow() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/forWithPossibleOverflow"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("forInDownToCharMinValue.kt")
+            public void testForInDownToCharMinValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToCharMinValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInDownToCharMinValueReversed.kt")
+            public void testForInDownToCharMinValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToCharMinValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInDownToIntMinValue.kt")
+            public void testForInDownToIntMinValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToIntMinValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInDownToIntMinValueReversed.kt")
+            public void testForInDownToIntMinValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToIntMinValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInDownToLongMinValue.kt")
+            public void testForInDownToLongMinValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToLongMinValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInDownToLongMinValueReversed.kt")
+            public void testForInDownToLongMinValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInDownToLongMinValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToCharMaxValue.kt")
+            public void testForInRangeToCharMaxValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToCharMaxValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToCharMaxValueReversed.kt")
+            public void testForInRangeToCharMaxValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToCharMaxValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToIntMaxValue.kt")
+            public void testForInRangeToIntMaxValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToIntMaxValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToIntMaxValueReversed.kt")
+            public void testForInRangeToIntMaxValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToIntMaxValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToLongMaxValue.kt")
+            public void testForInRangeToLongMaxValue() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToLongMaxValue.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInRangeToLongMaxValueReversed.kt")
+            public void testForInRangeToLongMaxValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInRangeToLongMaxValueReversed.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInUntilIntMinValueReversed.kt")
+            public void testForInUntilIntMinValueReversed() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ranges/forWithPossibleOverflow/forInUntilIntMinValueReversed.kt");
                 doTest(fileName);
             }
         }

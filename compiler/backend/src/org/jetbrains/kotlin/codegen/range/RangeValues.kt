@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
+import org.jetbrains.kotlin.resolve.scopes.receivers.ExpressionReceiver
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.checker.KotlinTypeChecker
 import org.jetbrains.org.objectweb.asm.Type
@@ -58,9 +59,9 @@ fun ExpressionCodegen.createRangeValueForExpression(rangeExpression: KtExpressio
         }
 
         isPrimitiveRange(rangeType) ->
-            PrimitiveRangeRangeValue()
+            PrimitiveRangeRangeValue(rangeExpression)
         isPrimitiveProgression(rangeType) ->
-            PrimitiveProgressionRangeValue()
+            PrimitiveProgressionRangeValue(rangeExpression)
         isSubtypeOfString(rangeType, builtIns) ->
             CharSequenceRangeValue(true, AsmTypes.JAVA_STRING_TYPE)
         isSubtypeOfCharSequence(rangeType, builtIns) ->
@@ -127,7 +128,15 @@ private fun ExpressionCodegen.createIntrinsifiedRangeValueOrNull(rangeCall: Reso
             CharSequenceIndicesRangeValue(rangeCall)
         isComparableRangeTo(rangeCallee) ->
             ComparableRangeLiteralRangeValue(this, rangeCall)
+        isPrimitiveProgressionReverse(rangeCallee) ->
+            createReversedRangeValueOrNull(rangeCall)
         else ->
             null
     }
+}
+
+private fun ExpressionCodegen.createReversedRangeValueOrNull(rangeCall: ResolvedCall<out CallableDescriptor>): RangeValue? {
+    val receiver = rangeCall.extensionReceiver as? ExpressionReceiver ?: return null
+    val receiverRangeValue = createRangeValueForExpression(receiver.expression) as? ReversableRangeValue ?: return null
+    return ReversedRangeValue(receiverRangeValue)
 }

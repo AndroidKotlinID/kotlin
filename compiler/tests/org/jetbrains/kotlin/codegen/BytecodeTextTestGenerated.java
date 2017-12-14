@@ -282,6 +282,12 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         doTest(fileName);
     }
 
+    @TestMetadata("kt7188.kt")
+    public void testKt7188() throws Exception {
+        String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/kt7188.kt");
+        doTest(fileName);
+    }
+
     @TestMetadata("kt7769.kt")
     public void testKt7769() throws Exception {
         String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/kt7769.kt");
@@ -1289,9 +1295,27 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             doTest(fileName);
         }
 
+        @TestMetadata("forInRangeToCharConst.kt")
+        public void testForInRangeToCharConst() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInRangeToCharConst.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("forInRangeToConst.kt")
         public void testForInRangeToConst() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInRangeToConst.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("forInRangeToLongConst.kt")
+        public void testForInRangeToLongConst() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInRangeToLongConst.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("forInRangeToQualifiedConst.kt")
+        public void testForInRangeToQualifiedConst() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInRangeToQualifiedConst.kt");
             doTest(fileName);
         }
 
@@ -1396,6 +1420,75 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             @TestMetadata("forInPrimitiveArrayIndices.kt")
             public void testForInPrimitiveArrayIndices() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInIndices/forInPrimitiveArrayIndices.kt");
+                doTest(fileName);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ForInReversed extends AbstractBytecodeTextTest {
+            public void testAllFilesPresentInForInReversed() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/forLoop/forInReversed"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+            }
+
+            @TestMetadata("forInReversedArrayIndices.kt")
+            public void testForInReversedArrayIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedArrayIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedCharSequenceIndices.kt")
+            public void testForInReversedCharSequenceIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedCharSequenceIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedCollectionIndices.kt")
+            public void testForInReversedCollectionIndices() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedCollectionIndices.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedDownTo.kt")
+            public void testForInReversedDownTo() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedDownTo.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedEmptyRangeLiteral.kt")
+            public void testForInReversedEmptyRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedEmptyRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedRange.kt")
+            public void testForInReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedRangeLiteral.kt")
+            public void testForInReversedRangeLiteral() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedRangeLiteral.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("ForInReversedReversedRange.kt")
+            public void testForInReversedReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/ForInReversedReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedReversedReversedRange.kt")
+            public void testForInReversedReversedReversedRange() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedReversedReversedRange.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("forInReversedUntil.kt")
+            public void testForInReversedUntil() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInReversed/forInReversedUntil.kt");
                 doTest(fileName);
             }
         }
