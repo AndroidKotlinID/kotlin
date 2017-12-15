@@ -138,6 +138,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
 
         val kaptClasspath = arrayListOf<File>()
         val buildDependencies = arrayListOf<TaskDependency>()
+        val kaptConfigurations = arrayListOf<Configuration>()
 
         fun handleSourceSet(sourceSetName: String) {
             val kaptConfiguration = project.findKaptConfiguration(sourceSetName)
@@ -146,6 +147,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
             } ?: emptyList()
 
             if (kaptConfiguration != null) {
+                kaptConfigurations += kaptConfiguration
                 buildDependencies += kaptConfiguration.buildDependencies
 
                 if (filteredDependencies.isNotEmpty()) {
@@ -178,6 +180,8 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         val kaptGenerateStubsTask = context.createKaptGenerateStubsTask()
         val kaptTask = context.createKaptKotlinTask()
 
+        kaptGenerateStubsTask.source(*kaptConfigurations.toTypedArray())
+
         kaptGenerateStubsTask.dependsOn(*buildDependencies.toTypedArray())
         kaptGenerateStubsTask.dependsOn(*kotlinCompile.dependsOn.toTypedArray())
 
@@ -202,9 +206,6 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
 
         pluginOptions += SubpluginOption("aptMode", aptMode)
         disableAnnotationProcessingInJavaTask()
-
-        // Skip annotation processing in kotlinc if no kapt dependencies were provided
-        if (kaptClasspath.isEmpty()) return pluginOptions
 
         kaptClasspath.forEach { pluginOptions += SubpluginOption("apclasspath", it.absolutePath) }
 
