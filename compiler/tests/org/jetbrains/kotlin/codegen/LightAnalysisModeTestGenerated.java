@@ -16249,6 +16249,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 doTest(fileName);
             }
 
+            @TestMetadata("javaVoid.kt")
+            public void testJavaVoid() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/reflection/classes/javaVoid.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("jvmName.kt")
             public void testJvmName() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/reflection/classes/jvmName.kt");
@@ -17272,6 +17278,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("javaClass.kt")
             public void testJavaClass() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/reflection/noReflectAtRuntime/javaClass.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("javaVoid.kt")
+            public void testJavaVoid() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/reflection/noReflectAtRuntime/javaVoid.kt");
                 doTest(fileName);
             }
 
@@ -20138,6 +20150,18 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt10047.kt")
         public void testKt10047() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/kt10047.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt21258_indirect.kt")
+        public void testKt21258_indirect() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/kt21258_indirect.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt21258_simple.kt")
+        public void testKt21258_simple() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/syntheticAccessors/kt21258_simple.kt");
             doTest(fileName);
         }
 
