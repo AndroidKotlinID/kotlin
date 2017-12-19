@@ -10105,6 +10105,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("kt17730.kt")
+            public void testKt17730() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/any/kt17730.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt17730_1.kt")
+            public void testKt17730_1() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/any/kt17730_1.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("none.kt")
             public void testNone() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/any/none.kt");
@@ -10759,6 +10771,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("KT21083.kt")
+            public void testKT21083() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/forEach/KT21083.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("notAvailable.kt")
             public void testNotAvailable() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/forEach/notAvailable.kt");
@@ -10903,6 +10921,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("assignMap2.kt")
             public void testAssignMap2() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/map/assignMap2.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("KT18816.kt")
+            public void testKT18816() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/map/KT18816.kt");
                 doTest(fileName);
             }
 
@@ -11434,6 +11458,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("goodReceiver.kt")
             public void testGoodReceiver() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/toCollection/goodReceiver.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("KT18881.kt")
+            public void testKT18881() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/loopToCallChain/toCollection/KT18881.kt");
                 doTest(fileName);
             }
 
