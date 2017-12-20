@@ -1858,6 +1858,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 doTest(fileName);
             }
 
+            @TestMetadata("callableReferenceAsLastExpressionInBlock.kt")
+            public void testCallableReferenceAsLastExpressionInBlock() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/callableReference/callableReferenceAsLastExpressionInBlock.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("classVsPackage.kt")
             public void testClassVsPackage() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/callableReference/classVsPackage.kt");
@@ -8422,6 +8428,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 doTest(fileName);
             }
 
+            @TestMetadata("functionExpressionAsLastExpressionInBlock.kt")
+            public void testFunctionExpressionAsLastExpressionInBlock() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/functionLiterals/functionExpressionAsLastExpressionInBlock.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("functionLIteralInBlockInIf.kt")
             public void testFunctionLIteralInBlockInIf() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/functionLiterals/functionLIteralInBlockInIf.kt");
@@ -10812,6 +10824,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("notNullConstraintOnNullableType.kt")
                 public void testNotNullConstraintOnNullableType() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/constraints/notNullConstraintOnNullableType.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("operationsOnIntegerValueTypes.kt")
+                public void testOperationsOnIntegerValueTypes() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/constraints/operationsOnIntegerValueTypes.kt");
                     doTest(fileName);
                 }
 
