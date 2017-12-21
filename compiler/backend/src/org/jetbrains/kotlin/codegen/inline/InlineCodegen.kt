@@ -51,6 +51,8 @@ import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedCallableMemberDescriptor
+import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.expressions.DoubleColonLHS
 import org.jetbrains.kotlin.types.expressions.ExpressionTypingUtils.isFunctionLiteral
 import org.jetbrains.kotlin.types.expressions.LabelResolver
 import org.jetbrains.org.objectweb.asm.Opcodes
@@ -157,18 +159,13 @@ abstract class InlineCodegen<out T: BaseExpressionCodegen>(
     }
 
     fun performInline(
-            resolvedCall: ResolvedCall<*>?,
+            typeArguments: Map<TypeParameterDescriptor, KotlinType>?,
             callDefault: Boolean,
             codegen: BaseExpressionCodegen
     ) {
-        if (!state.inlineCycleReporter.enterIntoInlining(resolvedCall)) {
-            generateStub(resolvedCall, codegen)
-            return
-        }
-
         var nodeAndSmap: SMAPAndMethodNode? = null
         try {
-            nodeAndSmap = createInlineMethodNode(functionDescriptor, jvmSignature, callDefault, resolvedCall, state, sourceCompiler)
+            nodeAndSmap = createInlineMethodNode(functionDescriptor, jvmSignature, callDefault, typeArguments, state, sourceCompiler)
             endCall(inlineCall(nodeAndSmap, callDefault))
         }
         catch (e: CompilationException) {
@@ -179,9 +176,6 @@ abstract class InlineCodegen<out T: BaseExpressionCodegen>(
         }
         catch (e: Exception) {
             throw throwCompilationException(nodeAndSmap, e, true)
-        }
-        finally {
-            state.inlineCycleReporter.exitFromInliningOf(resolvedCall)
         }
     }
 
@@ -475,17 +469,15 @@ abstract class InlineCodegen<out T: BaseExpressionCodegen>(
                 functionDescriptor: FunctionDescriptor,
                 jvmSignature: JvmMethodSignature,
                 callDefault: Boolean,
-                resolvedCall: ResolvedCall<*>?,
+                typeArguments: Map<TypeParameterDescriptor, KotlinType>?,
                 state: GenerationState,
                 sourceCompilerForInline: SourceCompilerForInline
         ): SMAPAndMethodNode {
             when {
                 isSpecialEnumMethod(functionDescriptor) -> {
-                    val arguments = resolvedCall!!.typeArguments
-
                     val node = createSpecialEnumMethodBody(
                             functionDescriptor.name.asString(),
-                            arguments.keys.single().defaultType,
+                            typeArguments!!.keys.single().defaultType,
                             state.typeMapper
                     )
                     return SMAPAndMethodNode(node, SMAPParser.parseOrCreateDefault(null, null, "fake", -1, -1))
@@ -674,7 +666,15 @@ class PsiInlineCodegen(
             callDefault: Boolean,
             codegen: ExpressionCodegen
     ) {
-       performInline(resolvedCall, callDefault, codegen)
+        if (!state.inlineCycleReporter.enterIntoInlining(resolvedCall)) {
+            generateStub(resolvedCall, codegen)
+            return
+        }
+        try {
+            performInline(resolvedCall?.typeArguments, callDefault, codegen)
+        } finally {
+            state.inlineCycleReporter.exitFromInliningOf(resolvedCall)
+        }
     }
 
     override fun processAndPutHiddenParameters(justProcess: Boolean) {
@@ -698,7 +698,7 @@ class PsiInlineCodegen(
     override fun putClosureParametersOnStack(next: LambdaInfo, functionReferenceReceiver: StackValue?) {
         activeLambda = next
         when (next) {
-            is ExpressionLambda -> codegen.pushClosureOnStack(next.classDescriptor, true, this, functionReferenceReceiver)
+            is PsiExpressionLambda -> codegen.pushClosureOnStack(next.classDescriptor, true, this, functionReferenceReceiver)
             is DefaultLambda -> rememberCapturedForDefaultLambda(next)
             else -> throw RuntimeException("Unknown lambda: $next")
         }
@@ -744,7 +744,7 @@ class PsiInlineCodegen(
         val ktLambda = KtPsiUtil.deparenthesize(expression)
         assert(isInlinableParameterExpression(ktLambda)) { "Couldn't find inline expression in ${expression.text}" }
 
-        return ExpressionLambda(
+        return PsiExpressionLambda(
                 ktLambda!!, typeMapper, parameter.isCrossinline, getBoundCallableReferenceReceiver(expression) != null
         ).also { lambda ->
             val closureInfo = invocationParamBuilder.addNextValueParameter(type, true, null, parameter.index)
