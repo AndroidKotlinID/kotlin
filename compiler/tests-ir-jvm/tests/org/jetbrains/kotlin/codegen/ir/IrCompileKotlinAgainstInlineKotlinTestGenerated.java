@@ -1210,9 +1210,57 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
             }
 
+            @TestMetadata("checkLambdaClassIsPresent.kt")
+            public void testCheckLambdaClassIsPresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkLambdaClassIsPresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("checkLambdaClassesArePresent.kt")
+            public void testCheckLambdaClassesArePresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkLambdaClassesArePresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("checkObjectClassIsPresent.kt")
+            public void testCheckObjectClassIsPresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkObjectClassIsPresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("checkStaticLambdaClassIsPresent.kt")
+            public void testCheckStaticLambdaClassIsPresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkStaticLambdaClassIsPresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("checkStaticLambdaClassesArePresent.kt")
+            public void testCheckStaticLambdaClassesArePresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkStaticLambdaClassesArePresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("checkStaticObjectClassIsPresent.kt")
+            public void testCheckStaticObjectClassIsPresent() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/checkStaticObjectClassIsPresent.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("defaultCallInDefaultLambda.kt")
+            public void testDefaultCallInDefaultLambda() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/defaultCallInDefaultLambda.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("defaultLambdaInNoInline.kt")
             public void testDefaultLambdaInNoInline() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/defaultLambdaInNoInline.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("genericLambda.kt")
+            public void testGenericLambda() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/genericLambda.kt");
                 doTest(fileName);
             }
 
@@ -1231,6 +1279,12 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
             @TestMetadata("jvmStaticDefault.kt")
             public void testJvmStaticDefault() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/jvmStaticDefault.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt21827.kt")
+            public void testKt21827() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/kt21827.kt");
                 doTest(fileName);
             }
 
@@ -3037,6 +3091,42 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/boxInline/smap/defaultLambda"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
             }
 
+            @TestMetadata("defaultLambdaInAnonymous.kt")
+            public void testDefaultLambdaInAnonymous() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/defaultLambdaInAnonymous.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inlinInDefault.kt")
+            public void testInlinInDefault() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/inlinInDefault.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inlinInDefault2.kt")
+            public void testInlinInDefault2() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/inlinInDefault2.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inlineAnonymousInDefault.kt")
+            public void testInlineAnonymousInDefault() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/inlineAnonymousInDefault.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inlineAnonymousInDefault2.kt")
+            public void testInlineAnonymousInDefault2() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/inlineAnonymousInDefault2.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("kt21827.kt")
+            public void testKt21827() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/kt21827.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("nested.kt")
             public void testNested() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/nested.kt");
@@ -3046,6 +3136,12 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/simple.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("simple2.kt")
+            public void testSimple2() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/boxInline/smap/defaultLambda/simple2.kt");
                 doTest(fileName);
             }
         }
