@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.IncrementalCompilation
 import org.jetbrains.kotlin.config.Services
+import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.incremental.multiproject.ArtifactChangesProvider
 import org.jetbrains.kotlin.incremental.multiproject.ChangesRegistry
@@ -63,7 +64,6 @@ fun makeIncrementally(
     val rootsWalk = sourceRoots.asSequence().flatMap { it.walk() }
     val files = rootsWalk.filter(File::isFile)
     val sourceFiles = files.filter { it.extension.toLowerCase() in allExtensions }.toList()
-    val kotlinFiles = sourceFiles.filter { it.extension.toLowerCase() in kotlinExtensions }
 
     withIC {
         val compiler = IncrementalJvmCompilerRunner(
@@ -73,9 +73,7 @@ fun makeIncrementally(
                 // Use precise setting in case of non-Gradle build
                 usePreciseJavaTracking = true
         )
-        compiler.compile(kotlinFiles, args, messageCollector) {
-            it.inputsCache.sourceSnapshotMap.compareAndUpdate(sourceFiles)
-        }
+        compiler.compile(sourceFiles, args, messageCollector, providedChangedFiles = null)
     }
 }
 
@@ -158,11 +156,11 @@ class IncrementalJvmCompilerRunner(
             dirtyFiles.addAll(dirtyFilesFromFqNames)
         }
 
-        val lastBuildInfo = BuildInfo.read(lastBuildInfoFile)
+        val lastBuildInfo = BuildInfo.read(lastBuildInfoFile) ?: return CompilationMode.Rebuild { "No information on previous build" }
         reporter.report { "Last Kotlin Build info -- $lastBuildInfo" }
 
         val changesFromFriend by lazy {
-            val myLastTS = lastBuildInfo?.startTS ?: return@lazy ChangesEither.Unknown()
+            val myLastTS = lastBuildInfo.startTS 
             val storage = friendBuildHistoryFile?.let { BuildDiffsStorage.readFromFile(it, reporter) } ?: return@lazy ChangesEither.Unknown()
 
             val (prevDiffs, newDiffs) = storage.buildDiffs.partition { it.ts < myLastTS }
@@ -226,6 +224,12 @@ class IncrementalJvmCompilerRunner(
 
         for (javaFile in javaFiles) {
             if (!caches.platformCache.isTrackedFile(javaFile)) {
+                if (!javaFile.exists()) {
+                    // todo: can we do this more optimal?
+                    reporter.report { "Could not get changed for untracked removed java file $javaFile" }
+                    return false
+                }
+
                 val psiFile = javaFile.psiFile()
                 if (psiFile !is PsiJavaFile) {
                     reporter.report { "[Precise Java tracking] Expected PsiJavaFile, got ${psiFile?.javaClass}" }
@@ -404,10 +408,11 @@ class IncrementalJvmCompilerRunner(
     override fun makeServices(
             args: K2JVMCompilerArguments,
             lookupTracker: LookupTracker,
+            expectActualTracker: ExpectActualTracker,
             caches: IncrementalJvmCachesManager,
             compilationMode: CompilationMode
     ): Services.Builder =
-        super.makeServices(args, lookupTracker, caches, compilationMode).apply {
+        super.makeServices(args, lookupTracker, expectActualTracker, caches, compilationMode).apply {
             val targetId = TargetId(args.moduleName!!, "java-production")
             val targetToCache = mapOf(targetId to caches.platformCache)
             val incrementalComponents = IncrementalCompilationComponentsImpl(targetToCache)

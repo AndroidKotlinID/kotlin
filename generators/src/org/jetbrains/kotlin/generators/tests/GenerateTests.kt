@@ -135,8 +135,7 @@ import org.jetbrains.kotlin.idea.structureView.AbstractKotlinFileStructureTest
 import org.jetbrains.kotlin.idea.stubs.AbstractMultiFileHighlightingTest
 import org.jetbrains.kotlin.idea.stubs.AbstractResolveByStubTest
 import org.jetbrains.kotlin.idea.stubs.AbstractStubBuilderTest
-import org.jetbrains.kotlin.incremental.AbstractIncrementalJsCompilerRunnerTest
-import org.jetbrains.kotlin.incremental.AbstractIncrementalJvmCompilerRunnerTest
+import org.jetbrains.kotlin.incremental.*
 import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterForWebDemoTest
 import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterMultiFileTest
 import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterSingleFileTest
@@ -919,6 +918,18 @@ fun main(args: Array<String>) {
         testClass<AbstractIncrementalJsCompilerRunnerTest> {
             model("incremental/pureKotlin", extension = null, recursive = false)
             model("incremental/classHierarchyAffected", extension = null, recursive = false)
+            model("incremental/js", extension = null, excludeParentDirs = true)
+        }
+
+        testClass<AbstractIncrementalJsCompilerRunnerWithFriendModulesDisabledTest> {
+            model("incremental/js/friendsModuleDisabled", extension = null, recursive = false)
+        }
+
+        testClass<AbstractIncrementalMultiplatformJvmCompilerRunnerTest> {
+            model("incremental/multiplatform", extension = null, excludeParentDirs = true)
+        }
+        testClass<AbstractIncrementalMultiplatformJsCompilerRunnerTest> {
+            model("incremental/multiplatform", extension = null, excludeParentDirs = true)
         }
     }
 

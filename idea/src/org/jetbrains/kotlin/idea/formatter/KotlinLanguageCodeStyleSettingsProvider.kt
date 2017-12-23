@@ -40,6 +40,10 @@ class KotlinLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvide
                            is Number -> 0
                            else -> 1
                        }
+                       if (i2 > 0 &&
+                               i3 < 0) {
+                           return 2
+                       }
                        return 0
                    }
                    private fun foo2():Int {
@@ -61,6 +65,10 @@ class KotlinLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvide
                        foo.toUpperCase().trim()
                            .length
                        val barLen = bar?.length() ?: x ?: -1
+                       if (foo.length > 0 &&
+                           barLen > 0) {
+                           println("> 0")
+                       }
                    }
                }
 
@@ -306,6 +314,11 @@ class KotlinLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvide
                         KotlinCodeStyleSettings::WRAP_ELVIS_EXPRESSIONS,
                         "Elvis expressions",
                         options = *arrayOf(CodeStyleSettingsCustomizable.WRAP_OPTIONS_FOR_SINGLETON, CodeStyleSettingsCustomizable.WRAP_VALUES_FOR_SINGLETON)
+                )
+                showCustomOption(
+                        KotlinCodeStyleSettings::CONTINUATION_INDENT_IN_IF_CONDITIONS,
+                        "Use continuation indent in conditions",
+                        CodeStyleSettingsCustomizable.WRAPPING_IF_STATEMENT
                 )
             }
             LanguageCodeStyleSettingsProvider.SettingsType.BLANK_LINES_SETTINGS -> {

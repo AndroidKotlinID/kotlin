@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.idea.formatter
 
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
+import com.intellij.psi.PsiElement
 import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
@@ -34,8 +35,10 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.children
+import org.jetbrains.kotlin.psi.psiUtil.leaves
 import org.jetbrains.kotlin.psi.psiUtil.parents
 import org.jetbrains.kotlin.psi.psiUtil.siblings
+import org.jetbrains.kotlin.psi.stubs.elements.KtStubElementTypes
 
 private val QUALIFIED_OPERATION = TokenSet.create(DOT, SAFE_ACCESS)
 private val QUALIFIED_EXPRESSIONS = TokenSet.create(KtNodeTypes.DOT_QUALIFIED_EXPRESSION, KtNodeTypes.SAFE_ACCESS_EXPRESSION)
@@ -117,11 +120,13 @@ abstract class KotlinCommonBlock(
             // Create fake ".something" or "?.something" block here, so child indentation will be
             // relative to it when it starts from new line (see Indent javadoc).
 
-            val indent = if (settings.kotlinCustomSettings.CONTINUATION_INDENT_FOR_CHAINED_CALLS)
-                Indent.getContinuationWithoutFirstIndent()
+            val indentType = if (settings.kotlinCustomSettings.CONTINUATION_INDENT_FOR_CHAINED_CALLS)
+                Indent.Type.CONTINUATION
             else
-                Indent.getNormalIndent()
+                Indent.Type.NORMAL
             val isNonFirstChainedCall = operationBlockIndex > 0 && isCallBlock(nodeSubBlocks[operationBlockIndex - 1])
+            val indent = Indent.getIndent(indentType, false,
+                                          isNonFirstChainedCall && hasLineBreakBefore(nodeSubBlocks[operationBlockIndex - 1]))
             val wrap = if ((settings.kotlinCommonSettings.WRAP_FIRST_METHOD_IN_CALL_CHAIN || isNonFirstChainedCall) &&
                            canWrapCallChain(node))
                 Wrap.createWrap(settings.kotlinCommonSettings.METHOD_CALL_CHAIN_WRAP, true)
@@ -229,6 +234,13 @@ abstract class KotlinCommonBlock(
             val elseBlock = mySubBlocks?.getOrNull(newChildIndex)
             if (elseBlock != null && elseBlock.node.elementType == KtTokens.ELSE_KEYWORD) {
                 return ChildAttributes.DELEGATE_TO_NEXT_CHILD
+            }
+        }
+
+        if (newChildIndex > 0) {
+            val prevBlock = mySubBlocks?.get(newChildIndex - 1)
+            if (prevBlock?.node?.elementType == KtNodeTypes.MODIFIER_LIST) {
+                return ChildAttributes(Indent.getNoneIndent(), null)
             }
         }
 
@@ -357,10 +369,30 @@ abstract class KotlinCommonBlock(
         val childrenAlignmentStrategy = getChildrenAlignmentStrategy()
         val wrappingStrategy = getWrappingStrategy()
 
-        return node.children()
+        val childNodes = if (node.elementType == KtNodeTypes.BINARY_EXPRESSION) {
+            val binaryExpressionChildren = mutableListOf<ASTNode>()
+            collectBinaryExpressionChildren(node, binaryExpressionChildren)
+            binaryExpressionChildren.asSequence()
+        }
+        else {
+            node.children()
+        }
+
+        return childNodes
                 .filter { it.textRange.length > 0 && it.elementType != TokenType.WHITE_SPACE }
                 .map { buildSubBlock(it, childrenAlignmentStrategy, wrappingStrategy ) }
                 .toList()
+    }
+
+    private fun collectBinaryExpressionChildren(node: ASTNode, result: MutableList<ASTNode>) {
+        for (child in node.children()) {
+            if (child.elementType == KtNodeTypes.BINARY_EXPRESSION) {
+                collectBinaryExpressionChildren(child, result)
+            }
+            else {
+                result.add(child)
+            }
+        }
     }
 
     private fun getWrappingStrategy(): WrappingStrategy {
@@ -370,8 +402,15 @@ abstract class KotlinCommonBlock(
         val nodePsi = node.psi
 
         when {
-            elementType === KtNodeTypes.VALUE_ARGUMENT_LIST ->
-                return getWrappingStrategyForItemList(commonSettings.CALL_PARAMETERS_WRAP, KtNodeTypes.VALUE_ARGUMENT)
+            elementType === KtNodeTypes.VALUE_ARGUMENT_LIST -> {
+                val wrapSetting = commonSettings.CALL_PARAMETERS_WRAP
+                if ((wrapSetting == CommonCodeStyleSettings.WRAP_AS_NEEDED || wrapSetting == CommonCodeStyleSettings.WRAP_ON_EVERY_ITEM) &&
+                    !needWrapArgumentList(nodePsi)
+                ) {
+                    return WrappingStrategy.NoWrapping
+                }
+                return getWrappingStrategyForItemList(wrapSetting, KtNodeTypes.VALUE_ARGUMENT)
+            }
 
             elementType === KtNodeTypes.VALUE_PARAMETER_LIST -> {
                 if (parentElementType === KtNodeTypes.FUN ||
@@ -512,6 +551,41 @@ private fun getWrapAfterAnnotation(childElement: ASTNode, wrapType: Int): Wrap? 
     return null
 }
 
+fun needWrapArgumentList(psi: PsiElement): Boolean {
+    val args = (psi as? KtValueArgumentList)?.arguments
+    return args?.singleOrNull()?.getArgumentExpression() !is KtObjectLiteralExpression
+}
+
+private fun hasLineBreakBefore(block: ASTBlock): Boolean {
+    val topLevelParent = block.node.parents().firstOrNull {
+        it.treeParent.elementType == KtNodeTypes.BLOCK || it.treeParent.elementType == KtStubElementTypes.FILE
+    } ?: return false
+    for (leaf in block.node.leaves(forward = false)) {
+        if (leaf.textContains('\n')) {
+            return true
+        }
+        if (leaf.textRange.startOffset == topLevelParent.startOffset) {
+            break
+        }
+    }
+    return false
+}
+
+fun NodeIndentStrategy.PositionStrategy.continuationIf(
+        option: (KotlinCodeStyleSettings) -> Boolean,
+        indentFirst: Boolean = false
+): NodeIndentStrategy {
+    return set { settings ->
+        if (option(settings.kotlinCustomSettings)) {
+            if (indentFirst)
+                Indent.getContinuationIndent()
+            else
+                Indent.getContinuationWithoutFirstIndent()
+        } else
+            Indent.getNormalIndent()
+    }
+}
+
 private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
         strategy("No indent for braces in blocks")
                 .within(KtNodeTypes.BLOCK, KtNodeTypes.CLASS_BODY, KtNodeTypes.FUNCTION_LITERAL)
@@ -544,11 +618,16 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
                 .forElement {
                     it.psi is KtExpression && it.psi !is KtBlockExpression
                 }
+                .continuationIf(KotlinCodeStyleSettings::CONTINUATION_INDENT_FOR_EXPRESSION_BODIES, indentFirst = true),
+
+        strategy("If condition")
+                .within(KtNodeTypes.CONDITION)
                 .set { settings ->
-                    if (settings.kotlinCustomSettings.CONTINUATION_INDENT_FOR_EXPRESSION_BODIES)
-                        Indent.getContinuationIndent()
+                    val indentType = if (settings.kotlinCustomSettings.CONTINUATION_INDENT_IN_IF_CONDITIONS)
+                        Indent.Type.CONTINUATION
                     else
-                        Indent.getNormalIndent()
+                        Indent.Type.NORMAL
+                    Indent.getIndent(indentType, false, true)
                 },
 
         strategy("Property accessor expression body")
@@ -563,12 +642,7 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
                 .forElement {
                     it.psi is KtExpression
                 }
-                .set { settings ->
-                    if (settings.kotlinCustomSettings.CONTINUATION_INDENT_FOR_EXPRESSION_BODIES)
-                        Indent.getContinuationWithoutFirstIndent()
-                    else
-                        Indent.getNormalIndent()
-                },
+                .continuationIf(KotlinCodeStyleSettings::CONTINUATION_INDENT_FOR_EXPRESSION_BODIES),
 
         strategy("Indent for parts")
                 .within(KtNodeTypes.PROPERTY, KtNodeTypes.FUN, KtNodeTypes.DESTRUCTURING_DECLARATION, KtNodeTypes.SECONDARY_CONSTRUCTOR)
@@ -579,12 +653,7 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
                 .within(QUALIFIED_EXPRESSIONS)
                 .notForType(KtTokens.DOT, KtTokens.SAFE_ACCESS)
                 .forElement { it.treeParent.firstChildNode != it }
-                .set { settings ->
-                    if (settings.kotlinCustomSettings.CONTINUATION_INDENT_FOR_CHAINED_CALLS)
-                        Indent.getContinuationWithoutFirstIndent()
-                    else
-                        Indent.getNormalIndent()
-                },
+                .continuationIf(KotlinCodeStyleSettings::CONTINUATION_INDENT_FOR_CHAINED_CALLS),
 
         strategy("Colon of delegation list")
                 .within(KtNodeTypes.CLASS, KtNodeTypes.OBJECT_DECLARATION)
@@ -593,12 +662,7 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
 
         strategy("Delegation list")
                 .within(KtNodeTypes.SUPER_TYPE_LIST, KtNodeTypes.INITIALIZER_LIST)
-                .set { settings ->
-                    if (settings.kotlinCustomSettings.CONTINUATION_INDENT_IN_SUPERTYPE_LISTS)
-                        Indent.getContinuationIndent(false)
-                    else
-                        Indent.getNormalIndent()
-                },
+                .continuationIf(KotlinCodeStyleSettings::CONTINUATION_INDENT_IN_SUPERTYPE_LISTS, indentFirst = true),
 
         strategy("Indices")
                 .within(KtNodeTypes.INDICES)
@@ -606,6 +670,7 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
 
         strategy("Binary expressions")
                 .within(BINARY_EXPRESSIONS)
+                .forElement { node -> !node.suppressBinaryExpressionIndent() }
                 .set(Indent.getContinuationWithoutFirstIndent(false)),
 
         strategy("Parenthesized expression")
@@ -642,12 +707,7 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
         strategy("Parameter list")
                 .within(KtNodeTypes.VALUE_PARAMETER_LIST)
                 .forElement { it.elementType == KtNodeTypes.VALUE_PARAMETER && it.psi.prevSibling != null }
-                .set { settings ->
-                    if (settings.kotlinCustomSettings.CONTINUATION_INDENT_IN_PARAMETER_LISTS)
-                        Indent.getContinuationIndent()
-                    else
-                        Indent.getNormalIndent()
-                },
+                .continuationIf(KotlinCodeStyleSettings::CONTINUATION_INDENT_IN_PARAMETER_LISTS, indentFirst = true),
 
         strategy("Where clause")
                 .within(KtNodeTypes.CLASS, KtNodeTypes.FUN, KtNodeTypes.PROPERTY)
@@ -668,11 +728,23 @@ private val INDENT_RULES = arrayOf<NodeIndentStrategy>(
 
 private fun getOperationType(node: ASTNode): IElementType? = node.findChildByType(KtNodeTypes.OPERATION_REFERENCE)?.firstChildNode?.elementType
 
-private fun hasErrorElementBefore(node: ASTNode): Boolean {
+fun hasErrorElementBefore(node: ASTNode): Boolean {
     val prevSibling = getPrevWithoutWhitespace(node) ?: return false
     if (prevSibling.elementType == TokenType.ERROR_ELEMENT) return true
     val lastChild = TreeUtil.getLastChild(prevSibling)
     return lastChild?.elementType == TokenType.ERROR_ELEMENT
+}
+
+/**
+ * Suppress indent for binary expressions when there is a block higher in the tree that forces
+ * its indent to children ('if' condition or elvis).
+ */
+private fun ASTNode.suppressBinaryExpressionIndent(): Boolean {
+    var psi = psi.parent as? KtBinaryExpression ?: return false
+    while (psi.parent is KtBinaryExpression) {
+        psi = psi.parent as KtBinaryExpression
+    }
+    return psi.parent?.node?.elementType == KtNodeTypes.CONDITION || psi.operationToken == KtTokens.ELVIS
 }
 
 private fun getAlignmentForChildInParenthesis(
@@ -727,7 +799,14 @@ private fun getWrappingStrategyForItemList(wrapType: Int, itemTypes: TokenSet, w
     val itemWrap = Wrap.createWrap(wrapType, wrapFirstElement)
     return object : WrappingStrategy {
         override fun getWrap(childElement: ASTNode): Wrap? {
-            return if (childElement.elementType in itemTypes) itemWrap else null
+            val thisType = childElement.elementType
+            val prevType = getPrevWithoutWhitespace(childElement)?.elementType
+            return if (thisType in itemTypes || prevType in itemTypes &&
+                       thisType != KtTokens.EOL_COMMENT && prevType != KtTokens.EOL_COMMENT
+                    )
+                itemWrap
+            else
+                null
         }
     }
 }
