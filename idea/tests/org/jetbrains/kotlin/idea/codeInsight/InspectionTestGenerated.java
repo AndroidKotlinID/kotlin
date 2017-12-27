@@ -44,18 +44,6 @@ public class InspectionTestGenerated extends AbstractInspectionTest {
             doTest(fileName);
         }
 
-        @TestMetadata("branched/ifThenToSafeAccess/inspectionData/inspections.test")
-        public void testBranched_ifThenToSafeAccess_inspectionData_Inspections_test() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/ifThenToSafeAccess/inspectionData/inspections.test");
-            doTest(fileName);
-        }
-
-        @TestMetadata("conventionNameCalls/replaceGetOrSet/inspectionData/inspections.test")
-        public void testConventionNameCalls_replaceGetOrSet_inspectionData_Inspections_test() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/conventionNameCalls/replaceGetOrSet/inspectionData/inspections.test");
-            doTest(fileName);
-        }
-
         @TestMetadata("convertToStringTemplate/inspectionData/inspections.test")
         public void testConvertToStringTemplate_inspectionData_Inspections_test() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertToStringTemplate/inspectionData/inspections.test");
@@ -95,12 +83,6 @@ public class InspectionTestGenerated extends AbstractInspectionTest {
         @TestMetadata("removeExplicitTypeArguments/inspectionData/inspections.test")
         public void testRemoveExplicitTypeArguments_inspectionData_Inspections_test() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeExplicitTypeArguments/inspectionData/inspections.test");
-            doTest(fileName);
-        }
-
-        @TestMetadata("simplifyNegatedBinaryExpression/inspectionData/inspections.test")
-        public void testSimplifyNegatedBinaryExpression_inspectionData_Inspections_test() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/simplifyNegatedBinaryExpression/inspectionData/inspections.test");
             doTest(fileName);
         }
     }
@@ -482,6 +464,33 @@ public class InspectionTestGenerated extends AbstractInspectionTest {
         @TestMetadata("wrapUnaryOperator/inspectionData/inspections.test")
         public void testWrapUnaryOperator_inspectionData_Inspections_test() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspections/wrapUnaryOperator/inspectionData/inspections.test");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class InspectionsLocal extends AbstractInspectionTest {
+        public void testAllFilesPresentInInspectionsLocal() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentInSingleGeneratedClass(this.getClass(), new File("idea/testData/inspectionsLocal"), Pattern.compile("^(inspections\\.test)$"), TargetBackend.ANY);
+        }
+
+        @TestMetadata("branched/ifThenToSafeAccess/inspectionData/inspections.test")
+        public void testBranched_ifThenToSafeAccess_inspectionData_Inspections_test() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/inspectionData/inspections.test");
+            doTest(fileName);
+        }
+
+        @TestMetadata("conventionNameCalls/replaceGetOrSet/inspectionData/inspections.test")
+        public void testConventionNameCalls_replaceGetOrSet_inspectionData_Inspections_test() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/conventionNameCalls/replaceGetOrSet/inspectionData/inspections.test");
+            doTest(fileName);
+        }
+
+        @TestMetadata("simplifyNegatedBinaryExpression/inspectionData/inspections.test")
+        public void testSimplifyNegatedBinaryExpression_inspectionData_Inspections_test() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/simplifyNegatedBinaryExpression/inspectionData/inspections.test");
             doTest(fileName);
         }
     }

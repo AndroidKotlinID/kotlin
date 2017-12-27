@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.idea.j2k
 
+import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
@@ -26,17 +27,15 @@ import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.core.setVisibility
 import org.jetbrains.kotlin.idea.inspections.*
+import org.jetbrains.kotlin.idea.inspections.branchedTransformations.IfThenToSafeAccessInspection
+import org.jetbrains.kotlin.idea.inspections.conventionNameCalls.ReplaceGetOrSetInspection
 import org.jetbrains.kotlin.idea.intentions.*
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.FoldIfToReturnAsymmetricallyIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.FoldIfToReturnIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToElvisIntention
-import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToSafeAccessIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isTrivialStatementBody
-import org.jetbrains.kotlin.idea.intentions.conventionNameCalls.ReplaceGetOrSetInspection
-import org.jetbrains.kotlin.idea.intentions.conventionNameCalls.ReplaceGetOrSetIntention
 import org.jetbrains.kotlin.idea.quickfix.RemoveModifierFix
 import org.jetbrains.kotlin.idea.quickfix.RemoveUselessCastFix
-import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlineValHandler
 import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
@@ -78,25 +77,25 @@ object J2KPostProcessingRegistrar {
         _processings.add(UnresolvedVariableReferenceFromInitializerToThisReferenceProcessing())
         _processings.add(RemoveRedundantSamAdaptersProcessing())
         _processings.add(RemoveRedundantCastToNullableProcessing())
-        _processings.add(ReplacePutWithAssignmentProcessing())
+        registerInspectionBasedProcessing(ReplacePutWithAssignmentInspection())
         _processings.add(UseExpressionBodyProcessing())
-        _processings.add(UnnecessaryVariableProcessing())
+        registerInspectionBasedProcessing(UnnecessaryVariableInspection())
 
         registerIntentionBasedProcessing(FoldInitializerAndIfToElvisIntention())
 
         registerIntentionBasedProcessing(FoldIfToReturnIntention()) { it.then.isTrivialStatementBody() && it.`else`.isTrivialStatementBody() }
         registerIntentionBasedProcessing(FoldIfToReturnAsymmetricallyIntention()) { it.then.isTrivialStatementBody() && (KtPsiUtil.skipTrailingWhitespacesAndComments(it) as KtReturnExpression).returnedExpression.isTrivialStatementBody() }
 
-        registerIntentionBasedProcessing(IfThenToSafeAccessIntention())
+        registerInspectionBasedProcessing(IfThenToSafeAccessInspection())
         registerIntentionBasedProcessing(IfThenToElvisIntention())
-        registerIntentionBasedProcessing(SimplifyNegatedBinaryExpressionIntention())
-        registerIntentionBasedProcessing(ReplaceGetOrSetIntention(), additionalChecker = ReplaceGetOrSetInspection.additionalChecker)
+        registerInspectionBasedProcessing(SimplifyNegatedBinaryExpressionInspection())
+        registerInspectionBasedProcessing(ReplaceGetOrSetInspection())
         registerIntentionBasedProcessing(AddOperatorModifierIntention())
         registerIntentionBasedProcessing(ObjectLiteralToLambdaIntention())
         registerIntentionBasedProcessing(AnonymousFunctionToLambdaIntention())
         registerIntentionBasedProcessing(RemoveUnnecessaryParenthesesIntention())
         registerIntentionBasedProcessing(DestructureIntention())
-        registerIntentionBasedProcessing(SimplifyAssertNotNullIntention())
+        registerInspectionBasedProcessing(SimplifyAssertNotNullInspection())
         registerIntentionBasedProcessing(RemoveRedundantCallsOfConversionMethodsIntention())
 
         registerDiagnosticBasedProcessing<KtBinaryExpressionWithTypeRHS>(Errors.USELESS_CAST) { element, _ ->
@@ -161,8 +160,36 @@ object J2KPostProcessingRegistrar {
                 if (!additionalChecker(tElement)) return null
                 return {
                     if (intention.applicabilityRange(tElement) != null) { // check availability of the intention again because something could change
-                        val apply = { intention.applyTo(element, null) }
-                        apply()
+                        intention.applyTo(element, null)
+                    }
+                }
+            }
+        })
+    }
+
+    private inline fun
+            <reified TElement : KtElement,
+            TInspection: AbstractApplicabilityBasedInspection<TElement>> registerInspectionBasedProcessing(
+
+            inspection: TInspection,
+            acceptInformationLevel: Boolean = false
+    ) {
+        _processings.add(object : J2kPostProcessing {
+            // Inspection can either need or not need write action
+            override val writeActionNeeded = inspection.startFixInWriteAction
+
+            private fun isApplicable(element: TElement): Boolean {
+                if (!inspection.isApplicable(element)) return false
+                return acceptInformationLevel || inspection.inspectionHighlightType(element) != ProblemHighlightType.INFORMATION
+            }
+
+            override fun createAction(element: KtElement, diagnostics: Diagnostics): (() -> Unit)? {
+                if (!TElement::class.java.isInstance(element)) return null
+                val tElement = element as TElement
+                if (!isApplicable(tElement)) return null
+                return {
+                    if (isApplicable(tElement)) { // check availability of the inspection again because something could change
+                        inspection.applyTo(inspection.inspectionTarget(tElement))
                     }
                 }
             }
@@ -272,21 +299,6 @@ object J2KPostProcessingRegistrar {
         }
     }
 
-    private class ReplacePutWithAssignmentProcessing : J2kPostProcessing {
-        override val writeActionNeeded = true
-
-        override fun createAction(element: KtElement, diagnostics: Diagnostics): (() -> Unit)? {
-            if (element !is KtDotQualifiedExpression) return null
-            if (!ReplacePutWithAssignmentInspection.isActiveFor(element)) return null
-
-            return {
-                if (ReplacePutWithAssignmentInspection.isActiveFor(element)) {
-                    ReplacePutWithAssignmentInspection.simplify(element)
-                }
-            }
-        }
-    }
-
     private class UseExpressionBodyProcessing : J2kPostProcessing {
         override val writeActionNeeded = true
 
@@ -300,21 +312,6 @@ object J2KPostProcessingRegistrar {
                 if (inspection.isActiveFor(element)) {
                     inspection.simplify(element, false)
                 }
-            }
-        }
-    }
-
-    private class UnnecessaryVariableProcessing : J2kPostProcessing {
-        // Refactoring
-        override val writeActionNeeded = false
-
-        override fun createAction(element: KtElement, diagnostics: Diagnostics): (() -> Unit)? {
-            if (element !is KtProperty) return null
-
-            if (!UnnecessaryVariableInspection.isActiveFor(element)) return null
-
-            return {
-                KotlinInlineValHandler(withPrompt = false).inlineElement(element.project, element.findExistingEditor(), element)
             }
         }
     }

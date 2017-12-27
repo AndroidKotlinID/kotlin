@@ -174,21 +174,26 @@ private class InitializedLazyImpl<out T>(override val value: T) : Lazy<T>, Seria
 
 @kotlin.jvm.JvmVersion
 private class SafePublicationLazyImpl<out T>(initializer: () -> T) : Lazy<T>, Serializable {
-    private var initializer: (() -> T)? = initializer
+    @Volatile private var initializer: (() -> T)? = initializer
     @Volatile private var _value: Any? = UNINITIALIZED_VALUE
     // this final field is required to enable safe publication of constructed instance
     private val final: Any = UNINITIALIZED_VALUE
 
     override val value: T
         get() {
-            if (_value === UNINITIALIZED_VALUE) {
-                val initializerValue = initializer
-                // if we see null in initializer here, it means that the value is already set by another thread
-                if (initializerValue != null) {
-                    val newValue = initializerValue()
-                    if (valueUpdater.compareAndSet(this, UNINITIALIZED_VALUE, newValue)) {
-                        initializer = null
-                    }
+            val value = _value
+            if (value !== UNINITIALIZED_VALUE) {
+                @Suppress("UNCHECKED_CAST")
+                return value as T
+            }
+
+            val initializerValue = initializer
+            // if we see null in initializer here, it means that the value is already set by another thread
+            if (initializerValue != null) {
+                val newValue = initializerValue()
+                if (valueUpdater.compareAndSet(this, UNINITIALIZED_VALUE, newValue)) {
+                    initializer = null
+                    return newValue
                 }
             }
             @Suppress("UNCHECKED_CAST")
