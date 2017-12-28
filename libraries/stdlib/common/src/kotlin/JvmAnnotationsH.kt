@@ -25,3 +25,6 @@ expect annotation class JvmName(val name: String)
 expect annotation class JvmMultifileClass()
 
 expect annotation class JvmField()
+
+@Target(FIELD)
+expect annotation class Volatile()

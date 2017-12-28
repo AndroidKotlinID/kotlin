@@ -136,9 +136,6 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
             val destination = arguments.destination
 
             if (arguments.buildFile != null) {
-                val sanitizedCollector = FilteringMessageCollector(messageCollector, VERBOSE::contains)
-                val moduleScript = CompileEnvironmentUtil.loadModuleDescriptions(arguments.buildFile, sanitizedCollector)
-
                 if (destination != null) {
                     messageCollector.report(
                             STRONG_WARNING,
@@ -146,20 +143,22 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                     )
                 }
 
-                val moduleFile = File(arguments.buildFile)
-                val directory = moduleFile.absoluteFile.parentFile
+                val sanitizedCollector = FilteringMessageCollector(messageCollector, VERBOSE::contains)
+                val buildFile = File(arguments.buildFile)
+                val moduleChunk = CompileEnvironmentUtil.loadModuleChunk(buildFile, sanitizedCollector)
 
-                KotlinToJVMBytecodeCompiler.configureSourceRoots(configuration, moduleScript.modules, directory)
-                configuration.put(JVMConfigurationKeys.MODULE_XML_FILE, moduleFile)
+                configuration.put(JVMConfigurationKeys.MODULE_XML_FILE, buildFile)
 
-                val environment = createEnvironmentWithScriptingSupport(rootDisposable, configuration, arguments, messageCollector)
+                KotlinToJVMBytecodeCompiler.configureSourceRoots(configuration, moduleChunk.modules, buildFile)
+
+                val environment = createCoreEnvironment(rootDisposable, configuration, arguments, messageCollector)
                                   ?: return COMPILATION_ERROR
 
                 registerJavacIfNeeded(environment, arguments).let {
                     if (!it) return COMPILATION_ERROR
                 }
 
-                KotlinToJVMBytecodeCompiler.compileModules(environment, directory)
+                KotlinToJVMBytecodeCompiler.compileModules(environment, buildFile, moduleChunk.modules)
             }
             else if (arguments.script) {
                 val sourcePath = arguments.freeArgs.first()
@@ -167,7 +166,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
 
                 configuration.put(JVMConfigurationKeys.RETAIN_OUTPUT_IN_MEMORY, true)
 
-                val environment = createEnvironmentWithScriptingSupport(rootDisposable, configuration, arguments, messageCollector)
+                val environment = createCoreEnvironment(rootDisposable, configuration, arguments, messageCollector)
                                   ?: return COMPILATION_ERROR
 
                 val scriptDefinitionProvider = ScriptDefinitionProvider.getInstance(environment.project)
@@ -193,7 +192,7 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                     }
                 }
 
-                val environment = createEnvironmentWithScriptingSupport(rootDisposable, configuration, arguments, messageCollector)
+                val environment = createCoreEnvironment(rootDisposable, configuration, arguments, messageCollector)
                                   ?: return COMPILATION_ERROR
 
                 registerJavacIfNeeded(environment, arguments).let {
@@ -264,33 +263,30 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
         return true
     }
 
-    private fun createEnvironmentWithScriptingSupport(rootDisposable: Disposable,
-                                                      configuration: CompilerConfiguration,
-                                                      arguments: K2JVMCompilerArguments,
-                                                      messageCollector: MessageCollector
+    private fun createCoreEnvironment(
+            rootDisposable: Disposable,
+            configuration: CompilerConfiguration,
+            arguments: K2JVMCompilerArguments,
+            messageCollector: MessageCollector
     ): KotlinCoreEnvironment? {
-
         val scriptResolverEnv = createScriptResolverEnvironment(arguments, messageCollector) ?: return null
         configureScriptDefinitions(arguments.scriptTemplates, configuration, messageCollector, scriptResolverEnv)
-        if (!messageCollector.hasErrors()) {
-            val environment = createCoreEnvironment(rootDisposable, configuration)
-            if (!messageCollector.hasErrors()) {
-                scriptResolverEnv.put("projectRoot", environment.project.run { basePath ?: baseDir?.canonicalPath }?.let(::File))
-                return environment
-            }
-        }
-        return null
-    }
+        if (messageCollector.hasErrors()) return null
 
-    private fun createCoreEnvironment(rootDisposable: Disposable, configuration: CompilerConfiguration): KotlinCoreEnvironment {
-        val result = KotlinCoreEnvironment.createForProduction(rootDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
+        val environment = KotlinCoreEnvironment.createForProduction(rootDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
 
         if (initStartNanos != 0L) {
             val initNanos = System.nanoTime() - initStartNanos
             reportPerf(configuration, "INIT: Compiler initialized in " + TimeUnit.NANOSECONDS.toMillis(initNanos) + " ms")
             initStartNanos = 0L
         }
-        return result
+
+        if (!messageCollector.hasErrors()) {
+            scriptResolverEnv.put("projectRoot", environment.project.run { basePath ?: baseDir?.canonicalPath }?.let(::File))
+            return environment
+        }
+
+        return null
     }
 
     override fun setupPlatformSpecificArgumentsAndServices(
