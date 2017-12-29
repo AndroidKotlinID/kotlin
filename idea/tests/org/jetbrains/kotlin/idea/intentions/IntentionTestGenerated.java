@@ -1225,6 +1225,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("fakeSafeCast.kt")
+            public void testFakeSafeCast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/fakeSafeCast.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("localValLhs.kt")
             public void testLocalValLhs() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/localValLhs.kt");
@@ -1237,6 +1243,24 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("longSafeCast.kt")
+            public void testLongSafeCast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/longSafeCast.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("safeCast.kt")
+            public void testSafeCast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/safeCast.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("safeCastUnstable.kt")
+            public void testSafeCastUnstable() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/safeCastUnstable.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("simpleNameExpression.kt")
             public void testSimpleNameExpression() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/simpleNameExpression.kt");
@@ -1246,6 +1270,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("simpleNameExpressionInParens.kt")
             public void testSimpleNameExpressionInParens() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/simpleNameExpressionInParens.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("simpleSafeCast.kt")
+            public void testSimpleSafeCast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/elvisToIfThen/simpleSafeCast.kt");
                 doTest(fileName);
             }
 
@@ -4418,6 +4448,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("doubleChained.kt")
+        public void testDoubleChained() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertLambdaToReference/doubleChained.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("emptyBrackets.kt")
         public void testEmptyBrackets() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertLambdaToReference/emptyBrackets.kt");
@@ -5468,6 +5504,24 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("itClash.kt")
         public void testItClash() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertReferenceToLambda/itClash.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kfunction.kt")
+        public void testKfunction() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertReferenceToLambda/kfunction.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kproperty.kt")
+        public void testKproperty() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertReferenceToLambda/kproperty.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kproperty0.kt")
+        public void testKproperty0() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertReferenceToLambda/kproperty0.kt");
             doTest(fileName);
         }
 
@@ -11789,6 +11843,30 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("binaryEqEqNotNullInLeftSide.kt")
+        public void testBinaryEqEqNotNullInLeftSide() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/operatorToFunction/binaryEqEqNotNullInLeftSide.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("binaryEqEqNotNullInRightSide.kt")
+        public void testBinaryEqEqNotNullInRightSide() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/operatorToFunction/binaryEqEqNotNullInRightSide.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("binaryEqEqNullInLeftSide.kt")
+        public void testBinaryEqEqNullInLeftSide() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/operatorToFunction/binaryEqEqNullInLeftSide.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("binaryEqEqNullInRightSide.kt")
+        public void testBinaryEqEqNullInRightSide() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/operatorToFunction/binaryEqEqNullInRightSide.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("binaryEqEqNullable.kt")
         public void testBinaryEqEqNullable() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/operatorToFunction/binaryEqEqNullable.kt");
@@ -14582,6 +14660,30 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("loopParameter.kt")
         public void testLoopParameter() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyTypeExplicitly/loopParameter.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideNotNullFunction.kt")
+        public void testOverrideNotNullFunction() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyTypeExplicitly/overrideNotNullFunction.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideNotNullProperty.kt")
+        public void testOverrideNotNullProperty() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyTypeExplicitly/overrideNotNullProperty.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideNullableFunction.kt")
+        public void testOverrideNullableFunction() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyTypeExplicitly/overrideNullableFunction.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideNullableProperty.kt")
+        public void testOverrideNullableProperty() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyTypeExplicitly/overrideNullableProperty.kt");
             doTest(fileName);
         }
 

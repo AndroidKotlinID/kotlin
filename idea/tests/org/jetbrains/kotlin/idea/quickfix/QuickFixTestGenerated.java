@@ -7640,9 +7640,51 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             doTest(fileName);
         }
 
+        @TestMetadata("nestedAbstractClass.kt")
+        public void testNestedAbstractClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedAbstractClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedAnnotationClass.kt")
+        public void testNestedAnnotationClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedAnnotationClass.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("nestedClassNotAllowed.kt")
         public void testNestedClassNotAllowed() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedClassNotAllowed.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedDataClass.kt")
+        public void testNestedDataClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedDataClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedEnumClass.kt")
+        public void testNestedEnumClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedEnumClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedInterface.kt")
+        public void testNestedInterface() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedInterface.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedObject.kt")
+        public void testNestedObject() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedObject.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedSealedClass.kt")
+        public void testNestedSealedClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/modifiers/nestedSealedClass.kt");
             doTest(fileName);
         }
 
@@ -9017,21 +9059,6 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/removeAtFromAnnotationArgument/simple.kt");
-            doTest(fileName);
-        }
-    }
-
-    @TestMetadata("idea/testData/quickfix/removeEqTokenFromFunctionDeclaration")
-    @TestDataPath("$PROJECT_ROOT")
-    @RunWith(JUnit3RunnerWithInners.class)
-    public static class RemoveEqTokenFromFunctionDeclaration extends AbstractQuickFixTest {
-        public void testAllFilesPresentInRemoveEqTokenFromFunctionDeclaration() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/removeEqTokenFromFunctionDeclaration"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
-        }
-
-        @TestMetadata("simple.kt")
-        public void testSimple() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/removeEqTokenFromFunctionDeclaration/simple.kt");
             doTest(fileName);
         }
     }
@@ -11024,6 +11051,12 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("noAddErrorType.kt")
         public void testNoAddErrorType() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/typeAddition/noAddErrorType.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("propertyHasType.kt")
+        public void testPropertyHasType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/typeAddition/propertyHasType.kt");
             doTest(fileName);
         }
 
