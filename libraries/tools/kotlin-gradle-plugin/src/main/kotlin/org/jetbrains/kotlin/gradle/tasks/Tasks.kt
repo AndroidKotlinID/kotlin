@@ -36,8 +36,9 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compilerRunner.*
 import org.jetbrains.kotlin.gradle.dsl.*
-import org.jetbrains.kotlin.gradle.plugin.kotlinDebug
-import org.jetbrains.kotlin.gradle.plugin.kotlinInfo
+import org.jetbrains.kotlin.gradle.internal.CompilerArgumentAwareWithInput
+import org.jetbrains.kotlin.gradle.internal.prepareCompilerArguments
+import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.utils.ParsedGradleVersion
 import org.jetbrains.kotlin.incremental.*
 import org.jetbrains.kotlin.incremental.multiproject.ArtifactDifferenceRegistry
@@ -45,6 +46,7 @@ import org.jetbrains.kotlin.incremental.multiproject.ArtifactDifferenceRegistryP
 import org.jetbrains.kotlin.utils.LibraryUtils
 import java.io.File
 import java.util.*
+import java.util.concurrent.Callable
 import kotlin.properties.Delegates
 
 const val ANNOTATIONS_PLUGIN_NAME = "org.jetbrains.kotlin.kapt"
@@ -52,13 +54,17 @@ const val KOTLIN_BUILD_DIR_NAME = "kotlin"
 const val USING_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin incremental compilation"
 const val USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE = "Using experimental Kotlin/JS incremental compilation"
 
-abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCompile() {
+abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCompile(), CompilerArgumentAwareWithInput<T> {
     // TODO: deprecate and remove
     @get:Internal
     var compilerJarFile: File? = null
 
     @get:Internal
     var compilerClasspath: List<File>? = null
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    override fun getSource() = super.getSource()
 
     @get:Classpath @get:InputFiles
     internal val computedCompilerClasspath: List<File>
@@ -73,7 +79,12 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCo
     protected abstract fun findKotlinCompilerClasspath(project: Project): List<File>
 }
 
-abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKotlinCompileTool<T>(), CompilerArgumentAware {
+abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKotlinCompileTool<T>() {
+
+    init {
+        cacheOnlyIfEnabledForKotlin()
+    }
+
     @get:LocalState
     internal val taskBuildDirectory: File
         get() = File(File(project.buildDir, KOTLIN_BUILD_DIR_NAME), name).apply { mkdirs() }
@@ -88,8 +99,6 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
             logger.kotlinDebug { "Set $this.incremental=$value" }
         }
 
-    abstract protected fun createCompilerArgs(): T
-
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()
 
@@ -101,21 +110,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         get() = (classpath + additionalClasspath)
                 .filterTo(LinkedHashSet(), File::exists)
 
-    @get:Input
-    override val serializedCompilerArguments: List<String>
-        get() {
-            val arguments = createCompilerArgs()
-            setupCompilerArgs(arguments)
-            return ArgumentUtils.convertArgumentsToStringList(arguments)
-        }
-
-    @get:Internal
-    override val defaultSerializedCompilerArguments: List<String>
-        get() {
-            val arguments = createCompilerArgs()
-            setupCompilerArgs(arguments, true)
-            return ArgumentUtils.convertArgumentsToStringList(arguments)
-        }
+    @get:Classpath @get:InputFiles
+    internal val pluginClasspath get() = pluginOptions.classpath
 
     private val kotlinExt: KotlinProjectExtension
             get() = project.extensions.findByType(KotlinProjectExtension::class.java)!!
@@ -213,8 +209,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         }
 
         sourceRoots.log(this.name, logger)
-        val args = createCompilerArgs()
-        setupCompilerArgs(args)
+        val args = prepareCompilerArguments()
 
         compilerCalled = true
         callCompiler(args, sourceRoots, ChangedFiles(inputs))
@@ -225,7 +220,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
 
     internal abstract fun callCompiler(args: T, sourceRoots: SourceRoots, changedFiles: ChangedFiles)
 
-    open fun setupCompilerArgs(args: T, defaultsOnly: Boolean = false) {
+    override fun setupCompilerArgs(args: T, defaultsOnly: Boolean) {
         args.coroutinesState = when (coroutines) {
             Coroutines.ENABLE -> CommonCompilerArguments.ENABLE
             Coroutines.WARN -> CommonCompilerArguments.WARN
@@ -242,11 +237,17 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     }
 
     open fun setupPlugins(compilerArgs: T) {
-        compilerArgs.pluginClasspaths = pluginOptions.classpath.toTypedArray()
+        compilerArgs.pluginClasspaths = pluginClasspath.toTypedArray()
         compilerArgs.pluginOptions = pluginOptions.arguments.toTypedArray()
+    }
+
+    protected fun hasFilesInTaskBuildDirectory(): Boolean {
+        val taskBuildDir = taskBuildDirectory
+        return taskBuildDir.walk().any { it != taskBuildDir && it.isFile }
     }
 }
 
+@CacheableTask
 open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), KotlinJvmCompile {
     @get:Internal
     internal var parentKotlinOptionsImpl: KotlinJvmOptionsImpl? = null
@@ -288,6 +289,9 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
             logger.kotlinDebug { "Set $this.usePreciseJavaTracking=$value" }
         }
 
+    @get:LocalState @get:Optional
+    internal var buildServicesWorkingDir: Callable<File>? = null
+
     init {
         incremental = true
     }
@@ -299,7 +303,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
             K2JVMCompilerArguments()
 
     override fun setupPlugins(compilerArgs: K2JVMCompilerArguments) {
-        compilerArgs.pluginClasspaths = pluginOptions.classpath.toTypedArray()
+        compilerArgs.pluginClasspaths = pluginClasspath.toTypedArray()
 
         val kaptPluginOptions = getKaptPluginOptions()
         compilerArgs.pluginOptions = (pluginOptions.arguments + kaptPluginOptions.arguments).toTypedArray()
@@ -344,11 +348,15 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         val reporter = GradleICReporter(project.rootProject.projectDir)
 
         val environment = when {
-            !incremental -> GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
+            !incremental ->
+                GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
             else -> {
                 logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
                 val friendTask = friendTaskName?.let { project.tasks.findByName(it) as? KotlinCompile }
-                GradleIncrementalCompilerEnvironment(computedCompilerClasspath, changedFiles, reporter, taskBuildDirectory,
+                GradleIncrementalCompilerEnvironment(
+                        computedCompilerClasspath,
+                        if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
+                        reporter, taskBuildDirectory,
                         messageCollector, outputItemCollector, args, kaptAnnotationsFileUpdater,
                         artifactDifferenceRegistryProvider,
                         artifactFile = artifactFile,
@@ -409,15 +417,15 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
                         kaptAnnotationsFileUpdater = AnnotationFileUpdaterImpl(kaptAnnotationsFile)
                     }
 
-                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, "output", kaptAnnotationsFile.canonicalPath)
+                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, FilesSubpluginOption("output", listOf(kaptAnnotationsFile)))
                 }
 
                 if (kaptOptions.generateStubs) {
-                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, "stubs", destinationDir.canonicalPath)
+                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, FilesSubpluginOption("stubs", listOf(destinationDir)))
                 }
 
                 if (kaptOptions.supportInheritedAnnotations) {
-                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, "inherited", true.toString())
+                    addPluginArgument(ANNOTATIONS_PLUGIN_NAME, SubpluginOption("inherited", true.toString()))
                 }
             }
 
@@ -434,6 +442,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     }
 }
 
+@CacheableTask
 open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), KotlinJsCompile {
     private val kotlinOptionsImpl = KotlinJsOptionsImpl()
 
@@ -469,6 +478,7 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
 
     @get:InputFiles
     @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     internal val friendDependency
         get() = friendTaskName
                 ?.let { project.getTasksByName(it, false).singleOrNull() as? Kotlin2JsCompile }
@@ -509,7 +519,9 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
             incremental -> {
                 logger.warn(USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE)
                 GradleIncrementalCompilerEnvironment(
-                        computedCompilerClasspath, changedFiles, reporter, taskBuildDirectory,
+                        computedCompilerClasspath,
+                        if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
+                        reporter, taskBuildDirectory,
                         messageCollector, outputItemCollector, args)
             }
             else -> {

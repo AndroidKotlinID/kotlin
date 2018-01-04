@@ -1,6 +1,7 @@
 package org.jetbrains.kotlin.gradle.internal
 
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.util.text.StringUtil.compareVersionNumbers
 import org.gradle.api.GradleException
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.ConventionTask
@@ -9,11 +10,22 @@ import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.compilerRunner.GradleCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.GradleCompilerRunner
 import org.jetbrains.kotlin.compilerRunner.OutputItemsCollectorImpl
-import org.jetbrains.kotlin.gradle.plugin.compareVersionNumbers
 import org.jetbrains.kotlin.gradle.tasks.*
 import java.io.File
 
-open class KaptTask : ConventionTask() {
+@CacheableTask
+open class KaptTask : ConventionTask(), CompilerArgumentAwareWithInput<K2JVMCompilerArguments> {
+
+    init {
+        cacheOnlyIfEnabledForKotlin()
+
+        if (isBuildCacheSupported()) {
+            val reason = "Caching is disabled by default for kapt because of arbitrary behavior of external " +
+                         "annotation processors. You can enable it by adding 'kapt.useBuildCache = true' to the build script."
+            outputs.cacheIf(reason) { useBuildCache }
+        }
+    }
+
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()
 
@@ -37,12 +49,35 @@ open class KaptTask : ConventionTask() {
     @get:OutputDirectory
     lateinit var destinationDir: File
 
+    @get:OutputDirectory
+    lateinit var kotlinSourcesDestinationDir: File
+
+    override fun createCompilerArgs(): K2JVMCompilerArguments = K2JVMCompilerArguments()
+
+    override fun setupCompilerArgs(args: K2JVMCompilerArguments, defaultsOnly: Boolean) {
+        kotlinCompileTask.setupCompilerArgs(args)
+
+        args.pluginClasspaths = (pluginClasspath + args.pluginClasspaths!!).toSet().toTypedArray()
+        args.pluginOptions = (pluginOptions.arguments + args.pluginOptions!!).toTypedArray()
+        args.verbose = project.hasProperty("kapt.verbose") && project.property("kapt.verbose").toString().toBoolean() == true
+    }
+
     @get:Classpath @get:InputFiles
     val classpath: FileCollection
         get() = kotlinCompileTask.classpath
 
+    @get:Internal
+    var useBuildCache: Boolean = false
+
+    @get:Classpath @get:InputFiles @Suppress("unused")
+    internal val kotlinTaskPluginClasspaths get() = kotlinCompileTask.pluginClasspath
+
+    @get:Classpath @get:InputFiles
+    internal val pluginClasspath get() = pluginOptions.classpath
+
+    @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE)
     val source: FileCollection
-        @InputFiles get() {
+        get() {
             val sourcesFromKotlinTask = kotlinCompileTask.source
                     .filter { it.extension == "java" && !isInsideDestinationDirs(it) }
 
@@ -56,18 +91,13 @@ open class KaptTask : ConventionTask() {
          * (annotation processing is not incremental) */
         destinationDir.clearDirectory()
         classesDir.clearDirectory()
+        kotlinSourcesDestinationDir.clearDirectory()
 
         val sourceRootsFromKotlin = kotlinCompileTask.sourceRootsContainer.sourceRoots
         val rawSourceRoots = FilteringSourceRootsContainer(sourceRootsFromKotlin, { !isInsideDestinationDirs(it) })
         val sourceRoots = SourceRoots.ForJvm.create(kotlinCompileTask.source, rawSourceRoots)
 
-        // todo handle the args like those of the compile tasks
-        val args = K2JVMCompilerArguments()
-        kotlinCompileTask.setupCompilerArgs(args)
-
-        args.pluginClasspaths = (pluginOptions.classpath + args.pluginClasspaths!!).toSet().toTypedArray()
-        args.pluginOptions = (pluginOptions.arguments + args.pluginOptions!!).toTypedArray()
-        args.verbose = project.hasProperty("kapt.verbose") && project.property("kapt.verbose").toString().toBoolean() == true
+        val args = prepareCompilerArguments()
 
         val messageCollector = GradleMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()

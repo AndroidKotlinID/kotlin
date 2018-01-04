@@ -534,6 +534,7 @@
     <liveTemplateMacro implementation="org.jetbrains.kotlin.idea.liveTemplates.macro.SuggestVariableNameMacro"/>
     <liveTemplateMacro implementation="org.jetbrains.kotlin.idea.liveTemplates.macro.KotlinClassNameMacro"/>
     <liveTemplateMacro implementation="org.jetbrains.kotlin.idea.liveTemplates.macro.KotlinFunctionNameMacro"/>
+    <liveTemplateMacro implementation="org.jetbrains.kotlin.idea.liveTemplates.macro.KotlinPackageNameMacro"/>
     <liveTemplateOptionalProcessor implementation="org.jetbrains.kotlin.idea.liveTemplates.KotlinShortenFQNamesProcessor"/>
 
     <annotator language="kotlin" implementationClass="org.jetbrains.kotlin.idea.highlighter.KotlinPsiCheckerAndHighlightingUpdater"/>
@@ -726,6 +727,7 @@
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinDeclarationAndAssignmentHandler"/>
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinBlockIntoSingleStatementHandler"/>
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinStatementsAddSemicolonHandler"/>
+    <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinToStringTemplateHandler"/>
 
     <targetElementEvaluator
         language="kotlin"
@@ -794,6 +796,11 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.SpecifyTypeExplicitlyIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.SpecifyTypeExplicitlyInDestructuringAssignmentIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -2390,6 +2397,14 @@
                      groupName="Naming conventions"
                      enabledByDefault="true"
                      displayName="Function naming convention"
+                     level="WEAK WARNING"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.TestFunctionNameInspection"
+                     language="kotlin"
+                     groupPath="Kotlin"
+                     groupName="Naming conventions"
+                     enabledByDefault="true"
+                     displayName="Test function naming convention"
                      level="WEAK WARNING"/>
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.PropertyNameInspection"

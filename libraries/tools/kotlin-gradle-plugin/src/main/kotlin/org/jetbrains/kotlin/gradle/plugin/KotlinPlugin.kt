@@ -20,9 +20,7 @@ import org.gradle.api.plugins.InvalidPluginException
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetOutput
+import org.gradle.api.tasks.*
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
@@ -203,6 +201,9 @@ internal class Kotlin2JvmSourceSetProcessor(
 
                     registerKotlinOutputForJavaLibrary(classesDirectory, classesProviderTask)
                 }
+
+                // To make Gradle read this location from the task's @LocalState property and clean it on cache hit:
+                kotlinTask.buildServicesWorkingDir = Callable { kotlinGradleBuildServices.workingDir }
             }
         }
     }
@@ -687,7 +688,14 @@ internal fun configureJavaTask(kotlinTask: KotlinCompile, javaTask: AbstractComp
     }
 
     // Make Gradle check if the javaTask is up-to-date based on the Kotlin classes
-    javaTask.inputsCompatible.dirCompatible(kotlinTask.destinationDir)
+    javaTask.inputsCompatible.run {
+        if (isBuildCacheSupported()) {
+            dir(kotlinTask.destinationDir).withNormalizer(CompileClasspathNormalizer::class.java)
+        }
+        else {
+            dirCompatible(kotlinTask.destinationDir)
+        }
+    }
     // Also, use kapt1 annotations file for up-to-date check since annotation processing is done with javac
     kotlinTask.kaptOptions.annotationsFile?.let { javaTask.inputsCompatible.fileCompatible(it) }
 
@@ -818,12 +826,41 @@ internal class SubpluginEnvironment(
             val subpluginClasspath = subpluginClasspaths[subplugin] ?: continue
             subpluginClasspath.forEach { pluginOptions.addClasspathEntry(it) }
 
-            for (option in subplugin.apply(project, kotlinTask, javaTask, variantData, androidProjectHandler, javaSourceSet)) {
-                pluginOptions.addPluginArgument(subplugin.getCompilerPluginId(), option.key, option.value)
+            val subpluginOptions = subplugin.apply(project, kotlinTask, javaTask, variantData, androidProjectHandler, javaSourceSet)
+            val subpluginId = subplugin.getCompilerPluginId()
+            kotlinTask.registerSubpluginOptionsAsInputs(subpluginId, subpluginOptions)
+
+            for (option in subpluginOptions) {
+                pluginOptions.addPluginArgument(subpluginId, option)
             }
         }
 
         return appliedSubplugins
+    }
+}
+
+internal fun Task.registerSubpluginOptionsAsInputs(subpluginId: String, subpluginOptions: List<SubpluginOption>) {
+    // There might be several options with the same key. We group them together
+    // and add an index to the Gradle input property name to resolve possible duplication:
+    val pluginOptionsGrouped = subpluginOptions.groupBy { it.key }
+    for ((optionKey, optionsGroup) in pluginOptionsGrouped) {
+        optionsGroup.forEachIndexed { index, option ->
+            val indexSuffix = if (optionsGroup.size > 1) ".$index" else ""
+            when (option) {
+                is CompositeSubpluginOption -> {
+                    val subpluginIdWithWrapperKey = "$subpluginId.${optionKey}$indexSuffix"
+                    registerSubpluginOptionsAsInputs(subpluginIdWithWrapperKey, option.originalOptions)
+                }
+
+                is FilesSubpluginOption -> when (option.kind) {
+                    FilesOptionKind.INTERNAL -> Unit
+                }.run { /* exhaustive when */ }
+
+                else -> {
+                    inputsCompatible.propertyCompatible("$subpluginId." + option.key + indexSuffix, option.value)
+                }
+            }
+        }
     }
 }
 
