@@ -50,6 +50,11 @@ public class MockParameterInfoUIContext implements ParameterInfoUIContext {
     }
 
     @Override
+    public void setupRawUIComponentPresentation(String htmlText) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public boolean isUIComponentEnabled() {
         return false;
     }
@@ -66,6 +71,16 @@ public class MockParameterInfoUIContext implements ParameterInfoUIContext {
     @Override
     public PsiElement getParameterOwner() {
         return myParameterOwner;
+    }
+
+    @Override
+    public boolean isSingleOverload() {
+        return false;
+    }
+
+    @Override
+    public boolean isSingleParameterInfo() {
+        return false;
     }
 
     @Override
