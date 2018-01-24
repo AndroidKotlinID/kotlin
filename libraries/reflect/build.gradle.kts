@@ -138,6 +138,8 @@ val reflectShadowJar by task<ShadowJar> {
         include("META-INF/services/**")
     }
 
+    exclude("**/*.proto")
+
     transform(KotlinModuleShadowTransformer(logger))
 
     configurations = listOf(shadows)
@@ -183,6 +185,8 @@ val relocateCoreSources by task<Copy> {
     from("$core/descriptors.runtime/src")
     from("$core/deserialization/src")
     from("$core/util.runtime/src")
+
+    exclude("META-INF/services/**")
 
     into(relocatedCoreSrc)
     includeEmptyDirs = false
