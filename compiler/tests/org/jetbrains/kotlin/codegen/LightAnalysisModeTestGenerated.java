@@ -81,6 +81,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             doTest(fileName);
         }
 
+        @TestMetadata("constValInAnnotation.kt")
+        public void testConstValInAnnotation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/annotations/constValInAnnotation.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("defaultParameterValues.kt")
         public void testDefaultParameterValues() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/annotations/defaultParameterValues.kt");
@@ -126,6 +132,12 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("nestedClassPropertyAsParameter.kt")
         public void testNestedClassPropertyAsParameter() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/annotations/nestedClassPropertyAsParameter.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("nestedClassesInAnnotations.kt")
+        public void testNestedClassesInAnnotations() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/annotations/nestedClassesInAnnotations.kt");
             doTest(fileName);
         }
 
