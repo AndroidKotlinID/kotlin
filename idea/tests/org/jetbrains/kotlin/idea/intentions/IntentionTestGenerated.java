@@ -12123,6 +12123,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("elseInDotQualifiedExpression.kt")
+        public void testElseInDotQualifiedExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/elseInDotQualifiedExpression.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("elseInPlusAssignExpression.kt")
+        public void testElseInPlusAssignExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/elseInPlusAssignExpression.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("for.kt")
         public void testFor() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/for.kt");
@@ -12138,6 +12150,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("if.kt")
         public void testIf() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/if.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("ifInDotQualifiedExpression.kt")
+        public void testIfInDotQualifiedExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/ifInDotQualifiedExpression.kt");
             doTest(fileName);
         }
 
@@ -12174,6 +12192,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("removeBracesFromIfWithCommentedCode.kt")
         public void testRemoveBracesFromIfWithCommentedCode() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/removeBracesFromIfWithCommentedCode.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("whenInDotQualifiedExpression.kt")
+        public void testWhenInDotQualifiedExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/removeBraces/whenInDotQualifiedExpression.kt");
             doTest(fileName);
         }
 
@@ -14028,6 +14052,33 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("semicolon.kt")
         public void testSemicolon() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceSubstringWithDropLast/semicolon.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/intentions/replaceSubstringWithIndexingOperation")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ReplaceSubstringWithIndexingOperation extends AbstractIntentionTest {
+        public void testAllFilesPresentInReplaceSubstringWithIndexingOperation() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/replaceSubstringWithIndexingOperation"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("oneFirstTwoSecondArgument.kt")
+        public void testOneFirstTwoSecondArgument() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceSubstringWithIndexingOperation/oneFirstTwoSecondArgument.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceSubstringWithIndexingOperation/simple.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("zeroFirstTenSecondArgument.kt")
+        public void testZeroFirstTenSecondArgument() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/replaceSubstringWithIndexingOperation/zeroFirstTenSecondArgument.kt");
             doTest(fileName);
         }
     }
