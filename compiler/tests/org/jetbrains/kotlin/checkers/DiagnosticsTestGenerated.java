@@ -9301,6 +9301,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("correctSubstitutionForIncorporationConstraint.kt")
+                public void testCorrectSubstitutionForIncorporationConstraint() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/generics/nullability/correctSubstitutionForIncorporationConstraint.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("declarationsBoundsViolation.kt")
                 public void testDeclarationsBoundsViolation() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/generics/nullability/declarationsBoundsViolation.kt");
@@ -10651,6 +10657,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("capturedTypeSubstitutedIntoOppositeProjection.kt")
                 public void testCapturedTypeSubstitutedIntoOppositeProjection() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/capturedTypeSubstitutedIntoOppositeProjection.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("capturedTypeWithTypeVariableSubtyping.kt")
+                public void testCapturedTypeWithTypeVariableSubtyping() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/capturedTypes/capturedTypeWithTypeVariableSubtyping.kt");
                     doTest(fileName);
                 }
 
@@ -14807,6 +14819,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("noUnnecessaryNotNullAssertionOnErrorType.kt")
             public void testNoUnnecessaryNotNullAssertionOnErrorType() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/nullabilityAndSmartCasts/noUnnecessaryNotNullAssertionOnErrorType.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("notnullTypesFromJavaWithSmartcast.kt")
+            public void testNotnullTypesFromJavaWithSmartcast() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/nullabilityAndSmartCasts/notnullTypesFromJavaWithSmartcast.kt");
                 doTest(fileName);
             }
 

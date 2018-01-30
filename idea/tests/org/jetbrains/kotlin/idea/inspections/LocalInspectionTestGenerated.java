@@ -140,6 +140,12 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("implicitReceiverInApply.kt")
+            public void testImplicitReceiverInApply() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/implicitReceiverInApply.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("isCheckSimple.kt")
             public void testIsCheckSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/isCheckSimple.kt");
@@ -2892,21 +2898,39 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             doTest(fileName);
         }
 
-        @TestMetadata("notOnlyReturnField.kt")
-        public void testNotOnlyReturnField() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/notOnlyReturnField.kt");
+        @TestMetadata("notOnlyFieldSetBody.kt")
+        public void testNotOnlyFieldSetBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/notOnlyFieldSetBody.kt");
             doTest(fileName);
         }
 
-        @TestMetadata("onlyReturnFieldBody.kt")
-        public void testOnlyReturnFieldBody() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/onlyReturnFieldBody.kt");
+        @TestMetadata("onlyFieldSetBody.kt")
+        public void testOnlyFieldSetBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/onlyFieldSetBody.kt");
             doTest(fileName);
         }
 
-        @TestMetadata("override.kt")
-        public void testOverride() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/override.kt");
+        @TestMetadata("overrideBlankBody.kt")
+        public void testOverrideBlankBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/overrideBlankBody.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideDefault.kt")
+        public void testOverrideDefault() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/overrideDefault.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideNotOnlyFieldSetBody.kt")
+        public void testOverrideNotOnlyFieldSetBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/overrideNotOnlyFieldSetBody.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("overrideOnlyFieldSetBody.kt")
+        public void testOverrideOnlyFieldSetBody() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantSetter/overrideOnlyFieldSetBody.kt");
             doTest(fileName);
         }
 
@@ -2962,6 +2986,60 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
     public static class RedundantUnitExpression extends AbstractLocalInspectionTest {
         public void testAllFilesPresentInRedundantUnitExpression() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantUnitExpression"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("atLastAfterClass.kt")
+        public void testAtLastAfterClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterConstant.kt")
+        public void testAtLastAfterConstant() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterConstant.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterFunInIf.kt")
+        public void testAtLastAfterFunInIf() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterFunInIf.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterFunInTry.kt")
+        public void testAtLastAfterFunInTry() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterFunInTry.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterFunInWhen.kt")
+        public void testAtLastAfterFunInWhen() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterFunInWhen.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterIntFunctionCall.kt")
+        public void testAtLastAfterIntFunctionCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterIntFunctionCall.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterUnit.kt")
+        public void testAtLastAfterUnit() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterUnit.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterUnitFunctionCall.kt")
+        public void testAtLastAfterUnitFunctionCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterUnitFunctionCall.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("atLastAfterVal.kt")
+        public void testAtLastAfterVal() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/redundantUnitExpression/atLastAfterVal.kt");
+            doTest(fileName);
         }
 
         @TestMetadata("lambda.kt")

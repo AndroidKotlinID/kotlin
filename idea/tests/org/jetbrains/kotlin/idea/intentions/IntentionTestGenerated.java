@@ -2467,6 +2467,36 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/branched/unfolding/returnToIf"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
                 }
 
+                @TestMetadata("ifWithBreak.kt")
+                public void testIfWithBreak() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/ifWithBreak.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("ifWithContinue.kt")
+                public void testIfWithContinue() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/ifWithContinue.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("ifWithInnerReturn.kt")
+                public void testIfWithInnerReturn() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/ifWithInnerReturn.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("ifWithNothing.kt")
+                public void testIfWithNothing() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/ifWithNothing.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("ifWithThrow.kt")
+                public void testIfWithThrow() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/ifWithThrow.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("innerIfTransformed.kt")
                 public void testInnerIfTransformed() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToIf/innerIfTransformed.kt");
@@ -2509,6 +2539,36 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 @TestMetadata("simpleWhenWithBlocks.kt")
                 public void testSimpleWhenWithBlocks() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/simpleWhenWithBlocks.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("whenWithBreak.kt")
+                public void testWhenWithBreak() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/whenWithBreak.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("whenWithContinue.kt")
+                public void testWhenWithContinue() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/whenWithContinue.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("whenWithInnerReturn.kt")
+                public void testWhenWithInnerReturn() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/whenWithInnerReturn.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("whenWithNothing.kt")
+                public void testWhenWithNothing() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/whenWithNothing.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("whenWithThrow.kt")
+                public void testWhenWithThrow() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/branched/unfolding/returnToWhen/whenWithThrow.kt");
                     doTest(fileName);
                 }
             }
@@ -2753,6 +2813,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("propertySetter.kt")
+            public void testPropertySetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/internal/propertySetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForPrivateProperty.kt")
+            public void testPropertySetterForPrivateProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/internal/propertySetterForPrivateProperty.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/internal/simple.kt");
@@ -2906,6 +2978,42 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("propertyGetter.kt")
+            public void testPropertyGetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertyGetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetter.kt")
+            public void testPropertySetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertySetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForInternalProperty.kt")
+            public void testPropertySetterForInternalProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertySetterForInternalProperty.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForPrivateProperty.kt")
+            public void testPropertySetterForPrivateProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertySetterForPrivateProperty.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForProtectedProperty.kt")
+            public void testPropertySetterForProtectedProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertySetterForProtectedProperty.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterInLocalClass.kt")
+            public void testPropertySetterInLocalClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/propertySetterInLocalClass.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/private/simple.kt");
@@ -2969,6 +3077,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 doTest(fileName);
             }
 
+            @TestMetadata("propertySetter.kt")
+            public void testPropertySetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/protected/propertySetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForPrivateProperty.kt")
+            public void testPropertySetterForPrivateProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/protected/propertySetterForPrivateProperty.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/protected/simple.kt");
@@ -3005,6 +3125,30 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("primaryConstructorPublicByDefault.kt")
             public void testPrimaryConstructorPublicByDefault() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/public/primaryConstructorPublicByDefault.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertyPrivateSetter.kt")
+            public void testPropertyPrivateSetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/public/propertyPrivateSetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertyPrivateSetterForPrivateProperty.kt")
+            public void testPropertyPrivateSetterForPrivateProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/public/propertyPrivateSetterForPrivateProperty.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetter.kt")
+            public void testPropertySetter() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/public/propertySetter.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("propertySetterForPrivateProperty.kt")
+            public void testPropertySetterForPrivateProperty() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/changeVisibility/public/propertySetterForPrivateProperty.kt");
                 doTest(fileName);
             }
 
