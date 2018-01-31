@@ -5,16 +5,23 @@ apply { plugin("kotlin") }
 
 jvmTarget = "1.6"
 
+val androidSdk by configurations.creating
+val androidJar by configurations.creating
+
 dependencies {
+    testRuntime(intellijDep())
+
     compile(project(":compiler:util"))
     compile(project(":compiler:light-classes"))
     compile(project(":idea:idea-core"))
     compile(project(":idea"))
+    compile(project(":idea:idea-jvm"))
     compile(project(":idea:idea-gradle"))
     compile(project(":plugins:android-extensions-compiler"))
-    compile(ideaPluginDeps("android", "android-common", "sdk-tools", "sdk-common", plugin = "android"))
-    compile(ideaPluginDeps("Groovy", plugin = "Groovy"))
     compileOnly(project(":kotlin-android-extensions-runtime"))
+    compileOnly(intellijPluginDep("android")) { includeJars("android", "android-common", "sdk-common", "sdk-tools") }
+    compileOnly(intellijPluginDep("Groovy")) { includeJars("Groovy") }
+    compileOnly(intellijDep()) { includeJars("extensions", "openapi", "util", "idea", "android-base-common", rootProject = rootProject) }
 
     testCompile(project(":compiler:tests-common"))
     testCompile(project(":compiler:cli"))
@@ -27,25 +34,28 @@ dependencies {
     testCompile(projectDist(":kotlin-test:kotlin-test-jvm"))
     testCompile(commonDep("junit:junit"))
     testRuntime(projectDist(":kotlin-reflect"))
+    testCompile(intellijPluginDep("android")) { includeJars("android", "android-common", "sdk-common", "sdk-tools") }
+    testCompile(intellijPluginDep("Groovy")) { includeJars("Groovy") }
+    testCompile(intellijDep()) { includeJars("extensions") }
+
     testRuntime(project(":idea:idea-jvm"))
     testRuntime(project(":plugins:android-extensions-jps"))
     testRuntime(project(":sam-with-receiver-ide-plugin"))
     testRuntime(project(":noarg-ide-plugin"))
     testRuntime(project(":allopen-ide-plugin"))
     testRuntime(project(":plugins:lint"))
-    testRuntime(ideaSdkDeps("*.jar"))
-    testRuntime(ideaPluginDeps("idea-junit", "resources_en", plugin = "junit"))
-    testRuntime(ideaPluginDeps("IntelliLang", plugin = "IntelliLang"))
-    testRuntime(ideaPluginDeps("jcommander", "testng", "testng-plugin", "resources_en", plugin = "testng"))
-    testRuntime(ideaPluginDeps("copyright", plugin = "copyright"))
-    testRuntime(ideaPluginDeps("properties", "resources_en", plugin = "properties"))
-    testRuntime(ideaPluginDeps("java-i18n", plugin = "java-i18n"))
-    testRuntime(ideaPluginDeps("*.jar", plugin = "gradle"))
-    testRuntime(ideaPluginDeps("*.jar", plugin = "Groovy"))
-    testRuntime(ideaPluginDeps("coverage", "jacocoant", plugin = "coverage"))
-    testRuntime(ideaPluginDeps("java-decompiler", plugin = "java-decompiler"))
-    testRuntime(ideaPluginDeps("*.jar", plugin = "maven"))
-    testRuntime(ideaPluginDeps("*.jar", plugin = "android"))
+    testRuntime(intellijPluginDep("junit"))
+    testRuntime(intellijPluginDep("IntelliLang"))
+    testRuntime(intellijPluginDep("properties"))
+    testRuntime(intellijPluginDep("java-i18n"))
+    testRuntime(intellijPluginDep("gradle"))
+    testRuntime(intellijPluginDep("Groovy"))
+    testRuntime(intellijPluginDep("java-decompiler"))
+    testRuntime(intellijPluginDep("maven"))
+    testRuntime(intellijPluginDep("android"))
+
+    androidSdk(project(":custom-dependencies:android-sdk", configuration = "androidSdk"))
+    androidJar(project(":custom-dependencies:android-sdk", configuration = "androidJar"))
 }
 
 sourceSets {
@@ -57,7 +67,13 @@ testsJar {}
 
 projectTest {
     dependsOn(":kotlin-android-extensions-runtime:dist")
+    dependsOn(androidSdk)
     workingDir = rootDir
+    doFirst {
+        systemProperty("android.sdk", androidSdk.singleFile.canonicalPath)
+        systemProperty("android.jar", androidJar.singleFile.canonicalPath)
+        systemProperty("idea.home.path", intellijRootDir().canonicalPath)
+    }
 }
 
 runtimeJar()

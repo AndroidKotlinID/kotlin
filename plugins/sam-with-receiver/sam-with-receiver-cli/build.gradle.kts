@@ -4,19 +4,22 @@ description = "Kotlin SamWithReceiver Compiler Plugin"
 apply { plugin("kotlin") }
 
 dependencies {
+    testRuntime(intellijDep())
+
     compileOnly(project(":compiler:frontend"))
     compileOnly(project(":compiler:frontend.java"))
     compileOnly(project(":compiler:plugin-api"))
-    runtime(projectRuntimeJar(":kotlin-compiler"))
+    compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
     runtime(projectDist(":kotlin-stdlib"))
     runtime(projectDist(":kotlin-reflect"))
+    runtime(projectRuntimeJar(":kotlin-compiler"))
 
     testCompile(project(":compiler:backend"))
     testCompile(project(":compiler:cli"))
     testCompile(project(":compiler:tests-common"))
     testCompile(projectTests(":compiler:tests-common"))
     testCompile(commonDep("junit:junit"))
-    testRuntime(ideaSdkDeps("*.jar"))
+    testCompileOnly(intellijCoreDep()) { includeJars("intellij-core") }
 }
 
 sourceSets {
@@ -43,5 +46,6 @@ ideaPlugin {
 }
 
 projectTest {
+    dependsOn(":prepare:mock-runtime-for-test:dist")
     workingDir = rootDir
 }

@@ -1,3 +1,4 @@
+
 import org.gradle.api.Project
 import java.util.*
 import java.io.File
@@ -14,7 +15,10 @@ buildscript {
     val repos = listOfNotNull(
             bootstrapKotlinRepo,
             "https://jcenter.bintray.com/",
-            "https://plugins.gradle.org/m2")
+            "https://plugins.gradle.org/m2",
+            "http://dl.bintray.com/kotlin/kotlinx",
+            "https://repo.gradle.org/gradle/libs-releases-local", // for native-platform
+            "https://jetbrains.bintray.com/intellij-third-party-dependencies") // for jflex
 
     extra["repos"] = repos
 
@@ -76,16 +80,21 @@ dependencies {
 }
 
 val commonBuildDir = File(rootDir, "build")
-val distDir = "$rootDir/dist"
-val distKotlinHomeDir = "$distDir/kotlinc"
+val distDir by extra("$rootDir/dist")
+val distKotlinHomeDir by extra("$distDir/kotlinc")
 val distLibDir = "$distKotlinHomeDir/lib"
-val ideaPluginDir = "$distDir/artifacts/Kotlin"
-val ideaUltimatePluginDir = "$distDir/artifacts/KotlinUltimate"
+val commonLocalDataDir = "$rootDir/local"
+val ideaSandboxDir = "$commonLocalDataDir/ideaSandbox"
+val ideaUltimateSandboxDir = "$commonLocalDataDir/ideaUltimateSandbox"
+val ideaPluginDir = "$distDir/artifacts/ideaPlugin/Kotlin"
+val ideaUltimatePluginDir = "$distDir/artifacts/ideaUltimatePlugin/Kotlin"
 
-extra["distDir"] = distDir
-extra["distKotlinHomeDir"] = distKotlinHomeDir
+// TODO: use "by extra()" syntax where possible
 extra["distLibDir"] = project.file(distLibDir)
 extra["libsDir"] = project.file(distLibDir)
+extra["commonLocalDataDir"] = project.file(commonLocalDataDir)
+extra["ideaSandboxDir"] = project.file(ideaSandboxDir)
+extra["ideaUltimateSandboxDir"] = project.file(ideaUltimateSandboxDir)
 extra["ideaPluginDir"] = project.file(ideaPluginDir)
 extra["ideaUltimatePluginDir"] = project.file(ideaUltimatePluginDir)
 extra["isSonatypeRelease"] = false
@@ -104,6 +113,10 @@ extra["JDK_17"] = jdkPath("1.7")
 extra["JDK_18"] = jdkPath("1.8")
 extra["JDK_9"] = jdkPathIfFound("9")
 
+rootProject.apply {
+    from(rootProject.file("versions.gradle.kts"))
+}
+
 extra["versions.protobuf-java"] = "2.6.1"
 extra["versions.javax.inject"] = "1"
 extra["versions.jsr305"] = "1.3.9"
@@ -113,9 +126,57 @@ extra["versions.junit"] = "4.12"
 extra["versions.javaslang"] = "2.0.6"
 extra["versions.ant"] = "1.8.2"
 extra["versions.android"] = "2.3.1"
+extra["versions.kotlinx-coroutines-core"] = "0.20"
+extra["versions.kotlinx-coroutines-jdk8"] = "0.20"
+extra["versions.json"] = "20160807"
+extra["versions.native-platform"] = "0.14"
+extra["versions.ant-launcher"] = "1.8.0"
+extra["versions.robolectric"] = "3.1"
+extra["versions.org.springframework"] = "4.2.0.RELEASE"
+extra["versions.jflex"] = "1.7.0"
 
-extra["ideaCoreSdkJars"] = arrayOf("annotations", "asm-all", "guava", "intellij-core", "jdom", "jna", "log4j", "picocontainer",
-                                   "snappy-in-java", "streamex", "trove4j", "xpp3-1.1.4-min", "xstream")
+val markdownVer =  "4054 - Kotlin 1.0.2-dev-566".replace(" ", "%20") // fixed here, was last with "status:SUCCESS,tag:forKotlin"
+extra["markdownParserRepo"] = "https://teamcity.jetbrains.com/guestAuth/repository/download/IntelliJMarkdownParser_Build/$markdownVer/([artifact]_[ext]/)[artifact](.[ext])"
+
+fun Project.getBooleanProperty(name: String): Boolean? = this.findProperty(name)?.let {
+    val v = it.toString()
+    if (v.isBlank()) true
+    else v.toBoolean()
+}
+
+val isTeamcityBuild = project.hasProperty("teamcity") || System.getenv("TEAMCITY_VERSION") != null
+val intellijUltimateEnabled = project.getBooleanProperty("intellijUltimateEnabled") ?: isTeamcityBuild
+
+val intellijSeparateSdks = project.getBooleanProperty("intellijSeparateSdks") ?: false
+
+extra["intellijUltimateEnabled"] = intellijUltimateEnabled
+extra["intellijSeparateSdks"] = intellijSeparateSdks
+
+extra["IntellijCoreDependencies"] =
+        listOf("annotations",
+               "asm-all",
+               "guava-21.0",
+               "jdom",
+               "jna",
+               "log4j",
+               "picocontainer",
+               "snappy-in-java-0.5.1",
+               "streamex",
+               "trove4j",
+               "xpp3-1.1.4-min",
+               "xstream-1.4.8")
+
+extra["nativePlatformVariants"] =
+        listOf("windows-amd64",
+               "windows-i386",
+               "osx-amd64",
+               "osx-i386",
+               "linux-amd64",
+               "linux-i386",
+               "freebsd-amd64-libcpp",
+               "freebsd-amd64-libstdcpp",
+               "freebsd-i386-libcpp",
+               "freebsd-i386-libstdcpp")
 
 extra["compilerModules"] = arrayOf(
         ":compiler:util",
@@ -191,21 +252,6 @@ apply {
     }
 }
 
-val importedAntTasksPrefix = "imported-ant-update-"
-
-// TODO: check the reasons of import conflict with xerces
-//ant.importBuild("$rootDir/update_dependencies.xml") { antTaskName -> importedAntTasksPrefix + antTaskName }
-
-tasks.matching { task ->
-    task.name.startsWith(importedAntTasksPrefix)
-}.forEach {
-    it.group = "Imported ant"
-}
-
-//task("update-dependencies") {
-//    dependsOn(tasks.getByName(importedAntTasksPrefix + "update"))
-//}
-
 fun Project.allprojectsRecursive(body: Project.() -> Unit) {
     this.body()
     this.subprojects { allprojectsRecursive(body) }
@@ -236,6 +282,11 @@ allprojects {
         for (repo in (rootProject.extra["repos"] as List<String>)) {
             maven { setUrl(repo) }
         }
+        ivy {
+            artifactPattern(rootProject.extra["markdownParserRepo"] as String)
+        }
+        intellijSdkRepo(project)
+        androidDxJarRepo(project)
     }
     configureJvmProject(javaHome!!, jvmTarget!!)
 
@@ -282,6 +333,18 @@ allprojects {
         if (javaHome != defaultJavaHome || jvmTarget != defaultJvmTarget) {
             configureJvmProject(javaHome!!, jvmTarget!!)
         }
+
+        fun File.toProjectRootRelativePathOrSelf() = (relativeToOrNull(rootDir)?.takeUnless { it.startsWith("..") } ?: this).path
+
+        fun FileCollection.printClassPath(role: String) =
+                println("${project.path} $role classpath:\n  ${joinToString("\n  ") { it.toProjectRootRelativePathOrSelf() } }")
+
+        try { the<JavaPluginConvention>() } catch (_: UnknownDomainObjectException) { null }?.let { javaConvention ->
+            task("printCompileClasspath") { doFirst { javaConvention.sourceSets["main"].compileClasspath.printClassPath("compile") } }
+            task("printRuntimeClasspath") { doFirst { javaConvention.sourceSets["main"].runtimeClasspath.printClassPath("runtime") } }
+            task("printTestCompileClasspath") { doFirst { javaConvention.sourceSets["test"].compileClasspath.printClassPath("test compile") } }
+            task("printTestRuntimeClasspath") { doFirst { javaConvention.sourceSets["test"].runtimeClasspath.printClassPath("test runtime") } }
+        }
     }
 }
 
@@ -292,14 +355,13 @@ task<Copy>("dist") {
 }
 
 val compilerCopyTask = task<Copy>("idea-plugin-copy-compiler") {
-    dependsOnTaskIfExistsRec("dist")
+    shouldRunAfter(":dist")
     into(ideaPluginDir)
     from(distDir) { include("kotlinc/**") }
 }
 
 task<Copy>("ideaPlugin") {
     dependsOn(compilerCopyTask)
-    dependsOnTaskIfExistsRec("idea-plugin")
     shouldRunAfter(":prepare:idea-plugin:idea-plugin")
     into("$ideaPluginDir/lib")
 }
@@ -312,6 +374,13 @@ tasks {
         }
     }
 
+    // TODO: copied from TeamCityBuild.xml (with ultimate-related modification), consider removing after migrating from it
+    "cleanupArtifacts" {
+        doLast {
+            delete(ideaPluginDir)
+            delete(ideaUltimatePluginDir)
+        }
+    }
 
     "coreLibsTest" {
         (coreLibProjects + listOf(
@@ -438,19 +507,70 @@ tasks {
     "check" { dependsOn("test") }
 }
 
+fun CopySpec.compilerScriptPermissionsSpec() {
+    filesMatching("bin/*") { mode = 0b111101101 }
+    filesMatching("bin/*.bat") { mode = 0b110100100 }
+}
+
+val zipCompiler by task<Zip> {
+    destinationDir = file(distDir)
+    archiveName = "kotlin-compiler-$kotlinVersion.zip"
+    from(distKotlinHomeDir) {
+        into("kotlinc")
+        compilerScriptPermissionsSpec()
+    }
+    doLast {
+        logger.lifecycle("Compiler artifacts packed to $archivePath")
+    }
+}
+
+val zipTestData by task<Zip> {
+    destinationDir = file(distDir)
+    archiveName = "kotlin-test-data.zip"
+    from("compiler/testData") { into("compiler") }
+    from("idea/testData") { into("ide") }
+    from("idea/idea-completion/testData") { into("ide/completion") }
+    doLast {
+        logger.lifecycle("Test data packed to $archivePath")
+    }
+}
+
+val zipPlugin by task<Zip> {
+    val src = when (project.findProperty("pluginArtifactDir") as String?) {
+        "Kotlin" -> ideaPluginDir
+        "KotlinUltimate" -> ideaUltimatePluginDir
+        null -> if (project.hasProperty("ultimate")) ideaUltimatePluginDir else ideaPluginDir
+        else -> error("Unsupported plugin artifact dir")
+    }
+    val destPath = project.findProperty("pluginZipPath") as String?
+    val dest = File(destPath ?: "$buildDir/kotlin-plugin.zip")
+    destinationDir = dest.parentFile
+    archiveName = dest.name
+    doFirst {
+        if (destPath == null) throw GradleException("Specify target zip path with 'pluginZipPath' property")
+    }
+    into("Kotlin") {
+        from("$src/kotlinc") {
+            into("kotlinc")
+            compilerScriptPermissionsSpec()
+        }
+        from(src) {
+            exclude("kotlinc")
+        }
+    }
+    doLast {
+        logger.lifecycle("Plugin artifacts packed to $archivePath")
+    }
+}
+
 configure<IdeaModel> {
     module {
         excludeDirs = files(
                 project.buildDir,
+                commonLocalDataDir,
                 ".gradle",
                 "dependencies",
-                "dist",
-                "ideaSDK/bin",
-                "ideaSDK/androidSDK",
-                "ideaSDK/config",
-                "ideaSDK/config-idea",
-                "ideaSDK/system",
-                "ideaSDK/system-idea"
+                "dist"
         ).toSet()
     }
 }

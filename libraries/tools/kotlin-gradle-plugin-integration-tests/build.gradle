@@ -7,6 +7,10 @@ repositories {
     jcenter()
 }
 
+configurations {
+    androidSdk
+}
+
 dependencies {
     testCompile project(':kotlin-gradle-plugin')
     testCompile project(':kotlin-gradle-plugin').sourceSets.test.output
@@ -25,6 +29,8 @@ dependencies {
     testCompile gradleApi()
 
     testRuntime project(path: ':kotlin-android-extensions', configuration: 'runtimeJar')
+
+    androidSdk project(path: ":custom-dependencies:android-sdk", configuration: "androidSdk")
 }
 
 // Include Gradle task properties validation into the testing procedure:
@@ -80,6 +86,9 @@ tasks.withType(Test) {
     def mavenLocalRepo = System.getProperty("maven.repo.local")
     if (mavenLocalRepo != null) {
         systemProperty("maven.repo.local", mavenLocalRepo)
+    }
+    doFirst {
+        systemProperty("android.sdk", project.configurations["androidSdk"].singleFile.getCanonicalPath())
     }
 
     testLogging {

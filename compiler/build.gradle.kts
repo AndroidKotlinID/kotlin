@@ -37,8 +37,11 @@ val testDistProjects = listOf(
 )
 
 val testJvm6ServerRuntime by configurations.creating
+val antLauncherJar by configurations.creating
 
 dependencies {
+    testRuntime(intellijDep()) // Should come before compiler, because of "progarded" stuff needed for tests
+
     depDistProjects.forEach {
         testCompile(projectDist(it))
     }
@@ -54,16 +57,18 @@ dependencies {
     otherCompilerModules.forEach {
         testCompileOnly(project(it))
     }
-    testCompile(ideaSdkDeps("openapi", "idea", "util", "asm-all", "commons-httpclient-3.1-patched"))
+    testCompileOnly(intellijCoreDep()) { includeJars("intellij-core") }
+    testCompileOnly(intellijDep()) { includeJars("openapi", "idea", "idea_rt", "util", "asm-all") }
 
     testRuntime(projectDist(":kotlin-reflect"))
     testRuntime(projectDist(":kotlin-daemon-client"))
-    testRuntime(preloadedDeps("dx", subdir = "android-5.0/lib"))
-    testRuntime(ideaSdkCoreDeps("*.jar"))
-    testRuntime(ideaSdkDeps("*.jar"))
-    testRuntime(files("${System.getProperty("java.home")}/../lib/tools.jar"))
+    testRuntime(androidDxJar())
+    testRuntime(files(toolsJar()))
 
     testJvm6ServerRuntime(projectTests(":compiler:tests-common-jvm6"))
+
+    antLauncherJar(commonDep("org.apache.ant", "ant"))
+    antLauncherJar(files(toolsJar()))
 }
 
 sourceSets {
@@ -79,6 +84,11 @@ projectTest {
     dependsOn(*testDistProjects.map { "$it:dist" }.toTypedArray())
     workingDir = rootDir
     systemProperty("kotlin.test.script.classpath", the<JavaPluginConvention>().sourceSets.getByName("test").output.classesDirs.joinToString(File.pathSeparator))
+    doFirst {
+        systemProperty("kotlin.ant.classpath", antLauncherJar.asPath)
+        systemProperty("kotlin.ant.launcher.class", "org.apache.tools.ant.Main")
+        systemProperty("idea.home.path", intellijRootDir().canonicalPath)
+    }
 }
 
 fun Project.codegenTest(target: Int, jvm: Int,
