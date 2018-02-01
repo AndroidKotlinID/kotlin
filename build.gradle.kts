@@ -259,7 +259,9 @@ fun Project.allprojectsRecursive(body: Project.() -> Unit) {
 
 fun Task.listConfigurationContents(configName: String) {
     doFirst {
-        println("$configName configuration files:\n${project.configurations[configName].allArtifacts.files.files.joinToString("\n  ", "  ")}")
+        project.configurations.findByName(configName)?.let {
+            println("$configName configuration files:\n${it.allArtifacts.files.files.joinToString("\n  ", "  ")}")
+        }
     }
 }
 
@@ -348,21 +350,25 @@ allprojects {
     }
 }
 
-task<Copy>("dist") {
+val distTask = task<Copy>("dist") {
+    val childDistTasks = getTasksByName("dist", true) - this@task
+    dependsOn(childDistTasks)
+
     into(distDir)
     from(files("compiler/cli/bin")) { into("kotlinc/bin") }
     from(files("license")) { into("kotlinc/license") }
 }
 
 val compilerCopyTask = task<Copy>("idea-plugin-copy-compiler") {
-    shouldRunAfter(":dist")
+    dependsOn(distTask)
     into(ideaPluginDir)
     from(distDir) { include("kotlinc/**") }
 }
 
 task<Copy>("ideaPlugin") {
     dependsOn(compilerCopyTask)
-    shouldRunAfter(":prepare:idea-plugin:idea-plugin")
+    val childIdeaPluginTasks = getTasksByName("ideaPlugin", true) - this@task
+    dependsOn(childIdeaPluginTasks)
     into("$ideaPluginDir/lib")
 }
 

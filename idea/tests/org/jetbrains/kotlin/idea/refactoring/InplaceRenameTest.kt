@@ -11,6 +11,7 @@ import com.intellij.codeInsight.template.impl.TemplateManagerImpl
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.refactoring.rename.inplace.MemberInplaceRenameHandler
 import com.intellij.refactoring.rename.inplace.VariableInplaceRenameHandler
 import com.intellij.testFramework.LightPlatformCodeInsightTestCase
 import com.intellij.testFramework.fixtures.CodeInsightTestUtil
@@ -81,6 +82,34 @@ class InplaceRenameTest : LightPlatformCodeInsightTestCase() {
         doTestInplaceRename("name1")
     }
 
+    fun testNoReformat() {
+        doTestMemberInplaceRename("subject2")
+    }
+
+    fun testInvokeToFoo() {
+        doTestMemberInplaceRename("foo")
+    }
+
+    fun testInvokeToGet() {
+        doTestMemberInplaceRename("get")
+    }
+
+    fun testInvokeToPlus() {
+        doTestMemberInplaceRename("plus")
+    }
+
+    fun testGetToFoo() {
+        doTestMemberInplaceRename("foo")
+    }
+
+    fun testGetToInvoke() {
+        doTestMemberInplaceRename("invoke")
+    }
+
+    fun testGetToPlus() {
+        doTestMemberInplaceRename("plus")
+    }
+
     private fun doTestImplicitLambdaParameter(newName: String) {
         configureByFile(getTestName(false) + ".kt")
 
@@ -131,7 +160,11 @@ class InplaceRenameTest : LightPlatformCodeInsightTestCase() {
         checkResultByFile(getTestName(false) + ".kt.after")
     }
 
-    private fun doTestInplaceRename(newName: String?) {
+    private fun doTestMemberInplaceRename(newName: String?) {
+        doTestInplaceRename(newName, MemberInplaceRenameHandler())
+    }
+
+    private fun doTestInplaceRename(newName: String?, handler: VariableInplaceRenameHandler = VariableInplaceRenameHandler()) {
         configureByFile(getTestName(false) + ".kt")
         val element = TargetElementUtil.findTargetElement(
                 LightPlatformCodeInsightTestCase.myEditor,
@@ -143,7 +176,6 @@ class InplaceRenameTest : LightPlatformCodeInsightTestCase() {
         val dataContext = SimpleDataContext.getSimpleContext(CommonDataKeys.PSI_ELEMENT.name, element!!,
                                                              LightPlatformCodeInsightTestCase.getCurrentEditorDataContext())
 
-        val handler = VariableInplaceRenameHandler()
         if (newName == null) {
             assertFalse(handler.isRenaming(dataContext), "In-place rename is allowed for " + element)
         }
