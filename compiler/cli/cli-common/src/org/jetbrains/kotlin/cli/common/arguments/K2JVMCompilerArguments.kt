@@ -49,11 +49,11 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     var noJdk: Boolean by FreezableVar(false)
 
     @GradleOption(DefaultValues.BooleanTrueDefault::class)
-    @Argument(value = "-no-stdlib", description = "Don't include Kotlin runtime into classpath")
+    @Argument(value = "-no-stdlib", description = "Don't include kotlin-stdlib.jar or kotlin-reflect.jar into classpath")
     var noStdlib: Boolean by FreezableVar(false)
 
     @GradleOption(DefaultValues.BooleanTrueDefault::class)
-    @Argument(value = "-no-reflect", description = "Don't include Kotlin reflection implementation into classpath")
+    @Argument(value = "-no-reflect", description = "Don't include kotlin-reflect.jar into classpath")
     var noReflect: Boolean by FreezableVar(false)
 
     @Argument(value = "-script", description = "Evaluate the script file")
@@ -191,11 +191,8 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(
         value = "-Xsupport-compatqual-checker-framework-annotations",
         valueDescription = "enable|disable",
-        description =
-        """
-Specify behavior for Checker Framework compatqual annotations (NullableDecl/NonNullDecl).
-Default value is 'enable'
-"""
+        description = "Specify behavior for Checker Framework compatqual annotations (NullableDecl/NonNullDecl).\n" +
+                "Default value is 'enable'"
     )
     var supportCompatqualCheckerFrameworkAnnotations: String? by FreezableVar(null)
 
