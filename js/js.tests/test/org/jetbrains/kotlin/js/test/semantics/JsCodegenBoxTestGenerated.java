@@ -9225,6 +9225,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("kt18731.kt")
+        public void testKt18731() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/kt18731.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt20651.kt")
         public void testKt20651() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/enum/kt20651.kt");
@@ -11259,6 +11265,27 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("prefixNullableIncrement.kt")
         public void testPrefixNullableIncrement() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/increment/prefixNullableIncrement.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/inlineClasses")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class InlineClasses extends AbstractJsCodegenBoxTest {
+        public void testAllFilesPresentInInlineClasses() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+        }
+
+        @TestMetadata("emptyConstructorForInlineClass.kt")
+        public void testEmptyConstructorForInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/emptyConstructorForInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("useInlineFunctionInsideInlineClass.kt")
+        public void testUseInlineFunctionInsideInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/useInlineFunctionInsideInlineClass.kt");
             doTest(fileName);
         }
     }
@@ -13707,6 +13734,54 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         public static class Optimized extends AbstractJsCodegenBoxTest {
             public void testAllFilesPresentInOptimized() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multifileClasses/optimized"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/multiplatform")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Multiplatform extends AbstractJsCodegenBoxTest {
+        public void testAllFilesPresentInMultiplatform() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multiplatform"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class DefaultArguments extends AbstractJsCodegenBoxTest {
+            public void testAllFilesPresentInDefaultArguments() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/defaultArguments"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("constructor.kt")
+            public void testConstructor() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments/constructor.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("function.kt")
+            public void testFunction() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments/function.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inheritedFromCommonClass.kt")
+            public void testInheritedFromCommonClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments/inheritedFromCommonClass.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inheritedFromExpectedClass.kt")
+            public void testInheritedFromExpectedClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments/inheritedFromExpectedClass.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("inlineFunctionWithDefaultLambda.kt")
+            public void testInlineFunctionWithDefaultLambda() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments/inlineFunctionWithDefaultLambda.kt");
+                doTest(fileName);
             }
         }
     }

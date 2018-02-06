@@ -2497,8 +2497,15 @@
                      enabledByDefault="true"
                      cleanupTool="true"
                      level="WEAK WARNING"
-                     language="kotlin"
-    />
+                     language="kotlin"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RemoveRedundantBackticksInspection"
+                     displayName="Remove redundant backticks"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"/>
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantSetterInspection"
                      displayName="Redundant property setter"
@@ -2520,7 +2527,7 @@
                      language="kotlin"
     />
 
-	<localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ExplicitThisInspection"
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ExplicitThisInspection"
                      displayName="Redundant explicit 'this'"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
@@ -2666,6 +2673,24 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.PlatformExtensionReceiverOfInlineInspection"
+                     displayName="Unsafe call of inline function with nullable extension receiver"
+                     groupPath="Kotlin"
+                     groupName="Java interop issues"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantNotNullExtensionReceiverOfInlineInspection"
+                     displayName="Not-null extension receiver of inline function can be made nullable"
+                     groupPath="Kotlin"
+                     groupName="Java interop issues"
+                     enabledByDefault="false"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 
     <fileType.fileViewProviderFactory filetype="KJSM" implementationClass="com.intellij.psi.ClassFileViewProviderFactory"/>
@@ -2722,6 +2747,8 @@
     <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinBuiltInBinary"/>
     <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinModuleBinary"/>
     <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinJsMetaBinary"/>
+
+    <highlighterExtension implementation="org.jetbrains.kotlin.idea.highlighter.dsl.DslHighlighterExtension"/>
   </extensions>
 
 </idea-plugin>

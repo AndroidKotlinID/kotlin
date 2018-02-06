@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2017 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.codegen;
@@ -110,6 +99,7 @@ import static org.jetbrains.kotlin.codegen.inline.InlineCodegenUtilsKt.*;
 import static org.jetbrains.kotlin.resolve.BindingContext.*;
 import static org.jetbrains.kotlin.resolve.BindingContextUtils.getDelegationConstructorCall;
 import static org.jetbrains.kotlin.resolve.BindingContextUtils.isVarCapturedInClosure;
+import static org.jetbrains.kotlin.resolve.DescriptorUtils.isEnumClass;
 import static org.jetbrains.kotlin.resolve.DescriptorUtils.isEnumEntry;
 import static org.jetbrains.kotlin.resolve.DescriptorUtils.isObject;
 import static org.jetbrains.kotlin.resolve.jvm.AsmTypes.*;
@@ -1667,6 +1657,12 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         if (descriptor instanceof PropertyDescriptor) {
             PropertyDescriptor propertyDescriptor = (PropertyDescriptor) descriptor;
 
+            // `this` is represented as first parameter of function in erased inline class
+            if (contextKind() == OwnerKind.ERASED_INLINE_CLASS) {
+                Type underlyingRepresentationType = typeMapper.mapType(propertyDescriptor.getType());
+                return StackValue.local(0, underlyingRepresentationType);
+            }
+
             Collection<ExpressionCodegenExtension> codegenExtensions = ExpressionCodegenExtension.Companion.getInstances(state.getProject());
             if (!codegenExtensions.isEmpty() && resolvedCall != null) {
                 ExpressionCodegenExtension.Context context = new ExpressionCodegenExtension.Context(this, typeMapper, v);
@@ -2077,6 +2073,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         FunctionDescriptor descriptor = accessibleFunctionDescriptor(resolvedCall);
 
         if (descriptor instanceof ConstructorDescriptor) {
+            if (InlineClassesUtilsKt.isInlineClass(descriptor.getContainingDeclaration())) {
+                KtValueArgument valueArgument = CollectionsKt.firstOrNull(expression.getValueArguments());
+                if (valueArgument == null) return null;
+
+                return gen(valueArgument.getArgumentExpression());
+            }
+
             return generateNewCall(expression, resolvedCall);
         }
 
@@ -3100,6 +3103,18 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             return StackValue.cmp(
                     opToken,
                     operandType,
+                    genLazyUnlessProvided(pregeneratedLeft, left, leftType),
+                    genLazy(right, rightType)
+            );
+        }
+
+        if ((opToken == KtTokens.EQEQ || opToken == KtTokens.EXCLEQ) &&
+            (isEnumClass(bindingContext.getType(left).getConstructor().getDeclarationDescriptor()) ||
+             isEnumClass(bindingContext.getType(right).getConstructor().getDeclarationDescriptor()))) {
+            // Reference equality can be used for enums.
+            return StackValue.cmp(
+                    opToken == KtTokens.EQEQ ? KtTokens.EQEQEQ : KtTokens.EXCLEQEQEQ,
+                    OBJECT_TYPE,
                     genLazyUnlessProvided(pregeneratedLeft, left, leftType),
                     genLazy(right, rightType)
             );
