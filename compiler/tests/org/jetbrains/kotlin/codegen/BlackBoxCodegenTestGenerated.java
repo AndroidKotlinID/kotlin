@@ -2556,6 +2556,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             doTest(fileName);
         }
 
+        @TestMetadata("kt22714.kt")
+        public void testKt22714() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/casts/kt22714.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("lambdaToUnitCast.kt")
         public void testLambdaToUnitCast() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/casts/lambdaToUnitCast.kt");
@@ -6569,6 +6575,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/coroutines/suspendFunctionTypeCall/simple.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("suspendModifier.kt")
+            public void testSuspendModifier() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/coroutines/suspendFunctionTypeCall/suspendModifier.kt");
                 doTest(fileName);
             }
         }
@@ -19183,6 +19195,24 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
     public static class Sam extends AbstractBlackBoxCodegenTest {
         public void testAllFilesPresentInSam() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/sam"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("kt17091.kt")
+        public void testKt17091() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt17091.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt17091_2.kt")
+        public void testKt17091_2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt17091_2.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt17091_3.kt")
+        public void testKt17091_3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt17091_3.kt");
+            doTest(fileName);
         }
 
         @TestMetadata("compiler/testData/codegen/box/sam/constructors")

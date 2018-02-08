@@ -13303,6 +13303,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("notNullVarargOverride.kt")
+                public void testNotNullVarargOverride() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/notNullVarargOverride.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("nullableVarargOverride.kt")
+                public void testNullableVarargOverride() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/nullableVarargOverride.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("overridesDefaultValue.kt")
                 public void testOverridesDefaultValue() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/signatureAnnotations/overridesDefaultValue.kt");
@@ -14440,6 +14452,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("extendExpectedClassWithAbstractMember.kt")
+                public void testExtendExpectedClassWithAbstractMember() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/extendExpectedClassWithAbstractMember.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("extendExpectedClassWithoutExplicitOverrideOfMethod.kt")
                 public void testExtendExpectedClassWithoutExplicitOverrideOfMethod() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/extendExpectedClassWithoutExplicitOverrideOfMethod.kt");
@@ -14449,6 +14467,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("extraHeaderOnMembers.kt")
                 public void testExtraHeaderOnMembers() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/extraHeaderOnMembers.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("functionAndPropertyWithSameName.kt")
+                public void testFunctionAndPropertyWithSameName() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/multiplatform/headerClass/functionAndPropertyWithSameName.kt");
                     doTest(fileName);
                 }
 
