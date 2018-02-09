@@ -182,7 +182,7 @@ public class FunctionCodegen {
         }
 
         boolean hasSpecialBridge = hasSpecialBridgeMethod(functionDescriptor);
-        JvmMethodGenericSignature jvmSignature = typeMapper.mapSignatureWithGeneric(functionDescriptor, contextKind, hasSpecialBridge);
+        JvmMethodGenericSignature jvmSignature = strategy.mapMethodSignature(functionDescriptor, typeMapper, contextKind, hasSpecialBridge);
         Method asmMethod = jvmSignature.getAsmMethod();
 
         int flags = getMethodAsmFlags(functionDescriptor, contextKind, state);
@@ -218,7 +218,9 @@ public class FunctionCodegen {
         generateParameterAnnotations(functionDescriptor, mv, jvmSignature);
         GenerateJava8ParameterNamesKt.generateParameterNames(functionDescriptor, mv, jvmSignature, state, (flags & ACC_SYNTHETIC) != 0);
 
-        generateBridges(functionDescriptor);
+        if (contextKind != OwnerKind.ERASED_INLINE_CLASS) {
+            generateBridges(functionDescriptor);
+        }
 
         if (isJvm8InterfaceWithDefaultsMember(functionDescriptor, state) && contextKind != OwnerKind.DEFAULT_IMPLS && state.getGenerateDefaultImplsForJvm8()) {
             generateDelegateForDefaultImpl(functionDescriptor, origin.getElement());
@@ -241,7 +243,9 @@ public class FunctionCodegen {
                 isClass(containingDeclaration) &&
                 ((ClassDescriptor) containingDeclaration).isInline() &&
                 contextKind != OwnerKind.ERASED_INLINE_CLASS &&
-                functionDescriptor instanceof SimpleFunctionDescriptor;
+                !(functionDescriptor instanceof ConstructorDescriptor) &&
+                !KotlinTypeMapper.isAccessor(functionDescriptor) &&
+                origin.getOriginKind() != JvmDeclarationOriginKind.UNBOX_METHOD_OF_INLINE_CLASS;
 
         if (isOpenSuspendInClass) {
             generateOpenMethodInSuspendClass(
@@ -529,16 +533,18 @@ public class FunctionCodegen {
             @NotNull KotlinTypeMapper typeMapper
     ) {
         ReceiverParameterDescriptor dispatchReceiver = functionDescriptor.getDispatchReceiverParameter();
+        // all functions inside erased version of inline class are static, so they don't have `this` as is,
+        // but functions inside wrapper class should use type of wrapper class, not the underlying type
         if (functionDescriptor instanceof ConstructorDescriptor) {
-            return typeMapper.mapType(functionDescriptor);
+            return typeMapper.mapTypeAsDeclaration(functionDescriptor);
         }
         else if (dispatchReceiver != null) {
-            return typeMapper.mapType(dispatchReceiver.getType());
+            return typeMapper.mapTypeAsDeclaration(dispatchReceiver.getType());
         }
         else if (isFunctionLiteral(functionDescriptor) ||
                  isLocalFunction(functionDescriptor) ||
                  isFunctionExpression(functionDescriptor)) {
-            return typeMapper.mapType(context.getThisDescriptor());
+            return typeMapper.mapClass(context.getThisDescriptor());
         }
         else {
             return null;

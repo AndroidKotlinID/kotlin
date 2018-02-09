@@ -1914,6 +1914,18 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("boxUnboxInlineClassFromMethodReturnType.kt")
+        public void testBoxUnboxInlineClassFromMethodReturnType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/boxUnboxInlineClassFromMethodReturnType.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("boxUnboxInsideLambdaAsLastExpression.kt")
+        public void testBoxUnboxInsideLambdaAsLastExpression() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/boxUnboxInsideLambdaAsLastExpression.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("callMemberMethodsInsideInlineClass.kt")
         public void testCallMemberMethodsInsideInlineClass() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/callMemberMethodsInsideInlineClass.kt");
@@ -1923,6 +1935,48 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("checkOuterInlineFunctionCall.kt")
         public void testCheckOuterInlineFunctionCall() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/checkOuterInlineFunctionCall.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inlineClassBoxingOnAssignment.kt")
+        public void testInlineClassBoxingOnAssignment() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/inlineClassBoxingOnAssignment.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inlineClassBoxingOnFunctionCall.kt")
+        public void testInlineClassBoxingOnFunctionCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/inlineClassBoxingOnFunctionCall.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inlineClassBoxingUnboxingInsideInlinedLambda.kt")
+        public void testInlineClassBoxingUnboxingInsideInlinedLambda() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/inlineClassBoxingUnboxingInsideInlinedLambda.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("inlineClassesUnboxingAfterAssertionOperator.kt")
+        public void testInlineClassesUnboxingAfterAssertionOperator() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/inlineClassesUnboxingAfterAssertionOperator.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("unboxInlineClassAfterElvis.kt")
+        public void testUnboxInlineClassAfterElvis() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/unboxInlineClassAfterElvis.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("unboxInlineClassAfterSafeCall.kt")
+        public void testUnboxInlineClassAfterSafeCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/unboxInlineClassAfterSafeCall.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("unboxInlineClassesAfterSmartCasts.kt")
+        public void testUnboxInlineClassesAfterSmartCasts() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/bytecodeText/inlineClasses/unboxInlineClassesAfterSmartCasts.kt");
             doTest(fileName);
         }
     }

@@ -124,7 +124,8 @@ public class PropertyCodegen {
             @Nullable KtPropertyAccessor getter,
             @Nullable KtPropertyAccessor setter
     ) {
-        assert kind == OwnerKind.PACKAGE || kind == OwnerKind.IMPLEMENTATION || kind == OwnerKind.DEFAULT_IMPLS
+        assert kind == OwnerKind.PACKAGE || kind == OwnerKind.IMPLEMENTATION ||
+               kind == OwnerKind.DEFAULT_IMPLS || kind == OwnerKind.ERASED_INLINE_CLASS
                 : "Generating property with a wrong kind (" + kind + "): " + descriptor;
 
         genBackingFieldAndAnnotations(declaration, descriptor, false);
@@ -315,6 +316,10 @@ public class PropertyCodegen {
             @NotNull Annotations delegateAnnotations
     ) {
         if (isJvmInterface(descriptor.getContainingDeclaration()) || kind == OwnerKind.DEFAULT_IMPLS) {
+            return false;
+        }
+
+        if (kind == OwnerKind.ERASED_INLINE_CLASS) {
             return false;
         }
 
