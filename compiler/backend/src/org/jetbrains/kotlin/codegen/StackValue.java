@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.codegen;
 import com.intellij.psi.tree.IElementType;
 import kotlin.Unit;
 import kotlin.collections.ArraysKt;
+import kotlin.collections.CollectionsKt;
 import kotlin.jvm.functions.Function1;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -150,6 +151,10 @@ public abstract class StackValue {
         return new Local(index, type);
     }
 
+    public static Local local(int index, @NotNull Type type, @Nullable KotlinType kotlinType) {
+        return new Local(index, type, kotlinType);
+    }
+
     @NotNull
     public static Local local(int index, @NotNull Type type, @NotNull VariableDescriptor descriptor) {
         return new Local(index, type, descriptor.getType(), descriptor.isLateInit(), descriptor.getName());
@@ -204,12 +209,17 @@ public abstract class StackValue {
 
     @NotNull
     public static StackValue constant(@Nullable Object value, @NotNull Type type) {
+        return constant(value, type, null);
+    }
+
+    @NotNull
+    public static StackValue constant(@Nullable Object value, @NotNull Type type, @Nullable KotlinType kotlinType) {
         if (type == Type.BOOLEAN_TYPE) {
             assert value instanceof Boolean : "Value for boolean constant should have boolean type: " + value;
             return BranchedValue.Companion.booleanConstant((Boolean) value);
         }
         else {
-            return new Constant(value, type);
+            return new Constant(value, type, kotlinType);
         }
     }
 
@@ -269,19 +279,28 @@ public abstract class StackValue {
     }
 
     @NotNull
-    public static StackValue arrayElement(@NotNull Type type, StackValue array, StackValue index) {
-        return new ArrayElement(type, array, index);
+    public static StackValue arrayElement(@NotNull Type type, @Nullable KotlinType kotlinType, StackValue array, StackValue index) {
+        return new ArrayElement(type, kotlinType, array, index);
     }
 
     @NotNull
     public static StackValue collectionElement(
             CollectionElementReceiver collectionElementReceiver,
             Type type,
+            KotlinType kotlinType,
             ResolvedCall<FunctionDescriptor> getter,
             ResolvedCall<FunctionDescriptor> setter,
             ExpressionCodegen codegen
     ) {
-        return new CollectionElement(collectionElementReceiver, type, getter, setter, codegen);
+        return new CollectionElement(collectionElementReceiver, type, kotlinType, getter, setter, codegen);
+    }
+
+    public static UnderlyingValueOfInlineClass underlyingValueOfInlineClass(
+            @NotNull Type type,
+            @Nullable KotlinType kotlinType,
+            @NotNull StackValue receiver
+    ) {
+        return new UnderlyingValueOfInlineClass(type, kotlinType, receiver);
     }
 
     @NotNull
@@ -380,12 +399,12 @@ public abstract class StackValue {
         );
     }
 
-    private static void unboxInlineClass(@NotNull Type type, @NotNull KotlinType kotlinType, @NotNull InstructionAdapter v) {
-        Type owner = KotlinTypeMapper.mapInlineClassTypeAsDeclaration(kotlinType);
+    private static void unboxInlineClass(@NotNull Type type, @NotNull KotlinType targetInlineClassType, @NotNull InstructionAdapter v) {
+        Type owner = KotlinTypeMapper.mapInlineClassTypeAsDeclaration(targetInlineClassType);
 
         coerce(type, owner, v);
 
-        Type resultType = KotlinTypeMapper.mapUnderlyingTypeOfInlineClassType(kotlinType);
+        Type resultType = KotlinTypeMapper.mapUnderlyingTypeOfInlineClassType(targetInlineClassType);
         v.invokevirtual(
                 owner.getInternalName(),
                 InlineClassDescriptorResolver.UNBOX_METHOD_NAME.asString(),
@@ -421,23 +440,32 @@ public abstract class StackValue {
             @NotNull InstructionAdapter v
     ) {
         if (fromKotlinType == null || toKotlinType == null) return false;
-        if (!InlineClassesUtilsKt.isInlineClassType(fromKotlinType)) return false;
+
+        boolean isFromTypeInlineClass = InlineClassesUtilsKt.isInlineClassType(fromKotlinType);
+        boolean isToTypeInlineClass = InlineClassesUtilsKt.isInlineClassType(toKotlinType);
+
+        if (!isFromTypeInlineClass && !isToTypeInlineClass) return false;
 
         if (fromKotlinType.equals(toKotlinType) && fromType.equals(toType)) return true;
 
-        boolean isFromTypeUnboxed = isUnboxedInlineClass(fromKotlinType, fromType);
-        if (InlineClassesUtilsKt.isInlineClassType(toKotlinType)) {
+        if (isFromTypeInlineClass && isToTypeInlineClass) {
+            boolean isFromTypeUnboxed = isUnboxedInlineClass(fromKotlinType, fromType);
             boolean isToTypeUnboxed = isUnboxedInlineClass(toKotlinType, toType);
             if (isFromTypeUnboxed && !isToTypeUnboxed) {
                 boxInlineClass(fromKotlinType, v);
             }
-            else if (!isFromTypeUnboxed) {
-                unboxInlineClass(fromType, fromKotlinType, v);
+            else if (!isFromTypeUnboxed && isToTypeUnboxed) {
+                unboxInlineClass(fromType, toKotlinType, v);
             }
         }
-        else {
-            if (isFromTypeUnboxed) {
+        else if (isFromTypeInlineClass) {
+            if (isUnboxedInlineClass(fromKotlinType, fromType)) {
                 boxInlineClass(fromKotlinType, v);
+            }
+        }
+        else { // isToTypeInlineClass is `true`
+            if (isUnboxedInlineClass(toKotlinType, toType)) {
+                unboxInlineClass(fromType, toKotlinType, v);
             }
         }
 
@@ -566,11 +594,22 @@ public abstract class StackValue {
         return new FieldForSharedVar(field.type, field.owner, field.name, newSharedVarReceiver, field.isLateinit, field.variableName);
     }
 
-    public static StackValue coercion(@NotNull StackValue value, @NotNull Type castType) {
-        if (value.type.equals(castType)) {
+    public static StackValue coercion(@NotNull StackValue value, @NotNull Type castType, @Nullable KotlinType castKotlinType) {
+        return coercionValueForArgumentOfInlineClassConstructor(value, castType, castKotlinType, null);
+    }
+
+    public static StackValue coercionValueForArgumentOfInlineClassConstructor(
+            @NotNull StackValue value,
+            @NotNull Type castType,
+            @Nullable KotlinType castKotlinType,
+            @Nullable KotlinType underlyingKotlinType
+    ) {
+        boolean kotlinTypesAreEqual = value.kotlinType == null && castKotlinType == null ||
+                                      value.kotlinType != null && castKotlinType != null && castKotlinType.equals(value.kotlinType);
+        if (value.type.equals(castType) && kotlinTypesAreEqual) {
             return value;
         }
-        return new CoercionValue(value, castType);
+        return new CoercionValue(value, castType, castKotlinType, underlyingKotlinType);
     }
 
     @NotNull
@@ -683,7 +722,7 @@ public abstract class StackValue {
     private static StackValue platformStaticCallIfPresent(@NotNull StackValue resultReceiver, @NotNull CallableDescriptor descriptor) {
         if (CodegenUtilKt.isJvmStaticInObjectOrClassOrInterface(descriptor)) {
             if (resultReceiver.canHaveSideEffects()) {
-                return coercion(resultReceiver, Type.VOID_TYPE);
+                return coercion(resultReceiver, Type.VOID_TYPE, null);
             }
             else {
                 return none();
@@ -774,6 +813,10 @@ public abstract class StackValue {
 
         private Local(int index, Type type) {
             this(index, type, null, false, null);
+        }
+
+        private Local(int index, Type type, KotlinType kotlinType) {
+            this(index, type, kotlinType, false, null);
         }
 
         @Override
@@ -925,8 +968,8 @@ public abstract class StackValue {
         @Nullable
         public final Object value;
 
-        public Constant(@Nullable Object value, Type type) {
-            super(type, false);
+        public Constant(@Nullable Object value, Type type, KotlinType kotlinType) {
+            super(type, kotlinType, false);
             assert !Type.BOOLEAN_TYPE.equals(type) : "Boolean constants should be created via 'StackValue.constant'";
             this.value = value;
         }
@@ -961,8 +1004,8 @@ public abstract class StackValue {
     private static class ArrayElement extends StackValueWithSimpleReceiver {
         private final Type type;
 
-        public ArrayElement(Type type, StackValue array, StackValue index) {
-            super(type, null, false, false, new Receiver(Type.LONG_TYPE, array, index), true);
+        public ArrayElement(Type type, KotlinType kotlinType, StackValue array, StackValue index) {
+            super(type, kotlinType, false, false, new Receiver(Type.LONG_TYPE, array, index), true);
             this.type = type;
         }
 
@@ -982,6 +1025,24 @@ public abstract class StackValue {
                 @NotNull Type type, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v
         ) {
             v.aload(this.type);    // assumes array and index are on the stack
+            coerceTo(type, kotlinType, v);
+        }
+    }
+
+    public static class UnderlyingValueOfInlineClass extends StackValueWithSimpleReceiver {
+
+        public UnderlyingValueOfInlineClass(
+                @NotNull Type type,
+                @Nullable KotlinType kotlinType,
+                @NotNull StackValue receiver
+        ) {
+            super(type, kotlinType, false, false, receiver, true);
+        }
+
+        @Override
+        public void putSelector(
+                @NotNull Type type, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v
+        ) {
             coerceTo(type, kotlinType, v);
         }
     }
@@ -1151,11 +1212,12 @@ public abstract class StackValue {
         public CollectionElement(
                 @NotNull CollectionElementReceiver collectionElementReceiver,
                 @NotNull Type type,
+                @Nullable KotlinType kotlinType,
                 @Nullable ResolvedCall<FunctionDescriptor> resolvedGetCall,
                 @Nullable ResolvedCall<FunctionDescriptor> resolvedSetCall,
                 @NotNull ExpressionCodegen codegen
         ) {
-            super(type, null, false, false, collectionElementReceiver, true);
+            super(type, kotlinType, false, false, collectionElementReceiver, true);
             this.resolvedGetCall = resolvedGetCall;
             this.resolvedSetCall = resolvedSetCall;
             this.setter = resolvedSetCall == null ? null :
@@ -1230,15 +1292,21 @@ public abstract class StackValue {
         }
 
         @Override
-        public void storeSelector(@NotNull Type topOfStackType, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v) {
+        public void storeSelector(@NotNull Type topOfStackType, @Nullable KotlinType topOfStackKotlinType, @NotNull InstructionAdapter v) {
             if (setter == null) {
                 throw new UnsupportedOperationException("no setter specified");
             }
 
             Type lastParameterType = ArraysKt.last(setter.getParameterTypes());
-            coerce(topOfStackType, lastParameterType, v);
+            KotlinType lastParameterKotlinType =
+                    CollectionsKt.last(resolvedSetCall.getResultingDescriptor().getValueParameters()).getType();
 
-            getCallGenerator().putValueIfNeeded(lastParameterType, StackValue.onStack(lastParameterType));
+            coerce(topOfStackType, topOfStackKotlinType, lastParameterType, lastParameterKotlinType, v);
+
+            getCallGenerator().putValueIfNeeded(
+                    new JvmKotlinType(lastParameterType, lastParameterKotlinType),
+                    StackValue.onStack(lastParameterType, lastParameterKotlinType)
+            );
 
             //Convention setter couldn't have default parameters, just getter can have it at last positions
             //We should remove default parameters of getter from stack*/
@@ -1425,7 +1493,7 @@ public abstract class StackValue {
                     putReceiver(v, false);
                 }
                 callGenerator.processAndPutHiddenParameters(true);
-                callGenerator.putValueIfNeeded(rightSide.type, rightSide);
+                callGenerator.putValueIfNeeded(new JvmKotlinType(rightSide.type, rightSide.kotlinType), rightSide);
                 callGenerator.putHiddenParamsIntoLocals();
                 callGenerator.genCall(setter, resolvedCall, false, codegen);
             }
@@ -1490,14 +1558,14 @@ public abstract class StackValue {
         private final ExpressionCodegen generator;
 
         public Expression(Type type, KtExpression expression, ExpressionCodegen generator) {
-            super(type);
+            super(type, generator.kotlinType(expression));
             this.expression = expression;
             this.generator = generator;
         }
 
         @Override
         public void putSelector(@NotNull Type type, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v) {
-            generator.gen(expression, type);
+            generator.gen(expression, type, kotlinType);
         }
     }
 

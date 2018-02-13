@@ -10917,6 +10917,36 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("asComparableToDouble.kt")
+        public void testAsComparableToDouble() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/asComparableToDouble.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("asComparableToDouble_properIeeeComparisons.kt")
+        public void testAsComparableToDouble_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/asComparableToDouble_properIeeeComparisons.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("comparableToTWithT_properIeeeComparisons.kt")
+        public void testComparableToTWithT_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/comparableToTWithT_properIeeeComparisons.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("comparableTypeCast.kt")
         public void testComparableTypeCast() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/comparableTypeCast.kt");
@@ -11049,6 +11079,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("nullableDoubleEqualsLV13.kt")
+        public void testNullableDoubleEqualsLV13() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/nullableDoubleEqualsLV13.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("nullableDoubleNotEquals.kt")
         public void testNullableDoubleNotEquals() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/nullableDoubleNotEquals.kt");
@@ -11103,6 +11139,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
         }
 
+        @TestMetadata("smartCastOnWhenSubjectAfterCheckInBranch_properIeeeComparisons.kt")
+        public void testSmartCastOnWhenSubjectAfterCheckInBranch_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastOnWhenSubjectAfterCheckInBranch_properIeeeComparisons.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("smartCastToDifferentTypes.kt")
         public void testSmartCastToDifferentTypes() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastToDifferentTypes.kt");
@@ -11113,6 +11155,42 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 return;
             }
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("smartCastToDifferentTypesWithNumericPromotion.kt")
+        public void testSmartCastToDifferentTypesWithNumericPromotion() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastToDifferentTypesWithNumericPromotion.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("smartCastToDifferentTypesWithNumericPromotion_properIeeeComparisons.kt")
+        public void testSmartCastToDifferentTypesWithNumericPromotion_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastToDifferentTypesWithNumericPromotion_properIeeeComparisons.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("smartCastToDifferentTypes_properIeeeComparisons.kt")
+        public void testSmartCastToDifferentTypes_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastToDifferentTypes_properIeeeComparisons.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("smartCastToDoubleAndComparableToDouble.kt")
+        public void testSmartCastToDoubleAndComparableToDouble() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/smartCastToDoubleAndComparableToDouble.kt");
+            doTest(fileName);
         }
 
         @TestMetadata("when.kt")
@@ -11295,15 +11373,39 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
         }
 
+        @TestMetadata("boxUnboxInlineClassesWithOperatorsGetSet.kt")
+        public void testBoxUnboxInlineClassesWithOperatorsGetSet() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/boxUnboxInlineClassesWithOperatorsGetSet.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("boxUnboxOfInlineClassForCapturedVars.kt")
         public void testBoxUnboxOfInlineClassForCapturedVars() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/boxUnboxOfInlineClassForCapturedVars.kt");
             doTest(fileName);
         }
 
+        @TestMetadata("callComputablePropertyInsideInlineClass.kt")
+        public void testCallComputablePropertyInsideInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/callComputablePropertyInsideInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("checkBoxUnboxOfArgumentsOnInlinedFunctions.kt")
+        public void testCheckBoxUnboxOfArgumentsOnInlinedFunctions() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkBoxUnboxOfArgumentsOnInlinedFunctions.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("checkBoxingAfterAssertionOperator.kt")
         public void testCheckBoxingAfterAssertionOperator() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkBoxingAfterAssertionOperator.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("checkBoxingForNonLocalAndLabeledReturns.kt")
+        public void testCheckBoxingForNonLocalAndLabeledReturns() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkBoxingForNonLocalAndLabeledReturns.kt");
             doTest(fileName);
         }
 
@@ -11331,9 +11433,33 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("checkCastToInlineClass.kt")
+        public void testCheckCastToInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkCastToInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("checkForInstanceOfInlineClass.kt")
+        public void testCheckForInstanceOfInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkForInstanceOfInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("checkLambdaWithInlineClassesInFunctionalType.kt")
+        public void testCheckLambdaWithInlineClassesInFunctionalType() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/checkLambdaWithInlineClassesInFunctionalType.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("computablePropertyInsideInlineClass.kt")
         public void testComputablePropertyInsideInlineClass() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/computablePropertyInsideInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("createInlineClassInArgumentPosition.kt")
+        public void testCreateInlineClassInArgumentPosition() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/createInlineClassInArgumentPosition.kt");
             doTest(fileName);
         }
 
@@ -11349,9 +11475,39 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("passInlineClassAsVararg.kt")
+        public void testPassInlineClassAsVararg() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/passInlineClassAsVararg.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("passInlineClassWithSpreadOperatorToVarargs.kt")
+        public void testPassInlineClassWithSpreadOperatorToVarargs() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/passInlineClassWithSpreadOperatorToVarargs.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("referToPropertyInCompanionObjectOfInlineClass.kt")
         public void testReferToPropertyInCompanionObjectOfInlineClass() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/referToPropertyInCompanionObjectOfInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("referToUnderlyingPropertyInsideInlineClass.kt")
+        public void testReferToUnderlyingPropertyInsideInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/referToUnderlyingPropertyInsideInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("referToUnderlyingPropertyOfInlineClass.kt")
+        public void testReferToUnderlyingPropertyOfInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/referToUnderlyingPropertyOfInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("UIntArraySortExample.kt")
+        public void testUIntArraySortExample() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/UIntArraySortExample.kt");
             doTest(fileName);
         }
 
@@ -11364,6 +11520,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("useInlineFunctionInsideInlineClass.kt")
         public void testUseInlineFunctionInsideInlineClass() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/useInlineFunctionInsideInlineClass.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("useThisInsideInlineClass.kt")
+        public void testUseThisInsideInlineClass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/inlineClasses/useThisInsideInlineClass.kt");
             doTest(fileName);
         }
     }
@@ -25248,6 +25410,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("switchOptimizationMultipleConditions.kt")
         public void testSwitchOptimizationMultipleConditions() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/when/switchOptimizationMultipleConditions.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("switchOptimizationSingleStatementCase.kt")
+        public void testSwitchOptimizationSingleStatementCase() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/when/switchOptimizationSingleStatementCase.kt");
             doTest(fileName);
         }
 

@@ -239,20 +239,12 @@ public class FunctionCodegen {
                 !(containingDeclaration instanceof PackageFragmentDescriptor) &&
                 origin.getOriginKind() != JvmDeclarationOriginKind.CLASS_MEMBER_DELEGATION_TO_DEFAULT_IMPL;
 
-        boolean isMethodInInlineClassWrapper =
-                isClass(containingDeclaration) &&
-                ((ClassDescriptor) containingDeclaration).isInline() &&
-                contextKind != OwnerKind.ERASED_INLINE_CLASS &&
-                !(functionDescriptor instanceof ConstructorDescriptor) &&
-                !KotlinTypeMapper.isAccessor(functionDescriptor) &&
-                origin.getOriginKind() != JvmDeclarationOriginKind.UNBOX_METHOD_OF_INLINE_CLASS;
-
         if (isOpenSuspendInClass) {
             generateOpenMethodInSuspendClass(
                     origin, functionDescriptor, methodContext, strategy, mv, jvmSignature, asmMethod, flags, staticInCompanionObject
             );
         }
-        else if (isMethodInInlineClassWrapper) {
+        else if (shouldDelegateMethodBodyToInlineClass(origin, functionDescriptor, contextKind, containingDeclaration, bindingContext)) {
             generateMethodInsideInlineClassWrapper(origin, functionDescriptor, (ClassDescriptor) containingDeclaration, mv);
         }
         else {
@@ -260,6 +252,34 @@ public class FunctionCodegen {
                     origin, functionDescriptor, methodContext, strategy, mv, jvmSignature, staticInCompanionObject
             );
         }
+    }
+
+    private static boolean shouldDelegateMethodBodyToInlineClass(
+            @NotNull JvmDeclarationOrigin origin,
+            @NotNull FunctionDescriptor functionDescriptor,
+            @NotNull OwnerKind contextKind,
+            @NotNull DeclarationDescriptor containingDeclaration,
+            @NotNull BindingContext bindingContext
+    ) {
+        // special kind / function
+        if (contextKind == OwnerKind.ERASED_INLINE_CLASS) return false;
+        if (origin.getOriginKind() == JvmDeclarationOriginKind.UNBOX_METHOD_OF_INLINE_CLASS) return false;
+
+        // descriptor corresponds to the underlying value
+        if (functionDescriptor instanceof PropertyAccessorDescriptor) {
+            PropertyDescriptor property = ((PropertyAccessorDescriptor) functionDescriptor).getCorrespondingProperty();
+            // property for the underlying value
+            if (JvmCodegenUtil.hasBackingField(property, contextKind, bindingContext)) {
+                return false;
+            }
+        }
+
+        // base check
+        boolean isInlineClass = isClass(containingDeclaration) && ((ClassDescriptor) containingDeclaration).isInline();
+        boolean simpleFunctionOrProperty =
+                !(functionDescriptor instanceof ConstructorDescriptor) && !KotlinTypeMapper.isAccessor(functionDescriptor);
+
+        return isInlineClass && simpleFunctionOrProperty;
     }
 
     private void generateMethodInsideInlineClassWrapper(
@@ -1172,7 +1192,7 @@ public class FunctionCodegen {
             ValueParameterDescriptor parameterDescriptor = valueParameters.get(index);
             Type type = mappedParameters.get(capturedArgumentsCount + index).getAsmType();
             int parameterIndex = frameMap.getIndex(parameterDescriptor);
-            generator.putValueIfNeeded(type, StackValue.local(parameterIndex, type));
+            generator.putValueIfNeeded(new JvmKotlinType(type, null), StackValue.local(parameterIndex, type));
         }
 
         CallableMethod method = state.getTypeMapper().mapToCallableMethod(functionDescriptor, false);
@@ -1244,14 +1264,14 @@ public class FunctionCodegen {
     ) {
         int var = 0;
         if (!isStatic) {
-            callGenerator.putValueIfNeeded(ownerType, StackValue.local(var, ownerType));
+            callGenerator.putValueIfNeeded(new JvmKotlinType(ownerType, null), StackValue.local(var, ownerType));
             var += ownerType.getSize();
         }
 
         for (JvmMethodParameterSignature parameterSignature : signature.getValueParameters()) {
             if (parameterSignature.getKind() != JvmMethodParameterKind.VALUE) {
                 Type type = parameterSignature.getAsmType();
-                callGenerator.putValueIfNeeded(type, StackValue.local(var, type));
+                callGenerator.putValueIfNeeded(new JvmKotlinType(type, null), StackValue.local(var, type));
                 var += type.getSize();
             }
         }

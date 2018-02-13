@@ -7141,6 +7141,48 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         }
     }
 
+    @TestMetadata("idea/testData/intentions/convertUnsafeCastCallToUnsafeCast")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConvertUnsafeCastCallToUnsafeCast extends AbstractIntentionTest {
+        public void testAllFilesPresentInConvertUnsafeCastCallToUnsafeCast() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/convertUnsafeCastCallToUnsafeCast"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("call.kt")
+        public void testCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertUnsafeCastCallToUnsafeCast/call.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("safeCall.kt")
+        public void testSafeCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertUnsafeCastCallToUnsafeCast/safeCall.kt");
+            doTest(fileName);
+        }
+    }
+
+    @TestMetadata("idea/testData/intentions/convertUnsafeCastToUnsafeCastCall")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConvertUnsafeCastToUnsafeCastCall extends AbstractIntentionTest {
+        public void testAllFilesPresentInConvertUnsafeCastToUnsafeCastCall() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/convertUnsafeCastToUnsafeCastCall"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("cast.kt")
+        public void testCast() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertUnsafeCastToUnsafeCastCall/cast.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("safeCast.kt")
+        public void testSafeCast() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/convertUnsafeCastToUnsafeCastCall/safeCast.kt");
+            doTest(fileName);
+        }
+    }
+
     @TestMetadata("idea/testData/intentions/copyConcatenatedStringToClipboard")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -9348,6 +9390,18 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("capturedInitialization.kt")
         public void testCapturedInitialization() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/joinDeclarationAndAssignment/capturedInitialization.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("caretOnHeadComment.kt")
+        public void testCaretOnHeadComment() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/joinDeclarationAndAssignment/caretOnHeadComment.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("caretOnTailComment.kt")
+        public void testCaretOnTailComment() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/joinDeclarationAndAssignment/caretOnTailComment.kt");
             doTest(fileName);
         }
 
@@ -14670,6 +14724,12 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest(fileName);
         }
 
+        @TestMetadata("cursorOnRightBrace.kt")
+        public void testCursorOnRightBrace() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyExplicitLambdaSignature/cursorOnRightBrace.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("delegate.kt")
         public void testDelegate() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyExplicitLambdaSignature/delegate.kt");
@@ -14703,12 +14763,6 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("emptyParamListWithoutItWithArrow.kt")
         public void testEmptyParamListWithoutItWithArrow() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyExplicitLambdaSignature/emptyParamListWithoutItWithArrow.kt");
-            doTest(fileName);
-        }
-
-        @TestMetadata("invalidCursorPosition.kt")
-        public void testInvalidCursorPosition() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/intentions/specifyExplicitLambdaSignature/invalidCursorPosition.kt");
             doTest(fileName);
         }
 
