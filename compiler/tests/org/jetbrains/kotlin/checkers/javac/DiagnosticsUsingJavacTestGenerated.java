@@ -10562,6 +10562,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 doTest(fileName);
             }
 
+            @TestMetadata("reportAboutUnresolvedReferenceAsUnresolved.kt")
+            public void testReportAboutUnresolvedReferenceAsUnresolved() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportAboutUnresolvedReferenceAsUnresolved.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("tryNumberLowerBoundsBeforeUpperBounds.kt")
             public void testTryNumberLowerBoundsBeforeUpperBounds() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/tryNumberLowerBoundsBeforeUpperBounds.kt");
@@ -11356,6 +11362,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("NoAmbiguityForDifferentFunctionTypes.kt")
                 public void testNoAmbiguityForDifferentFunctionTypes() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/NoAmbiguityForDifferentFunctionTypes.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("reportUnresolvedReferenceWrongReceiverForManyCandidates.kt")
+                public void testReportUnresolvedReferenceWrongReceiverForManyCandidates() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/reportingImprovements/reportUnresolvedReferenceWrongReceiverForManyCandidates.kt");
                     doTest(fileName);
                 }
 
