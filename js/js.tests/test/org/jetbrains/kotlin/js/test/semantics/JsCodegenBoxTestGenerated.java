@@ -5334,6 +5334,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             doTest(fileName);
         }
 
+        @TestMetadata("kt17110.kt")
+        public void testKt17110() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/controlStructures/kt17110.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("kt1742.kt")
         public void testKt1742() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/controlStructures/kt1742.kt");
@@ -5715,6 +5721,18 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         public static class ForInArray extends AbstractJsCodegenBoxTest {
             public void testAllFilesPresentInForInArray() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/controlStructures/forInArray"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("forInArraySpecializedToUntil.kt")
+            public void testForInArraySpecializedToUntil() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/controlStructures/forInArray/forInArraySpecializedToUntil.kt");
+                try {
+                    doTest(fileName);
+                }
+                catch (Throwable ignore) {
+                    return;
+                }
+                throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
             }
 
             @TestMetadata("forInArrayWithArrayPropertyUpdatedInLoopBody.kt")
@@ -10968,30 +10986,90 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("equalsDouble.kt")
         public void testEqualsDouble() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsDouble.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("equalsDouble_properIeeeComparisons.kt")
+        public void testEqualsDouble_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsDouble_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("equalsFloat.kt")
         public void testEqualsFloat() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsFloat.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("equalsFloat_properIeeeComparisons.kt")
+        public void testEqualsFloat_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsFloat_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("equalsNaN.kt")
         public void testEqualsNaN() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNaN.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("equalsNaN_properIeeeComparisons.kt")
+        public void testEqualsNaN_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNaN_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("equalsNullableDouble.kt")
         public void testEqualsNullableDouble() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNullableDouble.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("equalsNullableDouble_properIeeeComparisons.kt")
+        public void testEqualsNullableDouble_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNullableDouble_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("equalsNullableFloat.kt")
         public void testEqualsNullableFloat() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNullableFloat.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("equalsNullableFloat_properIeeeComparisons.kt")
+        public void testEqualsNullableFloat_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/equalsNullableFloat_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
@@ -11028,12 +11106,36 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("greaterDouble.kt")
         public void testGreaterDouble() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/greaterDouble.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("greaterDouble_properIeeeComparisons.kt")
+        public void testGreaterDouble_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/greaterDouble_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("greaterFloat.kt")
         public void testGreaterFloat() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/greaterFloat.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("greaterFloat_properIeeeComparisons.kt")
+        public void testGreaterFloat_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/greaterFloat_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
@@ -11052,12 +11154,36 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("lessDouble.kt")
         public void testLessDouble() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/lessDouble.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("lessDouble_properIeeeComparisons.kt")
+        public void testLessDouble_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/lessDouble_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("lessFloat.kt")
         public void testLessFloat() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/lessFloat.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("lessFloat_properIeeeComparisons.kt")
+        public void testLessFloat_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/lessFloat_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
@@ -11196,18 +11322,48 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("when.kt")
         public void testWhen() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/when.kt");
-            doTest(fileName);
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
         }
 
         @TestMetadata("when10.kt")
         public void testWhen10() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/when10.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("when10_properIeeeComparisons.kt")
+        public void testWhen10_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/when10_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
         @TestMetadata("whenNoSubject.kt")
         public void testWhenNoSubject() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/whenNoSubject.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("whenNoSubject_properIeeeComparisons.kt")
+        public void testWhenNoSubject_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/whenNoSubject_properIeeeComparisons.kt");
             doTest(fileName);
         }
 
@@ -11220,6 +11376,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("whenNullableSmartCast10.kt")
         public void testWhenNullableSmartCast10() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/whenNullableSmartCast10.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("when_properIeeeComparisons.kt")
+        public void testWhen_properIeeeComparisons() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/ieee754/when_properIeeeComparisons.kt");
             doTest(fileName);
         }
     }

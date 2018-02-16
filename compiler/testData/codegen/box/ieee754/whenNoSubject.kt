@@ -1,3 +1,6 @@
+// !LANGUAGE: -ProperIeee754Comparisons
+// IGNORE_BACKEND: JS
+
 fun box(): String {
     val plusZero: Any = 0.0
     val minusZero: Any = -0.0
@@ -7,18 +10,18 @@ fun box(): String {
                 return "fail 1"
             }
 
-            plusZero > minusZero -> {
-                return "fail 2"
-            }
+            plusZero > minusZero -> {}
             else -> {
+                return "fail 2"
             }
         }
 
 
         when {
             plusZero == minusZero -> {
+                return "fail 3"
             }
-            else -> return "fail 3"
+            else -> {}
         }
     }
 
