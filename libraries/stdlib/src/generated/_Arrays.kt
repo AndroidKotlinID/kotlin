@@ -8020,70 +8020,70 @@ public fun CharArray.toSet(): Set<Char> {
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun <T: Comparable<T>> Array<out T>.toSortedSet(): java.util.SortedSet<T> {
     return toCollection(java.util.TreeSet<T>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun ByteArray.toSortedSet(): java.util.SortedSet<Byte> {
     return toCollection(java.util.TreeSet<Byte>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun ShortArray.toSortedSet(): java.util.SortedSet<Short> {
     return toCollection(java.util.TreeSet<Short>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun IntArray.toSortedSet(): java.util.SortedSet<Int> {
     return toCollection(java.util.TreeSet<Int>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun LongArray.toSortedSet(): java.util.SortedSet<Long> {
     return toCollection(java.util.TreeSet<Long>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun FloatArray.toSortedSet(): java.util.SortedSet<Float> {
     return toCollection(java.util.TreeSet<Float>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun DoubleArray.toSortedSet(): java.util.SortedSet<Double> {
     return toCollection(java.util.TreeSet<Double>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun BooleanArray.toSortedSet(): java.util.SortedSet<Boolean> {
     return toCollection(java.util.TreeSet<Boolean>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  */
 public fun CharArray.toSortedSet(): java.util.SortedSet<Char> {
     return toCollection(java.util.TreeSet<Char>())
 }
 
 /**
- * Returns a [SortedSet] of all elements.
+ * Returns a [SortedSet][java.util.SortedSet] of all elements.
  * 
  * Elements in the set returned are sorted according to the given [comparator].
  */
@@ -9927,6 +9927,8 @@ public infix fun CharArray.union(other: Iterable<Char>): Set<Char> {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun <T> Array<out T>.all(predicate: (T) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9935,6 +9937,8 @@ public inline fun <T> Array<out T>.all(predicate: (T) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun ByteArray.all(predicate: (Byte) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9943,6 +9947,8 @@ public inline fun ByteArray.all(predicate: (Byte) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun ShortArray.all(predicate: (Short) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9951,6 +9957,8 @@ public inline fun ShortArray.all(predicate: (Short) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun IntArray.all(predicate: (Int) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9959,6 +9967,8 @@ public inline fun IntArray.all(predicate: (Int) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun LongArray.all(predicate: (Long) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9967,6 +9977,8 @@ public inline fun LongArray.all(predicate: (Long) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun FloatArray.all(predicate: (Float) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9975,6 +9987,8 @@ public inline fun FloatArray.all(predicate: (Float) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun DoubleArray.all(predicate: (Double) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9983,6 +9997,8 @@ public inline fun DoubleArray.all(predicate: (Double) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun BooleanArray.all(predicate: (Boolean) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9991,6 +10007,8 @@ public inline fun BooleanArray.all(predicate: (Boolean) -> Boolean): Boolean {
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public inline fun CharArray.all(predicate: (Char) -> Boolean): Boolean {
     for (element in this) if (!predicate(element)) return false
@@ -9999,6 +10017,8 @@ public inline fun CharArray.all(predicate: (Char) -> Boolean): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun <T> Array<out T>.any(): Boolean {
     return !isEmpty()
@@ -10006,6 +10026,8 @@ public fun <T> Array<out T>.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun ByteArray.any(): Boolean {
     return !isEmpty()
@@ -10013,6 +10035,8 @@ public fun ByteArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun ShortArray.any(): Boolean {
     return !isEmpty()
@@ -10020,6 +10044,8 @@ public fun ShortArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun IntArray.any(): Boolean {
     return !isEmpty()
@@ -10027,6 +10053,8 @@ public fun IntArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun LongArray.any(): Boolean {
     return !isEmpty()
@@ -10034,6 +10062,8 @@ public fun LongArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun FloatArray.any(): Boolean {
     return !isEmpty()
@@ -10041,6 +10071,8 @@ public fun FloatArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun DoubleArray.any(): Boolean {
     return !isEmpty()
@@ -10048,6 +10080,8 @@ public fun DoubleArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun BooleanArray.any(): Boolean {
     return !isEmpty()
@@ -10055,6 +10089,8 @@ public fun BooleanArray.any(): Boolean {
 
 /**
  * Returns `true` if array has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public fun CharArray.any(): Boolean {
     return !isEmpty()
@@ -10062,6 +10098,8 @@ public fun CharArray.any(): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun <T> Array<out T>.any(predicate: (T) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10070,6 +10108,8 @@ public inline fun <T> Array<out T>.any(predicate: (T) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun ByteArray.any(predicate: (Byte) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10078,6 +10118,8 @@ public inline fun ByteArray.any(predicate: (Byte) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun ShortArray.any(predicate: (Short) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10086,6 +10128,8 @@ public inline fun ShortArray.any(predicate: (Short) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun IntArray.any(predicate: (Int) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10094,6 +10138,8 @@ public inline fun IntArray.any(predicate: (Int) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun LongArray.any(predicate: (Long) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10102,6 +10148,8 @@ public inline fun LongArray.any(predicate: (Long) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun FloatArray.any(predicate: (Float) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10110,6 +10158,8 @@ public inline fun FloatArray.any(predicate: (Float) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun DoubleArray.any(predicate: (Double) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10118,6 +10168,8 @@ public inline fun DoubleArray.any(predicate: (Double) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun BooleanArray.any(predicate: (Boolean) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -10126,6 +10178,8 @@ public inline fun BooleanArray.any(predicate: (Boolean) -> Boolean): Boolean {
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public inline fun CharArray.any(predicate: (Char) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return true
@@ -11744,6 +11798,8 @@ public fun CharArray.minWith(comparator: Comparator<in Char>): Char? {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun <T> Array<out T>.none(): Boolean {
     return isEmpty()
@@ -11751,6 +11807,8 @@ public fun <T> Array<out T>.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun ByteArray.none(): Boolean {
     return isEmpty()
@@ -11758,6 +11816,8 @@ public fun ByteArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun ShortArray.none(): Boolean {
     return isEmpty()
@@ -11765,6 +11825,8 @@ public fun ShortArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun IntArray.none(): Boolean {
     return isEmpty()
@@ -11772,6 +11834,8 @@ public fun IntArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun LongArray.none(): Boolean {
     return isEmpty()
@@ -11779,6 +11843,8 @@ public fun LongArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun FloatArray.none(): Boolean {
     return isEmpty()
@@ -11786,6 +11852,8 @@ public fun FloatArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun DoubleArray.none(): Boolean {
     return isEmpty()
@@ -11793,6 +11861,8 @@ public fun DoubleArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun BooleanArray.none(): Boolean {
     return isEmpty()
@@ -11800,6 +11870,8 @@ public fun BooleanArray.none(): Boolean {
 
 /**
  * Returns `true` if the array has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public fun CharArray.none(): Boolean {
     return isEmpty()
@@ -11807,6 +11879,8 @@ public fun CharArray.none(): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun <T> Array<out T>.none(predicate: (T) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11815,6 +11889,8 @@ public inline fun <T> Array<out T>.none(predicate: (T) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun ByteArray.none(predicate: (Byte) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11823,6 +11899,8 @@ public inline fun ByteArray.none(predicate: (Byte) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun ShortArray.none(predicate: (Short) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11831,6 +11909,8 @@ public inline fun ShortArray.none(predicate: (Short) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun IntArray.none(predicate: (Int) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11839,6 +11919,8 @@ public inline fun IntArray.none(predicate: (Int) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun LongArray.none(predicate: (Long) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11847,6 +11929,8 @@ public inline fun LongArray.none(predicate: (Long) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun FloatArray.none(predicate: (Float) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11855,6 +11939,8 @@ public inline fun FloatArray.none(predicate: (Float) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun DoubleArray.none(predicate: (Double) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11863,6 +11949,8 @@ public inline fun DoubleArray.none(predicate: (Double) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun BooleanArray.none(predicate: (Boolean) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -11871,6 +11959,8 @@ public inline fun BooleanArray.none(predicate: (Boolean) -> Boolean): Boolean {
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public inline fun CharArray.none(predicate: (Char) -> Boolean): Boolean {
     for (element in this) if (predicate(element)) return false
@@ -13298,6 +13388,8 @@ public inline fun <V> CharArray.zip(other: CharArray, transform: (a: Char, b: Ch
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <T, A : Appendable> Array<out T>.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((T) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13318,6 +13410,8 @@ public fun <T, A : Appendable> Array<out T>.joinTo(buffer: A, separator: CharSeq
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> ByteArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Byte) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13341,6 +13435,8 @@ public fun <A : Appendable> ByteArray.joinTo(buffer: A, separator: CharSequence 
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> ShortArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Short) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13364,6 +13460,8 @@ public fun <A : Appendable> ShortArray.joinTo(buffer: A, separator: CharSequence
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> IntArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Int) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13387,6 +13485,8 @@ public fun <A : Appendable> IntArray.joinTo(buffer: A, separator: CharSequence =
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> LongArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Long) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13410,6 +13510,8 @@ public fun <A : Appendable> LongArray.joinTo(buffer: A, separator: CharSequence 
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> FloatArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Float) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13433,6 +13535,8 @@ public fun <A : Appendable> FloatArray.joinTo(buffer: A, separator: CharSequence
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> DoubleArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Double) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13456,6 +13560,8 @@ public fun <A : Appendable> DoubleArray.joinTo(buffer: A, separator: CharSequenc
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> BooleanArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Boolean) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13479,6 +13585,8 @@ public fun <A : Appendable> BooleanArray.joinTo(buffer: A, separator: CharSequen
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <A : Appendable> CharArray.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Char) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -13502,6 +13610,8 @@ public fun <A : Appendable> CharArray.joinTo(buffer: A, separator: CharSequence 
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ *
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun <T> Array<out T>.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((T) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13512,6 +13622,8 @@ public fun <T> Array<out T>.joinToString(separator: CharSequence = ", ", prefix:
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ *
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun ByteArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Byte) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13522,6 +13634,8 @@ public fun ByteArray.joinToString(separator: CharSequence = ", ", prefix: CharSe
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun ShortArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Short) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13532,6 +13646,8 @@ public fun ShortArray.joinToString(separator: CharSequence = ", ", prefix: CharS
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ *
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun IntArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Int) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13542,6 +13658,8 @@ public fun IntArray.joinToString(separator: CharSequence = ", ", prefix: CharSeq
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun LongArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Long) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13552,6 +13670,8 @@ public fun LongArray.joinToString(separator: CharSequence = ", ", prefix: CharSe
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun FloatArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Float) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13562,6 +13682,8 @@ public fun FloatArray.joinToString(separator: CharSequence = ", ", prefix: CharS
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun DoubleArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Double) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13572,6 +13694,8 @@ public fun DoubleArray.joinToString(separator: CharSequence = ", ", prefix: Char
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun BooleanArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Boolean) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()
@@ -13582,6 +13706,8 @@ public fun BooleanArray.joinToString(separator: CharSequence = ", ", prefix: Cha
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun CharArray.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((Char) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()

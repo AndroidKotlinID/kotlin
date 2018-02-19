@@ -706,16 +706,22 @@ public expect infix fun <T> Iterable<T>.union(other: Iterable<T>): Set<T>
 
 /**
  * Returns `true` if all elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.all
  */
 public expect inline fun <T> Iterable<T>.all(predicate: (T) -> Boolean): Boolean
 
 /**
  * Returns `true` if collection has at least one element.
+ * 
+ * @sample samples.collections.Collections.Aggregates.any
  */
 public expect fun <T> Iterable<T>.any(): Boolean
 
 /**
  * Returns `true` if at least one element matches the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.anyWithPredicate
  */
 public expect inline fun <T> Iterable<T>.any(predicate: (T) -> Boolean): Boolean
 
@@ -838,11 +844,15 @@ public expect fun <T> Iterable<T>.minWith(comparator: Comparator<in T>): T?
 
 /**
  * Returns `true` if the collection has no elements.
+ * 
+ * @sample samples.collections.Collections.Aggregates.none
  */
 public expect fun <T> Iterable<T>.none(): Boolean
 
 /**
  * Returns `true` if no elements match the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Aggregates.noneWithPredicate
  */
 public expect inline fun <T> Iterable<T>.none(predicate: (T) -> Boolean): Boolean
 
@@ -1135,6 +1145,8 @@ public expect inline fun <T, R> Iterable<T>.zipWithNext(transform: (a: T, b: T) 
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinTo
  */
 public fun <T, A : Appendable> Iterable<T>.joinTo(buffer: A, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((T) -> CharSequence)? = null): A {
     buffer.append(prefix)
@@ -1155,6 +1167,8 @@ public fun <T, A : Appendable> Iterable<T>.joinTo(buffer: A, separator: CharSequ
  * 
  * If the collection could be huge, you can specify a non-negative value of [limit], in which case only the first [limit]
  * elements will be appended, followed by the [truncated] string (which defaults to "...").
+ * 
+ * @sample samples.collections.Collections.Transformations.joinToString
  */
 public fun <T> Iterable<T>.joinToString(separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", transform: ((T) -> CharSequence)? = null): String {
     return joinTo(StringBuilder(), separator, prefix, postfix, limit, truncated, transform).toString()

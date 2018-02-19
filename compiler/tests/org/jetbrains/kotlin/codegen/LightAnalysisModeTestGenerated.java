@@ -7118,6 +7118,30 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
         }
 
+        @TestMetadata("implementedByFake2.kt")
+        public void ignoreImplementedByFake2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/defaultArguments/implementedByFake2.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
+        @TestMetadata("implementedByFake3.kt")
+        public void ignoreImplementedByFake3() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/defaultArguments/implementedByFake3.kt");
+            try {
+                doTest(fileName);
+            }
+            catch (Throwable ignore) {
+                return;
+            }
+            throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive for that.");
+        }
+
         public void testAllFilesPresentInDefaultArguments() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaultArguments"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
         }
@@ -19500,6 +19524,24 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt17091_3.kt")
         public void testKt17091_3() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt17091_3.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt17091_4.kt")
+        public void testKt17091_4() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt17091_4.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt22906.kt")
+        public void testKt22906() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt22906.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt22906_2.kt")
+        public void testKt22906_2() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/sam/kt22906_2.kt");
             doTest(fileName);
         }
 
