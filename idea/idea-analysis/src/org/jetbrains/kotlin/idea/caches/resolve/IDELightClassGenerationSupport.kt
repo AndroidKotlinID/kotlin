@@ -237,7 +237,7 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
 
     override fun analyze(element: KtElement) = element.analyze(BodyResolveMode.PARTIAL)
 
-    override fun analyzeFully(element: KtElement) = element.analyzeFully()
+    override fun analyzeWithContent(element: KtClassOrObject) = element.analyzeWithContent()
 
     override fun getFacadeNames(packageFqName: FqName, scope: GlobalSearchScope): Collection<String> {
         val facadeFilesInPackage = runReadAction {
