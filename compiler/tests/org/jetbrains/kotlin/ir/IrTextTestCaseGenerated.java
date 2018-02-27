@@ -331,6 +331,18 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/declarations/multiplatform/expectClassInherited.kt");
                 doTest(fileName);
             }
+
+            @TestMetadata("expectedEnumClass.kt")
+            public void testExpectedEnumClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/declarations/multiplatform/expectedEnumClass.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("expectedSealedClass.kt")
+            public void testExpectedSealedClass() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/declarations/multiplatform/expectedSealedClass.kt");
+                doTest(fileName);
+            }
         }
 
         @TestMetadata("compiler/testData/ir/irText/declarations/parameters")
@@ -786,6 +798,12 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("kt16905.kt")
         public void testKt16905() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/kt16905.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("kt23030.kt")
+        public void testKt23030() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/kt23030.kt");
             doTest(fileName);
         }
 
