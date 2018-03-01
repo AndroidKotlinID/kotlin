@@ -247,8 +247,8 @@ class KotlinLanguageInjector(
         val ktHost: KtElement = host
         val argument = ktHost.parent as? KtValueArgument ?: return null
 
-        val callExpression = PsiTreeUtil.getParentOfType(ktHost, KtCallExpression::class.java) ?: return null
-        val callee = callExpression.calleeExpression ?: return null
+        val callExpression = PsiTreeUtil.getParentOfType(ktHost, KtCallElement::class.java) ?: return null
+        val callee = getNameReference(callExpression.calleeExpression) ?: return null
 
         if (isAnalyzeOff()) return null
 
@@ -273,15 +273,20 @@ class KotlinLanguageInjector(
         return null
     }
 
+    private fun getNameReference(callee: KtExpression?): KtNameReferenceExpression? {
+        if (callee is KtConstructorCalleeExpression)
+            return callee.constructorReferenceExpression as? KtNameReferenceExpression
+        return callee as? KtNameReferenceExpression
+    }
+
     private fun injectInAnnotationCall(host: KtElement): InjectionInfo? {
         if (!annotationInjectionsEnabled) return null
         val argument = host.parent as? KtValueArgument ?: return null
-        val annotationEntry = argument.parent.parent as? KtAnnotationEntry ?: return null
+        val annotationEntry = argument.parent.parent as? KtCallElement ?: return null
         if (!fastCheckInjectionsExists(annotationEntry)) return null
-        val calleeReference = annotationEntry.calleeExpression?.constructorReferenceExpression?.mainReference
-        val callee = calleeReference?.resolve()
+        val calleeExpression = annotationEntry.calleeExpression ?: return null
+        val callee = getNameReference(calleeExpression)?.mainReference?.resolve()
         when (callee) {
-            is KtFunction -> return injectionForKotlinCall(argument, callee, calleeReference)
             is PsiClass -> {
                 val psiClass = callee as? PsiClass ?: return null
                 val argumentName = argument.getArgumentName()?.asName?.identifier ?: "value"
@@ -378,8 +383,8 @@ class KotlinLanguageInjector(
                                    }, configuration)
                                }, false)
 
-    private fun fastCheckInjectionsExists(annotationEntry: KtAnnotationEntry): Boolean {
-        val referencedName = (annotationEntry.typeReference?.typeElement as? KtUserType)?.referencedName ?: return false
+    private fun fastCheckInjectionsExists(annotationEntry: KtCallElement): Boolean {
+        val referencedName = getNameReference(annotationEntry.calleeExpression)?.getReferencedName() ?: return false
         val annotationShortName = annotationEntry.containingKtFile.aliasImportMap()[referencedName].singleOrNull() ?: referencedName
         return annotationShortName in injectableTargetClassShortNames.value
     }

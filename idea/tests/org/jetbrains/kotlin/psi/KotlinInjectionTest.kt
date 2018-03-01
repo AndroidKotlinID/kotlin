@@ -463,6 +463,21 @@ class KotlinInjectionTest : AbstractInjectionTest() {
         )
     }
 
+    fun testKotlinNestedAnnotationsPattern() {
+        doAnnotationInjectionTest(
+            patternLanguage = "kotlin",
+            injectedLanguage = RegExpLanguage.INSTANCE.id,
+            pattern = """kotlinParameter().ofFunction(0, kotlinFunction().withName("Matches").definedInClass("Matches"))""",
+            kotlinCode = """
+                        annotation class Matches(val pattern: String)
+                        annotation class ManyMatches(val patterns: Array<Matches>)
+
+                        @ManyMatches(patterns = [Matches("[A-Z]<caret>[a-z]+")])
+                        val name = "John"
+                                    """
+        )
+    }
+
     fun testKotlinAnnotationsPatternNamed() {
         doAnnotationInjectionTest(
                 patternLanguage = "kotlin",
@@ -517,6 +532,39 @@ class KotlinInjectionTest : AbstractInjectionTest() {
                                             fun foo() {
                                             }
                                             """)
+    }
+
+    fun testInjectionInJavaNestedAnnotation() {
+        myFixture.addClass(
+            """
+                            package myinjection;
+
+                            public @interface InHtml {
+                            String html();
+                            }
+                            """
+        )
+        myFixture.addClass(
+            """
+                            package myinjection;
+
+                            public @interface InHtmls {
+                            InHtml[] htmls();
+                            }
+                            """
+        )
+        doAnnotationInjectionTest(
+            injectedLanguage = HTMLLanguage.INSTANCE.id,
+            pattern = """psiMethod().withName("html").withParameters().definedInClass("myinjection.InHtml")""",
+            kotlinCode = """
+                                            import myinjection.InHtml
+                                            import myinjection.InHtmls
+
+                                            @InHtmls(htmls = [InHtml(html = "<htm<caret>l></html>")])
+                                            fun foo() {
+                                            }
+                                            """
+        )
     }
 
     fun testInjectionInAliasedJavaAnnotation() {
