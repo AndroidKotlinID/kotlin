@@ -2,6 +2,7 @@
 description = "Kotlin SamWithReceiver Compiler Plugin"
 
 apply { plugin("kotlin") }
+apply { plugin("jps-compatible") }
 
 dependencies {
     compileOnly(project(":compiler:frontend"))
@@ -36,7 +37,6 @@ dist {
 
 ideaPlugin {
     from(jar)
-    rename("^kotlin-", "")
 }
 
 projectTest {
