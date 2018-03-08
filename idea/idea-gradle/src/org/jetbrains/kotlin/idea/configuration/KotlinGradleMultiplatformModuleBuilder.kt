@@ -22,6 +22,7 @@ import com.intellij.openapi.externalSystem.service.project.wizard.ExternalModule
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.projectRoots.Sdk
+import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -56,6 +57,16 @@ class KotlinGradleMultiplatformModuleBuilder : GradleModuleBuilder() {
         )
     }
 
+    override fun setupRootModel(modifiableRootModel: ModifiableRootModel) {
+        super.setupRootModel(modifiableRootModel)
+        if (commonModuleName.isNullOrEmpty()) {
+            val module = modifiableRootModel.module
+            val buildScriptData = getBuildScriptData(module) ?: return
+            val sdk = modifiableRootModel.sdk
+            GradleKotlinMPPCommonFrameworkSupportProvider().addSupport(buildScriptData, sdk)
+        }
+    }
+
     override fun setupModule(module: Module) {
         super.setupModule(module)
 
@@ -68,8 +79,10 @@ class KotlinGradleMultiplatformModuleBuilder : GradleModuleBuilder() {
         settingsGradle?.let {
             module.project.executeCommand("Update settings.gradle") {
                 val doc = FileDocumentManager.getInstance().getDocument(it) ?: return@executeCommand
-                val commonPrefix = commonModuleName?.let { "'$it', " } ?: ""
-                doc.insertString(doc.textLength, "include $commonPrefix'$jvmModuleName', '$jsModuleName'")
+                val includedModules = listOfNotNull(commonModuleName, jvmModuleName, jsModuleName).filter { it.isNotEmpty() }
+                if (includedModules.isNotEmpty()) {
+                    doc.insertString(doc.textLength, includedModules.joinToString(prefix = "include ") { "'$it'" })
+                }
                 FileDocumentManager.getInstance().saveDocument(doc)
             }
         }
