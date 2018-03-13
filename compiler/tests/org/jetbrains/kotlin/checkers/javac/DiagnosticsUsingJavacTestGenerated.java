@@ -12578,6 +12578,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 doTest(fileName);
             }
 
+            @TestMetadata("flexibleNothing.kt")
+            public void testFlexibleNothing() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/flexibleNothing.kt");
+                doTest(fileName);
+            }
+
             @TestMetadata("genericConstructorWithMultipleBounds.kt")
             public void testGenericConstructorWithMultipleBounds() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/genericConstructorWithMultipleBounds.kt");
@@ -13228,6 +13234,12 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("typeInferenceOnSamAdapters.kt")
                 public void testTypeInferenceOnSamAdapters() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/sam/typeInferenceOnSamAdapters.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("withDefaultMethods.kt")
+                public void testWithDefaultMethods() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/j+k/sam/withDefaultMethods.kt");
                     doTest(fileName);
                 }
             }
