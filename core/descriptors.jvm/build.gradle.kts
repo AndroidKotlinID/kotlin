@@ -7,6 +7,7 @@ javaHome = rootProject.extra["JDK_16"] as String
 dependencies {
     compile(project(":core:descriptors"))
     compile(project(":core:deserialization"))
+    compile(project(":core:metadata.jvm"))
     compile(project(":core:util.runtime"))
     compile(commonDep("javax.inject"))
 }
