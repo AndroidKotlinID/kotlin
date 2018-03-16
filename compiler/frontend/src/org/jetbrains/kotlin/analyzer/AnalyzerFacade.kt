@@ -110,8 +110,12 @@ class ResolverForProjectImpl<M : ModuleInfo>(
         }
     }
 
+    // Protected by ("projectContext.storageManager.lock")
     private val descriptorByModule = mutableMapOf<M, ModuleData>()
+
+    // Protected by ("projectContext.storageManager.lock")
     private val moduleInfoByDescriptor = mutableMapOf<ModuleDescriptorImpl, M>()
+
     val modules = modules.toSet()
 
     override fun tryGetResolverForModule(moduleInfo: M): ResolverForModule? {
@@ -140,6 +144,7 @@ class ResolverForProjectImpl<M : ModuleInfo>(
         )
     }
 
+    // Protected by ("projectContext.storageManager.lock")
     private val resolverByModuleDescriptor = mutableMapOf<ModuleDescriptor, ResolverForModule>()
 
     override val allModules: Collection<M> by lazy {
@@ -161,6 +166,8 @@ class ResolverForProjectImpl<M : ModuleInfo>(
                 return@compute delegateResolver.resolverForModuleDescriptor(descriptor)
             }
             resolverByModuleDescriptor.getOrPut(descriptor) {
+                checkModuleIsCorrect(module)
+
                 ResolverForModuleComputationTracker.getInstance(projectContext.project)?.onResolverComputed(module)
 
                 analyzerFacade(module).createResolverForModule(
@@ -174,17 +181,23 @@ class ResolverForProjectImpl<M : ModuleInfo>(
     }
 
     internal fun isResolverForModuleDescriptorComputed(descriptor: ModuleDescriptor) =
-        descriptor in resolverByModuleDescriptor
+        projectContext.storageManager.compute {
+            descriptor in resolverByModuleDescriptor
+        }
 
     override fun descriptorForModule(moduleInfo: M): ModuleDescriptorImpl {
-        if (!isCorrectModuleInfo(moduleInfo)) {
-            diagnoseUnknownModuleInfo(listOf(moduleInfo))
-        }
+        checkModuleIsCorrect(moduleInfo)
         return doGetDescriptorForModule(moduleInfo)
     }
 
     override fun diagnoseUnknownModuleInfo(infos: List<ModuleInfo>) =
         throw AssertionError("$name does not know how to resolve $infos")
+
+    private fun checkModuleIsCorrect(moduleInfo: M) {
+        if (!isCorrectModuleInfo(moduleInfo)) {
+            diagnoseUnknownModuleInfo(listOf(moduleInfo))
+        }
+    }
 
     private fun doGetDescriptorForModule(module: M): ModuleDescriptorImpl {
         if (module in modules) {

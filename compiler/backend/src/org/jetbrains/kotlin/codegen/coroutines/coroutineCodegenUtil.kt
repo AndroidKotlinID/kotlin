@@ -19,6 +19,7 @@ package org.jetbrains.kotlin.codegen.coroutines
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.builtins.isBuiltinFunctionalType
+import org.jetbrains.kotlin.codegen.ExpressionCodegen
 import org.jetbrains.kotlin.codegen.StackValue
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
 import org.jetbrains.kotlin.codegen.inline.addFakeContinuationMarker
@@ -175,11 +176,16 @@ private fun NewResolvedCallImpl<VariableDescriptor>.asDummyOldResolvedCall(bindi
     )
 }
 
-fun ResolvedCall<*>.isSuspendNoInlineCall() =
-    resultingDescriptor.safeAs<FunctionDescriptor>()
-        ?.let {
-            it.isSuspend && (!it.isInline || it.isBuiltInSuspendCoroutineOrReturnInJvm() || it.isBuiltInSuspendCoroutineUninterceptedOrReturnInJvm())
-        } == true
+fun ResolvedCall<*>.isSuspendNoInlineCall(codegen: ExpressionCodegen): Boolean {
+    val isInlineLambda = this.safeAs<VariableAsFunctionResolvedCall>()
+        ?.variableCall?.resultingDescriptor?.safeAs<ValueParameterDescriptor>()
+        ?.let { it.isCrossinline || (!it.isNoinline && codegen.context.functionDescriptor.isInline) } == true
+
+    val functionDescriptor = resultingDescriptor as? FunctionDescriptor ?: return false
+    if (!functionDescriptor.isSuspend) return false
+    if (functionDescriptor.isBuiltInSuspendCoroutineOrReturnInJvm() || functionDescriptor.isBuiltInSuspendCoroutineUninterceptedOrReturnInJvm()) return true
+    return !(functionDescriptor.isInline || isInlineLambda)
+}
 
 fun CallableDescriptor.isSuspendFunctionNotSuspensionView(): Boolean {
     if (this !is FunctionDescriptor) return false

@@ -106,29 +106,28 @@ object ReturnUnitMethodTransformer : MethodTransformer() {
     private fun isSuspendingCallReturningUnit(node: AbstractInsnNode): Boolean =
         node.safeAs<MethodInsnNode>()?.next?.next?.let(::isReturnsUnitMarker) == true
 
-    private fun findSourceInstructions(
-        internalClassName: String,
-        methodNode: MethodNode,
-        pops: Collection<AbstractInsnNode>
-    ): Map<AbstractInsnNode, Collection<AbstractInsnNode>> {
-        val frames = analyze(internalClassName, methodNode, IgnoringCopyOperationSourceInterpreter())
-        return pops.keysToMap {
-            val index = methodNode.instructions.indexOf(it)
-            if (isUnreachable(index, frames)) return@keysToMap emptySet<AbstractInsnNode>()
-            frames[index].getStack(0).insns
-        }
-    }
-
     // Find { GETSTATIC kotlin/Unit.INSTANCE, ARETURN } sequences
     // Result is list of GETSTATIC kotlin/Unit.INSTANCE instructions
     private fun findReturnUnitSequences(methodNode: MethodNode): Collection<AbstractInsnNode> =
         methodNode.instructions.asSequence().filter { it.isUnitInstance() && it.next?.opcode == Opcodes.ARETURN }.toList()
 
-    private fun findReturnsUnitMarks(methodNode: MethodNode): Collection<AbstractInsnNode> =
+    internal fun findReturnsUnitMarks(methodNode: MethodNode): Collection<AbstractInsnNode> =
         methodNode.instructions.asSequence().filter(::isReturnsUnitMarker).toList()
 
-    private fun cleanUpReturnsUnitMarkers(methodNode: MethodNode, unitMarks: Collection<AbstractInsnNode>) {
+    internal fun cleanUpReturnsUnitMarkers(methodNode: MethodNode, unitMarks: Collection<AbstractInsnNode>) {
         unitMarks.forEach { methodNode.instructions.removeAll(listOf(it.previous, it)) }
     }
 }
 
+internal fun findSourceInstructions(
+    internalClassName: String,
+    methodNode: MethodNode,
+    insns: Collection<AbstractInsnNode>
+): Map<AbstractInsnNode, Collection<AbstractInsnNode>> {
+    val frames = MethodTransformer.analyze(internalClassName, methodNode, IgnoringCopyOperationSourceInterpreter())
+    return insns.keysToMap {
+        val index = methodNode.instructions.indexOf(it)
+        if (isUnreachable(index, frames)) return@keysToMap emptySet<AbstractInsnNode>()
+        frames[index].getStack(0).insns
+    }
+}

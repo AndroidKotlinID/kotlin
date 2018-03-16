@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2015 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.codegen.binding;
@@ -25,6 +14,7 @@ import kotlin.collections.CollectionsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.builtins.ReflectionTypes;
+import org.jetbrains.kotlin.builtins.functions.FunctionInvokeDescriptor;
 import org.jetbrains.kotlin.cfg.WhenChecker;
 import org.jetbrains.kotlin.codegen.*;
 import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenUtilKt;
@@ -51,6 +41,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.CallUtilKt;
 import org.jetbrains.kotlin.resolve.calls.model.ExpressionValueArgument;
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall;
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedValueArgument;
+import org.jetbrains.kotlin.resolve.calls.model.VariableAsFunctionResolvedCall;
 import org.jetbrains.kotlin.resolve.constants.ConstantValue;
 import org.jetbrains.kotlin.resolve.constants.EnumValue;
 import org.jetbrains.kotlin.resolve.constants.NullValue;
@@ -79,6 +70,7 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
 
     private final Stack<ClassDescriptor> classStack = new Stack<>();
     private final Stack<String> nameStack = new Stack<>();
+    private final Stack<FunctionDescriptor> functionsStack = new Stack<>();
     private final Set<ClassDescriptor> uninitializedClasses = new HashSet<>();
 
     private final BindingTrace bindingTrace;
@@ -314,11 +306,24 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
         nameStack.push(name);
 
         if (CoroutineUtilKt.isSuspendLambda(functionDescriptor)) {
+            SimpleFunctionDescriptor jvmSuspendFunctionView =
+                    CoroutineCodegenUtilKt.getOrCreateJvmSuspendFunctionView(
+                            (SimpleFunctionDescriptor) functionDescriptor
+                    );
+
+            bindingTrace.record(
+                    CodegenBinding.SUSPEND_FUNCTION_TO_JVM_VIEW,
+                    functionDescriptor,
+                    jvmSuspendFunctionView
+            );
             closure.setSuspend(true);
             closure.setSuspendLambda();
         }
+        functionsStack.push(functionDescriptor);
 
         super.visitLambdaExpression(lambdaExpression);
+
+        functionsStack.pop();
         nameStack.pop();
         classStack.pop();
     }
@@ -536,9 +541,11 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
                     recordClassForFunction(function, functionDescriptor, name, functionDescriptor);
             MutableClosure closure = recordClosure(classDescriptor, name);
             closure.setSuspend(true);
+            functionsStack.push(functionDescriptor);
 
             super.visitNamedFunction(function);
 
+            functionsStack.pop();
             if (nameForClassOrPackageMember != null) {
                 nameStack.pop();
             }
@@ -548,7 +555,9 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
 
         if (nameForClassOrPackageMember != null) {
             nameStack.push(nameForClassOrPackageMember);
+            functionsStack.push(functionDescriptor);
             super.visitNamedFunction(function);
+            functionsStack.pop();
             nameStack.pop();
         }
         else {
@@ -557,8 +566,10 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
             recordClosure(classDescriptor, name);
 
             classStack.push(classDescriptor);
+            functionsStack.push(functionDescriptor);
             nameStack.push(name);
             super.visitNamedFunction(function);
+            functionsStack.pop();
             nameStack.pop();
             classStack.pop();
         }
@@ -586,6 +597,47 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
     public void visitCallExpression(@NotNull KtCallExpression expression) {
         super.visitCallExpression(expression);
         checkSamCall(expression);
+        checkCrossinlineSuspendCall(expression);
+    }
+
+    private void checkCrossinlineSuspendCall(@NotNull KtCallExpression expression) {
+        KtExpression callee = expression.getCalleeExpression();
+        Call call = bindingContext.get(CALL, callee);
+        ResolvedCall<?> resolvedCall = bindingContext.get(RESOLVED_CALL, call);
+
+        if (resolvedCall instanceof VariableAsFunctionResolvedCall) {
+            VariableAsFunctionResolvedCall variableAsFunction = (VariableAsFunctionResolvedCall) resolvedCall;
+            VariableDescriptor variableDescriptor = variableAsFunction.getVariableCall().getResultingDescriptor();
+            CallableDescriptor callableDescriptor = ((ResolvedCall) variableAsFunction).getResultingDescriptor();
+
+            if (variableDescriptor instanceof ValueParameterDescriptor &&
+                ((ValueParameterDescriptor) variableDescriptor).isCrossinline() &&
+                callableDescriptor instanceof FunctionDescriptor &&
+                ((FunctionDescriptor) callableDescriptor).isSuspend()) {
+                FunctionDescriptor enclosingDescriptor =
+                        bindingContext.get(ENCLOSING_SUSPEND_FUNCTION_FOR_SUSPEND_FUNCTION_CALL, resolvedCall.getCall());
+                if (enclosingDescriptor == null) return;
+
+                DeclarationDescriptor functionWithCrossinlineParameter = variableDescriptor.getContainingDeclaration();
+                for (int i = functionsStack.size() - 1; i >= 0; i--) {
+                    if (functionsStack.get(i).isSuspend()) {
+                        Boolean alreadyPutValue = bindingTrace.getBindingContext()
+                                .get(CodegenBinding.CAPTURES_CROSSINLINE_SUSPEND_LAMBDA, functionsStack.get(i));
+                        if (alreadyPutValue != null && alreadyPutValue) {
+                            return;
+                        }
+                        bindingTrace.record(
+                                CodegenBinding.CAPTURES_CROSSINLINE_SUSPEND_LAMBDA,
+                                functionsStack.get(i),
+                                true
+                        );
+                    }
+                    if (functionsStack.get(i) == functionWithCrossinlineParameter) {
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     private void checkSamCall(@NotNull KtCallElement expression) {

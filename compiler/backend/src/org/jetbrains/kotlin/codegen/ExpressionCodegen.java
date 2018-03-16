@@ -1103,7 +1103,14 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         if (closure.isSuspend()) {
             // resultContinuation
             if (closure.isSuspendLambda()) {
-                v.aconst(null);
+                // When inlining crossinline lambda, the ACONST_NULL is never popped.
+                // Thus, do not generate it. Otherwise, it leads to VerifyError on run-time.
+                boolean isCrossinlineLambda = (callGenerator instanceof InlineCodegen<?>) &&
+                                              Objects.requireNonNull(((InlineCodegen) callGenerator).getActiveLambda(),
+                                                                     "no active lambda found").isCrossInline;
+                if (!isCrossinlineLambda) {
+                    v.aconst(null);
+                }
             }
             else {
                 assert context.getFunctionDescriptor().isSuspend() : "Coroutines closure must be created only inside suspend functions";
@@ -2343,10 +2350,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             @NotNull CallGenerator callGenerator,
             @NotNull ArgumentGenerator argumentGenerator
     ) {
-        boolean isSuspendCall = CoroutineCodegenUtilKt.isSuspendNoInlineCall(resolvedCall);
+        boolean isSuspendNoInlineCall = CoroutineCodegenUtilKt.isSuspendNoInlineCall(resolvedCall, this);
         boolean isConstructor = resolvedCall.getResultingDescriptor() instanceof ConstructorDescriptor;
         if (!(callableMethod instanceof IntrinsicWithSpecialReceiver)) {
-            putReceiverAndInlineMarkerIfNeeded(callableMethod, resolvedCall, receiver, isSuspendCall, isConstructor);
+            putReceiverAndInlineMarkerIfNeeded(callableMethod, resolvedCall, receiver, isSuspendNoInlineCall, isConstructor);
         }
 
         callGenerator.processAndPutHiddenParameters(false);
@@ -2380,13 +2387,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             }
         }
 
-        if (isSuspendCall) {
+        if (isSuspendNoInlineCall) {
             addSuspendMarker(v, true);
         }
 
         callGenerator.genCall(callableMethod, resolvedCall, defaultMaskWasGenerated, this);
 
-        if (isSuspendCall) {
+        if (isSuspendNoInlineCall) {
             addReturnsUnitMarkerIfNecessary(v, resolvedCall);
 
             addSuspendMarker(v, false);
