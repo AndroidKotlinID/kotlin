@@ -65,10 +65,7 @@ import org.jetbrains.kotlin.js.sourceMap.SourceFilePathResolver;
 import org.jetbrains.kotlin.progress.ProgressIndicatorAndCompilationCanceledStatus;
 import org.jetbrains.kotlin.psi.KtFile;
 import org.jetbrains.kotlin.serialization.js.ModuleKind;
-import org.jetbrains.kotlin.utils.ExceptionUtilsKt;
-import org.jetbrains.kotlin.utils.KotlinPaths;
-import org.jetbrains.kotlin.utils.PathUtil;
-import org.jetbrains.kotlin.utils.StringsKt;
+import org.jetbrains.kotlin.utils.*;
 
 import java.io.File;
 import java.io.IOException;
