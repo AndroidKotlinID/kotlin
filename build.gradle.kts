@@ -190,6 +190,7 @@ extra["compilerModules"] = arrayOf(
         ":compiler:daemon",
         ":compiler:ir.tree",
         ":compiler:ir.psi2ir",
+        ":compiler:backend.js",
         ":compiler:backend-common",
         ":compiler:backend",
         ":compiler:plugin-api",
@@ -285,12 +286,12 @@ allprojects {
 
     val repos: List<String> by rootProject.extra
     repositories {
+        intellijSdkRepo(project)
+        androidDxJarRepo(project)
+
         for (repo in repos) {
             maven(repo)
         }
-
-        intellijSdkRepo(project)
-        androidDxJarRepo(project)
     }
 
     configureJvmProject(javaHome!!, jvmTarget!!)

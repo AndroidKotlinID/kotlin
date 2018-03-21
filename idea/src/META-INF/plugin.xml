@@ -28,6 +28,7 @@
   <!-- ULTIMATE-PLUGIN-PLACEHOLDER -->
 
   <!-- CLION-PLUGIN-PLACEHOLDER-START -->
+  <depends>com.intellij.modules.java</depends>
   <depends optional="true" config-file="jvm.xml">com.intellij.modules.java</depends>
   <depends optional="true" config-file="javaScriptDebug.xml">JavaScriptDebugger</depends>
   <!-- CLION-PLUGIN-PLACEHOLDER-END -->
@@ -2743,6 +2744,15 @@
                      groupName="Style issues"
                      enabledByDefault="true"
                      level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantCompanionReferenceInspection"
+                     displayName="Redundant Companion reference"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WARNING"
                      language="kotlin"
     />
 
