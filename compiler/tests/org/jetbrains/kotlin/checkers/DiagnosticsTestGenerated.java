@@ -1678,6 +1678,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     doTest(fileName);
                 }
 
+                @TestMetadata("receiverUseSiteTargetOnExtensionFunction.kt")
+                public void testReceiverUseSiteTargetOnExtensionFunction() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/receiverUseSiteTargetOnExtensionFunction.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("repeatable.kt")
                 public void testRepeatable() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/repeatable.kt");
@@ -24533,6 +24539,18 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("AmbiguousVararg.kt")
             public void testAmbiguousVararg() throws Exception {
                 String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/AmbiguousVararg.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("assignNonConstSingleArrayElementAsVarargInAnnotation.kt")
+            public void testAssignNonConstSingleArrayElementAsVarargInAnnotation() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/assignNonConstSingleArrayElementAsVarargInAnnotation.kt");
+                doTest(fileName);
+            }
+
+            @TestMetadata("assignNonConstSingleArrayElementAsVarargInAnnotationError.kt")
+            public void testAssignNonConstSingleArrayElementAsVarargInAnnotationError() throws Exception {
+                String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/varargs/assignNonConstSingleArrayElementAsVarargInAnnotationError.kt");
                 doTest(fileName);
             }
 
