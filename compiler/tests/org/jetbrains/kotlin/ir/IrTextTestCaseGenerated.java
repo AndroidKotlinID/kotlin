@@ -759,6 +759,12 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             doTest(fileName);
         }
 
+        @TestMetadata("funImportedFromObject.kt")
+        public void testFunImportedFromObject() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/funImportedFromObject.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("genericPropertyCall.kt")
         public void testGenericPropertyCall() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/genericPropertyCall.kt");
@@ -846,6 +852,12 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("literals.kt")
         public void testLiterals() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/literals.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("memberTypeArguments.kt")
+        public void testMemberTypeArguments() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/memberTypeArguments.kt");
             doTest(fileName);
         }
 
@@ -951,6 +963,12 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             doTest(fileName);
         }
 
+        @TestMetadata("specializedTypeAliasConstructorCall.kt")
+        public void testSpecializedTypeAliasConstructorCall() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/specializedTypeAliasConstructorCall.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("stringComparisons.kt")
         public void testStringComparisons() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/stringComparisons.kt");
@@ -1008,6 +1026,12 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("typeParameterClassLiteral.kt")
         public void testTypeParameterClassLiteral() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/typeParameterClassLiteral.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("useImportedMember.kt")
+        public void testUseImportedMember() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/ir/irText/expressions/useImportedMember.kt");
             doTest(fileName);
         }
 

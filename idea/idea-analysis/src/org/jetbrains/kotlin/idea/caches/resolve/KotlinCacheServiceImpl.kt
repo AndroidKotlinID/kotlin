@@ -175,10 +175,12 @@ class KotlinCacheServiceImpl(val project: Project) : KotlinCacheService {
     private fun globalFacade(settings: PlatformAnalysisSettings) =
         getOrBuildGlobalFacade(settings).facadeForModules
 
-    private fun librariesFacade(settings: PlatformAnalysisSettings) = getOrBuildGlobalFacade(settings).facadeForLibraries
+    private fun librariesFacade(settings: PlatformAnalysisSettings) =
+        getOrBuildGlobalFacade(settings).facadeForLibraries
 
     @Synchronized
-    private fun getOrBuildGlobalFacade(settings: PlatformAnalysisSettings) = globalFacadesPerPlatformAndSdk[settings]
+    private fun getOrBuildGlobalFacade(settings: PlatformAnalysisSettings) =
+        globalFacadesPerPlatformAndSdk[settings]
 
     private val IdeaModuleInfo.sdk: Sdk? get() = dependencies().firstIsInstanceOrNull<SdkInfo>()?.sdk
 
@@ -306,7 +308,7 @@ class KotlinCacheServiceImpl(val project: Project) : KotlinCacheService {
                 object : KotlinSuppressCache() {
                     override fun getSuppressionAnnotations(annotated: KtAnnotated): List<AnnotationDescriptor> {
                         if (annotated.annotationEntries.none {
-                                it.calleeExpression?.text?.endsWith(suppressAnnotationShortName) == true
+                                it.calleeExpression?.text?.endsWith(SUPPRESS_ANNOTATION_SHORT_NAME) == true
                             }
                         ) {
                             // Avoid running resolve heuristics
@@ -376,7 +378,7 @@ class KotlinCacheServiceImpl(val project: Project) : KotlinCacheService {
         val notInSourceFiles = files.filterNotInProjectSource(moduleInfo)
         return if (notInSourceFiles.isNotEmpty()) {
             val projectFacade = getFacadeForSyntheticFiles(notInSourceFiles)
-            ResolutionFacadeImpl(projectFacade, moduleInfo)
+            ModuleResolutionFacadeImpl(projectFacade, moduleInfo)
         } else {
             val platform = TargetPlatformDetector.getPlatform(file)
             getResolutionFacadeByModuleInfo(moduleInfo, platform)
@@ -393,23 +395,29 @@ class KotlinCacheServiceImpl(val project: Project) : KotlinCacheService {
     private fun getResolutionFacadeByModuleInfo(moduleInfo: IdeaModuleInfo, platform: TargetPlatform): ResolutionFacade {
         val settings = PlatformAnalysisSettings(platform, moduleInfo.sdk, moduleInfo.supportsAdditionalBuiltInsMembers())
         val projectFacade = globalFacade(settings)
-        return ResolutionFacadeImpl(projectFacade, moduleInfo)
+        return ModuleResolutionFacadeImpl(projectFacade, moduleInfo)
     }
 
     override fun getResolutionFacadeByModuleInfo(moduleInfo: ModuleInfo, platform: TargetPlatform): ResolutionFacade? =
         (moduleInfo as? IdeaModuleInfo)?.let { getResolutionFacadeByModuleInfo(it, platform) }
 
-    private fun Collection<KtFile>.filterNotInProjectSource(moduleInfo: IdeaModuleInfo) = mapNotNull {
-        if (it is KtCodeFragment) it.getContextFile() else it
-    }.filter {
-        !ProjectRootsUtil.isInProjectSource(it) || !moduleInfo.contentScope().contains(it)
-    }.toSet()
+    private fun Collection<KtFile>.filterNotInProjectSource(moduleInfo: IdeaModuleInfo): Set<KtFile> {
+        return mapNotNull {
+            if (it is KtCodeFragment) it.getContextFile() else it
+        }.filter {
+            !ProjectRootsUtil.isInProjectSource(it) || !moduleInfo.contentScope().contains(it)
+        }.toSet()
+    }
 
     private fun KtCodeFragment.getContextFile(): KtFile? {
         val contextElement = context ?: return null
         val contextFile = (contextElement as? KtElement)?.containingKtFile
                 ?: throw AssertionError("Analyzing kotlin code fragment of type ${this::class.java} with java context of type ${contextElement::class.java}")
         return if (contextFile is KtCodeFragment) contextFile.getContextFile() else contextFile
+    }
+
+    private companion object {
+        private val SUPPRESS_ANNOTATION_SHORT_NAME = KotlinBuiltIns.FQ_NAMES.suppress.shortName().identifier
     }
 }
 

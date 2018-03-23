@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.resolve.lazy.AbsentDescriptorHandler
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import org.jetbrains.kotlin.resolve.lazy.ResolveSession
 
-internal class ResolutionFacadeImpl(
+internal class ModuleResolutionFacadeImpl(
     private val projectFacade: ProjectResolutionFacade,
     private val moduleInfo: IdeaModuleInfo
 ) : ResolutionFacade {
@@ -59,7 +59,7 @@ internal class ResolutionFacadeImpl(
         return resolveElementCache.resolveToElements(elements, bodyResolveMode)
     }
 
-    override fun analyzeFullyAndGetResult(elements: Collection<KtElement>): AnalysisResult =
+    override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>): AnalysisResult =
         projectFacade.getAnalysisResultsForElements(elements)
 
     override fun resolveToDescriptor(declaration: KtDeclaration, bodyResolveMode: BodyResolveMode): DeclarationDescriptor {
@@ -87,7 +87,7 @@ internal class ResolutionFacadeImpl(
         return projectFacade.resolverForElement(element).componentProvider.tryGetService(serviceClass)
     }
 
-    fun <T : Any> getFrontendService(ideaModuleInfo: IdeaModuleInfo, serviceClass: Class<T>): T {
+    private fun <T : Any> getFrontendService(ideaModuleInfo: IdeaModuleInfo, serviceClass: Class<T>): T {
         return projectFacade.resolverForModuleInfo(ideaModuleInfo).componentProvider.getService(serviceClass)
     }
 
@@ -97,5 +97,5 @@ internal class ResolutionFacadeImpl(
 }
 
 fun ResolutionFacade.findModuleDescriptor(ideaModuleInfo: IdeaModuleInfo): ModuleDescriptor? {
-    return (this as? ResolutionFacadeImpl)?.findModuleDescriptor(ideaModuleInfo)
+    return (this as? ModuleResolutionFacadeImpl)?.findModuleDescriptor(ideaModuleInfo)
 }
