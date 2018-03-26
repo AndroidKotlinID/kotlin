@@ -1,12 +1,12 @@
 
 description = "Kotlin Android Extensions Compiler"
 
-apply { plugin("kotlin") }
-apply { plugin("jps-compatible") }
+plugins {
+    kotlin("jvm")
+    id("jps-compatible")
+}
 
 val robolectricClasspath by configurations.creating
-
-containsEmbeddedComponents()
 
 dependencies {
     testCompile(intellijCoreDep()) { includeJars("intellij-core") }

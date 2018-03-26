@@ -6223,6 +6223,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/delegatedProperty/inference"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
                 }
 
+                @TestMetadata("delegateExpressionAsLambda.kt")
+                public void testDelegateExpressionAsLambda() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/delegateExpressionAsLambda.kt");
+                    doTest(fileName);
+                }
+
                 @TestMetadata("differentDelegatedExpressions.kt")
                 public void testDifferentDelegatedExpressions() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/differentDelegatedExpressions.kt");
@@ -6274,6 +6280,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("noExpectedTypeForSupertypeConstraint.kt")
                 public void testNoExpectedTypeForSupertypeConstraint() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/noExpectedTypeForSupertypeConstraint.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("resultTypeOfLambdaForConventionMethods.kt")
+                public void testResultTypeOfLambdaForConventionMethods() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/delegatedProperty/inference/resultTypeOfLambdaForConventionMethods.kt");
                     doTest(fileName);
                 }
 
@@ -10888,6 +10900,12 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("operationsOnIntegerValueTypes.kt")
                 public void testOperationsOnIntegerValueTypes() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/constraints/operationsOnIntegerValueTypes.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("returnLambdaFromLambda.kt")
+                public void testReturnLambdaFromLambda() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/tests/inference/constraints/returnLambdaFromLambda.kt");
                     doTest(fileName);
                 }
 
