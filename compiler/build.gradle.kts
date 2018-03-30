@@ -14,16 +14,22 @@ val compilerModules: Array<String> by rootProject.extra
 val otherCompilerModules = compilerModules.filter { it != path }
 
 val effectSystemEnabled: Boolean by rootProject.extra
-if (effectSystemEnabled) {
-    allprojects {
-        tasks.withType<KotlinCompile<*>> {
-            kotlinOptions {
-                freeCompilerArgs += listOf("-Xeffect-system")
+val newInferenceEnabled: Boolean by rootProject.extra
+
+configureFreeCompilerArg(effectSystemEnabled, "-Xeffect-system")
+configureFreeCompilerArg(newInferenceEnabled, "-Xnew-inference")
+
+fun configureFreeCompilerArg(isEnabled: Boolean, compilerArgument: String) {
+    if (isEnabled) {
+        allprojects {
+            tasks.withType<KotlinCompile<*>> {
+                kotlinOptions {
+                    freeCompilerArgs += listOf(compilerArgument)
+                }
             }
         }
     }
 }
-
 
 val depDistProjects = listOf(
         ":kotlin-script-runtime",
@@ -108,7 +114,6 @@ projectTest {
     doFirst {
         systemProperty("kotlin.ant.classpath", antLauncherJar.asPath)
         systemProperty("kotlin.ant.launcher.class", "org.apache.tools.ant.Main")
-        systemProperty("idea.home.path", intellijRootDir().canonicalPath)
     }
 }
 

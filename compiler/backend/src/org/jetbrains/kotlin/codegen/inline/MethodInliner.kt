@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
  * that can be found in the license/LICENSE.txt file.
  */
 
@@ -53,7 +53,7 @@ class MethodInliner(
     //keeps order
     private val transformations = ArrayList<TransformationInfo>()
     //current state
-    private val currentTypeMapping = HashMap<String, String>()
+    private val currentTypeMapping = HashMap<String, String?>()
     private val result = InlineResult.create()
     private var lambdasFinallyBlocks: Int = 0
 
@@ -291,7 +291,7 @@ class MethodInliner(
                         }
 
                         val isContinuationCreate = isContinuation && oldInfo != null && resultNode.name == "create" &&
-                                resultNode.desc.startsWith("(" + CONTINUATION_ASM_TYPE.descriptor)
+                                resultNode.desc.endsWith(")" + CONTINUATION_ASM_TYPE.descriptor)
 
                         for (capturedParamDesc in info.allRecapturedParameters) {
                             if (capturedParamDesc.fieldName == THIS && isContinuationCreate) {

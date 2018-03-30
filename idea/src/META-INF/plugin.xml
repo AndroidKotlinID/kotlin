@@ -2761,6 +2761,15 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.PublicApiImplicitTypeInspection"
+                     displayName="Public API declaration has implicit return type"
+                     groupPath="Kotlin"
+                     groupName="Other problems"
+                     enabledByDefault="false"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 
     <fileType.fileViewProviderFactory filetype="KJSM" implementationClass="com.intellij.psi.ClassFileViewProviderFactory"/>
@@ -2786,6 +2795,7 @@
                   serviceImplementation="org.jetbrains.uast.kotlin.internal.IdeaKotlinUastBindingContextProviderService"/>
 
     <statistics.usagesCollector implementation="org.jetbrains.kotlin.idea.formatter.KotlinFormatterUsageCollector" />
+    <statistics.usagesCollector implementation="org.jetbrains.kotlin.idea.parameterInfo.KotlinInlayParameterHintsUsageCollector" />
   </extensions>
 
   <xi:include href="tipsAndTricks.xml" xpointer="xpointer(/idea-plugin/*)"/>
@@ -2803,13 +2813,13 @@
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameDynamicMemberHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameOnSecondaryConstructorHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameJavaSyntheticPropertyHandler"/>
+    <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameSyntheticDeclarationByReferenceHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.JavaMemberByKotlinReferenceInplaceRenameHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameJvmNameHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameBackingFieldReferenceHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameClassByCompanionObjectShortReferenceHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameByLabeledReferenceInLambdaArgumentHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameImportAliasByReferenceHandler"/>
-    <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.RenameSyntheticDeclarationByReferenceHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.KotlinMemberInplaceRenameHandler"/>
     <renameHandler implementation="org.jetbrains.kotlin.idea.refactoring.rename.KotlinVariableInplaceRenameHandler"/>
 
