@@ -117,7 +117,7 @@ Properties().apply {
 extra["JDK_16"] = jdkPath("1.6")
 extra["JDK_17"] = jdkPath("1.7")
 extra["JDK_18"] = jdkPath("1.8")
-extra["JDK_9"] = jdkPathIfFound("9")
+extra["JDK_9"] = jdkPath("9")
 extra["JDK_10"] = jdkPathIfFound("10")
 
 rootProject.apply {
@@ -596,10 +596,12 @@ fun jdkPath(version: String): String = jdkPathIfFound(version)
 
 fun Project.configureJvmProject(javaHome: String, javaVersion: String) {
     tasks.withType<JavaCompile> {
-        options.isFork = true
-        options.forkOptions.javaHome = file(javaHome)
-        options.compilerArgs.add("-proc:none")
-        options.encoding = "UTF-8"
+        if (name != "compileJava9Java") {
+            options.isFork = true
+            options.forkOptions.javaHome = file(javaHome)
+            options.compilerArgs.add("-proc:none")
+            options.encoding = "UTF-8"
+        }
     }
 
     tasks.withType<KotlinCompile> {
