@@ -5,16 +5,30 @@
 
 package org.jetbrains.kotlin.ir.backend.js.transformers.irToJs
 
-import org.jetbrains.kotlin.builtins.extractParameterNameFromFunctionTypeArgument
-import org.jetbrains.kotlin.ir.backend.js.utils.*
+import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
+import org.jetbrains.kotlin.ir.backend.js.utils.Namer
+import org.jetbrains.kotlin.ir.backend.js.utils.isSpecial
+import org.jetbrains.kotlin.ir.backend.js.utils.name
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
 import org.jetbrains.kotlin.js.backend.ast.*
 
 class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsExpression, JsGenerationContext> {
+
+    // TODO: should we prohibit using blocks as expression in the future?
+    override fun visitBlock(expression: IrBlock, context: JsGenerationContext): JsExpression {
+        if (expression.statements.isEmpty()) {
+            // TODO: what should we do here? Crash? Generate throw? Should it be treated as unreachable code?
+            return super.visitBlock(expression, context)
+        }
+
+        return expression.statements
+            .map { it.accept(this, context) }
+            .reduce { left, right -> JsBinaryOperation(JsBinaryOperator.COMMA, left, right) }
+    }
+
     override fun visitExpressionBody(body: IrExpressionBody, context: JsGenerationContext): JsExpression {
         return body.expression.accept(this, context)
     }
@@ -77,34 +91,21 @@ class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsEx
         val callFuncRef = JsNameRef(Namer.CALL_FUNCTION, classNameRef)
         val fromPrimary = context.currentFunction is IrConstructor
         val thisRef = if (fromPrimary) JsThisRef() else JsNameRef("\$this")
-        val arguments = translateCallArguments(expression, expression.symbol.parameterCount, context)
+        val arguments = translateCallArguments(expression, context)
         return JsInvocation(callFuncRef, listOf(thisRef) + arguments)
     }
 
     override fun visitCall(expression: IrCall, context: JsGenerationContext): JsExpression {
-        // TODO rewrite more accurately, right now it just copy-pasted and adopted from old version
-        // TODO support:
-        // * ir intrinsics
-        // * js be intrinsics
-        // * js function
-        // * getters and setters
-        // * binary and unary operations
-
-        if (expression.symbol == context.staticContext.backendContext.objectCreate.symbol) {
-            // TODO: temporary workaround until there is no an intrinsic infrastructure
-            assert(expression.typeArgumentsCount == 1 && expression.valueArgumentsCount == 0)
-            val classToCreate = expression.getTypeArgument(0)!!
-            val prototype = prototypeOf(classToCreate.constructor.declarationDescriptor!!.name.toJsName().makeRef())
-            return JsInvocation(Namer.JS_OBJECT_CREATE_FUNCTION, prototype)
-        }
-
         val symbol = expression.symbol
 
         val dispatchReceiver = expression.dispatchReceiver?.accept(this, context)
         val extensionReceiver = expression.extensionReceiver?.accept(this, context)
 
+        val arguments = translateCallArguments(expression, context)
 
-        val arguments = translateCallArguments(expression, expression.symbol.parameterCount, context)
+        context.staticContext.intrinsics[symbol]?.let {
+            return it(expression, arguments)
+        }
 
         return if (symbol is IrConstructorSymbol) {
             JsNew(JsNameRef((symbol.owner.parent as IrClass).name.asString()), arguments)
