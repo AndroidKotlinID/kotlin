@@ -3189,6 +3189,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/closures"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
         }
 
+        @TestMetadata("anonymousObjectAsLastExpressionInLambda.kt")
+        public void testAnonymousObjectAsLastExpressionInLambda() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/anonymousObjectAsLastExpressionInLambda.kt");
+        }
+
         @TestMetadata("captureExtensionReceiver.kt")
         public void testCaptureExtensionReceiver() throws Exception {
             runTest("compiler/testData/codegen/box/closures/captureExtensionReceiver.kt");
@@ -13195,6 +13200,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 @TestMetadata("capturedLocalLateinit.kt")
                 public void testCapturedLocalLateinit() throws Exception {
                     runTest("compiler/testData/codegen/box/properties/lateinit/local/capturedLocalLateinit.kt");
+                }
+
+                @TestMetadata("kt23260.kt")
+                public void testKt23260() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/codegen/box/properties/lateinit/local/kt23260.kt");
+                    doTest(fileName);
                 }
 
                 @TestMetadata("localLateinit.kt")

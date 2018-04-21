@@ -37,10 +37,9 @@ object Aggregates : TemplateGroupBase() {
         doc {
             """
             Returns `true` if all ${f.element.pluralize()} match the given [predicate].
-
-            @sample samples.collections.Collections.Aggregates.all
             """
         }
+        sample("samples.collections.Collections.Aggregates.all")
         returns("Boolean")
         body {
             """
@@ -64,10 +63,9 @@ object Aggregates : TemplateGroupBase() {
         doc {
             """
             Returns `true` if no ${f.element.pluralize()} match the given [predicate].
-
-            @sample samples.collections.Collections.Aggregates.noneWithPredicate
             """
         }
+        sample("samples.collections.Collections.Aggregates.noneWithPredicate")
         returns("Boolean")
         body {
             """
@@ -89,10 +87,9 @@ object Aggregates : TemplateGroupBase() {
         doc {
             """
             Returns `true` if the ${f.collection} has no ${f.element.pluralize()}.
-
-            @sample samples.collections.Collections.Aggregates.none
             """
         }
+        sample("samples.collections.Collections.Aggregates.none")
         returns("Boolean")
         body {
             "return !iterator().hasNext()"
@@ -119,10 +116,9 @@ object Aggregates : TemplateGroupBase() {
         doc {
             """
             Returns `true` if at least one ${f.element} matches the given [predicate].
-
-            @sample samples.collections.Collections.Aggregates.anyWithPredicate
             """
         }
+        sample("samples.collections.Collections.Aggregates.anyWithPredicate")
         returns("Boolean")
         body {
             """
@@ -144,10 +140,9 @@ object Aggregates : TemplateGroupBase() {
         doc {
             """
             Returns `true` if ${f.collection} has at least one ${f.element}.
-
-            @sample samples.collections.Collections.Aggregates.any
             """
         }
+        sample("samples.collections.Collections.Aggregates.any")
         returns("Boolean")
         body {
             "return iterator().hasNext()"
@@ -630,7 +625,7 @@ object Aggregates : TemplateGroupBase() {
             """
         }
         typeParam("S")
-        typeParam("T: S")
+        typeParam("T : S")
         returns("S")
         body {
             """
@@ -703,7 +698,7 @@ object Aggregates : TemplateGroupBase() {
             """
         }
         typeParam("S")
-        typeParam("T: S")
+        typeParam("T : S")
         returns("S")
         body {
             """
@@ -764,7 +759,7 @@ object Aggregates : TemplateGroupBase() {
 
         doc { "Accumulates value starting with the first ${f.element} and applying [operation] from left to right to current accumulator value and each ${f.element}." }
         typeParam("S")
-        typeParam("T: S")
+        typeParam("T : S")
         returns("S")
         body {
             """
@@ -820,7 +815,7 @@ object Aggregates : TemplateGroupBase() {
         inline()
         doc { "Accumulates value starting with last ${f.element} and applying [operation] from right to left to each ${f.element} and current accumulator value." }
         typeParam("S")
-        typeParam("T: S")
+        typeParam("T : S")
         returns("S")
         body {
             """

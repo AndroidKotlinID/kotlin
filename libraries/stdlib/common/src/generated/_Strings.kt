@@ -220,6 +220,8 @@ public inline fun CharSequence.singleOrNull(predicate: (Char) -> Boolean): Char?
 
 /**
  * Returns a subsequence of this char sequence with the first [n] characters removed.
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public fun CharSequence.drop(n: Int): CharSequence {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -228,6 +230,8 @@ public fun CharSequence.drop(n: Int): CharSequence {
 
 /**
  * Returns a string with the first [n] characters removed.
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public fun String.drop(n: Int): String {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -236,6 +240,8 @@ public fun String.drop(n: Int): String {
 
 /**
  * Returns a subsequence of this char sequence with the last [n] characters removed.
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public fun CharSequence.dropLast(n: Int): CharSequence {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -244,6 +250,8 @@ public fun CharSequence.dropLast(n: Int): CharSequence {
 
 /**
  * Returns a string with the last [n] characters removed.
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public fun String.dropLast(n: Int): String {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -252,6 +260,8 @@ public fun String.dropLast(n: Int): String {
 
 /**
  * Returns a subsequence of this char sequence containing all characters except last characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public inline fun CharSequence.dropLastWhile(predicate: (Char) -> Boolean): CharSequence {
     for (index in lastIndex downTo 0)
@@ -262,6 +272,8 @@ public inline fun CharSequence.dropLastWhile(predicate: (Char) -> Boolean): Char
 
 /**
  * Returns a string containing all characters except last characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public inline fun String.dropLastWhile(predicate: (Char) -> Boolean): String {
     for (index in lastIndex downTo 0)
@@ -272,6 +284,8 @@ public inline fun String.dropLastWhile(predicate: (Char) -> Boolean): String {
 
 /**
  * Returns a subsequence of this char sequence containing all characters except first characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public inline fun CharSequence.dropWhile(predicate: (Char) -> Boolean): CharSequence {
     for (index in this.indices)
@@ -282,6 +296,8 @@ public inline fun CharSequence.dropWhile(predicate: (Char) -> Boolean): CharSequ
 
 /**
  * Returns a string containing all characters except first characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.drop
  */
 public inline fun String.dropWhile(predicate: (Char) -> Boolean): String {
     for (index in this.indices)
@@ -406,6 +422,8 @@ public inline fun String.slice(indices: Iterable<Int>): String {
 
 /**
  * Returns a subsequence of this char sequence containing the first [n] characters from this char sequence, or the entire char sequence if this char sequence is shorter.
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public fun CharSequence.take(n: Int): CharSequence {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -414,6 +432,8 @@ public fun CharSequence.take(n: Int): CharSequence {
 
 /**
  * Returns a string containing the first [n] characters from this string, or the entire string if this string is shorter.
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public fun String.take(n: Int): String {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -422,6 +442,8 @@ public fun String.take(n: Int): String {
 
 /**
  * Returns a subsequence of this char sequence containing the last [n] characters from this char sequence, or the entire char sequence if this char sequence is shorter.
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public fun CharSequence.takeLast(n: Int): CharSequence {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -431,6 +453,8 @@ public fun CharSequence.takeLast(n: Int): CharSequence {
 
 /**
  * Returns a string containing the last [n] characters from this string, or the entire string if this string is shorter.
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public fun String.takeLast(n: Int): String {
     require(n >= 0) { "Requested character count $n is less than zero." }
@@ -440,6 +464,8 @@ public fun String.takeLast(n: Int): String {
 
 /**
  * Returns a subsequence of this char sequence containing last characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public inline fun CharSequence.takeLastWhile(predicate: (Char) -> Boolean): CharSequence {
     for (index in lastIndex downTo 0) {
@@ -452,6 +478,8 @@ public inline fun CharSequence.takeLastWhile(predicate: (Char) -> Boolean): Char
 
 /**
  * Returns a string containing last characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public inline fun String.takeLastWhile(predicate: (Char) -> Boolean): String {
     for (index in lastIndex downTo 0) {
@@ -464,6 +492,8 @@ public inline fun String.takeLastWhile(predicate: (Char) -> Boolean): String {
 
 /**
  * Returns a subsequence of this char sequence containing the first characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public inline fun CharSequence.takeWhile(predicate: (Char) -> Boolean): CharSequence {
     for (index in 0 until length)
@@ -475,6 +505,8 @@ public inline fun CharSequence.takeWhile(predicate: (Char) -> Boolean): CharSequ
 
 /**
  * Returns a string containing the first characters that satisfy the given [predicate].
+ * 
+ * @sample samples.collections.Collections.Transformations.take
  */
 public inline fun String.takeWhile(predicate: (Char) -> Boolean): String {
     for (index in 0 until length)
@@ -1312,14 +1344,21 @@ public fun <R> CharSequence.windowedSequence(size: Int, step: Int = 1, partialWi
 }
 
 /**
- * Returns a list of pairs built from characters of both char sequences with same indexes. List has length of shortest char sequence.
+ * Returns a list of pairs built from the characters of `this` and the [other] char sequences with the same index
+ * The returned list has length of the shortest char sequence.
+ * 
+ * @sample samples.text.Strings.zip
  */
 public infix fun CharSequence.zip(other: CharSequence): List<Pair<Char, Char>> {
     return zip(other) { c1, c2 -> c1 to c2 }
 }
 
 /**
- * Returns a list of values built from characters of both char sequences with same indexes using provided [transform]. List has length of shortest char sequence.
+ * Returns a list of values built from the characters of `this` and the [other] char sequences with the same index
+ * using the provided [transform] function applied to each pair of characters.
+ * The returned list has length of the shortest char sequence.
+ * 
+ * @sample samples.text.Strings.zipWithTransform
  */
 public inline fun <V> CharSequence.zip(other: CharSequence, transform: (a: Char, b: Char) -> V): List<V> {
     val length = minOf(this.length, other.length)

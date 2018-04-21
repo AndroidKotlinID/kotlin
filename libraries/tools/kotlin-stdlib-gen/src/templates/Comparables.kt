@@ -30,15 +30,15 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Ranges)
         returns("SELF")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         doc {
             """
             Ensures that this value is not less than the specified [minimumValue].
 
             @return this value if it's greater than or equal to the [minimumValue] or the [minimumValue] otherwise.
-            @sample samples.comparisons.ComparableOps.coerceAtLeast${if (f == Generic) "Comparable" else ""}
             """
         }
+        sample("samples.comparisons.ComparableOps.coerceAtLeast${if (f == Generic) "Comparable" else ""}")
         body {
             """
             return if (this < minimumValue) minimumValue else this
@@ -52,15 +52,15 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Ranges)
         returns("SELF")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         doc {
             """
             Ensures that this value is not greater than the specified [maximumValue].
 
             @return this value if it's less than or equal to the [maximumValue] or the [maximumValue] otherwise.
-            @sample samples.comparisons.ComparableOps.coerceAtMost${if (f == Generic) "Comparable" else ""}
             """
         }
+        sample("samples.comparisons.ComparableOps.coerceAtMost${if (f == Generic) "Comparable" else ""}")
         body {
             """
             return if (this > maximumValue) maximumValue else this
@@ -74,15 +74,15 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Ranges)
         returns("SELF")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         doc {
             """
             Ensures that this value lies in the specified [range].
 
             @return this value if it's in the [range], or `range.start` if this value is less than `range.start`, or `range.endInclusive` if this value is greater than `range.endInclusive`.
-            @sample samples.comparisons.ComparableOps.coerceIn${if (f == Generic) "Comparable" else ""}
             """
         }
+        sample("samples.comparisons.ComparableOps.coerceIn${if (f == Generic) "Comparable" else ""}")
         body(Generic) {
             """
             if (range is ClosedFloatingPointRange) {
@@ -117,15 +117,15 @@ object ComparableOps : TemplateGroupBase() {
         sourceFile(SourceFile.Ranges)
         since("1.1")
         returns("SELF")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         doc {
             """
             Ensures that this value lies in the specified [range].
 
             @return this value if it's in the [range], or `range.start` if this value is less than `range.start`, or `range.endInclusive` if this value is greater than `range.endInclusive`.
-            @sample samples.comparisons.ComparableOps.coerceInFloatingPointRange
             """
         }
+        sample("samples.comparisons.ComparableOps.coerceInFloatingPointRange")
         body(Generic) {
             """
             if (range.isEmpty()) throw IllegalArgumentException("Cannot coerce value to an empty range: ${'$'}range.")
@@ -147,7 +147,7 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Comparisons)
         since("1.1")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         returns("T")
         receiver("")
         doc {
@@ -191,7 +191,7 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Comparisons)
         since("1.1")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         returns("T")
         receiver("")
         specialFor(Primitives) { inlineOnly() }
@@ -261,7 +261,7 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Comparisons)
         since("1.1")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         returns("T")
         receiver("")
         doc {
@@ -305,7 +305,7 @@ object ComparableOps : TemplateGroupBase() {
     } builder {
         sourceFile(SourceFile.Comparisons)
         since("1.1")
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         returns("T")
         receiver("")
         specialFor(Primitives) { inlineOnly() }
@@ -377,16 +377,16 @@ object ComparableOps : TemplateGroupBase() {
         sourceFile(SourceFile.Ranges)
 
         specialFor(Generic) { signature("coerceIn(minimumValue: SELF?, maximumValue: SELF?)", notForSorting = true) }
-        typeParam("T: Comparable<T>")
+        typeParam("T : Comparable<T>")
         returns("SELF")
         doc {
             """
             Ensures that this value lies in the specified range [minimumValue]..[maximumValue].
 
             @return this value if it's in the range, or [minimumValue] if this value is less than [minimumValue], or [maximumValue] if this value is greater than [maximumValue].
-            @sample samples.comparisons.ComparableOps.coerceIn${if (f == Generic) "Comparable" else ""}
             """
         }
+        sample("samples.comparisons.ComparableOps.coerceIn${if (f == Generic) "Comparable" else ""}")
         body(Primitives) {
             """
             if (minimumValue > maximumValue) throw IllegalArgumentException("Cannot coerce value to an empty range: maximum ${'$'}maximumValue is less than minimum ${'$'}minimumValue.")

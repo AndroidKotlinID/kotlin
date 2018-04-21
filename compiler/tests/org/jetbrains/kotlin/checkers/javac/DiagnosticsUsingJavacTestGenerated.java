@@ -20989,6 +20989,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/thisAndSuper/genericQualifiedSuperOverridden.kt");
             }
 
+            @TestMetadata("implicitInvokeOnSuper.kt")
+            public void testImplicitInvokeOnSuper() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/thisAndSuper/implicitInvokeOnSuper.kt");
+            }
+
             @TestMetadata("notAccessibleSuperInTrait.kt")
             public void testNotAccessibleSuperInTrait() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/thisAndSuper/notAccessibleSuperInTrait.kt");
