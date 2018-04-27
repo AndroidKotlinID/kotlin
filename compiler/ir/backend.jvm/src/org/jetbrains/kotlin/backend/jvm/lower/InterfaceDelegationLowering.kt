@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
+import org.jetbrains.kotlin.ir.util.createParameterDeclarations
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.resolve.DescriptorUtils
@@ -57,12 +58,16 @@ class InterfaceDelegationLowering(val state: GenerationState) : IrElementTransfo
             //skip java 8 default methods
             if (!interfaceFun.isDefinitelyNotDefaultImplsMethod()) {
                 val inheritedFun =
-                        if (classDescriptor !== descriptor) {
-                            InterfaceLowering.createDefaultImplFunDescriptor(descriptor as DefaultImplsClassDescriptorImpl, interfaceFun, classDescriptor, state.typeMapper)
-                        }
-                        else {
-                            value
-                        }
+                    if (classDescriptor !== descriptor) {
+                        InterfaceLowering.createDefaultImplFunDescriptor(
+                            descriptor as DefaultImplsClassDescriptorImpl,
+                            interfaceFun,
+                            classDescriptor,
+                            state.typeMapper
+                        )
+                    } else {
+                        value
+                    }
                 generateDelegationToDefaultImpl(irClass, interfaceFun, inheritedFun)
             }
         }
@@ -71,13 +76,16 @@ class InterfaceDelegationLowering(val state: GenerationState) : IrElementTransfo
     private fun generateDelegationToDefaultImpl(irClass: IrClass, interfaceFun: FunctionDescriptor, inheritedFun: FunctionDescriptor) {
         val irBody = IrBlockBodyImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET)
         val irFunction = IrFunctionImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, IrDeclarationOrigin.DEFINED, inheritedFun, irBody)
+        irFunction.createParameterDeclarations()
         irClass.declarations.add(irFunction)
 
         val interfaceDescriptor = interfaceFun.containingDeclaration as ClassDescriptor
         val defaultImpls = InterfaceLowering.createDefaultImplsClassDescriptor(interfaceDescriptor)
-        val defaultImplFun = InterfaceLowering.createDefaultImplFunDescriptor(defaultImpls, interfaceFun.original, interfaceDescriptor, state.typeMapper)
+        val defaultImplFun =
+            InterfaceLowering.createDefaultImplFunDescriptor(defaultImpls, interfaceFun.original, interfaceDescriptor, state.typeMapper)
         val returnType = inheritedFun.returnType!!
-        val irCallImpl = IrCallImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, defaultImplFun, null, JvmLoweredStatementOrigin.DEFAULT_IMPLS_DELEGATION)
+        val irCallImpl =
+            IrCallImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, defaultImplFun, null, JvmLoweredStatementOrigin.DEFAULT_IMPLS_DELEGATION)
         irBody.statements.add(IrReturnImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, inheritedFun, irCallImpl))
 
         var shift = 0
