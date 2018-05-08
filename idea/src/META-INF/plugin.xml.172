@@ -1601,6 +1601,16 @@
       <category>Kotlin</category>
     </intentionAction>
 
+    <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.ConvertVarargParameterToArrayIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.ConvertArrayParameterToVarargIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
     <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.ObjectLiteralToLambdaInspection"
                      displayName="Object literal can be converted to lambda"
                      groupPath="Kotlin"
@@ -2842,9 +2852,6 @@
     <resolveScopeProvider implementation="org.jetbrains.kotlin.idea.core.script.dependencies.ScriptDependenciesResolveScopeProvider"/>
 
     <codeInsight.intention.jvmCommonIntentionActionsFactory language="kotlin" implementationClass="org.jetbrains.kotlin.idea.intentions.KotlinCommonIntentionActionsFactory"/>
-
-    <projectService serviceInterface="org.jetbrains.uast.kotlin.KotlinUastBindingContextProviderService"
-                  serviceImplementation="org.jetbrains.uast.kotlin.internal.IdeaKotlinUastBindingContextProviderService"/>
 
     <statistics.usagesCollector implementation="org.jetbrains.kotlin.idea.formatter.KotlinFormatterUsageCollector" />
     <statistics.usagesCollector implementation="org.jetbrains.kotlin.idea.parameterInfo.KotlinInlayParameterHintsUsageCollector" />
