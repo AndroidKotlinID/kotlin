@@ -48,6 +48,15 @@ plugins {
     id("jps-compatible")
 }
 
+pill {
+    excludedDirs(
+        "out",
+        "buildSrc/build",
+        "buildSrc/prepare-deps/android-dx/build",
+        "buildSrc/prepare-deps/intellij-sdk/build"
+    )
+}
+
 buildScan {
     setTermsOfServiceUrl("https://gradle.com/terms-of-service")
     setTermsOfServiceAgree("yes")
@@ -132,6 +141,7 @@ extra["versions.javaslang"] = "2.0.6"
 extra["versions.ant"] = "1.8.2"
 extra["versions.android"] = "2.3.1"
 extra["versions.kotlinx-coroutines-core"] = "0.20"
+extra["versions.kotlinx-serialization-runtime"] = "0.4.2"
 extra["versions.kotlinx-coroutines-jdk8"] = "0.20"
 extra["versions.json"] = "20160807"
 extra["versions.native-platform"] = "0.14"
@@ -576,7 +586,6 @@ val cidrPlugin by task<Copy> {
         exclude("lib/android-extensions-ide.jar")
         exclude("lib/android-extensions-compiler.jar")
         exclude("lib/kapt3-idea.jar")
-        exclude("lib/j2k.jar")
         exclude("lib/jps-ide.jar")
         exclude("lib/jps/**")
         exclude("kotlinc/**")
