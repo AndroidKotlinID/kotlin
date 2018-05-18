@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.gradle.tasks
 
+import com.intellij.openapi.util.io.FileUtil
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.logging.Logger
@@ -23,6 +24,7 @@ import org.gradle.api.plugins.BasePluginConvention
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
 import org.jetbrains.kotlin.annotation.AnnotationFileUpdater
 import org.jetbrains.kotlin.annotation.AnnotationFileUpdaterImpl
@@ -35,18 +37,16 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compilerRunner.*
+import org.jetbrains.kotlin.daemon.common.MultiModuleICSettings
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.internal.CompilerArgumentAwareWithInput
 import org.jetbrains.kotlin.gradle.internal.prepareCompilerArguments
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.utils.ParsedGradleVersion
 import org.jetbrains.kotlin.incremental.*
-import org.jetbrains.kotlin.incremental.multiproject.ArtifactDifferenceRegistry
-import org.jetbrains.kotlin.incremental.multiproject.ArtifactDifferenceRegistryProvider
 import org.jetbrains.kotlin.utils.LibraryUtils
 import java.io.File
 import java.util.*
-import java.util.concurrent.Callable
 import kotlin.properties.Delegates
 
 const val ANNOTATIONS_PLUGIN_NAME = "org.jetbrains.kotlin.kapt"
@@ -98,6 +98,16 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
             field = value
             logger.kotlinDebug { "Set $this.incremental=$value" }
         }
+
+    @get:Internal
+    internal val buildHistoryFile: File get() = File(taskBuildDirectory, "build-history.bin")
+
+    @get:Input
+    internal var useModuleDetection: Boolean = false
+
+    @get:Internal
+    protected val multiModuleICSettings: MultiModuleICSettings
+        get() = MultiModuleICSettings(buildHistoryFile, useModuleDetection)
 
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()
@@ -185,10 +195,15 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     @get:Internal // takes part in the compiler arguments
     var friendPaths: Lazy<Array<String>?> = lazy {
         friendTask?.let { friendTask ->
-            mutableListOf<String>().apply {
-                add((friendTask.javaOutputDir ?: friendTask.destinationDir).absolutePath)
-                addAll(friendTask.attachedClassesDirs.mapNotNull { it.value?.absolutePath })
-            }.toTypedArray()
+            val possibleFriendDirs = ArrayList<File?>().apply {
+                add(friendTask.javaOutputDir)
+                add(friendTask.destinationDir)
+                addAll(friendTask.attachedClassesDirs.map { it.value })
+            }
+
+            possibleFriendDirs.filterNotNullTo(HashSet())
+                .map { it.absolutePath }
+                .toTypedArray()
         }
     }
 
@@ -216,6 +231,9 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
 
         compilerCalled = true
         callCompiler(args, sourceRoots, ChangedFiles(inputs))
+
+
+
     }
 
     @Internal
@@ -268,9 +286,6 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     private var kaptAnnotationsFileUpdater: AnnotationFileUpdater? = null
 
     @get:Internal
-    val buildHistoryFile: File get() = File(taskBuildDirectory, "build-history.bin")
-
-    @get:Internal
     val kaptOptions = KaptOptions()
 
     /** A package prefix that is used for locating Java sources in a directory structure with non-full-depth packages.
@@ -281,21 +296,12 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     @get:Optional
     var javaPackagePrefix: String? = null
 
-    @get:Internal
-    internal var artifactDifferenceRegistryProvider: ArtifactDifferenceRegistryProvider? = null
-
-    @get:Internal
-    internal var artifactFile: File? = null
-
     @get:Input
     var usePreciseJavaTracking: Boolean = true
         set(value) {
             field = value
             logger.kotlinDebug { "Set $this.usePreciseJavaTracking=$value" }
         }
-
-    @get:LocalState @get:Optional
-    internal var buildServicesWorkingDir: Callable<File>? = null
 
     init {
         incremental = true
@@ -350,25 +356,20 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         val messageCollector = GradleMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()
         val compilerRunner = GradleCompilerRunner(project)
-        val reporter = GradleICReporter(project.rootProject.projectDir)
 
         val environment = when {
             !incremental ->
                 GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
             else -> {
                 logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
-                val friendTask = friendTaskName?.let { project.tasks.findByName(it) as? KotlinCompile }
                 GradleIncrementalCompilerEnvironment(
                         computedCompilerClasspath,
                         if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
-                        reporter, taskBuildDirectory,
+                        taskBuildDirectory,
                         messageCollector, outputItemCollector, args, kaptAnnotationsFileUpdater,
-                        artifactDifferenceRegistryProvider,
-                        artifactFile = artifactFile,
-                        buildHistoryFile = buildHistoryFile,
-                        friendBuildHistoryFile = friendTask?.buildHistoryFile,
                         usePreciseJavaTracking = usePreciseJavaTracking,
-                        localStateDirs = outputDirectories
+                        localStateDirs = outputDirectories,
+                        multiModuleICSettings = multiModuleICSettings
                 )
             }
         }
@@ -385,20 +386,34 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
                     args,
                     environment)
 
+            disableMultiModuleICIfNeeded()
             processCompilerExitCode(exitCode)
-            artifactDifferenceRegistryProvider?.withRegistry(reporter) {
-                it.flush(true)
-            }
         }
         catch (e: Throwable) {
             cleanupOnError()
-            artifactDifferenceRegistryProvider?.clean()
             throw e
         }
-        finally {
-            artifactDifferenceRegistryProvider?.withRegistry(reporter, ArtifactDifferenceRegistry::close)
-        }
         anyClassesCompiled = true
+    }
+
+    private fun disableMultiModuleICIfNeeded() {
+        if (!incremental || javaOutputDir == null) return
+
+        val illegalTask = project.tasks.firstOrNull {
+            it is AbstractCompile &&
+                    it !is JavaCompile &&
+                    it !is AbstractKotlinCompile<*> &&
+                    FileUtil.isAncestor(javaOutputDir!!, it.destinationDir, /* strict = */ false)
+        } as? AbstractCompile
+
+        if (illegalTask != null) {
+            project.logger.info(
+                "Kotlin inter-project IC is disabled: " +
+                        "unknown task '$illegalTask' destination dir ${illegalTask.destinationDir} " +
+                        "intersects with java destination dir $javaOutputDir"
+            )
+            buildHistoryFile.delete()
+        }
     }
 
     private fun cleanupOnError() {
@@ -525,8 +540,10 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
                 GradleIncrementalCompilerEnvironment(
                         computedCompilerClasspath,
                         if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
-                        reporter, taskBuildDirectory,
-                        messageCollector, outputItemCollector, args)
+                        taskBuildDirectory,
+                        messageCollector, outputItemCollector, args,
+                        multiModuleICSettings = multiModuleICSettings
+                )
             }
             else -> {
                 GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)

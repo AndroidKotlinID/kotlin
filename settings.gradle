@@ -113,6 +113,8 @@ include ":kotlin-build-common",
         ":kotlin-stdlib-jdk8",
         ":kotlin-stdlib:samples",
         ":kotlin-stdlib:jvm-minimal-for-test",
+        ":kotlinx-metadata",
+        ":kotlinx-metadata-jvm",
         ":prepare:build.version",
         ":kotlin-build-common",
         ":prepare:formatter",
@@ -132,6 +134,7 @@ include ":kotlin-build-common",
         ":tools:binary-compatibility-validator",
         ":tools:kotlin-stdlib-js-merger",
         ":tools:kotlin-stdlib-gen",
+        ":tools:kotlinp",
         ":kotlin-gradle-plugin-api",
         ":kotlin-gradle-plugin",
         ":kotlin-gradle-plugin-test-utils-embeddable",
@@ -204,6 +207,8 @@ project(':kotlin-stdlib:samples').projectDir = "$rootDir/libraries/stdlib/sample
 project(":kotlin-stdlib:jvm-minimal-for-test").projectDir = "$rootDir/libraries/stdlib/jvm-minimal-for-test" as File
 project(':kotlin-reflect').projectDir = "$rootDir/libraries/reflect" as File
 project(':kotlin-reflect-api').projectDir = "$rootDir/libraries/reflect/api" as File
+project(':kotlinx-metadata').projectDir = "$rootDir/libraries/kotlinx-metadata" as File
+project(':kotlinx-metadata-jvm').projectDir = "$rootDir/libraries/kotlinx-metadata/jvm" as File
 project(':kotlin-compiler').projectDir = "$rootDir/prepare/compiler" as File
 project(':kotlin-compiler-embeddable').projectDir = "$rootDir/prepare/compiler-embeddable" as File
 project(':kotlin-compiler-client-embeddable').projectDir = "$rootDir/prepare/compiler-client-embeddable" as File
@@ -236,6 +241,7 @@ project(':kotlin-source-sections-compiler-plugin').projectDir = "$rootDir/plugin
 project(':tools:binary-compatibility-validator').projectDir = "$rootDir/libraries/tools/binary-compatibility-validator" as File
 project(':tools:kotlin-stdlib-js-merger').projectDir = "$rootDir/libraries/tools/kotlin-stdlib-js-merger" as File
 project(':tools:kotlin-stdlib-gen').projectDir = "$rootDir/libraries/tools/kotlin-stdlib-gen" as File
+project(':tools:kotlinp').projectDir = "$rootDir/libraries/tools/kotlinp" as File
 project(':kotlin-gradle-plugin-api').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin-api" as File
 project(':kotlin-gradle-plugin').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin" as File
 project(':kotlin-gradle-plugin-test-utils-embeddable').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin-test-utils-embeddable" as File
