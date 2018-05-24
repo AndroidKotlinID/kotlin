@@ -5602,6 +5602,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 runTest("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters/namedArgument.kt");
             }
 
+            @TestMetadata("optionalParameterAndLambda.kt")
+            public void testOptionalParameterAndLambda() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters/optionalParameterAndLambda.kt");
+            }
+
+            @TestMetadata("optionalParameterAndLambdaComplex.kt")
+            public void testOptionalParameterAndLambdaComplex() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters/optionalParameterAndLambdaComplex.kt");
+            }
+
             @TestMetadata("optionalParameters1.kt")
             public void testOptionalParameters1() throws Exception {
                 runTest("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters/optionalParameters1.kt");
@@ -5640,6 +5650,44 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             @TestMetadata("overridingMethod.kt")
             public void testOverridingMethod() throws Exception {
                 runTest("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters/overridingMethod.kt");
+            }
+        }
+
+        @TestMetadata("idea/testData/quickfix/deprecatedSymbolUsage/properties")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Properties extends AbstractQuickFixTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProperties() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/deprecatedSymbolUsage/properties"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+            }
+
+            @TestMetadata("callInAssignmentToProperty.kt")
+            public void testCallInAssignmentToProperty() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/properties/callInAssignmentToProperty.kt");
+            }
+
+            @TestMetadata("callToCustomProperty.kt")
+            public void testCallToCustomProperty() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/properties/callToCustomProperty.kt");
+            }
+
+            @TestMetadata("callToProperty.kt")
+            public void testCallToProperty() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/properties/callToProperty.kt");
+            }
+
+            @TestMetadata("extensionPropertyToProperty.kt")
+            public void testExtensionPropertyToProperty() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/properties/extensionPropertyToProperty.kt");
+            }
+
+            @TestMetadata("extensionPropertyWriteToProperty.kt")
+            public void testExtensionPropertyWriteToProperty() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/properties/extensionPropertyWriteToProperty.kt");
             }
         }
 
@@ -6047,6 +6095,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/experimental/basicFunctionNotApplicable.kt");
         }
 
+        @TestMetadata("basicModule.kt")
+        public void testBasicModule() throws Exception {
+            runTest("idea/testData/quickfix/experimental/basicModule.kt");
+        }
+
         @TestMetadata("basicUseExperimental.kt")
         public void testBasicUseExperimental() throws Exception {
             runTest("idea/testData/quickfix/experimental/basicUseExperimental.kt");
@@ -6055,6 +6108,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("classUseExperimental.kt")
         public void testClassUseExperimental() throws Exception {
             runTest("idea/testData/quickfix/experimental/classUseExperimental.kt");
+        }
+
+        @TestMetadata("doNotSwitchOn.kt")
+        public void testDoNotSwitchOn() throws Exception {
+            runTest("idea/testData/quickfix/experimental/doNotSwitchOn.kt");
         }
 
         @TestMetadata("functionInLocalClass.kt")
@@ -6075,6 +6133,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("override.kt")
         public void testOverride() throws Exception {
             runTest("idea/testData/quickfix/experimental/override.kt");
+        }
+
+        @TestMetadata("switchOn.kt")
+        public void testSwitchOn() throws Exception {
+            runTest("idea/testData/quickfix/experimental/switchOn.kt");
         }
     }
 
@@ -8629,6 +8692,24 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("idea/testData/quickfix/redundantIf/simple.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/quickfix/redundantLateinit")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantLateinit extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRedundantLateinit() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/redundantLateinit"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("idea/testData/quickfix/redundantLateinit/simple.kt");
         }
     }
 

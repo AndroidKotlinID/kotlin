@@ -2281,6 +2281,16 @@ public class QuickFixMultiFileTestGenerated extends AbstractQuickFixMultiFileTes
                 runTest("idea/testData/quickfix/deprecatedSymbolUsage/imports/addImports.before.Main.kt");
             }
 
+            @TestMetadata("addImportsSimple.before.Main.kt")
+            public void testAddImportsSimple() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/imports/addImportsSimple.before.Main.kt");
+            }
+
+            @TestMetadata("addImportsWithSameName.before.Main.kt")
+            public void testAddImportsWithSameName() throws Exception {
+                runTest("idea/testData/quickfix/deprecatedSymbolUsage/imports/addImportsWithSameName.before.Main.kt");
+            }
+
             public void testAllFilesPresentInImports() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/deprecatedSymbolUsage/imports"), Pattern.compile("^(\\w+)\\.((before\\.Main\\.\\w+)|(test))$"), TargetBackend.ANY, true);
             }
@@ -2340,6 +2350,19 @@ public class QuickFixMultiFileTestGenerated extends AbstractQuickFixMultiFileTes
 
             public void testAllFilesPresentInOptionalParameters() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/deprecatedSymbolUsage/optionalParameters"), Pattern.compile("^(\\w+)\\.((before\\.Main\\.\\w+)|(test))$"), TargetBackend.ANY, true);
+            }
+        }
+
+        @TestMetadata("idea/testData/quickfix/deprecatedSymbolUsage/properties")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Properties extends AbstractQuickFixMultiFileTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTestWithExtraFile, TargetBackend.ANY, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProperties() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/deprecatedSymbolUsage/properties"), Pattern.compile("^(\\w+)\\.((before\\.Main\\.\\w+)|(test))$"), TargetBackend.ANY, true);
             }
         }
 
@@ -3114,6 +3137,19 @@ public class QuickFixMultiFileTestGenerated extends AbstractQuickFixMultiFileTes
 
         public void testAllFilesPresentInRedundantIf() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/redundantIf"), Pattern.compile("^(\\w+)\\.((before\\.Main\\.\\w+)|(test))$"), TargetBackend.ANY, true);
+        }
+    }
+
+    @TestMetadata("idea/testData/quickfix/redundantLateinit")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantLateinit extends AbstractQuickFixMultiFileTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTestWithExtraFile, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRedundantLateinit() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/redundantLateinit"), Pattern.compile("^(\\w+)\\.((before\\.Main\\.\\w+)|(test))$"), TargetBackend.ANY, true);
         }
     }
 

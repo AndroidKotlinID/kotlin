@@ -493,6 +493,7 @@ class QuickFixRegistrar : QuickFixContributor {
         INAPPLICABLE_LATEINIT_MODIFIER.registerFactory(ChangeVariableMutabilityFix.LATEINIT_VAL_FACTORY)
         INAPPLICABLE_LATEINIT_MODIFIER.registerFactory(RemoveNullableFix.LATEINIT_FACTORY)
         INAPPLICABLE_LATEINIT_MODIFIER.registerFactory(RemovePartsFromPropertyFix.LateInitFactory)
+        INAPPLICABLE_LATEINIT_MODIFIER.registerFactory(RemoveModifierFix.createRemoveLateinitFactory())
 
         VARIABLE_WITH_REDUNDANT_INITIALIZER.registerFactory(RemoveRedundantInitializerFix)
 
@@ -551,5 +552,6 @@ class QuickFixRegistrar : QuickFixContributor {
         EXPERIMENTAL_API_USAGE_ERROR.registerFactory(ExperimentalFixesFactory)
         EXPERIMENTAL_OVERRIDE.registerFactory(ExperimentalFixesFactory)
         EXPERIMENTAL_OVERRIDE_ERROR.registerFactory(ExperimentalFixesFactory)
+        EXPERIMENTAL_IS_NOT_ENABLED.registerFactory(MakeModuleExperimentalFix)
     }
 }
