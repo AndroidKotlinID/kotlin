@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.cli.common.arguments
 
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.*
 
@@ -223,14 +224,11 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     var noExceptionOnExplicitEqualsForBoxedNull by FreezableVar(false)
 
     @Argument(
-        value = "-Xoutput-imports",
-        valueDescription = "<path>",
-        description = "Output imports from all compiled files to the specified file in JSON format"
+        value = "-Xjvm-default-mode",
+        valueDescription = "{disable|enable|compatibility}",
+        description = "Allow to use '@JvmDefault' for JVM default method support"
     )
-    var outputImports: String? by FreezableVar(null)
-
-    @Argument(value = "-Xenable-jvm-default", description = "Allow to use '@JvmDefault' for JVM default method support")
-    var enableJvmDefault: Boolean by FreezableVar(false)
+    var jvmDefaultMode: String by FreezableVar(JvmDefaultMode.DEFAULT.description)
 
     @Argument(value = "-Xdisable-default-scripting-plugin", description = "Do not enable scripting plugin by default")
     var disableDefaultScriptingPlugin: Boolean by FreezableVar(false)
@@ -247,8 +245,13 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
             jsr305,
             supportCompatqualCheckerFrameworkAnnotations
         )
-        result[AnalysisFlag.enableJvmDefault] = enableJvmDefault
         result[AnalysisFlag.ignoreDataFlowInAssert] = JVMAssertionsMode.fromString(assertionsMode) != JVMAssertionsMode.LEGACY
+        JvmDefaultMode.fromStringOrNull(jvmDefaultMode)?.let { result[AnalysisFlag.jvmDefaultMode] = it }
+                ?: collector.report(
+                    CompilerMessageSeverity.ERROR,
+                    "Unknown @JvmDefault mode: $jvmDefaultMode, " +
+                            "supported modes: ${JvmDefaultMode.values().map { it.description }}"
+                )
         return result
     }
 

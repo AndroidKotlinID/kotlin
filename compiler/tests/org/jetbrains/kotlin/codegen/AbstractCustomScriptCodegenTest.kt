@@ -13,16 +13,20 @@ import org.jetbrains.kotlin.scripting.compiler.plugin.configureScriptDefinitions
 import org.jetbrains.kotlin.test.ConfigurationKind
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import org.jetbrains.kotlin.test.TestJdkKind
+import org.jetbrains.kotlin.utils.PathUtil
+import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_COMMON_JAR
+import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_COMPILER_PLUGIN_JAR
+import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_JVM_JAR
+import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_MISC_JAR
 import org.junit.Assert
 import java.io.File
-import kotlin.reflect.full.starProjectedType
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.annotations.KotlinScriptDefaultCompilationConfiguration
+import kotlin.script.experimental.api.KotlinType
 import kotlin.script.experimental.api.ScriptCompileConfigurationProperties
-import kotlin.script.experimental.misc.invoke
 import kotlin.script.experimental.util.TypedKey
 
-open class AbstractCustomScriptCodegenTest : CodegenTestCase() {
+abstract class AbstractCustomScriptCodegenTest : CodegenTestCase() {
     private lateinit var scriptDefinitions: List<String>
 
     override fun setUp() {
@@ -33,7 +37,7 @@ open class AbstractCustomScriptCodegenTest : CodegenTestCase() {
 
     override fun updateConfiguration(configuration: CompilerConfiguration) {
         if (scriptDefinitions.isNotEmpty()) {
-            configureScriptDefinitions(scriptDefinitions, configuration, MessageCollector.NONE, emptyMap())
+            configureScriptDefinitions(scriptDefinitions, configuration, this::class.java.classLoader, MessageCollector.NONE, emptyMap())
         }
 
         configuration.addJvmClasspathRoots(additionalDependencies.orEmpty())
@@ -49,7 +53,15 @@ open class AbstractCustomScriptCodegenTest : CodegenTestCase() {
 
         scriptDefinitions = InTextDirectivesUtils.findListWithPrefixes(content, "KOTLIN_SCRIPT_DEFINITION:")
         if (scriptDefinitions.isNotEmpty()) {
-            additionalDependencies = scriptCompilationClasspathFromContextOrStlib("tests-common", "kotlin-stdlib")
+            additionalDependencies =
+                    scriptCompilationClasspathFromContextOrStlib("tests-common", "kotlin-stdlib") +
+                    File(TestScriptWithReceivers::class.java.protectionDomain.codeSource.location.toURI().path) +
+                    with(PathUtil.kotlinPathsForDistDirectory) {
+                        arrayOf(
+                            KOTLIN_SCRIPTING_COMPILER_PLUGIN_JAR, KOTLIN_SCRIPTING_COMMON_JAR,
+                            KOTLIN_SCRIPTING_JVM_JAR, KOTLIN_SCRIPTING_MISC_JAR
+                        ).mapNotNull { File(libPath, it).takeIf { it.exists() } }
+                    }
         }
 
         createEnvironmentWithMockJdkAndIdeaAnnotations(configurationKind, files, TestJdkKind.FULL_JDK)
@@ -117,7 +129,7 @@ open class AbstractCustomScriptCodegenTest : CodegenTestCase() {
 
 object TestScriptWithReceiversConfiguration : ArrayList<Pair<TypedKey<*>, Any?>>(
     listOf(
-        ScriptCompileConfigurationProperties.scriptImplicitReceivers(String::class.starProjectedType)
+        ScriptCompileConfigurationProperties.scriptImplicitReceivers to listOf(KotlinType(String::class))
     )
 )
 
@@ -128,7 +140,7 @@ abstract class TestScriptWithReceivers
 
 object TestScriptWithSimpleEnvVarsConfiguration : ArrayList<Pair<TypedKey<*>, Any?>>(
     listOf(
-        ScriptCompileConfigurationProperties.contextVariables("stringVar1" to String::class.starProjectedType)
+        ScriptCompileConfigurationProperties.contextVariables to mapOf("stringVar1" to KotlinType(String::class))
     )
 )
 
