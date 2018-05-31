@@ -508,6 +508,21 @@ public class BlackBoxWithJava8CodegenTestGenerated extends AbstractBlackBoxCodeg
                     runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/bridge3.kt");
                 }
 
+                @TestMetadata("bridgeWithProperties.kt")
+                public void testBridgeWithProperties() throws Exception {
+                    runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/bridgeWithProperties.kt");
+                }
+
+                @TestMetadata("bridgeWithProperties2.kt")
+                public void testBridgeWithProperties2() throws Exception {
+                    runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/bridgeWithProperties2.kt");
+                }
+
+                @TestMetadata("bridgeWithProperties3.kt")
+                public void testBridgeWithProperties3() throws Exception {
+                    runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/bridgeWithProperties3.kt");
+                }
+
                 @TestMetadata("defaultArgs.kt")
                 public void testDefaultArgs() throws Exception {
                     runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/defaultArgs.kt");
@@ -516,6 +531,11 @@ public class BlackBoxWithJava8CodegenTestGenerated extends AbstractBlackBoxCodeg
                 @TestMetadata("inheritedJvmDefault.kt")
                 public void testInheritedJvmDefault() throws Exception {
                     runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/inheritedJvmDefault.kt");
+                }
+
+                @TestMetadata("propertyAnnotation.kt")
+                public void testPropertyAnnotation() throws Exception {
+                    runTest("compiler/testData/codegen/java8/box/jvm8/defaults/compatibility/propertyAnnotation.kt");
                 }
 
                 @TestMetadata("simpleFunction.kt")
