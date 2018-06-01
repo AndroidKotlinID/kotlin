@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.gradle.tasks
 import com.intellij.openapi.util.io.FileUtil
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.BasePluginConvention
 import org.gradle.api.tasks.*
@@ -36,22 +37,43 @@ import java.io.File
 import java.util.*
 import kotlin.properties.Delegates
 
-const val ANNOTATIONS_PLUGIN_NAME = "org.jetbrains.kotlin.kapt"
 const val KOTLIN_BUILD_DIR_NAME = "kotlin"
 const val USING_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin incremental compilation"
 const val USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE = "Using experimental Kotlin/JS incremental compilation"
 
 abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCompile(), CompilerArgumentAwareWithInput<T> {
-    // TODO: deprecate and remove
+    private fun useCompilerClasspathConfigurationMessage(propertyName: String) {
+        project.logger.kotlinWarn(
+            "'$path.$propertyName' is deprecated and will be removed soon. " +
+                    "Use '$COMPILER_CLASSPATH_CONFIGURATION_NAME' " +
+                    "configuration for customizing compiler classpath."
+        )
+    }
+
+    // TODO: remove
     @get:Internal
     var compilerJarFile: File? = null
+        @Deprecated("Use $COMPILER_CLASSPATH_CONFIGURATION_NAME configuration")
+        set(value) {
+            useCompilerClasspathConfigurationMessage("compilerJarFile")
+            field = value
+        }
 
+    // TODO: remove
     @get:Internal
     var compilerClasspath: List<File>? = null
+        @Deprecated("Use $COMPILER_CLASSPATH_CONFIGURATION_NAME configuration")
+        set(value) {
+            useCompilerClasspathConfigurationMessage("compilerClasspath")
+            field = value
+        }
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     override fun getSource() = super.getSource()
+
+    @get:Input
+    internal var useFallbackCompilerSearch: Boolean = false
 
     @get:Classpath @get:InputFiles
     internal val computedCompilerClasspath: List<File>
@@ -60,8 +82,21 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCo
                     // a hack to remove compiler jar from the cp, will be dropped when compilerJarFile will be removed
                     listOf(it) + findKotlinCompilerClasspath(project).filter { !it.name.startsWith("kotlin-compiler") }
                 }
-                ?: findKotlinCompilerClasspath(project).takeIf { it.isNotEmpty() }
-                ?: throw IllegalStateException("Could not find Kotlin Compiler classpath. Please specify $name.compilerClasspath")
+                ?: if (!useFallbackCompilerSearch) {
+                    try {
+                        project.configurations.getByName(COMPILER_CLASSPATH_CONFIGURATION_NAME).resolve().toList()
+                    } catch (e: Exception) {
+                        project.logger.error(
+                            "Could not resolve compiler classpath. " +
+                                    "Check if Kotlin Gradle plugin repository is configured in $project."
+                        )
+                        throw e
+                    }
+                } else {
+                    findKotlinCompilerClasspath(project)
+                }
+                ?: throw IllegalStateException("Could not find Kotlin Compiler classpath")
+
 
     protected abstract fun findKotlinCompilerClasspath(project: Project): List<File>
 }
@@ -96,6 +131,11 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     protected val multiModuleICSettings: MultiModuleICSettings
         get() = MultiModuleICSettings(buildHistoryFile, useModuleDetection)
 
+    @get:Classpath
+    @get:InputFiles
+    val pluginClasspath: FileCollection
+        get() = project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)
+
     @get:Internal
     internal val pluginOptions = CompilerPluginOptions()
 
@@ -106,9 +146,6 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     protected val compileClasspath: Iterable<File>
         get() = (classpath + additionalClasspath)
                 .filterTo(LinkedHashSet(), File::exists)
-
-    @get:Classpath @get:InputFiles
-    internal val pluginClasspath get() = pluginOptions.classpath
 
     private val kotlinExt: KotlinProjectExtension
             get() = project.extensions.findByType(KotlinProjectExtension::class.java)!!
@@ -243,8 +280,8 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         setupPlugins(args)
     }
 
-    open fun setupPlugins(compilerArgs: T) {
-        compilerArgs.pluginClasspaths = pluginClasspath.toTypedArray()
+    fun setupPlugins(compilerArgs: T) {
+        compilerArgs.pluginClasspaths = pluginClasspath.toSortedPathsArray()
         compilerArgs.pluginOptions = pluginOptions.arguments.toTypedArray()
     }
 
@@ -291,11 +328,6 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
 
     override fun createCompilerArgs(): K2JVMCompilerArguments =
             K2JVMCompilerArguments()
-
-    override fun setupPlugins(compilerArgs: K2JVMCompilerArguments) {
-        compilerArgs.pluginClasspaths = pluginClasspath.toTypedArray()
-        compilerArgs.pluginOptions = pluginOptions.arguments.toTypedArray()
-    }
 
     override fun setupCompilerArgs(args: K2JVMCompilerArguments, defaultsOnly: Boolean) {
         args.apply { fillDefaultValues() }
