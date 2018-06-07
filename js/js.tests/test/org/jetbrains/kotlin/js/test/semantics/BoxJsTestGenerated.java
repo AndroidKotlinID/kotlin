@@ -3724,6 +3724,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             runTest("js/js.translator/testData/box/inline/classObject.kt");
         }
 
+        @TestMetadata("continueInLoopWithInlinableCondition.kt")
+        public void testContinueInLoopWithInlinableCondition() throws Exception {
+            runTest("js/js.translator/testData/box/inline/continueInLoopWithInlinableCondition.kt");
+        }
+
         @TestMetadata("dontInlineFunctionCall.kt")
         public void testDontInlineFunctionCall() throws Exception {
             runTest("js/js.translator/testData/box/inline/dontInlineFunctionCall.kt");
@@ -3917,6 +3922,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("localInlineFunctionReference.kt")
         public void testLocalInlineFunctionReference() throws Exception {
             runTest("js/js.translator/testData/box/inline/localInlineFunctionReference.kt");
+        }
+
+        @TestMetadata("loopWithInlinableCondition.kt")
+        public void testLoopWithInlinableCondition() throws Exception {
+            runTest("js/js.translator/testData/box/inline/loopWithInlinableCondition.kt");
         }
 
         @TestMetadata("metadataForPublicFunction.kt")

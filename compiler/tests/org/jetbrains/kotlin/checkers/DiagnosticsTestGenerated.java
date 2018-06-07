@@ -9565,6 +9565,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/equalityConstraintOnNullableType.kt");
                 }
 
+                @TestMetadata("errorUpperBoundConstraint.kt")
+                public void testErrorUpperBoundConstraint() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/errorUpperBoundConstraint.kt");
+                }
+
                 @TestMetadata("ignoreConstraintFromImplicitInNothing.kt")
                 public void testIgnoreConstraintFromImplicitInNothing() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/ignoreConstraintFromImplicitInNothing.kt");
@@ -10699,6 +10704,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("basicInlineClassDeclarationDisabled.kt")
             public void testBasicInlineClassDeclarationDisabled() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/basicInlineClassDeclarationDisabled.kt");
+            }
+
+            @TestMetadata("identityComparisonWithInlineClasses.kt")
+            public void testIdentityComparisonWithInlineClasses() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inlineClasses/identityComparisonWithInlineClasses.kt");
             }
 
             @TestMetadata("inlineClassDeclarationCheck.kt")
