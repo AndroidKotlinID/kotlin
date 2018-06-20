@@ -2981,6 +2981,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
                 runTest("js/js.translator/testData/box/expression/try/multipleCatchBlocks.kt");
             }
 
+            @TestMetadata("nestedTryCatchInCatch.kt")
+            public void testNestedTryCatchInCatch() throws Exception {
+                runTest("js/js.translator/testData/box/expression/try/nestedTryCatchInCatch.kt");
+            }
+
             @TestMetadata("rethrowExceptionIfNotCaught.kt")
             public void testRethrowExceptionIfNotCaught() throws Exception {
                 runTest("js/js.translator/testData/box/expression/try/rethrowExceptionIfNotCaught.kt");
@@ -3195,6 +3200,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             @TestMetadata("whenWithLongRangeClause.kt")
             public void testWhenWithLongRangeClause() throws Exception {
                 runTest("js/js.translator/testData/box/expression/when/whenWithLongRangeClause.kt");
+            }
+
+            @TestMetadata("whenWithMapRangeClause.kt")
+            public void testWhenWithMapRangeClause() throws Exception {
+                runTest("js/js.translator/testData/box/expression/when/whenWithMapRangeClause.kt");
             }
 
             @TestMetadata("whenWithOneStmWhen.kt")

@@ -10716,6 +10716,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassDeclarationCheck.kt");
             }
 
+            @TestMetadata("inlineClassImplementsCollection.kt")
+            public void testInlineClassImplementsCollection() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassImplementsCollection.kt");
+            }
+
             @TestMetadata("inlineClassesInsideAnnotations.kt")
             public void testInlineClassesInsideAnnotations() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassesInsideAnnotations.kt");
@@ -21460,6 +21465,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/typealias/import.kt");
             }
 
+            @TestMetadata("importForTypealiasObject.kt")
+            public void testImportForTypealiasObject() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typealias/importForTypealiasObject.kt");
+            }
+
             @TestMetadata("importFromTypeAliasObject.kt")
             public void testImportFromTypeAliasObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typealias/importFromTypeAliasObject.kt");
@@ -22451,6 +22461,99 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("whenWithNothingAndLambdas.kt")
             public void testWhenWithNothingAndLambdas() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/when/whenWithNothingAndLambdas.kt");
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/tests/when/withSubjectVariable")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class WithSubjectVariable extends AbstractDiagnosticsUsingJavacTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInWithSubjectVariable() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/when/withSubjectVariable"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("capturingInInitializer.kt")
+                public void testCapturingInInitializer() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/capturingInInitializer.kt");
+                }
+
+                @TestMetadata("invisibleOutsideOfWhen.kt")
+                public void testInvisibleOutsideOfWhen() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/invisibleOutsideOfWhen.kt");
+                }
+
+                @TestMetadata("jumpoutInInitializer.kt")
+                public void testJumpoutInInitializer() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/jumpoutInInitializer.kt");
+                }
+
+                @TestMetadata("nestedWhenWithSubject.kt")
+                public void testNestedWhenWithSubject() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/nestedWhenWithSubject.kt");
+                }
+
+                @TestMetadata("noSubjectVariableName.kt")
+                public void testNoSubjectVariableName() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/noSubjectVariableName.kt");
+                }
+
+                @TestMetadata("reassignmentToWhenSubjectVariable.kt")
+                public void testReassignmentToWhenSubjectVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/reassignmentToWhenSubjectVariable.kt");
+                }
+
+                @TestMetadata("shadowingOtherVariable.kt")
+                public void testShadowingOtherVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/shadowingOtherVariable.kt");
+                }
+
+                @TestMetadata("smartCastOnValueBoundToSubjectVariable.kt")
+                public void testSmartCastOnValueBoundToSubjectVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/smartCastOnValueBoundToSubjectVariable.kt");
+                }
+
+                @TestMetadata("smartCastsOnSubjectVariable.kt")
+                public void testSmartCastsOnSubjectVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/smartCastsOnSubjectVariable.kt");
+                }
+
+                @TestMetadata("smartcastToEnum.kt")
+                public void testSmartcastToEnum() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/smartcastToEnum.kt");
+                }
+
+                @TestMetadata("smartcastToSealed.kt")
+                public void testSmartcastToSealed() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/smartcastToSealed.kt");
+                }
+
+                @TestMetadata("softModifierName.kt")
+                public void testSoftModifierName() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/softModifierName.kt");
+                }
+
+                @TestMetadata("subjectVariableInIsPattern.kt")
+                public void testSubjectVariableInIsPattern() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/subjectVariableInIsPattern.kt");
+                }
+
+                @TestMetadata("unsupportedFeature.kt")
+                public void testUnsupportedFeature() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/unsupportedFeature.kt");
+                }
+
+                @TestMetadata("unsupportedVariableDeclarationsInWhenSubject.kt")
+                public void testUnsupportedVariableDeclarationsInWhenSubject() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/unsupportedVariableDeclarationsInWhenSubject.kt");
+                }
+
+                @TestMetadata("unusedWhenSubjectVariable.kt")
+                public void testUnusedWhenSubjectVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/when/withSubjectVariable/unusedWhenSubjectVariable.kt");
+                }
             }
         }
     }
