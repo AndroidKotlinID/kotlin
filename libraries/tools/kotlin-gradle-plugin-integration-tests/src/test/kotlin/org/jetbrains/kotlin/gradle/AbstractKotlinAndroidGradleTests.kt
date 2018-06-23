@@ -99,13 +99,13 @@ abstract class KotlinAndroid3GradleIT(
 
         // Check that Kotlin tasks were created for both lib and feature variants:
         val kotlinTaskNames =
-            listOf("Debug", "Release").flatMap { buildType ->
+            listOf("Debug").flatMap { buildType ->
                 listOf("Flavor1", "Flavor2").flatMap { flavor ->
                     listOf("", "Feature").map { isFeature -> ":Lib:compile$flavor$buildType${isFeature}Kotlin" }
                 }
             }
 
-        project.build(":Lib:assemble") {
+        project.build(":Lib:assembleDebug") {
             assertSuccessful()
             assertTasksExecuted(*kotlinTaskNames.toTypedArray())
         }
@@ -231,6 +231,32 @@ fun getSomething() = 10
         project.build("assembleDebug", options = options) {
             assertSuccessful()
             val affectedSources = project.projectDir.getFilesByNames("libUtil.kt", "MainActivity2.kt")
+            assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
+        }
+    }
+
+    @Test
+    fun testMultiModuleICNonAndroidModuleIsChanged() {
+        val project = Project("AndroidIncrementalMultiModule", gradleVersion)
+        val options = defaultBuildOptions().copy(incremental = true, kotlinDaemonDebugPort = null)
+
+        project.build("assembleDebug", options = options) {
+            assertSuccessful()
+        }
+
+        val libAndroidUtilKt = project.projectDir.getFileByName("libAndroidUtil.kt")
+        libAndroidUtilKt.modify { it.replace("fun libAndroidUtil(): String", "fun libAndroidUtil(): CharSequence") }
+        project.build("assembleDebug", options = options) {
+            assertSuccessful()
+            val affectedSources = project.projectDir.getFilesByNames("libAndroidUtil.kt", "useLibAndroidUtil.kt")
+            assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
+        }
+
+        val libJvmUtilKt = project.projectDir.getFileByName("LibJvmUtil.kt")
+        libJvmUtilKt.modify { it.replace("fun libJvmUtil(): String", "fun libJvmUtil(): CharSequence") }
+        project.build("assembleDebug", options = options) {
+            assertSuccessful()
+            val affectedSources = project.projectDir.getFilesByNames("LibJvmUtil.kt", "useLibJvmUtil.kt")
             assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
         }
     }

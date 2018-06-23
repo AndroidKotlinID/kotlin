@@ -387,6 +387,7 @@ internal abstract class AbstractKotlinPlugin(
             return
         }
         val inspectTask = project.tasks.create("inspectClassesForKotlinIC", InspectClassesForMultiModuleIC::class.java)
+        inspectTask.sourceSetName = SourceSet.MAIN_SOURCE_SET_NAME
         inspectTask.jarTask = jarTask
         inspectTask.dependsOn(classesTask)
         jarTask.dependsOn(inspectTask)
@@ -694,7 +695,8 @@ internal class SubpluginEnvironment(
             project.logger.kotlinDebug { "Loading subplugin $pluginId" }
 
             val artifact = subplugin.getPluginArtifact()
-            val mavenCoordinate = "${artifact.groupId}:${artifact.artifactId}:$kotlinPluginVersion"
+            val artifactVersion = artifact.version ?: kotlinPluginVersion
+            val mavenCoordinate = "${artifact.groupId}:${artifact.artifactId}:$artifactVersion"
             project.logger.kotlinDebug { "Adding '$mavenCoordinate' to '$PLUGIN_CLASSPATH_CONFIGURATION_NAME' configuration" }
             project.dependencies.add(PLUGIN_CLASSPATH_CONFIGURATION_NAME, mavenCoordinate)
 

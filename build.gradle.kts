@@ -170,12 +170,12 @@ extra["intellijSeparateSdks"] = intellijSeparateSdks
 extra["IntellijCoreDependencies"] =
         listOf("annotations",
                "asm-all",
-               "guava-21.0",
+               "guava",
                "jdom",
                "jna",
                "log4j",
                "picocontainer",
-               "snappy-in-java-0.5.1",
+               "snappy-in-java",
                "streamex",
                "trove4j")
 
@@ -598,8 +598,7 @@ val cidrPlugin by task<Copy> {
     from(ideaPluginDir) {
         exclude("lib/kotlin-plugin.jar")
 
-        exclude("lib/uast-kotlin.jar")
-        exclude("lib/uast-kotlin-ide.jar")
+        exclude("lib/android-lint.jar")
         exclude("lib/android-ide.jar")
         exclude("lib/android-output-parser-ide.jar")
         exclude("lib/android-extensions-ide.jar")
@@ -681,7 +680,7 @@ tasks.create("findShadowJarsInClasspath").doLast {
         for (task in project.tasks) {
             when (task) {
                 is ShadowJar -> {
-                    shadowJars.add(File(task.archivePath))
+                    shadowJars.add(fileFrom(task.archivePath))
                 }
                 is ProGuardTask -> {
                     shadowJars.addAll(task.outputs.files.toList())
