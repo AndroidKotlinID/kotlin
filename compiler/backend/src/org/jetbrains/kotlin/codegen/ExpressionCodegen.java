@@ -1707,11 +1707,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         if (descriptor instanceof PropertyDescriptor) {
             PropertyDescriptor propertyDescriptor = (PropertyDescriptor) descriptor;
 
-            boolean isUnderlyingPropertyOfInlineClass =
-                    InlineClassesUtilsKt.isInlineClass(propertyDescriptor.getContainingDeclaration()) &&
-                    JvmCodegenUtil.hasBackingField(propertyDescriptor, contextKind(), bindingContext);
-
-            if (isUnderlyingPropertyOfInlineClass) {
+            if (InlineClassesUtilsKt.isUnderlyingPropertyOfInlineClass(propertyDescriptor)) {
                 KotlinType propertyType = propertyDescriptor.getType();
                 return StackValue.underlyingValueOfInlineClass(typeMapper.mapType(propertyType), propertyType, receiver);
             }
@@ -2902,6 +2898,18 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                         KotlinType argumentKotlinType = kotlinType(argumentExpression);
                         if (argument.getSpreadElement() != null) {
                             gen(argumentExpression, OBJECT_TYPE, argumentKotlinType);
+
+                            if (argumentKotlinType != null && InlineClassesUtilsKt.isInlineClassType(argumentKotlinType)) {
+                                // we're going to pass value of inline class type to j/l/Object, which would result in boxing and then
+                                // will cause check cast error on toArray() call. To mitigate this problem, we unbox this value and pass
+                                // primitive array to the method. Note that bytecode optimisations will remove box/unbox calls.
+                                StackValue.coerce(
+                                        OBJECT_TYPE, argumentKotlinType,
+                                        asmType(argumentKotlinType), argumentKotlinType,
+                                        v
+                                );
+                            }
+
                             v.invokevirtual(owner, "addSpread", "(Ljava/lang/Object;)V", false);
                         }
                         else {
