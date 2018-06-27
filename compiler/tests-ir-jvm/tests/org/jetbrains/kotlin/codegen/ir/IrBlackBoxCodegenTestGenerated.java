@@ -13492,6 +13492,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/multiplatform/optionalExpectation.kt");
         }
 
+        @TestMetadata("optionalExpectationJvm.kt")
+        public void testOptionalExpectationJvm() throws Exception {
+            runTest("compiler/testData/codegen/box/multiplatform/optionalExpectationJvm.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -14032,6 +14037,16 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("privateCompanionObjectAccessedFromAnonymousObjectInNestedClass.kt")
             public void testPrivateCompanionObjectAccessedFromAnonymousObjectInNestedClass() throws Exception {
                 runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromAnonymousObjectInNestedClass.kt");
+            }
+
+            @TestMetadata("privateCompanionObjectAccessedFromInitBlock.kt")
+            public void testPrivateCompanionObjectAccessedFromInitBlock() throws Exception {
+                runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromInitBlock.kt");
+            }
+
+            @TestMetadata("privateCompanionObjectAccessedFromInitBlockOfNestedClass.kt")
+            public void testPrivateCompanionObjectAccessedFromInitBlockOfNestedClass() throws Exception {
+                runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromInitBlockOfNestedClass.kt");
             }
 
             @TestMetadata("privateCompanionObjectAccessedFromInlineLambdaInNestedClass.kt")

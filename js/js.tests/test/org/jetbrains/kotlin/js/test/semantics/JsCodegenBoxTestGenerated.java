@@ -11714,6 +11714,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multiplatform"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
         }
 
+        @TestMetadata("optionalExpectation.kt")
+        public void testOptionalExpectation() throws Exception {
+            runTest("compiler/testData/codegen/box/multiplatform/optionalExpectation.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/multiplatform/defaultArguments")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -12234,6 +12239,16 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             @TestMetadata("privateCompanionObjectAccessedFromAnonymousObjectInNestedClass.kt")
             public void testPrivateCompanionObjectAccessedFromAnonymousObjectInNestedClass() throws Exception {
                 runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromAnonymousObjectInNestedClass.kt");
+            }
+
+            @TestMetadata("privateCompanionObjectAccessedFromInitBlock.kt")
+            public void testPrivateCompanionObjectAccessedFromInitBlock() throws Exception {
+                runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromInitBlock.kt");
+            }
+
+            @TestMetadata("privateCompanionObjectAccessedFromInitBlockOfNestedClass.kt")
+            public void testPrivateCompanionObjectAccessedFromInitBlockOfNestedClass() throws Exception {
+                runTest("compiler/testData/codegen/box/objects/companionObjectAccess/privateCompanionObjectAccessedFromInitBlockOfNestedClass.kt");
             }
 
             @TestMetadata("privateCompanionObjectAccessedFromInlineLambdaInNestedClass.kt")

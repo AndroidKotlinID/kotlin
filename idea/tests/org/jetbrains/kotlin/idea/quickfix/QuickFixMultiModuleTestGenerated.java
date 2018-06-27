@@ -334,6 +334,21 @@ public class QuickFixMultiModuleTestGenerated extends AbstractQuickFixMultiModul
         runTest("idea/testData/multiModuleQuickFix/property/");
     }
 
+    @TestMetadata("safeDeleteForbiddenFromActual")
+    public void testSafeDeleteForbiddenFromActual() throws Exception {
+        runTest("idea/testData/multiModuleQuickFix/safeDeleteForbiddenFromActual/");
+    }
+
+    @TestMetadata("safeDeleteFromActual")
+    public void testSafeDeleteFromActual() throws Exception {
+        runTest("idea/testData/multiModuleQuickFix/safeDeleteFromActual/");
+    }
+
+    @TestMetadata("safeDeleteUsedInAnotherPlatform")
+    public void testSafeDeleteUsedInAnotherPlatform() throws Exception {
+        runTest("idea/testData/multiModuleQuickFix/safeDeleteUsedInAnotherPlatform/");
+    }
+
     @TestMetadata("sealed")
     public void testSealed() throws Exception {
         runTest("idea/testData/multiModuleQuickFix/sealed/");
