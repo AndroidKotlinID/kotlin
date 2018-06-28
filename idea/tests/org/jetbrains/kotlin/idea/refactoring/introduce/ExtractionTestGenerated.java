@@ -3931,6 +3931,11 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
             KotlinTestUtils.runTest(this::doExtractSuperclassTest, TargetBackend.ANY, testDataFilePath);
         }
 
+        @TestMetadata("abstractedMemberUsingPrivate.kt")
+        public void testAbstractedMemberUsingPrivate() throws Exception {
+            runTest("idea/testData/refactoring/extractSuperclass/abstractedMemberUsingPrivate.kt");
+        }
+
         @TestMetadata("addSuperclassNoSecondaryConstructors.kt")
         public void testAddSuperclassNoSecondaryConstructors() throws Exception {
             runTest("idea/testData/refactoring/extractSuperclass/addSuperclassNoSecondaryConstructors.kt");
@@ -3957,7 +3962,7 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
         }
 
         public void testAllFilesPresentInExtractSuperclass() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/refactoring/extractSuperclass"), Pattern.compile("^(.+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/refactoring/extractSuperclass"), Pattern.compile("^([^.]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
         }
 
         @TestMetadata("annotation.kt")
@@ -3973,6 +3978,11 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
         @TestMetadata("enum.kt")
         public void testEnum() throws Exception {
             runTest("idea/testData/refactoring/extractSuperclass/enum.kt");
+        }
+
+        @TestMetadata("extractToExistingFile.kt")
+        public void testExtractToExistingFile() throws Exception {
+            runTest("idea/testData/refactoring/extractSuperclass/extractToExistingFile.kt");
         }
 
         @TestMetadata("interface.kt")
@@ -4024,6 +4034,16 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
             KotlinTestUtils.runTest(this::doExtractInterfaceTest, TargetBackend.ANY, testDataFilePath);
         }
 
+        @TestMetadata("abstractedMemberUsingPrivate.kt")
+        public void testAbstractedMemberUsingPrivate() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/abstractedMemberUsingPrivate.kt");
+        }
+
+        @TestMetadata("addImportOnParameterPullUp.kt")
+        public void testAddImportOnParameterPullUp() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/addImportOnParameterPullUp.kt");
+        }
+
         @TestMetadata("addInterface.kt")
         public void testAddInterface() throws Exception {
             runTest("idea/testData/refactoring/extractInterface/addInterface.kt");
@@ -4045,7 +4065,7 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
         }
 
         public void testAllFilesPresentInExtractInterface() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/refactoring/extractInterface"), Pattern.compile("^(.+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/refactoring/extractInterface"), Pattern.compile("^([^.]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
         }
 
         @TestMetadata("annotation.kt")
@@ -4056,6 +4076,26 @@ public class ExtractionTestGenerated extends AbstractExtractionTest {
         @TestMetadata("dropFinal.kt")
         public void testDropFinal() throws Exception {
             runTest("idea/testData/refactoring/extractInterface/dropFinal.kt");
+        }
+
+        @TestMetadata("extractToExistingFile.kt")
+        public void testExtractToExistingFile() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/extractToExistingFile.kt");
+        }
+
+        @TestMetadata("liftInternal.kt")
+        public void testLiftInternal() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/liftInternal.kt");
+        }
+
+        @TestMetadata("liftPrivate.kt")
+        public void testLiftPrivate() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/liftPrivate.kt");
+        }
+
+        @TestMetadata("liftProtected.kt")
+        public void testLiftProtected() throws Exception {
+            runTest("idea/testData/refactoring/extractInterface/liftProtected.kt");
         }
 
         @TestMetadata("noWarningOnVisibilityInsideAbstractedMember.kt")

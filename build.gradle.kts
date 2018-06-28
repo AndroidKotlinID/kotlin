@@ -5,6 +5,7 @@ import java.util.*
 import java.io.File
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 import proguard.gradle.ProGuardTask
@@ -367,6 +368,22 @@ allprojects {
                 dependencies.add(it.name, files(bootstrapCompilerClasspath))
             }
         }
+    }
+}
+
+if (!isTeamcityBuild) {
+    gradle.taskGraph.whenReady {
+        for (project in allprojects) {
+            for (task in project.tasks) {
+                 when (task) {
+                     is AbstractKotlinCompile<*> -> task.incremental = true
+                     is JavaCompile -> task.options.isIncremental = true
+                     is org.gradle.jvm.tasks.Jar -> task.entryCompression = ZipEntryCompression.STORED
+                 }
+            }
+        }
+
+        logger.warn("Local build profile is active (IC is on, proguard is off). Use -Pteamcity=true to reproduce TC build")
     }
 }
 
