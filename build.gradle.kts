@@ -13,7 +13,7 @@ import proguard.gradle.ProGuardTask
 buildscript {
     extra["defaultSnapshotVersion"] = "1.2-SNAPSHOT"
 
-    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.2.60-dev-980", onlySuccessBootstrap = false))
+    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.2.70-dev-23", onlySuccessBootstrap = false))
 
     val mirrorRepo: String? = findProperty("maven.repository.mirror")?.toString()
 
@@ -307,7 +307,7 @@ allprojects {
 
     configureJvmProject(javaHome!!, jvmTarget!!)
 
-    val commonCompilerArgs = listOf("-Xallow-kotlin-package", "-Xread-deserialized-contracts")
+    val commonCompilerArgs = listOfNotNull("-Xallow-kotlin-package", "-Xread-deserialized-contracts", "-Xprogressive".takeIf { hasProperty("test.progressive.mode") })
 
     tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
         kotlinOptions {
