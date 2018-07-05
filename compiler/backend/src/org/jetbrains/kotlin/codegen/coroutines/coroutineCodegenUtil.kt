@@ -201,6 +201,12 @@ fun CallableDescriptor.isSuspendFunctionNotSuspensionView(): Boolean {
     return this.isSuspend && this.getUserData(INITIAL_DESCRIPTOR_FOR_SUSPEND_FUNCTION) == null
 }
 
+fun <D : FunctionDescriptor> getOrCreateJvmSuspendFunctionView(function: D, state: GenerationState): D = getOrCreateJvmSuspendFunctionView(
+    function,
+    state.languageVersionSettings.supportsFeature(LanguageFeature.ReleaseCoroutines),
+    state.bindingContext
+)
+
 // Suspend functions have irregular signatures on JVM, containing an additional last parameter with type `Continuation<return-type>`,
 // and return type Any?
 // This function returns a function descriptor reflecting how the suspend function looks from point of view of JVM
@@ -208,8 +214,7 @@ fun CallableDescriptor.isSuspendFunctionNotSuspensionView(): Boolean {
 fun <D : FunctionDescriptor> getOrCreateJvmSuspendFunctionView(
     function: D,
     isReleaseCoroutines: Boolean,
-    bindingContext: BindingContext? = null,
-    dropSuspend: Boolean = false
+    bindingContext: BindingContext? = null
 ): D {
     assert(function.isSuspend) {
         "Suspended function is expected, but $function was found"
@@ -239,9 +244,6 @@ fun <D : FunctionDescriptor> getOrCreateJvmSuspendFunctionView(
         setPreserveSourceElement()
         setReturnType(function.builtIns.nullableAnyType)
         setValueParameters(it.valueParameters + continuationParameter)
-        if (dropSuspend) {
-            setIsSuspend(false)
-        }
         putUserData(INITIAL_DESCRIPTOR_FOR_SUSPEND_FUNCTION, it)
     }
 }

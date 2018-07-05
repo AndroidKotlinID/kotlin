@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtThisExpression
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
+import org.jetbrains.kotlin.resolve.calls.callUtil.isCallableReference
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
@@ -76,6 +77,9 @@ object CoroutineSuspendCallChecker : CallChecker {
                 )
 
                 checkRestrictsSuspension(enclosingSuspendFunction, resolvedCall, reportOn, context)
+            }
+            resolvedCall.call.isCallableReference() -> {
+                // do nothing: we can get callable reference to suspend function outside suspend context
             }
             else -> {
                 when (descriptor) {

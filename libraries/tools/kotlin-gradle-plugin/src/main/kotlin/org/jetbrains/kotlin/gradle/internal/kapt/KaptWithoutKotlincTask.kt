@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.gradle.internal.Kapt3KotlinGradleSubplugin.Companion
 import org.jetbrains.kotlin.gradle.tasks.clearOutputDirectories
 import org.jetbrains.kotlin.gradle.tasks.findKotlinStdlibClasspath
 import org.jetbrains.kotlin.gradle.tasks.findToolsJar
+import org.jetbrains.kotlin.utils.PathUtil
 import java.io.File
 import java.io.Serializable
 import java.net.URLClassLoader
@@ -24,10 +25,6 @@ open class KaptWithoutKotlincTask @Inject constructor(private val workerExecutor
     @Suppress("unused")
     val kaptJars: Collection<File>
         get() = project.configurations.getByName(KAPT_WORKER_DEPENDENCIES_CONFIGURATION_NAME).resolve()
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    lateinit var projectDir: File
 
     @get:Input
     var isVerbose: Boolean = false
@@ -51,7 +48,7 @@ open class KaptWithoutKotlincTask @Inject constructor(private val workerExecutor
         clearOutputDirectories()
 
         val paths = KaptPathsForWorker(
-            projectDir,
+            project.projectDir,
             classpath.files.toList(),
             kaptClasspath.files.toList(),
             javaSourceRoots.toList(),
@@ -127,9 +124,12 @@ private class KaptExecution @Inject constructor(
     }
 
     private fun createKaptPaths(classLoader: ClassLoader) = with(paths) {
+        val fullClasspath = ArrayList<File>()
+        fullClasspath.addAll(PathUtil.getJdkClassesRootsFromCurrentJre())
+        fullClasspath.addAll(compileClasspath)
         Class.forName("org.jetbrains.kotlin.kapt3.base.KaptPaths", true, classLoader).constructors.single().newInstance(
             projectBaseDir,
-            compileClasspath,
+            fullClasspath,
             annotationProcessingClasspath,
             javaSourceRoots,
             sourcesOutputDir,

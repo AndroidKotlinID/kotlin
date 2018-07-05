@@ -145,10 +145,21 @@ abstract class AbstractKapt3Extension(
 
         logger.info { "Initial analysis took ${System.currentTimeMillis() - pluginInitializedTime} ms" }
 
+        val bindingContext = bindingTrace.bindingContext
+        if (aptMode.generateStubs) {
+            logger.info { "Kotlin files to compile: " + files.map { it.virtualFile?.name ?: "<in memory ${it.hashCode()}>" } }
+
+            contextForStubGeneration(project, module, bindingContext, files.toList()).use { context ->
+                generateKotlinSourceStubs(context)
+            }
+        }
+
+        if (!aptMode.runAnnotationProcessing) return doNotGenerateCode()
+
         val processors = loadProcessors()
         if (processors.isEmpty()) return if (aptMode != WITH_COMPILATION) doNotGenerateCode() else null
 
-        val kaptContext = generateStubs(project, module, bindingTrace.bindingContext, files)
+        val kaptContext = KaptContext(paths, false, logger, mapDiagnosticLocations, options, javacOptions)
 
         fun handleKaptError(error: KaptError): AnalysisResult {
             val cause = error.cause
@@ -189,23 +200,6 @@ abstract class AbstractKapt3Extension(
         }
     }
 
-    private fun generateStubs(
-        project: Project,
-        module: ModuleDescriptor,
-        context: BindingContext,
-        files: Collection<KtFile>
-    ): KaptContext {
-        if (!aptMode.generateStubs) {
-            return KaptContext(paths, false, logger, mapDiagnosticLocations, options, javacOptions)
-        }
-
-        logger.info { "Kotlin files to compile: " + files.map { it.virtualFile?.name ?: "<in memory ${it.hashCode()}>" } }
-
-        return compileStubs(project, module, context, files.toList()).apply {
-            generateKotlinSourceStubs(this)
-        }
-    }
-
     private fun runAnnotationProcessing(kaptContext: KaptContext, processors: List<Processor>) {
         if (!aptMode.runAnnotationProcessing) return
 
@@ -219,7 +213,7 @@ abstract class AbstractKapt3Extension(
         logger.info { "Annotation processing took $annotationProcessingTime ms" }
     }
 
-    private fun compileStubs(
+    private fun contextForStubGeneration(
             project: Project,
             module: ModuleDescriptor,
             bindingContext: BindingContext,

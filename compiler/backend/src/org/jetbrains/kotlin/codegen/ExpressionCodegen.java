@@ -981,8 +981,12 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         );
 
         ClosureCodegen coroutineCodegen = CoroutineCodegenForLambda.create(this, descriptor, declaration, cv);
+        ClosureContext closureContext = descriptor.isSuspend() ? this.context.intoCoroutineClosure(
+                CoroutineCodegenUtilKt.getOrCreateJvmSuspendFunctionView(descriptor, state),
+                descriptor, this, state.getTypeMapper()
+        ) : this.context.intoClosure(descriptor, this, typeMapper);
         ClosureCodegen closureCodegen = coroutineCodegen != null ? coroutineCodegen : new ClosureCodegen(
-                state, declaration, samType, context.intoClosure(descriptor, this, typeMapper),
+                state, declaration, samType, closureContext,
                 functionReferenceTarget, strategy, parentCodegen, cv
         );
 
@@ -1121,6 +1125,11 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                     v.aconst(null);
                 }
             }
+            else if (classDescriptor instanceof SyntheticClassDescriptorForLambda &&
+                     ((SyntheticClassDescriptorForLambda) classDescriptor).isCallableReference()) {
+                // Constructor of callable reference to suspend function does not accept continuation:
+                // do nothing.
+            }
             else {
                 assert context.getFunctionDescriptor().isSuspend() : "Coroutines closure must be created only inside suspend functions";
                 ValueParameterDescriptor continuationParameter = CollectionsKt.last(context.getFunctionDescriptor().getValueParameters());
@@ -1128,7 +1137,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
                 assert continuationValue != null : "Couldn't find a value for continuation parameter of " + context.getFunctionDescriptor();
 
-                callGenerator.putCapturedValueOnStack(continuationValue, continuationValue.type, paramIndex++);
+                callGenerator.putCapturedValueOnStack(continuationValue, continuationValue.type, paramIndex);
             }
         }
     }
@@ -2937,7 +2946,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                     v.dup();
                     StackValue rightSide = gen(arguments.get(i).getArgumentExpression());
                     StackValue
-                            .arrayElement(elementType, elementKotlinType, StackValue.onStack(type, outType), StackValue.constant(i, Type.INT_TYPE))
+                            .arrayElement(elementType, elementKotlinType, StackValue.onStack(type, outType), StackValue.constant(i))
                             .store(rightSide, v);
                 }
                 return Unit.INSTANCE;
@@ -4431,9 +4440,17 @@ The "returned" value of try expression with no finally is either the last expres
 
         StackValue value = genQualified(receiver, left);
 
+        KotlinType leftKotlinType = value.kotlinType;
+        Type boxedLeftType;
+        if (leftKotlinType != null && InlineClassesUtilsKt.isInlineClassType(leftKotlinType)) {
+            boxedLeftType = typeMapper.mapTypeAsDeclaration(leftKotlinType);
+        } else {
+            boxedLeftType = boxType(value.type);
+        }
+
         Type boxedRightType = boxType(typeMapper.mapTypeAsDeclaration(rightKotlinType));
         return StackValue.operation(boxedRightType, rightKotlinType, v -> {
-            value.put(boxType(value.type), value.kotlinType, v);
+            value.put(boxedLeftType, value.kotlinType, v);
 
             if (value.type == Type.VOID_TYPE) {
                 StackValue.putUnitInstance(v);
@@ -4479,21 +4496,29 @@ The "returned" value of try expression with no finally is either the last expres
         return negated ? StackValue.not(value) : value;
     }
 
-    private StackValue generateIsCheck(StackValue expressionToGen, KotlinType kotlinType, boolean leaveExpressionOnStack) {
+    private StackValue generateIsCheck(StackValue expressionToGen, KotlinType rhsKotlinType, boolean leaveExpressionOnStack) {
+        KotlinType lhsKotlinType = expressionToGen.kotlinType;
+        Type lhsBoxedType;
+        if (lhsKotlinType != null && InlineClassesUtilsKt.isInlineClassType(lhsKotlinType)) {
+            lhsBoxedType = typeMapper.mapTypeAsDeclaration(lhsKotlinType);
+        }
+        else {
+            lhsBoxedType = OBJECT_TYPE;
+        }
         return StackValue.operation(Type.BOOLEAN_TYPE, v -> {
-            expressionToGen.put(OBJECT_TYPE, kotlinType, v);
+            expressionToGen.put(lhsBoxedType, expressionToGen.kotlinType, v);
             if (leaveExpressionOnStack) {
                 v.dup();
             }
 
-            Type type = boxType(typeMapper.mapTypeAsDeclaration(kotlinType));
-            if (TypeUtils.isReifiedTypeParameter(kotlinType)) {
-                putReifiedOperationMarkerIfTypeIsReifiedParameter(kotlinType, ReifiedTypeInliner.OperationKind.IS);
+            Type type = boxType(typeMapper.mapTypeAsDeclaration(rhsKotlinType));
+            if (TypeUtils.isReifiedTypeParameter(rhsKotlinType)) {
+                putReifiedOperationMarkerIfTypeIsReifiedParameter(rhsKotlinType, ReifiedTypeInliner.OperationKind.IS);
                 v.instanceOf(type);
                 return null;
             }
 
-            CodegenUtilKt.generateIsCheck(v, kotlinType, type);
+            CodegenUtilKt.generateIsCheck(v, rhsKotlinType, type);
             return null;
         });
     }
