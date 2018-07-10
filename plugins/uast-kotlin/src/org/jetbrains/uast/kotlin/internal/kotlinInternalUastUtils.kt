@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.idea.project.languageVersionSettings
 import org.jetbrains.kotlin.load.java.lazy.descriptors.LazyJavaPackageFragment
+import org.jetbrains.kotlin.load.java.sam.SamConstructorDescriptor
 import org.jetbrains.kotlin.load.kotlin.KotlinJvmBinaryPackageSourceElement
 import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.metadata.ProtoBuf
@@ -45,10 +46,12 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
+import org.jetbrains.kotlin.resolve.calls.model.ArgumentMatch
 import org.jetbrains.kotlin.resolve.constants.IntegerValueTypeConstructor
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedCallableMemberDescriptor
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedClassDescriptor
+import org.jetbrains.kotlin.synthetic.SamAdapterExtensionFunctionDescriptor
 import org.jetbrains.kotlin.type.MapPsiToAsmDesc
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.typeUtil.isInterface
@@ -297,10 +300,21 @@ internal fun KotlinType.getFunctionalInterfaceType(source: UElement, element: Kt
 
 internal fun KotlinULambdaExpression.getFunctionalInterfaceType(): PsiType? {
     val parent = psi.parent
-    return when (parent) {
-        is KtBinaryExpressionWithTypeRHS -> parent.right?.getType()?.getFunctionalInterfaceType(this, psi)
-        else -> psi.getExpectedType()?.getFunctionalInterfaceType(this, psi)
+    if (parent is KtBinaryExpressionWithTypeRHS) return parent.right?.getType()?.getFunctionalInterfaceType(this, psi)
+    if (parent is KtLambdaArgument) run {
+        val callExpression = parent.parent as? KtCallExpression ?: return@run
+        val resolvedCall = callExpression.getResolvedCall(callExpression.analyze()) ?: return@run
+        val candidateDescriptor = resolvedCall.candidateDescriptor
+        when (candidateDescriptor) {
+            is SamConstructorDescriptor -> return candidateDescriptor.returnType?.getFunctionalInterfaceType(this, psi)
+            is SamAdapterExtensionFunctionDescriptor -> {
+                val index = (resolvedCall.getArgumentMapping(parent) as? ArgumentMatch)?.valueParameter?.index ?: return@run
+                val parameterDescriptor = candidateDescriptor.baseDescriptorForSynthetic.valueParameters.getOrNull(index) ?: return@run
+                return parameterDescriptor.type.getFunctionalInterfaceType(this, psi)
+            }
+        }
     }
+    return psi.getExpectedType()?.getFunctionalInterfaceType(this, psi)
 }
 
 internal fun unwrapFakeFileForLightClass(file: PsiFile): PsiFile = (file as? FakeFileForLightClass)?.ktFile ?: file

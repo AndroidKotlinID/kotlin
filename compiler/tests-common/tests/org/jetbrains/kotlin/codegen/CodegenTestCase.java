@@ -480,10 +480,15 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
 
     @NotNull
     protected String generateToText() {
+        return generateToText(null);
+    }
+
+    @NotNull
+    protected String generateToText(@Nullable String ignorePathPrefix) {
         if (classFileFactory == null) {
             classFileFactory = generateFiles(myEnvironment, myFiles);
         }
-        return classFileFactory.createText();
+        return classFileFactory.createText(ignorePathPrefix);
     }
 
     @NotNull
@@ -712,7 +717,9 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
         boolean addCoroutines = false;
         boolean addUnsignedTypes = false;
         for (TestFile file : files) {
-            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "COMMON_COROUTINES_TEST")) {
+            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "COMMON_COROUTINES_TEST") ||
+                InTextDirectivesUtils.isDirectiveDefined(file.content, "!LANGUAGE: +ReleaseCoroutines") ||
+                InTextDirectivesUtils.isDirectiveDefined(file.content, "LANGUAGE_VERSION: 1.3")) {
                 addCoroutines = true;
             }
             if (InTextDirectivesUtils.isDirectiveDefined(file.content, "WITH_RUNTIME")) {

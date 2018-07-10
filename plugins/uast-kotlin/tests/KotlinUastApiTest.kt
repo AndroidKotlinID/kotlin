@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.asJava.toLightAnnotation
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.test.testFramework.KtUsefulTestCase
+import org.jetbrains.kotlin.utils.addToStdlib.assertedCast
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.sure
 import org.jetbrains.uast.*
@@ -97,6 +98,11 @@ class KotlinUastApiTest : AbstractKotlinUastTest() {
 
             assertEquals("java.lang.Runnable",
                          file.findElementByText<ULambdaExpression>("{/* Return */}").functionalInterfaceType?.canonicalText)
+
+            assertEquals(
+                "java.lang.Runnable",
+                file.findElementByText<ULambdaExpression>("{ /* SAM */ }").functionalInterfaceType?.canonicalText
+            )
         }
     }
 
@@ -360,6 +366,24 @@ class KotlinUastApiTest : AbstractKotlinUastTest() {
         barMethod.assertResolveCall("contains(2 as Int)", "longRangeContains")
         barMethod.assertResolveCall("IntRange(1, 2)")
     }
+
+    @Test
+    fun testUtilsStreamLambda() {
+        doTest("Lambdas") { _, file ->
+            val lambda = file.findElementByTextFromPsi<ULambdaExpression>("{ it.isEmpty() }")
+            assertEquals(
+                "java.util.function.Predicate<? super java.lang.String>",
+                lambda.functionalInterfaceType?.canonicalText
+            )
+            assertEquals(
+                "kotlin.jvm.functions.Function1<? super java.lang.String,? extends java.lang.Boolean>",
+                lambda.getExpressionType()?.canonicalText
+            )
+            val uCallExpression = lambda.uastParent.assertedCast<UCallExpression> { "UCallExpression expected" }
+            assertTrue(uCallExpression.valueArguments.contains(lambda))
+        }
+    }
+
 }
 
 fun <T, R> Iterable<T>.assertedFind(value: R, transform: (T) -> R): T =

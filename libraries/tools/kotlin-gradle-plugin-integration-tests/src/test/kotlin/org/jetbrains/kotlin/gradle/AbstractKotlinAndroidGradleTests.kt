@@ -221,25 +221,6 @@ fun getSomething() = 10
 
     @Test
     fun testMultiModuleIC() {
-        val project = Project("AndroidProject")
-        val options = defaultBuildOptions().copy(incremental = true)
-
-        project.build("assembleDebug", options = options) {
-            assertSuccessful()
-        }
-
-        val libUtilKt = project.projectDir.getFileByName("libUtil.kt")
-        libUtilKt.modify { it.replace("fun libUtil(): String", "fun libUtil(): CharSequence") }
-
-        project.build("assembleDebug", options = options) {
-            assertSuccessful()
-            val affectedSources = project.projectDir.getFilesByNames("libUtil.kt", "MainActivity2.kt")
-            assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
-        }
-    }
-
-    @Test
-    fun testMultiModuleICNonAndroidModuleIsChanged() {
         val project = Project("AndroidIncrementalMultiModule")
         val options = defaultBuildOptions().copy(incremental = true, kotlinDaemonDebugPort = null)
 
@@ -252,6 +233,14 @@ fun getSomething() = 10
         project.build("assembleDebug", options = options) {
             assertSuccessful()
             val affectedSources = project.projectDir.getFilesByNames("libAndroidUtil.kt", "useLibAndroidUtil.kt")
+            assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
+        }
+
+        val libAndroidClassesOnlyUtilKt = project.projectDir.getFileByName("LibAndroidClassesOnlyUtil.kt")
+        libAndroidClassesOnlyUtilKt.modify { it.replace("fun libAndroidClassesOnlyUtil(): String", "fun libAndroidClassesOnlyUtil(): CharSequence") }
+        project.build("assembleDebug", options = options) {
+            assertSuccessful()
+            val affectedSources = project.projectDir.getFilesByNames("LibAndroidClassesOnlyUtil.kt", "useLibAndroidClassesOnlyUtil.kt")
             assertCompiledKotlinSources(project.relativize(affectedSources), weakTesting = false)
         }
 

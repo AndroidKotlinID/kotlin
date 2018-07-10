@@ -5320,13 +5320,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @TestMetadata("coroutineToString.kt")
-        public void testCoroutineToString_1_2() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/coroutineToString.kt", "kotlin.coroutines.experimental");
+        public void testCoroutineToString() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/coroutineToString.kt");
         }
 
-        @TestMetadata("coroutineToString.kt")
-        public void testCoroutineToString_1_3() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/coroutineToString.kt", "kotlin.coroutines");
+        @TestMetadata("coroutineToString_1_2.kt")
+        public void testCoroutineToString_1_2() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/coroutineToString_1_2.kt");
         }
 
         @TestMetadata("createCoroutineSafe.kt")
@@ -5460,13 +5460,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @TestMetadata("illegalState.kt")
-        public void testIllegalState_1_2() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/illegalState.kt", "kotlin.coroutines.experimental");
+        public void testIllegalState() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/illegalState.kt");
         }
 
-        @TestMetadata("illegalState.kt")
-        public void testIllegalState_1_3() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/illegalState.kt", "kotlin.coroutines");
+        @TestMetadata("illegalState_1_2.kt")
+        public void testIllegalState_1_2() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/illegalState_1_2.kt");
         }
 
         @TestMetadata("indirectInlineUsedAsNonInline.kt")
@@ -5850,13 +5850,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @TestMetadata("suspendCovariantJavaOverrides.kt")
-        public void testSuspendCovariantJavaOverrides_1_2() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendCovariantJavaOverrides.kt", "kotlin.coroutines.experimental");
+        public void testSuspendCovariantJavaOverrides() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/suspendCovariantJavaOverrides.kt");
         }
 
-        @TestMetadata("suspendCovariantJavaOverrides.kt")
-        public void testSuspendCovariantJavaOverrides_1_3() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendCovariantJavaOverrides.kt", "kotlin.coroutines");
+        @TestMetadata("suspendCovariantJavaOverrides_1_2.kt")
+        public void testSuspendCovariantJavaOverrides_1_2() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/suspendCovariantJavaOverrides_1_2.kt");
         }
 
         @TestMetadata("suspendDefaultImpl.kt")
@@ -5940,13 +5940,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @TestMetadata("suspendJavaOverrides.kt")
-        public void testSuspendJavaOverrides_1_2() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendJavaOverrides.kt", "kotlin.coroutines.experimental");
+        public void testSuspendJavaOverrides() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/suspendJavaOverrides.kt");
         }
 
-        @TestMetadata("suspendJavaOverrides.kt")
-        public void testSuspendJavaOverrides_1_3() throws Exception {
-            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendJavaOverrides.kt", "kotlin.coroutines");
+        @TestMetadata("suspendJavaOverrides_1_2.kt")
+        public void testSuspendJavaOverrides_1_2() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/suspendJavaOverrides_1_2.kt");
         }
 
         @TestMetadata("suspensionInsideSafeCallWithElvis.kt")
@@ -7002,13 +7002,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             }
 
             @TestMetadata("inlineWithJava.kt")
-            public void testInlineWithJava_1_2() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/multiModule/inlineWithJava.kt", "kotlin.coroutines.experimental");
+            public void testInlineWithJava() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/multiModule/inlineWithJava.kt");
             }
 
-            @TestMetadata("inlineWithJava.kt")
-            public void testInlineWithJava_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/multiModule/inlineWithJava.kt", "kotlin.coroutines");
+            @TestMetadata("inlineWithJava_1_2.kt")
+            public void testInlineWithJava_1_2() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/multiModule/inlineWithJava_1_2.kt");
             }
 
             @TestMetadata("simple.kt")
@@ -7193,13 +7193,13 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             }
 
             @TestMetadata("openFunWithJava.kt")
-            public void testOpenFunWithJava_1_2() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendFunctionAsCoroutine/openFunWithJava.kt", "kotlin.coroutines.experimental");
+            public void testOpenFunWithJava() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/suspendFunctionAsCoroutine/openFunWithJava.kt");
             }
 
-            @TestMetadata("openFunWithJava.kt")
-            public void testOpenFunWithJava_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/suspendFunctionAsCoroutine/openFunWithJava.kt", "kotlin.coroutines");
+            @TestMetadata("openFunWithJava_1_2.kt")
+            public void testOpenFunWithJava_1_2() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/suspendFunctionAsCoroutine/openFunWithJava_1_2.kt");
             }
 
             @TestMetadata("operators.kt")
@@ -15820,6 +15820,16 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/ranges/expression/openRange.kt");
             }
 
+            @TestMetadata("overflowZeroDownToMaxValue.kt")
+            public void testOverflowZeroDownToMaxValue() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/expression/overflowZeroDownToMaxValue.kt");
+            }
+
+            @TestMetadata("overflowZeroToMinValue.kt")
+            public void testOverflowZeroToMinValue() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/expression/overflowZeroToMinValue.kt");
+            }
+
             @TestMetadata("progressionDownToMinValue.kt")
             public void testProgressionDownToMinValue() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/expression/progressionDownToMinValue.kt");
@@ -16349,6 +16359,16 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("openRange.kt")
             public void testOpenRange() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/literal/openRange.kt");
+            }
+
+            @TestMetadata("overflowZeroDownToMaxValue.kt")
+            public void testOverflowZeroDownToMaxValue() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/literal/overflowZeroDownToMaxValue.kt");
+            }
+
+            @TestMetadata("overflowZeroToMinValue.kt")
+            public void testOverflowZeroToMinValue() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/literal/overflowZeroToMinValue.kt");
             }
 
             @TestMetadata("progressionDownToMinValue.kt")
@@ -19388,6 +19408,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("kt22906_2.kt")
         public void testKt22906_2() throws Exception {
             runTest("compiler/testData/codegen/box/sam/kt22906_2.kt");
+        }
+
+        @TestMetadata("kt24825.kt")
+        public void testKt24825() throws Exception {
+            runTest("compiler/testData/codegen/box/sam/kt24825.kt");
         }
 
         @TestMetadata("partialSam.kt")
