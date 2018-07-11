@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.ir.backend.js
 
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.SimpleFunctionDescriptorImpl
@@ -14,7 +15,9 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.util.DeclarationStubGenerator
 import org.jetbrains.kotlin.js.resolve.JsPlatform.builtIns
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.psi2ir.findSingleFunction
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.KotlinTypeFactory
 import org.jetbrains.kotlin.types.Variance
@@ -91,13 +94,14 @@ class JsIntrinsics(
 
     // Number conversions:
 
-    val jsAsIs = getInternalFunction("asIs")  // as-is conversion. Call can be replaced with first paramenter
     val jsNumberToByte = getInternalFunction("numberToByte")
     val jsNumberToDouble = getInternalFunction("numberToDouble")
     val jsNumberToInt = getInternalFunction("numberToInt")
     val jsNumberToShort = getInternalFunction("numberToShort")
+    val jsNumberToLong = getInternalFunction("numberToLong")
     val jsToByte = getInternalFunction("toByte")
     val jsToShort = getInternalFunction("toShort")
+    val jsToLong = getInternalFunction("toLong")
 
 
     // Other:
@@ -112,6 +116,20 @@ class JsIntrinsics(
     val jsEquals = getInternalFunction("equals")
 
 
+    val longConstructor =
+        context.symbolTable.referenceConstructor(context.getClass(FqName("kotlin.Long")).constructors.single())
+    val longToDouble = context.symbolTable.referenceSimpleFunction(
+        context.getClass(FqName("kotlin.Long")).unsubstitutedMemberScope.findSingleFunction(
+            Name.identifier("toDouble")
+        )
+    )
+    val longToFloat = context.symbolTable.referenceSimpleFunction(
+        context.getClass(FqName("kotlin.Long")).unsubstitutedMemberScope.findSingleFunction(
+            Name.identifier("toFloat")
+        )
+    )
+
+    val charConstructor = context.symbolTable.referenceConstructor(context.getClass(KotlinBuiltIns.FQ_NAMES._char.toSafe()).constructors.single())
 
     // Helpers:
 

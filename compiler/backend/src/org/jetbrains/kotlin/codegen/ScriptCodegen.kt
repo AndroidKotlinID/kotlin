@@ -44,6 +44,7 @@ class ScriptCodegen private constructor(
                 typeMapper.mapSupertype(scriptDescriptor.getSuperClassOrAny().defaultType, null).internalName,
                 mapSupertypesNames(typeMapper, scriptDescriptor.getSuperInterfaces(), null)
         )
+        AnnotationCodegen.forClass(v.visitor, this, typeMapper).genAnnotations(scriptDescriptor, null)
     }
 
     override fun generateBody() {
@@ -75,10 +76,9 @@ class ScriptCodegen private constructor(
 
         val jvmSignature = typeMapper.mapScriptSignature(
             scriptDescriptor,
-            scriptContext.earlierScripts,
-            scriptDefinition.implicitReceivers,
-            scriptDefinition.environmentVariables
+            scriptContext.earlierScripts
         )
+        val asmMethod = jvmSignature.asmMethod
 
         if (state.replSpecific.shouldGenerateScriptResultValue) {
             val resultFieldInfo = scriptContext.resultFieldInfo
@@ -94,6 +94,8 @@ class ScriptCodegen private constructor(
                 OtherOrigin(scriptDeclaration, scriptDescriptor.unsubstitutedPrimaryConstructor),
                 ACC_PUBLIC, jvmSignature.asmMethod.name, jvmSignature.asmMethod.descriptor, null, null)
 
+        FunctionCodegen.generateMethodAnnotations(scriptDescriptor.unsubstitutedPrimaryConstructor, asmMethod, mv, this, typeMapper)
+
         if (state.classBuilderMode.generateBodies) {
             mv.visitCode()
 
@@ -104,48 +106,15 @@ class ScriptCodegen private constructor(
             val superclass = scriptDescriptor.getSuperClassNotAny()
             // TODO: throw if class is not found)
 
-            if (superclass == null) {
-                iv.load(0, classType)
-                iv.invokespecial("java/lang/Object", "<init>", "()V", false)
-            }
-            else {
-                val ctorDesc = superclass.unsubstitutedPrimaryConstructor
-                               ?: throw RuntimeException("Primary constructor not found for script template " + superclass.toString())
-
-                iv.load(0, classType)
-
-                fun Int.incrementIf(cond: Boolean): Int = if (cond) plus(1) else this
-                val valueParamStart = 1
-                    .incrementIf(scriptContext.earlierScripts.isNotEmpty())
-                    .incrementIf(scriptDefinition.implicitReceivers.isNotEmpty())
-                    .incrementIf(scriptDefinition.environmentVariables.isNotEmpty())
-
-                val valueParameters = scriptDescriptor.unsubstitutedPrimaryConstructor.valueParameters
-                for (superclassParam in ctorDesc.valueParameters) {
-                    val valueParam = valueParameters.first { it.name == superclassParam.name }
-                    iv.load(valueParam!!.index + valueParamStart, typeMapper.mapType(valueParam.type))
-                }
-
-                val ctorMethod = typeMapper.mapToCallableMethod(ctorDesc, false)
-                val sig = ctorMethod.getAsmMethod().descriptor
-
-                iv.invokespecial(
-                        typeMapper.mapSupertype(superclass.defaultType, null).internalName,
-                        "<init>", sig, false)
-            }
-            iv.load(0, classType)
-
             val frameMap = FrameMap()
             frameMap.enterTemp(OBJECT_TYPE)
 
             fun genFieldFromArrayElement(descriptor: ClassDescriptor, paramIndex: Int, elementIndex: Int, name: String) {
                 val elementClassType = typeMapper.mapClass(descriptor)
-                iv.load(0, classType)
-                iv.load(paramIndex, elementClassType)
-                iv.aconst(elementIndex)
-                iv.aload(OBJECT_TYPE)
-                iv.checkcast(elementClassType)
-                iv.putfield(classType.internalName, name, elementClassType.descriptor)
+                val array = StackValue.local(paramIndex, AsmUtil.getArrayType(OBJECT_TYPE))
+                val value = StackValue.arrayElement(OBJECT_TYPE, null, array, StackValue.constant(elementIndex, Type.INT_TYPE))
+                val field = StackValue.field(elementClassType, classType, name, false, StackValue.local(0, classType))
+                field.store(value, iv)
             }
 
             if (!scriptContext.earlierScripts.isEmpty()) {
@@ -156,6 +125,37 @@ class ScriptCodegen private constructor(
                     genFieldFromArrayElement(earlierScript, scriptsParamIndex, earlierScriptIndex, name)
                 }
             }
+
+            if (superclass == null) {
+                iv.load(0, classType)
+                iv.invokespecial("java/lang/Object", "<init>", "()V", false)
+            } else {
+                val ctorDesc = superclass.unsubstitutedPrimaryConstructor
+                        ?: throw RuntimeException("Primary constructor not found for script template " + superclass.toString())
+
+                iv.load(0, classType)
+
+                fun Int.incrementIf(cond: Boolean): Int = if (cond) plus(1) else this
+                val valueParamStart = 1
+                    .incrementIf(scriptContext.earlierScripts.isNotEmpty())
+
+                val valueParameters = scriptDescriptor.unsubstitutedPrimaryConstructor.valueParameters
+                for (superclassParam in ctorDesc.valueParameters) {
+                    val valueParam = valueParameters.first { it.name == superclassParam.name }
+                    val paramType = typeMapper.mapType(valueParam.type)
+                    iv.load(valueParam!!.index + valueParamStart, paramType)
+                    frameMap.enterTemp(paramType)
+                }
+
+                val ctorMethod = typeMapper.mapToCallableMethod(ctorDesc, false)
+                val sig = ctorMethod.getAsmMethod().descriptor
+
+                iv.invokespecial(
+                    typeMapper.mapSupertype(superclass.defaultType, null).internalName,
+                    "<init>", sig, false
+                )
+            }
+            iv.load(0, classType)
 
             if (scriptDefinition.implicitReceivers.isNotEmpty()) {
                 val receiversParamIndex = frameMap.enterTemp(AsmUtil.getArrayType(OBJECT_TYPE))
