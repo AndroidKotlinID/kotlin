@@ -83,6 +83,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
     companion object {
         private val VERBOSE_OPTION_NAME = "kapt.verbose"
         private val USE_WORKER_API = "kapt.use.worker.api"
+        private val INFO_AS_WARNINGS = "kapt.info.as.warnings"
 
         const val KAPT_WORKER_DEPENDENCIES_CONFIGURATION_NAME = "kotlinKaptWorkerDependencies"
 
@@ -110,6 +111,10 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
 
         fun Project.isUseWorkerApi(): Boolean {
             return isWorkerAPISupported() && hasProperty(USE_WORKER_API) && property(USE_WORKER_API) == "true"
+        }
+
+        fun Project.isInfoAsWarnings(): Boolean {
+            return hasProperty(INFO_AS_WARNINGS) && property(INFO_AS_WARNINGS) == "true"
         }
 
         fun findMainKaptConfiguration(project: Project) = project.findKaptConfiguration(MAIN_KAPT_CONFIGURATION_NAME)
@@ -332,6 +337,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         pluginOptions += SubpluginOption("useLightAnalysis", "${kaptExtension.useLightAnalysis}")
         pluginOptions += SubpluginOption("correctErrorTypes", "${kaptExtension.correctErrorTypes}")
         pluginOptions += SubpluginOption("mapDiagnosticLocations", "${kaptExtension.mapDiagnosticLocations}")
+        pluginOptions += SubpluginOption("infoAsWarnings", "${project.isInfoAsWarnings()}")
         pluginOptions += FilesSubpluginOption("stubs", listOf(getKaptStubsDir()))
 
         if (project.isKaptVerbose()) {
@@ -457,6 +463,10 @@ private val ANNOTATION_PROCESSOR = "annotationProcessor"
 private val ANNOTATION_PROCESSOR_CAP = ANNOTATION_PROCESSOR.capitalize()
 
 internal fun checkAndroidAnnotationProcessorDependencyUsage(project: Project) {
+    if (project.hasProperty("kapt.dont.warn.annotationProcessor.dependencies")) {
+        return
+    }
+
     val isKapt3Enabled = Kapt3GradleSubplugin.isEnabled(project)
 
     val apConfigurations = project.configurations

@@ -125,7 +125,10 @@ class KotlinCodeFragmentFactory : CodeFragmentFactory() {
 
                 val frameDescriptor = getFrameInfo(contextElement, debuggerContext)
                 if (frameDescriptor == null) {
-                    LOG.warn("Couldn't get info about 'this' and local variables for ${debuggerContext.sourcePosition.file.name}:${debuggerContext.sourcePosition.line}")
+                    LOG.warn(
+                        "Couldn't get info about 'this' and local variables for " +
+                                "${debuggerContext.sourcePosition?.file?.name}:${debuggerContext.sourcePosition?.line}"
+                    )
                     return@putCopyableUserData emptyFile
                 }
 
@@ -171,6 +174,8 @@ class KotlinCodeFragmentFactory : CodeFragmentFactory() {
                     frameInfo = FrameInfo(frame?.thisObject(), visibleVariables)
                 } catch (ignored: AbsentInformationException) {
                     // Debug info unavailable
+                } catch (ignored: InvalidStackFrameException) {
+                    // Thread is resumed, the frame we have is not valid anymore
                 } finally {
                     semaphore.up()
                 }

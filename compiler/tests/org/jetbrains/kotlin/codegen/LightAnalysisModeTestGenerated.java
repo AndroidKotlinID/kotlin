@@ -12240,6 +12240,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/jvmStatic/inlinePropertyAccessors.kt");
         }
 
+        @TestMetadata("interfaceCompanion.kt")
+        public void testInterfaceCompanion() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmStatic/interfaceCompanion.kt");
+        }
+
         @TestMetadata("kt21246.kt")
         public void testKt21246() throws Exception {
             runTest("compiler/testData/codegen/box/jvmStatic/kt21246.kt");
@@ -17626,6 +17631,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("memberProperty.kt")
             public void testMemberProperty() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/mapping/memberProperty.kt");
+            }
+
+            @TestMetadata("methodsFromObject.kt")
+            public void testMethodsFromObject() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/mapping/methodsFromObject.kt");
             }
 
             @TestMetadata("openSuspendFun.kt")
