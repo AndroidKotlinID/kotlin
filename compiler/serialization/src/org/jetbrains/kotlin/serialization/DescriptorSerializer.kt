@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.descriptors.annotations.Annotated
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.Flags
 import org.jetbrains.kotlin.metadata.deserialization.VersionRequirement
+import org.jetbrains.kotlin.metadata.deserialization.isVersionRequirementTableWrittenCorrectly
 import org.jetbrains.kotlin.metadata.serialization.Interner
 import org.jetbrains.kotlin.metadata.serialization.MutableTypeTable
 import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable
@@ -21,10 +22,8 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils.isEnumEntry
-import org.jetbrains.kotlin.resolve.DescriptorUtils.isInterface
 import org.jetbrains.kotlin.resolve.MemberComparator
 import org.jetbrains.kotlin.resolve.RequireKotlinNames
-import org.jetbrains.kotlin.resolve.annotations.hasJvmDefaultAnnotation
 import org.jetbrains.kotlin.resolve.calls.components.isActualParameterWithAnyExpectedDefault
 import org.jetbrains.kotlin.resolve.checkers.KotlinVersionStringAnnotationValueChecker
 import org.jetbrains.kotlin.resolve.constants.EnumValue
@@ -144,16 +143,14 @@ class DescriptorSerializer private constructor(
         val requirement = serializeVersionRequirement(classDescriptor)
         if (requirement != null) {
             builder.versionRequirement = requirement
-        } else {
-            writeVersionRequirementForJvmDefaultIfNeeded(classDescriptor, builder)
         }
+
+        extension.serializeClass(classDescriptor, builder, versionRequirementTable)
 
         val versionRequirementTableProto = versionRequirementTable.serialize()
         if (versionRequirementTableProto != null) {
             builder.versionRequirementTable = versionRequirementTableProto
         }
-
-        extension.serializeClass(classDescriptor, builder)
         return builder
     }
 
@@ -244,7 +241,7 @@ class DescriptorSerializer private constructor(
             builder.versionRequirement = writeVersionRequirementDependingOnCoroutinesVersion()
         }
 
-        extension.serializeProperty(descriptor, builder)
+        extension.serializeProperty(descriptor, builder, versionRequirementTable)
 
         return builder
     }
@@ -622,19 +619,6 @@ class DescriptorSerializer private constructor(
         return builder
     }
 
-    // Interfaces which have @JvmDefault members somewhere in the hierarchy need the compiler 1.2.40+
-    // so that the generated bridges in subclasses would call the super members correctly
-    private fun writeVersionRequirementForJvmDefaultIfNeeded(classDescriptor: ClassDescriptor, builder: ProtoBuf.Class.Builder) {
-        if (
-            isInterface(classDescriptor) &&
-            classDescriptor.unsubstitutedMemberScope.getContributedDescriptors().any {
-                it is CallableMemberDescriptor && it.hasJvmDefaultAnnotation()
-            }
-        ) {
-            builder.versionRequirement = writeVersionRequirement(1, 2, 40, ProtoBuf.VersionRequirement.VersionKind.COMPILER_VERSION)
-        }
-    }
-
     private fun writeVersionRequirement(languageFeature: LanguageFeature): Int {
         val languageVersion = languageFeature.sinceVersion!!
         return writeVersionRequirement(
@@ -644,16 +628,7 @@ class DescriptorSerializer private constructor(
     }
 
     private fun writeVersionRequirement(major: Int, minor: Int, patch: Int, versionKind: ProtoBuf.VersionRequirement.VersionKind): Int {
-        val requirement = ProtoBuf.VersionRequirement.newBuilder().apply {
-            VersionRequirement.Version(major, minor, patch).encode(
-                writeVersion = { version = it },
-                writeVersionFull = { versionFull = it }
-            )
-            if (versionKind != defaultInstanceForType.versionKind) {
-                this.versionKind = versionKind
-            }
-        }
-        return versionRequirementTable[requirement]
+        return writeVersionRequirement(major, minor, patch, versionKind, versionRequirementTable)
     }
 
     // Returns index into versionRequirementTable, or null if there's no @RequireKotlin on the descriptor
@@ -735,10 +710,14 @@ class DescriptorSerializer private constructor(
         }
 
         @JvmStatic
-        fun create(descriptor: ClassDescriptor, extension: SerializerExtension): DescriptorSerializer {
+        fun create(
+            descriptor: ClassDescriptor,
+            extension: SerializerExtension,
+            parentSerializer: DescriptorSerializer?
+        ): DescriptorSerializer {
             val container = descriptor.containingDeclaration
-            val parentSerializer = if (container is ClassDescriptor)
-                create(container, extension)
+            val parent = if (container is ClassDescriptor)
+                parentSerializer ?: create(container, extension, null)
             else
                 createTopLevel(extension)
 
@@ -746,12 +725,13 @@ class DescriptorSerializer private constructor(
             // serializing outer classes before nested classes.
             // Otherwise our interner can get wrong ids because we may serialize classes in any order.
             val serializer = DescriptorSerializer(
-                    descriptor,
-                    Interner(parentSerializer.typeParameters),
-                    parentSerializer.extension,
-                    MutableTypeTable(),
-                    MutableVersionRequirementTable(),
-                    serializeTypeTableToFunction = false
+                descriptor,
+                Interner(parent.typeParameters),
+                extension,
+                MutableTypeTable(),
+                if (container is ClassDescriptor && !isVersionRequirementTableWrittenCorrectly(extension.metadataVersion))
+                    parent.versionRequirementTable else MutableVersionRequirementTable(),
+                serializeTypeTableToFunction = false
             )
             for (typeParameter in descriptor.declaredTypeParameters) {
                 serializer.typeParameters.intern(typeParameter)
@@ -782,5 +762,24 @@ class DescriptorSerializer private constructor(
                     //NOTE: the exact comparator does matter here
                     Collections.sort(this, MemberComparator.INSTANCE)
                 }
+
+        fun writeVersionRequirement(
+            major: Int,
+            minor: Int,
+            patch: Int,
+            versionKind: ProtoBuf.VersionRequirement.VersionKind,
+            versionRequirementTable: MutableVersionRequirementTable
+        ): Int {
+            val requirement = ProtoBuf.VersionRequirement.newBuilder().apply {
+                VersionRequirement.Version(major, minor, patch).encode(
+                    writeVersion = { version = it },
+                    writeVersionFull = { versionFull = it }
+                )
+                if (versionKind != defaultInstanceForType.versionKind) {
+                    this.versionKind = versionKind
+                }
+            }
+            return versionRequirementTable[requirement]
+        }
     }
 }

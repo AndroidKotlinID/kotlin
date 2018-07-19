@@ -902,6 +902,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/interfaceThisRef.kt");
         }
 
+        @TestMetadata("javaSyntheticPropertyAccess.kt")
+        public void testJavaSyntheticPropertyAccess() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/javaSyntheticPropertyAccess.kt");
+        }
+
         @TestMetadata("jvmInstanceFieldReference.kt")
         public void testJvmInstanceFieldReference() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/jvmInstanceFieldReference.kt");
@@ -1383,6 +1388,16 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("javaStaticMethod.kt")
         public void testJavaStaticMethod() throws Exception {
             runTest("compiler/testData/ir/irText/stubs/javaStaticMethod.kt");
+        }
+
+        @TestMetadata("javaSyntheticProperty.kt")
+        public void testJavaSyntheticProperty() throws Exception {
+            runTest("compiler/testData/ir/irText/stubs/javaSyntheticProperty.kt");
+        }
+
+        @TestMetadata("jdkClassSyntheticProperty.kt")
+        public void testJdkClassSyntheticProperty() throws Exception {
+            runTest("compiler/testData/ir/irText/stubs/jdkClassSyntheticProperty.kt");
         }
 
         @TestMetadata("kotlinInnerClass.kt")

@@ -36,6 +36,7 @@ import org.jetbrains.kotlin.types.KotlinType
 
 class MemberDeserializer(private val c: DeserializationContext) {
     private val annotationDeserializer = AnnotationDeserializer(c.components.moduleDescriptor, c.components.notFoundClasses)
+
     fun loadProperty(proto: ProtoBuf.Property): PropertyDescriptor {
         val flags = if (proto.hasFlags()) proto.flags else loadOldFlags(proto.oldFlags)
 
@@ -276,7 +277,7 @@ class MemberDeserializer(private val c: DeserializationContext) {
             c.containingDeclaration.asProtoContainer()?.let {
                 c.components.annotationAndConstantLoader
                     .loadExtensionReceiverParameterAnnotations(it, proto, receiverTargetedKind)
-                    .map { AnnotationWithTarget(it, AnnotationUseSiteTarget.RECEIVER) }
+                    .map { annotation -> AnnotationWithTarget(annotation, AnnotationUseSiteTarget.RECEIVER) }
                     .toList()
             }.orEmpty()
         }
