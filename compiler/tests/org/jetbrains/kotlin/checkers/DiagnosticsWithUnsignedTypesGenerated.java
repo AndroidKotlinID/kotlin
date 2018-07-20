@@ -34,6 +34,11 @@ public class DiagnosticsWithUnsignedTypesGenerated extends AbstractDiagnosticsWi
         runTest("compiler/testData/diagnostics/testsWithUnsignedTypes/allowedVarargsOfUnsignedTypes.kt");
     }
 
+    @TestMetadata("callDefaultConstructorOfUnsignedType.kt")
+    public void testCallDefaultConstructorOfUnsignedType() throws Exception {
+        runTest("compiler/testData/diagnostics/testsWithUnsignedTypes/callDefaultConstructorOfUnsignedType.kt");
+    }
+
     @TestMetadata("explicitUnsignedLongTypeCheck.kt")
     public void testExplicitUnsignedLongTypeCheck() throws Exception {
         runTest("compiler/testData/diagnostics/testsWithUnsignedTypes/explicitUnsignedLongTypeCheck.kt");
@@ -42,6 +47,11 @@ public class DiagnosticsWithUnsignedTypesGenerated extends AbstractDiagnosticsWi
     @TestMetadata("forbiddenEqualsOnUnsignedTypes.kt")
     public void testForbiddenEqualsOnUnsignedTypes() throws Exception {
         runTest("compiler/testData/diagnostics/testsWithUnsignedTypes/forbiddenEqualsOnUnsignedTypes.kt");
+    }
+
+    @TestMetadata("lateinitUnsignedType.kt")
+    public void testLateinitUnsignedType() throws Exception {
+        runTest("compiler/testData/diagnostics/testsWithUnsignedTypes/lateinitUnsignedType.kt");
     }
 
     @TestMetadata("overloadResolutionOfBasicOperations.kt")
