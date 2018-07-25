@@ -6130,6 +6130,16 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/ifStatement.kt", "kotlin.coroutines");
             }
 
+            @TestMetadata("kt22694.kt")
+            public void testKt22694_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/kt22694.kt", "kotlin.coroutines.experimental");
+            }
+
+            @TestMetadata("kt22694.kt")
+            public void testKt22694_1_3() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/kt22694.kt", "kotlin.coroutines");
+            }
+
             @TestMetadata("labeledWhile.kt")
             public void testLabeledWhile_1_2() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/labeledWhile.kt", "kotlin.coroutines.experimental");
@@ -6178,6 +6188,16 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("throwInTryWithHandleResult.kt")
             public void testThrowInTryWithHandleResult_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/throwInTryWithHandleResult.kt", "kotlin.coroutines");
+            }
+
+            @TestMetadata("whenWithSuspensions.kt")
+            public void testWhenWithSuspensions_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/whenWithSuspensions.kt", "kotlin.coroutines.experimental");
+            }
+
+            @TestMetadata("whenWithSuspensions.kt")
+            public void testWhenWithSuspensions_1_3() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/whenWithSuspensions.kt", "kotlin.coroutines");
             }
 
             @TestMetadata("whileStatement.kt")
@@ -15396,6 +15416,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/properties/const/constValInAnnotationDefault.kt");
             }
 
+            @TestMetadata("fpNonConstValProperlyInitialized.kt")
+            public void testFpNonConstValProperlyInitialized() throws Exception {
+                runTest("compiler/testData/codegen/box/properties/const/fpNonConstValProperlyInitialized.kt");
+            }
+
             @TestMetadata("interfaceCompanion.kt")
             public void testInterfaceCompanion() throws Exception {
                 runTest("compiler/testData/codegen/box/properties/const/interfaceCompanion.kt");
@@ -17596,6 +17621,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/reflection/genericSignature/defaultImplsGenericSignature.kt");
             }
 
+            @TestMetadata("delegatedMembers.kt")
+            public void testDelegatedMembers() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/genericSignature/delegatedMembers.kt");
+            }
+
             @TestMetadata("functionLiteralGenericSignature.kt")
             public void testFunctionLiteralGenericSignature() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/genericSignature/functionLiteralGenericSignature.kt");
@@ -17624,6 +17654,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("kt6106.kt")
             public void testKt6106() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/genericSignature/kt6106.kt");
+            }
+
+            @TestMetadata("samWrappedLambdaVsReference.kt")
+            public void testSamWrappedLambdaVsReference() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/genericSignature/samWrappedLambdaVsReference.kt");
             }
 
             @TestMetadata("signatureOfDeepGenericInner.kt")
