@@ -5004,6 +5004,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/beginWithException.kt", "kotlin.coroutines.experimental");
         }
 
+        @TestMetadata("catchWithInlineInsideSuspend.kt")
+        public void testCatchWithInlineInsideSuspend_1_2() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/catchWithInlineInsideSuspend.kt", "kotlin.coroutines.experimental");
+        }
+
         @TestMetadata("coercionToUnit.kt")
         public void testCoercionToUnit_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/coercionToUnit.kt", "kotlin.coroutines.experimental");
@@ -5423,6 +5428,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             @TestMetadata("returnFromFinally.kt")
             public void testReturnFromFinally_1_2() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/returnFromFinally.kt", "kotlin.coroutines.experimental");
+            }
+
+            @TestMetadata("returnWithFinally.kt")
+            public void testReturnWithFinally_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/returnWithFinally.kt", "kotlin.coroutines.experimental");
             }
 
             @TestMetadata("switchLikeWhen.kt")
