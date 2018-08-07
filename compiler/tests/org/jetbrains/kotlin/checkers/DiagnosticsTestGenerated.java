@@ -10872,6 +10872,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassImplementsCollection.kt");
             }
 
+            @TestMetadata("inlineClassWithForbiddenUnderlyingType.kt")
+            public void testInlineClassWithForbiddenUnderlyingType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassWithForbiddenUnderlyingType.kt");
+            }
+
             @TestMetadata("inlineClassesInsideAnnotations.kt")
             public void testInlineClassesInsideAnnotations() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/inlineClassesInsideAnnotations.kt");
@@ -13048,6 +13053,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
 
                 public void testAllFilesPresentInHeaderClass() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/headerClass"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("baseExpectClassWithoutConstructor.kt")
+                public void testBaseExpectClassWithoutConstructor() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/headerClass/baseExpectClassWithoutConstructor.kt");
                 }
 
                 @TestMetadata("classKinds.kt")
