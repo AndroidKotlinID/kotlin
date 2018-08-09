@@ -18849,6 +18849,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/smartCasts/elvisRHS.kt");
             }
 
+            @TestMetadata("enumEntryMembers_after.kt")
+            public void testEnumEntryMembers_after() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/smartCasts/enumEntryMembers_after.kt");
+            }
+
+            @TestMetadata("enumEntryMembers_before.kt")
+            public void testEnumEntryMembers_before() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/smartCasts/enumEntryMembers_before.kt");
+            }
+
             @TestMetadata("equals.kt")
             public void testEquals() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/smartCasts/equals.kt");
@@ -19811,6 +19821,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("WhileTrueWithBreakInIfCondition.kt")
                 public void testWhileTrueWithBreakInIfCondition() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/smartCasts/loops/WhileTrueWithBreakInIfCondition.kt");
+                }
+
+                @TestMetadata("whileWithAssertInConditionAndBreakAfter.kt")
+                public void testWhileWithAssertInConditionAndBreakAfter() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/smartCasts/loops/whileWithAssertInConditionAndBreakAfter.kt");
+                }
+
+                @TestMetadata("whileWithAssertInConditionAndBreakBefore.kt")
+                public void testWhileWithAssertInConditionAndBreakBefore() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/smartCasts/loops/whileWithAssertInConditionAndBreakBefore.kt");
                 }
             }
 
