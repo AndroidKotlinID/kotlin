@@ -164,7 +164,7 @@ internal class Kotlin2JvmSourceSetProcessor(
             super.defaultKotlinDestinationDir
 
     override fun doCreateTask(project: Project, taskName: String): KotlinCompile =
-            tasksProvider.createKotlinJVMTask(project, taskName, kotlinCompilation.compilationName)
+            tasksProvider.createKotlinJVMTask(project, taskName, kotlinCompilation)
 
     override fun doTargetSpecificProcessing() {
         Kapt3KotlinGradleSubplugin.createAptConfigurationIfNeeded(project, kotlinCompilation.compilationName)
@@ -254,7 +254,7 @@ internal class Kotlin2JsSourceSetProcessor(
     kotlinCompilation = kotlinCompilation
 ) {
     override fun doCreateTask(project: Project, taskName: String): Kotlin2JsCompile =
-            tasksProvider.createKotlinJSTask(project, taskName, kotlinCompilation.compilationName)
+            tasksProvider.createKotlinJSTask(project, taskName, kotlinCompilation)
 
     override fun doTargetSpecificProcessing() {
         project.tasks.findByName(kotlinCompilation.compileAllTaskName)!!.dependsOn(kotlinTask)
@@ -332,7 +332,7 @@ internal class KotlinCommonSourceSetProcessor(
     }
 
     override fun doCreateTask(project: Project, taskName: String): KotlinCompileCommon =
-            tasksProvider.createKotlinCommonTask(project, taskName, kotlinCompilation.compilationName)
+            tasksProvider.createKotlinCommonTask(project, taskName, kotlinCompilation)
 }
 
 internal abstract class AbstractKotlinPlugin(
@@ -708,15 +708,19 @@ abstract class AbstractAndroidProjectHandler<V>(private val kotlinConfigurationT
         }
 
         val compilation = target.compilations.getByName(variantDataName)
+        val defaultSourceSet = project.kotlinExtension.sourceSets.maybeCreate(compilation.defaultSourceSetName)
+
         val kotlinTaskName = compilation.compileKotlinTaskName
         // todo: Investigate possibility of creating and configuring kotlinTask before evaluation
-        val kotlinTask = tasksProvider.createKotlinJVMTask(project, kotlinTaskName, variantDataName)
+        val kotlinTask = tasksProvider.createKotlinJVMTask(project, kotlinTaskName, compilation)
         kotlinTask.parentKotlinOptionsImpl = rootKotlinOptions
 
         // store kotlin classes in separate directory. They will serve as class-path to java compiler
         kotlinTask.destinationDir = File(project.buildDir, "tmp/kotlin-classes/$variantDataName")
         kotlinTask.description = "Compiles the $variantDataName kotlin."
 
+        // Register the source only after the task is created, because tne task is required for that:
+        compilation.source(defaultSourceSet)
         configureSources(kotlinTask, variantData, compilation)
 
         // In MPPs, add the common main Kotlin sources to non-test variants, the common test sources to test variants
