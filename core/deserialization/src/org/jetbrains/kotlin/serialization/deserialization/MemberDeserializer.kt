@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.serialization.deserialization
 
-import org.jetbrains.kotlin.builtins.isSuspendFunctionTypeOrSubtype
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationWithTarget
@@ -138,7 +137,9 @@ class MemberDeserializer(private val c: DeserializationContext) {
     }
 
     private fun DeserializedMemberDescriptor.versionAndReleaseCoroutinesMismatch(): Boolean =
-        c.components.configuration.releaseCoroutines && versionRequirement?.version != VersionRequirement.Version(1, 3)
+        c.components.configuration.releaseCoroutines && versionRequirements.none {
+            it.version == VersionRequirement.Version(1, 3) && it.kind == ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION
+        }
 
     private fun loadOldFlags(oldFlags: Int): Int {
         val lowSixBits = oldFlags and 0x3f
@@ -230,8 +231,7 @@ class MemberDeserializer(private val c: DeserializationContext) {
         descriptor.typeParameters.forEach { it.upperBounds }
         descriptor.isExperimentalCoroutineInReleaseEnvironment = local.typeDeserializer.experimentalSuspendFunctionTypeEncountered ||
                 ((c.containingDeclaration as? DeserializedClassDescriptor)?.c?.typeDeserializer?.experimentalSuspendFunctionTypeEncountered == true &&
-                        c.components.configuration.releaseCoroutines &&
-                        descriptor.versionRequirement?.version != VersionRequirement.Version(1, 3))
+                        descriptor.versionAndReleaseCoroutinesMismatch())
 
         return descriptor
     }
