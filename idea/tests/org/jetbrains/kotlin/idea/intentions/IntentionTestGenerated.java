@@ -2796,6 +2796,31 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 runTest("idea/testData/intentions/branched/safeAccessToIfThen/equality.kt");
             }
 
+            @TestMetadata("let.kt")
+            public void testLet() throws Exception {
+                runTest("idea/testData/intentions/branched/safeAccessToIfThen/let.kt");
+            }
+
+            @TestMetadata("let2.kt")
+            public void testLet2() throws Exception {
+                runTest("idea/testData/intentions/branched/safeAccessToIfThen/let2.kt");
+            }
+
+            @TestMetadata("let3.kt")
+            public void testLet3() throws Exception {
+                runTest("idea/testData/intentions/branched/safeAccessToIfThen/let3.kt");
+            }
+
+            @TestMetadata("letNotRedundant.kt")
+            public void testLetNotRedundant() throws Exception {
+                runTest("idea/testData/intentions/branched/safeAccessToIfThen/letNotRedundant.kt");
+            }
+
+            @TestMetadata("letTopLevelVar.kt")
+            public void testLetTopLevelVar() throws Exception {
+                runTest("idea/testData/intentions/branched/safeAccessToIfThen/letTopLevelVar.kt");
+            }
+
             @TestMetadata("localValAsReceiver.kt")
             public void testLocalValAsReceiver() throws Exception {
                 runTest("idea/testData/intentions/branched/safeAccessToIfThen/localValAsReceiver.kt");
@@ -5185,14 +5210,14 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/convertLambdaToReference/extension.kt");
         }
 
+        @TestMetadata("extensionOuterScope.kt")
+        public void testExtensionOuterScope() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/extensionOuterScope.kt");
+        }
+
         @TestMetadata("extensionProperty.kt")
         public void testExtensionProperty() throws Exception {
             runTest("idea/testData/intentions/convertLambdaToReference/extensionProperty.kt");
-        }
-
-        @TestMetadata("extentionOuterScope.kt")
-        public void testExtentionOuterScope() throws Exception {
-            runTest("idea/testData/intentions/convertLambdaToReference/extentionOuterScope.kt");
         }
 
         @TestMetadata("fqNameForReceiver.kt")
@@ -5258,6 +5283,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("memberInLambdaArgument.kt")
         public void testMemberInLambdaArgument() throws Exception {
             runTest("idea/testData/intentions/convertLambdaToReference/memberInLambdaArgument.kt");
+        }
+
+        @TestMetadata("memberInScopeFunction.kt")
+        public void testMemberInScopeFunction() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/memberInScopeFunction.kt");
+        }
+
+        @TestMetadata("memberInScopeFunction2.kt")
+        public void testMemberInScopeFunction2() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/memberInScopeFunction2.kt");
         }
 
         @TestMetadata("memberOuterScope.kt")
@@ -5363,6 +5398,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("unwrap.kt")
         public void testUnwrap() throws Exception {
             runTest("idea/testData/intentions/convertLambdaToReference/unwrap.kt");
+        }
+
+        @TestMetadata("varargFunction.kt")
+        public void testVarargFunction() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/varargFunction.kt");
+        }
+
+        @TestMetadata("varargFunction2.kt")
+        public void testVarargFunction2() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/varargFunction2.kt");
         }
 
         @TestMetadata("wrongNamedOrder.kt")
@@ -5788,6 +5833,69 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("withProperties.kt")
         public void testWithProperties() throws Exception {
             runTest("idea/testData/intentions/convertPrimaryConstructorToSecondary/withProperties.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/intentions/convertPropertyGetterToInitializer")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConvertPropertyGetterToInitializer extends AbstractIntentionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInConvertPropertyGetterToInitializer() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/convertPropertyGetterToInitializer"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("block.kt")
+        public void testBlock() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/block.kt");
+        }
+
+        @TestMetadata("extentionProperty.kt")
+        public void testExtentionProperty() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/extentionProperty.kt");
+        }
+
+        @TestMetadata("hasComment.kt")
+        public void testHasComment() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/hasComment.kt");
+        }
+
+        @TestMetadata("hasComment2.kt")
+        public void testHasComment2() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/hasComment2.kt");
+        }
+
+        @TestMetadata("hasComment3.kt")
+        public void testHasComment3() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/hasComment3.kt");
+        }
+
+        @TestMetadata("hasInitializer.kt")
+        public void testHasInitializer() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/hasInitializer.kt");
+        }
+
+        @TestMetadata("inInterface.kt")
+        public void testInInterface() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/inInterface.kt");
+        }
+
+        @TestMetadata("multiStatementBlock.kt")
+        public void testMultiStatementBlock() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/multiStatementBlock.kt");
+        }
+
+        @TestMetadata("run.kt")
+        public void testRun() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/run.kt");
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyGetterToInitializer/simple.kt");
         }
     }
 
@@ -6934,6 +7042,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/convertToRun/itReceiver.kt");
         }
 
+        @TestMetadata("javaMethod.kt")
+        public void testJavaMethod() throws Exception {
+            runTest("idea/testData/intentions/convertToRun/javaMethod.kt");
+        }
+
+        @TestMetadata("javaStaticMethod.kt")
+        public void testJavaStaticMethod() throws Exception {
+            runTest("idea/testData/intentions/convertToRun/javaStaticMethod.kt");
+        }
+
         @TestMetadata("methodChain.kt")
         public void testMethodChain() throws Exception {
             runTest("idea/testData/intentions/convertToRun/methodChain.kt");
@@ -7241,6 +7359,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("itReceiver.kt")
         public void testItReceiver() throws Exception {
             runTest("idea/testData/intentions/convertToWith/itReceiver.kt");
+        }
+
+        @TestMetadata("javaMethod.kt")
+        public void testJavaMethod() throws Exception {
+            runTest("idea/testData/intentions/convertToWith/javaMethod.kt");
+        }
+
+        @TestMetadata("javaStaticMethod.kt")
+        public void testJavaStaticMethod() throws Exception {
+            runTest("idea/testData/intentions/convertToWith/javaStaticMethod.kt");
         }
 
         @TestMetadata("methodChain.kt")
@@ -13885,6 +14013,31 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("comparisons.kt")
         public void testComparisons() throws Exception {
             runTest("idea/testData/intentions/replaceSingleLineLetIntention/comparisons.kt");
+        }
+
+        @TestMetadata("destructuringDeclaration.kt")
+        public void testDestructuringDeclaration() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/destructuringDeclaration.kt");
+        }
+
+        @TestMetadata("destructuringDeclaration2.kt")
+        public void testDestructuringDeclaration2() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/destructuringDeclaration2.kt");
+        }
+
+        @TestMetadata("destructuringDeclaration3.kt")
+        public void testDestructuringDeclaration3() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/destructuringDeclaration3.kt");
+        }
+
+        @TestMetadata("destructuringDeclaration4.kt")
+        public void testDestructuringDeclaration4() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/destructuringDeclaration4.kt");
+        }
+
+        @TestMetadata("destructuringDeclaration5.kt")
+        public void testDestructuringDeclaration5() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/destructuringDeclaration5.kt");
         }
 
         @TestMetadata("dotWithComparison.kt")

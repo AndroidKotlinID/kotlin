@@ -3973,6 +3973,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/redundantSemicolon/beforeKDocAndLambda.kt");
         }
 
+        @TestMetadata("betweenSoftKeywordAndDeclaration.kt")
+        public void testBetweenSoftKeywordAndDeclaration() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/betweenSoftKeywordAndDeclaration.kt");
+        }
+
+        @TestMetadata("betweenSoftModifierKeywordAndDeclaration.kt")
+        public void testBetweenSoftModifierKeywordAndDeclaration() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/betweenSoftModifierKeywordAndDeclaration.kt");
+        }
+
+        @TestMetadata("betweenSoftModifierKeywordAndDeclaration2.kt")
+        public void testBetweenSoftModifierKeywordAndDeclaration2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/betweenSoftModifierKeywordAndDeclaration2.kt");
+        }
+
+        @TestMetadata("betweenSoftModifierKeywordAndDeclaration3.kt")
+        public void testBetweenSoftModifierKeywordAndDeclaration3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/betweenSoftModifierKeywordAndDeclaration3.kt");
+        }
+
         @TestMetadata("companionBeforeFun.kt")
         public void testCompanionBeforeFun() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantSemicolon/companionBeforeFun.kt");
@@ -4646,6 +4666,59 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("vararg.kt")
         public void testVararg() throws Exception {
             runTest("idea/testData/inspectionsLocal/replaceArrayOfWithLiteral/vararg.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ReplaceAssertBooleanWithAssertEquality extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInReplaceAssertBooleanWithAssertEquality() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("assertFalse.kt")
+        public void testAssertFalse() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertFalse.kt");
+        }
+
+        @TestMetadata("assertFalseEQEQ.kt")
+        public void testAssertFalseEQEQ() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertFalseEQEQ.kt");
+        }
+
+        @TestMetadata("assertFalseEQEQEQ.kt")
+        public void testAssertFalseEQEQEQ() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertFalseEQEQEQ.kt");
+        }
+
+        @TestMetadata("assertFalseWithMessage.kt")
+        public void testAssertFalseWithMessage() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertFalseWithMessage.kt");
+        }
+
+        @TestMetadata("assertTrue.kt")
+        public void testAssertTrue() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertTrue.kt");
+        }
+
+        @TestMetadata("assertTrueEQEQ.kt")
+        public void testAssertTrueEQEQ() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertTrueEQEQ.kt");
+        }
+
+        @TestMetadata("assertTrueEQEQEQ.kt")
+        public void testAssertTrueEQEQEQ() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertTrueEQEQEQ.kt");
+        }
+
+        @TestMetadata("assertTrueWithMessage.kt")
+        public void testAssertTrueWithMessage() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertTrueWithMessage.kt");
         }
     }
 
