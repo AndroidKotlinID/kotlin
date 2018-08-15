@@ -81,6 +81,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/blockUsesDifferentVar.kt");
             }
 
+            @TestMetadata("call.kt")
+            public void testCall() throws Exception {
+                runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/call.kt");
+            }
+
+            @TestMetadata("call2.kt")
+            public void testCall2() throws Exception {
+                runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/call2.kt");
+            }
+
+            @TestMetadata("call3.kt")
+            public void testCall3() throws Exception {
+                runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/call3.kt");
+            }
+
+            @TestMetadata("call4.kt")
+            public void testCall4() throws Exception {
+                runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/call4.kt");
+            }
+
             @TestMetadata("conditionComparesNullWithNull.kt")
             public void testConditionComparesNullWithNull() throws Exception {
                 runTest("idea/testData/inspectionsLocal/branched/ifThenToSafeAccess/conditionComparesNullWithNull.kt");
@@ -3252,6 +3272,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/implicitThisReceiver.kt");
         }
 
+        @TestMetadata("invalidFunctionReference.kt")
+        public void testInvalidFunctionReference() throws Exception {
+            runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/invalidFunctionReference.kt");
+        }
+
+        @TestMetadata("invalidFunctionReference2.kt")
+        public void testInvalidFunctionReference2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/invalidFunctionReference2.kt");
+        }
+
+        @TestMetadata("invalidFunctionReference3.kt")
+        public void testInvalidFunctionReference3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/invalidFunctionReference3.kt");
+        }
+
+        @TestMetadata("invalidFunctionReference4.kt")
+        public void testInvalidFunctionReference4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/invalidFunctionReference4.kt");
+        }
+
         @TestMetadata("it.kt")
         public void testIt() throws Exception {
             runTest("idea/testData/inspectionsLocal/moveSuspiciousCallableReferenceIntoParentheses/it.kt");
@@ -3925,6 +3965,39 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("useGenericsSuper.kt")
         public void testUseGenericsSuper() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantOverride/useGenericsSuper.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/redundantReturnLabel")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RedundantReturnLabel extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRedundantReturnLabel() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantReturnLabel"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("inAnonymousFunction.kt")
+        public void testInAnonymousFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantReturnLabel/inAnonymousFunction.kt");
+        }
+
+        @TestMetadata("inFunction.kt")
+        public void testInFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantReturnLabel/inFunction.kt");
+        }
+
+        @TestMetadata("inFunction2.kt")
+        public void testInFunction2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantReturnLabel/inFunction2.kt");
+        }
+
+        @TestMetadata("inLambda.kt")
+        public void testInLambda() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantReturnLabel/inLambda.kt");
         }
     }
 

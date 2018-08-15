@@ -5270,6 +5270,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/kt21605.kt", "kotlin.coroutines.experimental");
         }
 
+        @TestMetadata("kt25912.kt")
+        public void testKt25912_1_2() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/kt25912.kt", "kotlin.coroutines.experimental");
+        }
+
         @TestMetadata("lastExpressionIsLoop.kt")
         public void testLastExpressionIsLoop_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/lastExpressionIsLoop.kt", "kotlin.coroutines.experimental");
@@ -10111,6 +10116,16 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("kt25771.kt")
         public void testKt25771() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/kt25771.kt");
+        }
+
+        @TestMetadata("kt26103.kt")
+        public void testKt26103() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt26103.kt");
+        }
+
+        @TestMetadata("kt26103_original.kt")
+        public void testKt26103_original() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt26103_original.kt");
         }
 
         @TestMetadata("noAssertionsOnInlineClassBasedOnNullableType.kt")
