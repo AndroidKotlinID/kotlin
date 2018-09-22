@@ -18,10 +18,8 @@ import java.util.jar.JarFile
 import kotlin.coroutines.experimental.buildSequence
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.KotlinType
-import kotlin.script.experimental.api.ScriptingEnvironment
-import kotlin.script.experimental.api.ScriptingEnvironmentProperties
-import kotlin.script.experimental.definitions.ScriptDefinitionFromAnnotatedBaseClass
-import kotlin.script.experimental.jvm.JvmGetScriptingClass
+import kotlin.script.experimental.host.createCompilationConfigurationFromTemplate
+import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.templates.ScriptTemplateDefinition
 
 internal const val SCRIPT_DEFINITION_MARKERS_PATH = "META-INF/kotlin/script/templates/"
@@ -47,7 +45,7 @@ internal fun discoverScriptTemplatesInClasspath(
     baseClassLoader: ClassLoader,
     scriptResolverEnv: Map<String, Any?>,
     messageCollector: MessageCollector
-): Sequence<KotlinScriptDefinition> = buildSequence {
+): Sequence<KotlinScriptDefinition> = buildSequence<KotlinScriptDefinition> {
     // TODO: try to find a way to reduce classpath (and classloader) to minimal one needed to load script definition and its dependencies
     val loader = LazyClasspathWithClassLoader(baseClassLoader) { classpath }
 
@@ -135,7 +133,7 @@ internal fun loadScriptTemplatesFromClasspath(
     messageCollector: MessageCollector
 ): Sequence<KotlinScriptDefinition> =
     if (scriptTemplates.isEmpty()) emptySequence()
-    else buildSequence {
+    else buildSequence<KotlinScriptDefinition> {
         // trying the direct classloading from baseClassloader first, since this is the most performant variant
         val (initialLoadedDefinitions, initialNotFoundTemplates) = scriptTemplates.partitionMapNotNull {
             loadScriptDefinition(baseClassLoader, it, scriptResolverEnv, messageCollector)
@@ -274,13 +272,14 @@ private fun loadScriptDefinition(
         val cls = classLoader.loadClass(template)
         val def =
             if (cls.annotations.firstIsInstanceOrNull<KotlinScript>() != null) {
+                val environment = defaultJvmScriptingHostConfiguration
                 KotlinScriptDefinitionAdapterFromNewAPI(
-                    ScriptDefinitionFromAnnotatedBaseClass(
-                        ScriptingEnvironment(
-                            ScriptingEnvironmentProperties.baseClass to KotlinType(cls.kotlin),
-                            ScriptingEnvironmentProperties.getScriptingClass to JvmGetScriptingClass()
-                        )
-                    )
+                    createCompilationConfigurationFromTemplate(
+                        KotlinType(cls.kotlin),
+                        environment,
+                        KotlinScriptDefinition::class
+                    ),
+                    environment
                 )
             } else {
                 KotlinScriptDefinitionFromAnnotatedTemplate(cls.kotlin, scriptResolverEnv)

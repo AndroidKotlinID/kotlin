@@ -16,6 +16,7 @@ import com.intellij.openapi.roots.impl.libraries.LibraryEx
 import com.intellij.openapi.roots.libraries.Library
 import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.ResolveScopeEnlarger
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.util.PathUtil
@@ -26,6 +27,7 @@ import org.jetbrains.kotlin.analyzer.CombinedModuleInfo
 import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.analyzer.TrackableModuleInfo
 import org.jetbrains.kotlin.caches.project.LibraryModuleInfo
+import org.jetbrains.kotlin.caches.resolve.resolution
 import org.jetbrains.kotlin.config.KotlinSourceRootType
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.idea.configuration.BuildSystemType
@@ -39,6 +41,7 @@ import org.jetbrains.kotlin.idea.stubindex.KotlinSourceFilterScope
 import org.jetbrains.kotlin.idea.util.isInSourceContentWithoutInjected
 import org.jetbrains.kotlin.idea.util.rootManager
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.platform.idePlatformKind
 import org.jetbrains.kotlin.resolve.TargetPlatform
 import org.jetbrains.kotlin.resolve.jvm.GlobalSearchScopeWithModuleSources
 import org.jetbrains.kotlin.utils.addIfNotNull
@@ -56,6 +59,14 @@ interface IdeaModuleInfo : org.jetbrains.kotlin.idea.caches.resolve.IdeaModuleIn
         get() = super.capabilities + mapOf(OriginCapability to moduleOrigin)
 
     override fun dependencies(): List<IdeaModuleInfo>
+}
+
+private fun enlargedSearchScope(searchScope: GlobalSearchScope, moduleFile: VirtualFile?): GlobalSearchScope {
+    if (moduleFile == null) return searchScope
+    return ResolveScopeEnlarger.EP_NAME.extensions.fold(searchScope) { scope, enlarger ->
+        val extra = enlarger.getAdditionalResolveScope(moduleFile, scope.project)
+        if (extra != null) scope.union(extra) else scope
+    }
 }
 
 private fun orderEntryToModuleInfo(project: Project, orderEntry: OrderEntry, forProduction: Boolean): List<IdeaModuleInfo> {
@@ -77,7 +88,7 @@ private fun orderEntryToModuleInfo(project: Project, orderEntry: OrderEntry, for
         }
         is LibraryOrderEntry -> {
             val library = orderEntry.library ?: return listOf()
-            listOfNotNull(LibraryInfo(project, library))
+            createLibraryInfo(project, library)
         }
         is JdkOrderEntry -> {
             val sdk = orderEntry.jdk ?: return listOf()
@@ -88,6 +99,11 @@ private fun orderEntryToModuleInfo(project: Project, orderEntry: OrderEntry, for
         }
     }
 }
+
+fun createLibraryInfo(project: Project, library: Library): List<LibraryInfo> {
+    return getLibraryPlatform(project, library).idePlatformKind.resolution.createLibraryInfo(project, library)
+}
+
 
 private fun OrderEntry.acceptAsDependency(forProduction: Boolean): Boolean {
     return this !is ExportableOrderEntry
@@ -161,7 +177,7 @@ data class ModuleProductionSourceInfo internal constructor(
 
     override val stableName: Name = module.getStableName()
 
-    override fun contentScope(): GlobalSearchScope = ModuleProductionSourceScope(module)
+    override fun contentScope(): GlobalSearchScope = enlargedSearchScope(ModuleProductionSourceScope(module), module.moduleFile)
 
     override fun <T> createCachedValueProvider(f: () -> CachedValueProvider.Result<T>) = CachedValueProvider { f() }
 }
@@ -177,7 +193,7 @@ data class ModuleTestSourceInfo internal constructor(override val module: Module
 
     override val displayedName get() = module.name + " (test)"
 
-    override fun contentScope(): GlobalSearchScope = ModuleTestSourceScope(module)
+    override fun contentScope(): GlobalSearchScope = enlargedSearchScope(ModuleTestSourceScope(module), module.moduleFile)
 
     override fun modulesWhoseInternalsAreVisible() = module.cached(CachedValueProvider {
         val list = SmartList<ModuleInfo>()
@@ -247,7 +263,7 @@ private class ModuleTestSourceScope(module: Module) : ModuleSourceScope(module) 
     override fun toString() = "ModuleTestSourceScope($module)"
 }
 
-class LibraryInfo(val project: Project, val library: Library) : IdeaModuleInfo, LibraryModuleInfo, BinaryModuleInfo {
+open class LibraryInfo(val project: Project, val library: Library) : IdeaModuleInfo, LibraryModuleInfo, BinaryModuleInfo {
     override val moduleOrigin: ModuleOrigin
         get() = ModuleOrigin.LIBRARY
 
@@ -262,11 +278,8 @@ class LibraryInfo(val project: Project, val library: Library) : IdeaModuleInfo, 
         val (libraries, sdks) = LibraryDependenciesCache.getInstance(project).getLibrariesAndSdksUsedWith(library)
 
         sdks.mapTo(result) { SdkInfo(project, it) }
-        libraries.filter { it is LibraryEx && !it.isDisposed }.mapTo(result) {
-            LibraryInfo(
-                project,
-                it
-            )
+        libraries.filter { it is LibraryEx && !it.isDisposed }.flatMapTo(result) {
+            createLibraryInfo(project, it)
         }
 
         return result.toList()
@@ -276,7 +289,7 @@ class LibraryInfo(val project: Project, val library: Library) : IdeaModuleInfo, 
         get() = getLibraryPlatform(project, library)
 
     override val sourcesModuleInfo: SourceForBinaryModuleInfo
-        get() = LibrarySourceInfo(project, library)
+        get() = LibrarySourceInfo(project, library, this)
 
     override fun getLibraryRoots(): Collection<String> =
         library.getFiles(OrderRootType.CLASSES).mapNotNull(PathUtil::getLocalPath)
@@ -291,7 +304,7 @@ class LibraryInfo(val project: Project, val library: Library) : IdeaModuleInfo, 
     override fun hashCode(): Int = 43 * library.hashCode()
 }
 
-data class LibrarySourceInfo(val project: Project, val library: Library) : IdeaModuleInfo, SourceForBinaryModuleInfo {
+data class LibrarySourceInfo(val project: Project, val library: Library, override val binariesModuleInfo: BinaryModuleInfo) : IdeaModuleInfo, SourceForBinaryModuleInfo {
 
     override val name: Name = Name.special("<sources for library ${library.name}>")
 
@@ -302,11 +315,8 @@ data class LibrarySourceInfo(val project: Project, val library: Library) : IdeaM
         ), project)
 
     override fun modulesWhoseInternalsAreVisible(): Collection<ModuleInfo> {
-        return listOf(LibraryInfo(project, library))
+        return createLibraryInfo(project, library)
     }
-
-    override val binariesModuleInfo: BinaryModuleInfo
-        get() = LibraryInfo(project, library)
 
     override fun toString() = "LibrarySourceInfo(libraryName=${library.name})"
 }
@@ -406,7 +416,7 @@ interface SourceForBinaryModuleInfo : IdeaModuleInfo {
 }
 
 data class PlatformModuleInfo(
-    internal val platformModule: ModuleSourceInfo,
+    val platformModule: ModuleSourceInfo,
     private val commonModules: List<ModuleSourceInfo> // NOTE: usually contains a single element for current implementation
 ) : IdeaModuleInfo, CombinedModuleInfo, TrackableModuleInfo {
     override val capabilities: Map<ModuleDescriptor.Capability<*>, Any?>

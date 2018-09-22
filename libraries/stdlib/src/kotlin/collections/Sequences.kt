@@ -48,6 +48,31 @@ private object EmptySequence : Sequence<Nothing>, DropTakeSequence<Nothing> {
 }
 
 /**
+ * Returns this sequence if it's not `null` and the empty sequence otherwise.
+ * @sample samples.collections.Sequences.Usage.sequenceOrEmpty
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun <T> Sequence<T>?.orEmpty(): Sequence<T> = this ?: emptySequence()
+
+
+/**
+ * Returns a sequence that iterates through the elements either of this sequence
+ * or, if this sequence turns out to be empty, of the sequence returned by [defaultValue] function.
+ *
+ * @sample samples.collections.Sequences.Usage.sequenceIfEmpty
+ */
+@SinceKotlin("1.3")
+public fun <T> Sequence<T>.ifEmpty(defaultValue: () -> Sequence<T>): Sequence<T> = sequence {
+    val iterator = this@ifEmpty.iterator()
+    if (iterator.hasNext()) {
+        yieldAll(iterator)
+    } else {
+        yieldAll(defaultValue())
+    }
+}
+
+/**
  * Returns a sequence of all elements from all sequences in this sequence.
  *
  * The operation is _intermediate_ and _stateless_.
@@ -170,7 +195,7 @@ constructor(private val sequence: Sequence<T>, private val transformer: (Int, T)
         val iterator = sequence.iterator()
         var index = 0
         override fun next(): R {
-            return transformer(index++, iterator.next())
+            return transformer(checkIndexOverflow(index++), iterator.next())
         }
 
         override fun hasNext(): Boolean {
@@ -189,7 +214,7 @@ constructor(private val sequence: Sequence<T>) : Sequence<IndexedValue<T>> {
         val iterator = sequence.iterator()
         var index = 0
         override fun next(): IndexedValue<T> {
-            return IndexedValue(index++, iterator.next())
+            return IndexedValue(checkIndexOverflow(index++), iterator.next())
         }
 
         override fun hasNext(): Boolean {
@@ -413,8 +438,8 @@ internal class DropSequence<T>(
         require(count >= 0) { "count must be non-negative, but was $count." }
     }
 
-    override fun drop(n: Int): Sequence<T> = DropSequence(sequence, count + n)
-    override fun take(n: Int): Sequence<T> = SubSequence(sequence, count, count + n)
+    override fun drop(n: Int): Sequence<T> = (count + n).let { n1 -> if (n1 < 0) DropSequence(this, n) else DropSequence(sequence, n1) }
+    override fun take(n: Int): Sequence<T> = (count + n).let { n1 -> if (n1 < 0) TakeSequence(this, n) else SubSequence(sequence, count, n1) }
 
     override fun iterator(): Iterator<T> = object : Iterator<T> {
         val iterator = sequence.iterator()
@@ -563,7 +588,7 @@ public fun <T> Sequence<T>.constrainOnce(): Sequence<T> {
  * The returned sequence is constrained to be iterated only once.
  *
  * @see constrainOnce
- * @see kotlin.coroutines.experimental.buildSequence
+ * @see kotlin.sequences.sequence
  *
  * @sample samples.collections.Sequences.Building.generateSequence
  */
@@ -580,7 +605,7 @@ public fun <T : Any> generateSequence(nextFunction: () -> T?): Sequence<T> {
  *
  * The sequence can be iterated multiple times, each time starting with [seed].
  *
- * @see kotlin.coroutines.experimental.buildSequence
+ * @see kotlin.sequences.sequence
  *
  * @sample samples.collections.Sequences.Building.generateSequenceWithSeed
  */
@@ -600,7 +625,7 @@ public fun <T : Any> generateSequence(seed: T?, nextFunction: (T) -> T?): Sequen
  *
  * The sequence can be iterated multiple times.
  *
- * @see kotlin.coroutines.experimental.buildSequence
+ * @see kotlin.sequences.sequence
  *
  * @sample samples.collections.Sequences.Building.generateSequenceWithLazySeed
  */

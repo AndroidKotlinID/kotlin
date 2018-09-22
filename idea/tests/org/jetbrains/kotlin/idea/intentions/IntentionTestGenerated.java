@@ -2276,6 +2276,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 runTest("idea/testData/intentions/branched/ifThenToElvis/emptyThenBlock.kt");
             }
 
+            @TestMetadata("extensionFunctionInClass.kt")
+            public void testExtensionFunctionInClass() throws Exception {
+                runTest("idea/testData/intentions/branched/ifThenToElvis/extensionFunctionInClass.kt");
+            }
+
             @TestMetadata("ifAndElseBothInBlocks.kt")
             public void testIfAndElseBothInBlocks() throws Exception {
                 runTest("idea/testData/intentions/branched/ifThenToElvis/ifAndElseBothInBlocks.kt");
@@ -2421,6 +2426,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 runTest("idea/testData/intentions/branched/ifThenToElvis/otherBlockHasMoreThanOneStatement.kt");
             }
 
+            @TestMetadata("replaceWithLetInMember.kt")
+            public void testReplaceWithLetInMember() throws Exception {
+                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLetInMember.kt");
+            }
+
+            @TestMetadata("replaceWithLetInMemberWithIs.kt")
+            public void testReplaceWithLetInMemberWithIs() throws Exception {
+                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLetInMemberWithIs.kt");
+            }
+
             @TestMetadata("rhsEqualsNull.kt")
             public void testRhsEqualsNull() throws Exception {
                 runTest("idea/testData/intentions/branched/ifThenToElvis/rhsEqualsNull.kt");
@@ -2562,6 +2577,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 @TestMetadata("ifWithoutElse.kt")
                 public void testIfWithoutElse() throws Exception {
                     runTest("idea/testData/intentions/branched/ifWhen/ifToWhen/ifWithoutElse.kt");
+                }
+
+                @TestMetadata("lambdaExpression.kt")
+                public void testLambdaExpression() throws Exception {
+                    runTest("idea/testData/intentions/branched/ifWhen/ifToWhen/lambdaExpression.kt");
+                }
+
+                @TestMetadata("lambdaExpression2.kt")
+                public void testLambdaExpression2() throws Exception {
+                    runTest("idea/testData/intentions/branched/ifWhen/ifToWhen/lambdaExpression2.kt");
                 }
 
                 @TestMetadata("multipleIfFake.kt")
@@ -3491,6 +3516,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
 
             public void testAllFilesPresentInPrivate() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/changeVisibility/private"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+            }
+
+            @TestMetadata("annotated.kt")
+            public void testAnnotated() throws Exception {
+                runTest("idea/testData/intentions/changeVisibility/private/annotated.kt");
             }
 
             @TestMetadata("hasModifier1.kt")
@@ -8421,6 +8451,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/foldInitializerAndIfToElvis/NotIs.kt");
         }
 
+        @TestMetadata("NotIsNullableType.kt")
+        public void testNotIsNullableType() throws Exception {
+            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/NotIsNullableType.kt");
+        }
+
         @TestMetadata("OtherVar1.kt")
         public void testOtherVar1() throws Exception {
             runTest("idea/testData/intentions/foldInitializerAndIfToElvis/OtherVar1.kt");
@@ -11800,6 +11835,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/movePropertyToConstructor"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("annotationTarget.kt")
+        public void testAnnotationTarget() throws Exception {
+            runTest("idea/testData/intentions/movePropertyToConstructor/annotationTarget.kt");
+        }
+
         @TestMetadata("annotationWithUseSite.kt")
         public void testAnnotationWithUseSite() throws Exception {
             runTest("idea/testData/intentions/movePropertyToConstructor/annotationWithUseSite.kt");
@@ -11823,6 +11863,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("getter.kt")
         public void testGetter() throws Exception {
             runTest("idea/testData/intentions/movePropertyToConstructor/getter.kt");
+        }
+
+        @TestMetadata("javaAnnotation.kt")
+        public void testJavaAnnotation() throws Exception {
+            runTest("idea/testData/intentions/movePropertyToConstructor/javaAnnotation.kt");
         }
 
         @TestMetadata("lambda.kt")
@@ -13144,6 +13189,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("lambdaInitializer5.kt")
         public void testLambdaInitializer5() throws Exception {
             runTest("idea/testData/intentions/removeExplicitType/lambdaInitializer5.kt");
+        }
+
+        @TestMetadata("needTypeArgument.kt")
+        public void testNeedTypeArgument() throws Exception {
+            runTest("idea/testData/intentions/removeExplicitType/needTypeArgument.kt");
+        }
+
+        @TestMetadata("needTypeArgument2.kt")
+        public void testNeedTypeArgument2() throws Exception {
+            runTest("idea/testData/intentions/removeExplicitType/needTypeArgument2.kt");
         }
 
         @TestMetadata("notOnParameterOfFunctionType.kt")
@@ -14821,6 +14876,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("notEqualsTrue.kt")
         public void testNotEqualsTrue() throws Exception {
             runTest("idea/testData/intentions/simplifyBooleanWithConstants/notEqualsTrue.kt");
+        }
+
+        @TestMetadata("notReduceableBinary.kt")
+        public void testNotReduceableBinary() throws Exception {
+            runTest("idea/testData/intentions/simplifyBooleanWithConstants/notReduceableBinary.kt");
+        }
+
+        @TestMetadata("notReduceableBinary2.kt")
+        public void testNotReduceableBinary2() throws Exception {
+            runTest("idea/testData/intentions/simplifyBooleanWithConstants/notReduceableBinary2.kt");
         }
 
         @TestMetadata("nullableBoolean.kt")

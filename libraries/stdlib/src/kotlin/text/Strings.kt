@@ -11,7 +11,7 @@ package kotlin.text
 
 import kotlin.*
 import kotlin.comparisons.*
-import kotlin.internal.contracts.*
+import kotlin.contracts.contract
 
 
 /**
@@ -275,6 +275,28 @@ public operator fun CharSequence.iterator(): CharIterator = object : CharIterato
 /** Returns the string if it is not `null`, or the empty string otherwise. */
 @kotlin.internal.InlineOnly
 public inline fun String?.orEmpty(): String = this ?: ""
+
+/**
+ * Returns this char sequence if it's not empty
+ * or the result of calling [defaultValue] function if the char sequence is empty.
+ *
+ * @sample samples.text.Strings.stringIfEmpty
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun <C, R> C.ifEmpty(defaultValue: () -> R): R where C : CharSequence, C : R =
+    if (isEmpty()) defaultValue() else this
+
+/**
+ * Returns this char sequence if it is not empty and doesn't consist solely of whitespace characters,
+ * or the result of calling [defaultValue] function otherwise.
+ *
+ * @sample samples.text.Strings.stringIfBlank
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun <C, R> C.ifBlank(defaultValue: () -> R): R where C : CharSequence, C : R =
+    if (isBlank()) defaultValue() else this
 
 /**
  * Returns the range of valid character indices for this char sequence.
@@ -1043,7 +1065,7 @@ private class DelimitedRangesSequence(
     private val input: CharSequence,
     private val startIndex: Int,
     private val limit: Int,
-    private val getNextMatch: CharSequence.(Int) -> Pair<Int, Int>?
+    private val getNextMatch: CharSequence.(currentIndex: Int) -> Pair<Int, Int>?
 ) : Sequence<IntRange> {
 
     override fun iterator(): Iterator<IntRange> = object : Iterator<IntRange> {
@@ -1110,8 +1132,8 @@ private class DelimitedRangesSequence(
 private fun CharSequence.rangesDelimitedBy(delimiters: CharArray, startIndex: Int = 0, ignoreCase: Boolean = false, limit: Int = 0): Sequence<IntRange> {
     require(limit >= 0, { "Limit must be non-negative, but was $limit." })
 
-    return DelimitedRangesSequence(this, startIndex, limit, { startIndex ->
-        indexOfAny(delimiters, startIndex, ignoreCase = ignoreCase).let { if (it < 0) null else it to 1 }
+    return DelimitedRangesSequence(this, startIndex, limit, { currentIndex ->
+        indexOfAny(delimiters, currentIndex, ignoreCase = ignoreCase).let { if (it < 0) null else it to 1 }
     })
 }
 
@@ -1134,7 +1156,7 @@ private fun CharSequence.rangesDelimitedBy(delimiters: Array<out String>, startI
     require(limit >= 0, { "Limit must be non-negative, but was $limit." } )
     val delimitersList = delimiters.asList()
 
-    return DelimitedRangesSequence(this, startIndex, limit, { startIndex -> findAnyOf(delimitersList, startIndex, ignoreCase = ignoreCase, last = false)?.let { it.first to it.second.length } })
+    return DelimitedRangesSequence(this, startIndex, limit, { currentIndex -> findAnyOf(delimitersList, currentIndex, ignoreCase = ignoreCase, last = false)?.let { it.first to it.second.length } })
 
 }
 

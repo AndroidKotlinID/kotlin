@@ -19,18 +19,34 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType.Companion.ID
+import org.jetbrains.kotlin.idea.project.platform
 import org.jetbrains.kotlin.idea.util.rootManager
+import org.jetbrains.kotlin.platform.impl.CommonIdePlatformKind
+import org.jetbrains.kotlin.platform.impl.isCommon
 import org.jetbrains.kotlin.resolve.TargetPlatform
 
-internal val Module.isNewMPPModule: Boolean
+val Module.isNewMPPModule: Boolean
     get() = KotlinFacet.get(this)?.configuration?.settings?.kind?.isNewMPP ?: false
+
+val Module.externalProjectId: String
+    get() = KotlinFacet.get(this)?.configuration?.settings?.externalProjectId ?: ""
+
+val Module.isMPPModule: Boolean
+    get() {
+        val settings = KotlinFacet.get(this)?.configuration?.settings ?: return false
+        return settings.platform.isCommon ||
+                settings.implementedModuleNames.isNotEmpty() ||
+                settings.kind.isNewMPP
+    }
 
 val Module.implementingModules: List<Module>
     get() = cached(CachedValueProvider {
         val moduleManager = ModuleManager.getInstance(project)
         CachedValueProvider.Result(
             if (isNewMPPModule) {
-                moduleManager.getModuleDependentModules(this).filter { it.isNewMPPModule }
+                moduleManager.getModuleDependentModules(this).filter {
+                    it.isNewMPPModule && it.externalProjectId == externalProjectId
+                }
             } else {
                 moduleManager.modules.filter { name in it.findOldFashionedImplementedModuleNames() }
             },
@@ -43,7 +59,9 @@ val Module.implementedModules: List<Module>
         CachedValueProvider {
             CachedValueProvider.Result(
                 if (isNewMPPModule) {
-                    rootManager.dependencies.filter { it.isNewMPPModule }
+                    rootManager.dependencies.filter {
+                        it.isNewMPPModule && it.platform is CommonIdePlatformKind.Platform && it.externalProjectId == externalProjectId
+                    }
                 } else {
                     val modelsProvider = IdeModelsProviderImpl(project)
                     findOldFashionedImplementedModuleNames().mapNotNull { modelsProvider.findIdeModule(it) }

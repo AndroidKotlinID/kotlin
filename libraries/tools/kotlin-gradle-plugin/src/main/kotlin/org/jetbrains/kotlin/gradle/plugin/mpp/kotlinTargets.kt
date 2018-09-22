@@ -4,20 +4,26 @@
  */
 package org.jetbrains.kotlin.gradle.plugin.mpp
 
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.DomainObjectSet
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
 import org.gradle.api.internal.component.UsageContext
 import org.gradle.api.plugins.JavaPlugin
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilationToRunnableFiles
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.util.ConfigureUtil
+import org.gradle.util.WrapUtil
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 abstract class AbstractKotlinTarget (
-    override val project: Project
+    final override val project: Project
 ) : KotlinTarget {
     private val attributeContainer = HierarchyAttributeContainer(parent = null)
 
@@ -37,6 +43,16 @@ abstract class AbstractKotlinTarget (
 
     override fun toString(): String = "target $name ($platformType)"
 
+    override val publishable: Boolean
+        get() = true
+
+    override val component: KotlinTargetComponent by lazy {
+        if (isGradleVersionAtLeast(4, 7))
+            KotlinVariantWithCoordinates(this)
+        else
+            KotlinVariant(this)
+    }
+
     override fun createUsageContexts(): Set<UsageContext> =
         setOf(
             KotlinPlatformUsageContext(
@@ -51,6 +67,17 @@ abstract class AbstractKotlinTarget (
                     runtimeElementsConfigurationName
                 )
             ) else emptyList()
+
+    @Suppress("UNCHECKED_CAST")
+    internal val publicationConfigureActions =
+        WrapUtil.toDomainObjectSet(Action::class.java) as DomainObjectSet<Action<MavenPublication>>
+
+    override fun mavenPublication(action: Action<MavenPublication>) {
+        publicationConfigureActions.add(action)
+    }
+
+    override fun mavenPublication(action: Closure<Unit>) =
+        mavenPublication(ConfigureUtil.configureUsing(action))
 }
 
 internal fun KotlinTarget.disambiguateName(simpleName: String) =
@@ -118,3 +145,38 @@ open class KotlinOnlyTarget<T : KotlinCompilation>(
     override var disambiguationClassifier: String? = null
         internal set
 }
+
+class KotlinNativeTarget(
+    project: Project,
+    val konanTarget: KonanTarget
+) : KotlinOnlyTarget<KotlinNativeCompilation>(project, KotlinPlatformType.native) {
+
+    init {
+        attributes.attribute(konanTargetAttribute, konanTarget.name)
+    }
+
+    // TODO: Should binary files be output of a target or a compilation?
+    override val artifactsTaskName: String
+        get() = disambiguateName("link")
+
+    override val publishable: Boolean
+        get() = konanTarget.enabledOnCurrentHost
+
+    companion object {
+        val konanTargetAttribute = Attribute.of(
+            "org.jetbrains.kotlin.native.target",
+            String::class.java
+        )
+
+        // TODO: Can we do it better?
+        // User-visible constants
+        val DEBUG = NativeBuildType.DEBUG
+        val RELEASE = NativeBuildType.RELEASE
+
+        val EXECUTABLE = NativeOutputKind.EXECUTABLE
+        val FRAMEWORK = NativeOutputKind.FRAMEWORK
+        val DYNAMIC = NativeOutputKind.DYNAMIC
+        val STATIC = NativeOutputKind.STATIC
+    }
+}
+

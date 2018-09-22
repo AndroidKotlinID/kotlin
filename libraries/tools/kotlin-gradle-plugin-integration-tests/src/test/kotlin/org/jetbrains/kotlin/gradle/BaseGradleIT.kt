@@ -312,9 +312,9 @@ abstract class BaseGradleIT {
         return this
     }
 
-    fun CompiledProject.assertContains(vararg expected: String): CompiledProject {
+    fun CompiledProject.assertContains(vararg expected: String, ignoreCase: Boolean = false): CompiledProject {
         for (str in expected) {
-            assertTrue(output.contains(str.normalize()), "Output should contain '$str'")
+            assertTrue(output.contains(str.normalize(), ignoreCase), "Output should contain '$str'")
         }
         return this
     }
@@ -529,7 +529,10 @@ abstract class BaseGradleIT {
             }
 
             add("-Pkotlin_version=" + options.kotlinVersion)
-            options.incremental?.let { add("-Pkotlin.incremental=$it") }
+            options.incremental?.let {
+                add("-Pkotlin.incremental=$it")
+                add("-Pkotlin.incremental.js=$it")
+            }
             options.usePreciseJavaTracking?.let { add("-Pkotlin.incremental.usePreciseJavaTracking=$it") }
             options.androidGradlePluginVersion?.let { add("-Pandroid_tools_version=$it") }
             if (options.debug) {

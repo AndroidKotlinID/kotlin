@@ -8,22 +8,27 @@ package org.jetbrains.kotlin.codegen.inline
 import com.intellij.psi.PsiElement
 import com.intellij.util.ArrayUtil
 import org.jetbrains.kotlin.backend.common.isBuiltInIntercepted
+import org.jetbrains.kotlin.backend.common.isTopLevelInPackage
 import org.jetbrains.kotlin.builtins.BuiltInsPackageFragment
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.getMethodAsmFlags
 import org.jetbrains.kotlin.codegen.AsmUtil.isPrimitive
 import org.jetbrains.kotlin.codegen.context.ClosureContext
-import org.jetbrains.kotlin.codegen.coroutines.*
+import org.jetbrains.kotlin.codegen.coroutines.createMethodNodeForCoroutineContext
+import org.jetbrains.kotlin.codegen.coroutines.createMethodNodeForIntercepted
+import org.jetbrains.kotlin.codegen.coroutines.createMethodNodeForSuspendCoroutineUninterceptedOrReturn
+import org.jetbrains.kotlin.codegen.coroutines.isBuiltInSuspendCoroutineUninterceptedOrReturnInJvm
 import org.jetbrains.kotlin.codegen.intrinsics.bytecode
 import org.jetbrains.kotlin.codegen.intrinsics.classId
+import org.jetbrains.kotlin.codegen.optimization.common.ControlFlowGraph
+import org.jetbrains.kotlin.codegen.optimization.common.asSequence
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
+import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.isInlineOnly
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtPsiUtil
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils
@@ -71,7 +76,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
 
     private val initialFrameSize = codegen.frameMap.currentSize
 
-    private val reifiedTypeInliner = ReifiedTypeInliner(typeParameterMappings)
+    private val reifiedTypeInliner = ReifiedTypeInliner(typeParameterMappings, state.languageVersionSettings.isReleaseCoroutines())
 
     protected val functionDescriptor: FunctionDescriptor =
         if (InlineUtil.isArrayConstructorWithLambda(function))
@@ -242,7 +247,18 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
             }
         }
         val reificationResult = reifiedTypeInliner.reifyInstructions(node)
-        generateClosuresBodies()
+
+        val hasMonitor = node.instructions.asSequence().any { it.opcode == Opcodes.MONITORENTER }
+        if (hasMonitor) {
+            state.globalCoroutinesContext.pushArgumentIndexes(findInlineLambdasInsideMonitor(node))
+        }
+        try {
+            generateClosuresBodies()
+        } finally {
+            if (hasMonitor) {
+                state.globalCoroutinesContext.popArgumentIndexes()
+            }
+        }
 
         //through generation captured parameters will be added to invocationParamBuilder
         putClosureParametersOnStack()
@@ -299,6 +315,45 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
         return result
     }
 
+    private fun findInlineLambdasInsideMonitor(node: MethodNode): Set<Int> {
+        val sources = MethodInliner.analyzeMethodNodeBeforeInline(node)
+
+        val cfg = ControlFlowGraph.build(node)
+        val monitorDepthMap = hashMapOf<AbstractInsnNode, Int>()
+        val result = hashSetOf<Int>()
+
+        fun addMonitorDepthToSuccs(index: Int, depth: Int) {
+            val insn = node.instructions[index]
+            monitorDepthMap[insn] = depth
+            val newDepth = when (insn.opcode) {
+                Opcodes.MONITORENTER -> depth + 1
+                Opcodes.MONITOREXIT -> depth - 1
+                else -> depth
+            }
+            for (succIndex in cfg.getSuccessorsIndices(index)) {
+                if (monitorDepthMap[node.instructions[succIndex]] == null) {
+                    addMonitorDepthToSuccs(succIndex, newDepth)
+                }
+            }
+        }
+
+        addMonitorDepthToSuccs(0, 0)
+
+        for (insn in node.instructions.asSequence()) {
+            if (insn !is MethodInsnNode) continue
+            if (!isInvokeOnLambda(insn.owner, insn.name)) continue
+            if (monitorDepthMap[insn]?.let { it > 0 } != true) continue
+            val frame = sources[node.instructions.indexOf(insn)] ?: continue
+            for (source in frame.getStack(frame.stackSize - Type.getArgumentTypes(insn.desc).size - 1).insns) {
+                if (source.opcode == Opcodes.ALOAD) {
+                    result.add((source as VarInsnNode).`var`)
+                }
+            }
+        }
+
+        return result
+    }
+
     private fun isInlinedToInlineFunInKotlinRuntime(): Boolean {
         val codegen = this.codegen as? ExpressionCodegen ?: return false
         val caller = codegen.context.functionDescriptor
@@ -308,8 +363,16 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
     }
 
     private fun generateClosuresBodies() {
+        val parameters = invocationParamBuilder.buildParameters()
+
         for (info in expressionMap.values) {
-            info.generateLambdaBody(sourceCompiler, reifiedTypeInliner)
+            val index = parameters.find { it.lambda == info }?.index
+            state.globalCoroutinesContext.enterMonitorIfNeeded(index)
+            try {
+                info.generateLambdaBody(sourceCompiler, reifiedTypeInliner)
+            } finally {
+                state.globalCoroutinesContext.exitMonitorIfNeeded(index)
+            }
         }
     }
 
@@ -322,13 +385,14 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
     ) {
         val isDefaultParameter = kind === ValueKind.DEFAULT_PARAMETER
         val jvmType = jvmKotlinType.type
-        if (!isDefaultParameter && shouldPutGeneralValue(jvmType, stackValue)) {
-            stackValue.put(jvmType, jvmKotlinType.kotlinType, codegen.v)
+        val kotlinType = jvmKotlinType.kotlinType
+        if (!isDefaultParameter && shouldPutGeneralValue(jvmType, kotlinType, stackValue)) {
+            stackValue.put(jvmType, kotlinType, codegen.v)
         }
 
         if (!asFunctionInline && Type.VOID_TYPE !== jvmType) {
             //TODO remap only inlinable closure => otherwise we could get a lot of problem
-            val couldBeRemapped = !shouldPutGeneralValue(jvmType, stackValue) && kind !== ValueKind.DEFAULT_PARAMETER
+            val couldBeRemapped = !shouldPutGeneralValue(jvmType, kotlinType, stackValue) && kind !== ValueKind.DEFAULT_PARAMETER
             val remappedValue = if (couldBeRemapped) stackValue else null
 
             val info: ParameterInfo
@@ -500,7 +564,8 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
             else
                 mangleSuspendInlineFunctionAsmMethodIfNeeded(functionDescriptor, jvmSignature.asmMethod)
 
-            val methodId = MethodId(DescriptorUtils.getFqNameSafe(functionDescriptor.containingDeclaration), asmMethod)
+            val owner = state.typeMapper.mapImplementationOwner(functionDescriptor)
+            val methodId = MethodId(owner.internalName, asmMethod)
             val directMember = getDirectMemberAndCallableFromObject(functionDescriptor)
             if (!isBuiltInArrayIntrinsic(functionDescriptor) && directMember !is DeserializedCallableMemberDescriptor) {
                 return sourceCompilerForInline.doCreateMethodNodeFromSource(functionDescriptor, jvmSignature, callDefault, asmMethod)
@@ -598,11 +663,17 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
 
 
         /*descriptor is null for captured vars*/
-        private fun shouldPutGeneralValue(type: Type, stackValue: StackValue): Boolean {
+        private fun shouldPutGeneralValue(type: Type, kotlinType: KotlinType?, stackValue: StackValue): Boolean {
             //remap only inline functions (and maybe non primitives)
-            //TODO - clean asserion and remapping logic
+            //TODO - clean assertion and remapping logic
+
+            // don't remap boxing/unboxing primitives
             if (isPrimitive(type) != isPrimitive(stackValue.type)) {
-                //don't remap boxing/unboxing primitives - lost identity and perfomance
+                return true
+            }
+
+            // don't remap boxing/unboxing inline classes
+            if (StackValue.requiresInlineClassBoxingOrUnboxing(stackValue.type, stackValue.kotlinType, type, kotlinType)) {
                 return true
             }
 
@@ -757,7 +828,8 @@ class PsiInlineCodegen(
         assert(isInlinableParameterExpression(ktLambda)) { "Couldn't find inline expression in ${expression.text}" }
 
         return PsiExpressionLambda(
-            ktLambda!!, typeMapper, parameter.isCrossinline, getBoundCallableReferenceReceiver(expression) != null
+            ktLambda!!, typeMapper, state.languageVersionSettings,
+            parameter.isCrossinline, getBoundCallableReferenceReceiver(expression) != null
         ).also { lambda ->
             val closureInfo = invocationParamBuilder.addNextValueParameter(type, true, null, parameter.index)
             closureInfo.lambda = lambda

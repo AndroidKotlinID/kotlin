@@ -12,10 +12,7 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.modalityModifier
 import org.jetbrains.kotlin.psi.psiUtil.visibilityModifier
-import org.jetbrains.kotlin.resolve.BindingContext
-import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.isInlineClass
-import org.jetbrains.kotlin.resolve.substitutedUnderlyingType
+import org.jetbrains.kotlin.resolve.*
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.typeUtil.isNothing
 import org.jetbrains.kotlin.types.typeUtil.isTypeParameter
@@ -80,10 +77,15 @@ object InlineClassDeclarationChecker : DeclarationChecker {
         }
 
         val baseParameterType = descriptor.safeAs<ClassDescriptor>()?.defaultType?.substitutedUnderlyingType()
-        if (baseParameterType != null && baseParameterType.isInapplicableParameterType()) {
-            val typeReference = baseParameter.typeReference
-            if (typeReference != null) {
-                trace.report(Errors.INLINE_CLASS_HAS_INAPPLICABLE_PARAMETER_TYPE.on(typeReference, baseParameterType))
+        val baseParameterTypeReference = baseParameter.typeReference
+        if (baseParameterType != null && baseParameterTypeReference != null) {
+            if (baseParameterType.isInapplicableParameterType()) {
+                trace.report(Errors.INLINE_CLASS_HAS_INAPPLICABLE_PARAMETER_TYPE.on(baseParameterTypeReference, baseParameterType))
+                return
+            }
+
+            if (baseParameterType.isRecursiveInlineClassType()) {
+                trace.report(Errors.INLINE_CLASS_CANNOT_BE_RECURSIVE.on(baseParameterTypeReference))
                 return
             }
         }
@@ -135,6 +137,40 @@ class PropertiesWithBackingFieldsInsideInlineClass : DeclarationChecker {
 
         declaration.delegate?.let {
             context.trace.report(Errors.DELEGATED_PROPERTY_INSIDE_INLINE_CLASS.on(it))
+        }
+    }
+}
+
+class ReservedMembersAndConstructsForInlineClass : DeclarationChecker {
+
+    companion object {
+        private val reservedFunctions = setOf("box", "unbox", "equals", "hashCode")
+    }
+
+    override fun check(declaration: KtDeclaration, descriptor: DeclarationDescriptor, context: DeclarationCheckerContext) {
+        val containingDeclaration = descriptor.containingDeclaration ?: return
+        if (!containingDeclaration.isInlineClass()) return
+
+        if (descriptor !is FunctionDescriptor) return
+
+        when (descriptor) {
+            is SimpleFunctionDescriptor -> {
+                val ktFunction = declaration as? KtFunction ?: return
+                val functionName = descriptor.name.asString()
+                if (functionName in reservedFunctions) {
+                    val nameIdentifier = ktFunction.nameIdentifier ?: return
+                    context.trace.report(Errors.RESERVED_MEMBER_INSIDE_INLINE_CLASS.on(nameIdentifier, functionName))
+                }
+            }
+
+            is ConstructorDescriptor -> {
+                val secondaryConstructor = declaration as? KtSecondaryConstructor ?: return
+                val bodyExpression = secondaryConstructor.bodyExpression
+                if (secondaryConstructor.hasBlockBody() && bodyExpression is KtBlockExpression) {
+                    val lBrace = bodyExpression.lBrace ?: return
+                    context.trace.report(Errors.SECONDARY_CONSTRUCTOR_WITH_BODY_INSIDE_INLINE_CLASS.on(lBrace))
+                }
+            }
         }
     }
 }

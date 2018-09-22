@@ -14,18 +14,18 @@ object Test {
     fun asNullableForNullableValue(a: NullableValue<Int>?) {}
 }
 
-// method: Test::withNotNullPrimitive
+// method: Test::withNotNullPrimitive-inxE8tU
 // jvm signature: (Ljava/lang/Object;)V
 // generic signature: null
 
-// method: Test::asNullable
+// method: Test::asNullable-UczwCtY
 // jvm signature: (Ljava/lang/Object;)V
 // generic signature: null
 
-// method: Test::withNotNullForNullableValue
+// method: Test::withNotNullForNullableValue-3nNnbBk
 // jvm signature: (Ljava/lang/Object;)V
 // generic signature: null
 
-// method: Test::asNullableForNullableValue
+// method: Test::asNullableForNullableValue-wXDnar0
 // jvm signature: (LNullableValue;)V
 // generic signature: (LNullableValue<Ljava/lang/Integer;>;)V

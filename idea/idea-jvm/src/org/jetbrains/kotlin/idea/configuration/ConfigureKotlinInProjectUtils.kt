@@ -46,7 +46,7 @@ import org.jetbrains.kotlin.utils.ifEmpty
 
 data class RepositoryDescription(val id: String, val name: String, val url: String, val bintrayUrl: String?, val isSnapshot: Boolean)
 
-const val LAST_SNAPSHOT_VERSION = "1.2-SNAPSHOT"
+const val LAST_SNAPSHOT_VERSION = "1.3-SNAPSHOT"
 
 val SNAPSHOT_REPOSITORY = RepositoryDescription(
     "sonatype.oss.snapshots",
@@ -293,7 +293,7 @@ fun hasKotlinFilesInSources(module: Module): Boolean {
     return FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, module.getModuleScope(false))
 }
 
-private class LibraryKindSearchScope(
+class LibraryKindSearchScope(
     val module: Module,
     val baseScope: GlobalSearchScope,
     val libraryKind: PersistentLibraryKind<*>

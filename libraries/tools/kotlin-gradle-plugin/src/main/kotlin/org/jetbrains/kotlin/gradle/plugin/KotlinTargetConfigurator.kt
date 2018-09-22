@@ -5,43 +5,49 @@
 
 package org.jetbrains.kotlin.gradle.plugin
 
-import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.*
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.artifacts.ArtifactAttributes
+import org.gradle.api.internal.artifacts.publish.DefaultPublishArtifact
+import org.gradle.api.internal.plugins.DefaultArtifactPublicationSet
 import org.gradle.api.internal.plugins.DslObject
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.testing.Test
 import org.gradle.internal.cleanup.BuildOutputCleanupRegistry
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.nativeplatform.test.tasks.RunTestExecutable
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinOnlyTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.disambiguateName
-import org.jetbrains.kotlin.gradle.plugin.mpp.defaultSourceSetName
-import org.jetbrains.kotlin.gradle.plugin.sources.getSourceSetHierarchy
-import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation.Companion.MAIN_COMPILATION_NAME
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation.Companion.TEST_COMPILATION_NAME
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
+import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
+import org.jetbrains.kotlin.konan.target.CompilerOutputKind
+import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.io.File
+import java.util.*
 import java.util.concurrent.Callable
 
-open class KotlinTargetConfigurator(
-    private val buildOutputCleanupRegistry: BuildOutputCleanupRegistry
+abstract class AbstractKotlinTargetConfigurator<KotlinTargetType : KotlinTarget>(
+    private val buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
+    protected val createDefaultSourceSets: Boolean,
+    protected val createTestCompilation: Boolean
 ) {
-    fun <KotlinCompilationType: KotlinCompilation> configureTarget(
-        target: KotlinOnlyTarget<KotlinCompilationType>
+    open fun configureTarget(
+        target: KotlinTargetType
     ) {
         configureCompilationDefaults(target)
         configureCompilations(target)
@@ -49,11 +55,12 @@ open class KotlinTargetConfigurator(
         configureArchivesAndComponent(target)
         configureTest(target)
         configureBuild(target)
-
-        setCompatibilityOfAbstractCompileTasks(target.project)
     }
 
-    private fun <KotlinCompilationType: KotlinCompilation> configureCompilations(platformTarget: KotlinOnlyTarget<KotlinCompilationType>) {
+
+    abstract fun configureArchivesAndComponent(target: KotlinTargetType)
+
+    protected fun configureCompilations(platformTarget: KotlinTargetType) {
         val project = platformTarget.project
         val main = platformTarget.compilations.create(KotlinCompilation.MAIN_COMPILATION_NAME)
 
@@ -65,79 +72,40 @@ open class KotlinTargetConfigurator(
             }
         }
 
-        platformTarget.compilations.create(KotlinCompilation.TEST_COMPILATION_NAME).apply {
-            compileDependencyFiles = project.files(main.output, project.configurations.maybeCreate(compileDependencyConfigurationName))
+        if (createTestCompilation) {
+            platformTarget.compilations.create(KotlinCompilation.TEST_COMPILATION_NAME).apply {
+                compileDependencyFiles = project.files(main.output, project.configurations.maybeCreate(compileDependencyConfigurationName))
 
-            if (this is KotlinCompilationToRunnableFiles) {
-                runtimeDependencyFiles = project.files(output, main.output, project.configurations.maybeCreate(runtimeDependencyConfigurationName))
+                if (this is KotlinCompilationToRunnableFiles) {
+                    runtimeDependencyFiles =
+                            project.files(output, main.output, project.configurations.maybeCreate(runtimeDependencyConfigurationName))
+                }
             }
         }
-
     }
 
-    private fun <KotlinCompilationType: KotlinCompilation> configureCompilationDefaults(target: KotlinOnlyTarget<KotlinCompilationType>) {
+    protected fun configureCompilationDefaults(target: KotlinTargetType) {
         val project = target.project
 
         target.compilations.all { compilation ->
             defineConfigurationsForCompilation(compilation, target, project.configurations)
 
-            project.kotlinExtension.sourceSets.maybeCreate(compilation.defaultSourceSetName).also { sourceSet ->
-                compilation.source(sourceSet) // also adds dependencies, requires the configurations for target and source set to exist at this point
+            if (createDefaultSourceSets) {
+                project.kotlinExtension.sourceSets.maybeCreate(compilation.defaultSourceSetName).also { sourceSet ->
+                    compilation.source(sourceSet) // also adds dependencies, requires the configurations for target and source set to exist at this point
+                }
             }
 
             if (compilation is KotlinCompilationWithResources) {
-                val sourceSetHierarchy = compilation.kotlinSourceSets.flatMap { it.getSourceSetHierarchy() }.distinct()
-                configureResourceProcessing(compilation, project.files(Callable { sourceSetHierarchy.map { it.resources } }))
+                configureResourceProcessing(compilation, project.files(Callable { compilation.allKotlinSourceSets.map { it.resources } }))
             }
 
             createLifecycleTask(compilation)
         }
     }
 
-    private fun configureArchivesAndComponent(target: KotlinOnlyTarget<*>) {
-        val project = target.project
-
-        val mainCompilation = target.compilations.getByName(KotlinCompilation.MAIN_COMPILATION_NAME)
-
-        val jar = project.tasks.create(target.artifactsTaskName, Jar::class.java)
-        jar.description = "Assembles a jar archive containing the main classes."
-        jar.group = BasePlugin.BUILD_GROUP
-        jar.from(mainCompilation.output)
-
-        val apiElementsConfiguration = project.configurations.getByName(target.apiElementsConfigurationName)
-
-        target.disambiguationClassifier?.let { jar.classifier = it }
-
-        // Workaround: adding the artifact during configuration seems to interfere with the Java plugin, which results into missing
-        // task dependency 'assemble -> jar' if the Java plugin is applied after this steps
-        project.afterEvaluate {
-            project.artifacts.add(Dependency.ARCHIVES_CONFIGURATION, jar) { jarArtifact ->
-                jarArtifact.builtBy(jar)
-                jarArtifact.type = ArtifactTypeDefinition.JAR_TYPE
-
-                addJar(apiElementsConfiguration, jarArtifact)
-
-                if (mainCompilation is KotlinCompilationToRunnableFiles) {
-                    val runtimeConfiguration = project.configurations.getByName(mainCompilation.deprecatedRuntimeConfigurationName)
-                    val runtimeElementsConfiguration = project.configurations.getByName(target.runtimeElementsConfigurationName)
-                    addJar(runtimeConfiguration, jarArtifact)
-                    addJar(runtimeElementsConfiguration, jarArtifact)
-                    // TODO Check Gradle's special split into variants for classes & resources -- do we need that too?
-                }
-            }
-        }
-    }
-
-    private fun addJar(configuration: Configuration, jarArtifact: PublishArtifact) {
-        val publications = configuration.outgoing
-
-        // Configure an implicit variant
-        publications.artifacts.add(jarArtifact)
-        publications.attributes.attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.JAR_TYPE)
-    }
-
-    private fun configureTest(target: KotlinTarget) {
-        val testCompilation = target.compilations.getByName(KotlinCompilation.TEST_COMPILATION_NAME) as? KotlinCompilationToRunnableFiles
+    protected fun configureTest(target: KotlinTarget) {
+        val testCompilation = target.compilations.findByName(KotlinCompilation.TEST_COMPILATION_NAME) as? KotlinCompilationToRunnableFiles
             ?: return // Otherwise, there is no runtime classpath
 
         target.project.tasks.create(lowerCamelCaseName(target.targetName, testTaskNameSuffix), Test::class.java).apply {
@@ -151,7 +119,7 @@ open class KotlinTargetConfigurator(
         }
     }
 
-    private fun configureResourceProcessing(
+    protected fun configureResourceProcessing(
         compilation: KotlinCompilationWithResources,
         resourceSet: FileCollection
     ) {
@@ -168,14 +136,14 @@ open class KotlinTargetConfigurator(
         resourcesTask.from(resourceSet)
     }
 
-    private fun createLifecycleTask(compilation: KotlinCompilation) {
+    protected fun createLifecycleTask(compilation: KotlinCompilation) {
         val project = compilation.target.project
 
         (compilation.output.classesDirs as ConfigurableFileCollection).from(project.files().builtBy(compilation.compileAllTaskName))
 
         project.tasks.create(compilation.compileAllTaskName).apply {
             group = LifecycleBasePlugin.BUILD_GROUP
-            description = "Assembles " + compilation.output + ""
+            description = "Assembles outputs for compilation '${compilation.name}' of target '${compilation.target.name}'"
             dependsOn(
                 compilation.output.dirs,
                 compilation.compileKotlinTaskName
@@ -186,28 +154,20 @@ open class KotlinTargetConfigurator(
         }
     }
 
-    private fun defineConfigurationsForTarget(target: KotlinOnlyTarget<*>) {
+    protected fun defineConfigurationsForTarget(target: KotlinTargetType) {
         val project = target.project
 
         val configurations = project.configurations
 
         val defaultConfiguration = configurations.maybeCreate(target.defaultConfigurationName)
         val mainCompilation = target.compilations.maybeCreate(KotlinCompilation.MAIN_COMPILATION_NAME)
-        val testCompilation = target.compilations.maybeCreate(KotlinCompilation.TEST_COMPILATION_NAME)
 
         val compileConfiguration = configurations.maybeCreate(mainCompilation.deprecatedCompileConfigurationName)
         val implementationConfiguration = configurations.maybeCreate(mainCompilation.implementationConfigurationName)
 
         val runtimeOnlyConfiguration = configurations.maybeCreate(mainCompilation.runtimeOnlyConfigurationName)
-        val compileTestsConfiguration = configurations.maybeCreate(testCompilation.deprecatedCompileConfigurationName)
-        val testImplementationConfiguration = configurations.maybeCreate(testCompilation.implementationConfigurationName)
-        val testRuntimeOnlyConfiguration = configurations.maybeCreate(testCompilation.runtimeOnlyConfigurationName)
 
-        compileTestsConfiguration.extendsFrom(compileConfiguration)
-        testImplementationConfiguration.extendsFrom(implementationConfiguration)
-        testRuntimeOnlyConfiguration.extendsFrom(runtimeOnlyConfiguration)
-
-        configurations.maybeCreate(target.apiElementsConfigurationName).apply {
+        val apiElementsConfiguration = configurations.maybeCreate(target.apiElementsConfigurationName).apply {
             description = "API elements for main."
             isVisible = false
             isCanBeResolved = false
@@ -221,76 +181,62 @@ open class KotlinTargetConfigurator(
             usesPlatformOf(target)
         }
 
-        val runtimeElementsConfiguration = configurations.maybeCreate(target.runtimeElementsConfigurationName).apply {
-            description = "Elements of runtime for main."
-            isVisible = false
-            isCanBeConsumed = true
-            isCanBeResolved = false
-            attributes.attribute<Usage>(USAGE_ATTRIBUTE, project.usageByName(Usage.JAVA_RUNTIME_JARS))
-            if (mainCompilation is KotlinCompilationToRunnableFiles) {
+        if (mainCompilation is KotlinCompilationToRunnableFiles) {
+            val runtimeElementsConfiguration = configurations.maybeCreate(target.runtimeElementsConfigurationName).apply {
+                description = "Elements of runtime for main."
+                isVisible = false
+                isCanBeConsumed = true
+                isCanBeResolved = false
+                attributes.attribute<Usage>(USAGE_ATTRIBUTE, project.usageByName(Usage.JAVA_RUNTIME_JARS))
                 val runtimeConfiguration = configurations.maybeCreate(mainCompilation.deprecatedRuntimeConfigurationName)
                 extendsFrom(implementationConfiguration, runtimeOnlyConfiguration, runtimeConfiguration)
+                usesPlatformOf(target)
             }
-            usesPlatformOf(target)
+            defaultConfiguration.extendsFrom(runtimeElementsConfiguration)
+        } else {
+            defaultConfiguration.extendsFrom(apiElementsConfiguration)
         }
 
-        if (mainCompilation is KotlinCompilationToRunnableFiles && testCompilation is KotlinCompilationToRunnableFiles) {
-            val runtimeConfiguration = configurations.maybeCreate(mainCompilation.deprecatedRuntimeConfigurationName)
-            val testRuntimeConfiguration = configurations.maybeCreate(testCompilation.deprecatedRuntimeConfigurationName)
-            testRuntimeConfiguration.extendsFrom(runtimeConfiguration)
-        }
+        if (createTestCompilation) {
+            val testCompilation = target.compilations.getByName(KotlinCompilation.TEST_COMPILATION_NAME)
+            val compileTestsConfiguration = configurations.maybeCreate(testCompilation.deprecatedCompileConfigurationName)
+            val testImplementationConfiguration = configurations.maybeCreate(testCompilation.implementationConfigurationName)
+            val testRuntimeOnlyConfiguration = configurations.maybeCreate(testCompilation.runtimeOnlyConfigurationName)
 
-        defaultConfiguration.extendsFrom(runtimeElementsConfiguration).usesPlatformOf(target)
+            compileTestsConfiguration.extendsFrom(compileConfiguration)
+            testImplementationConfiguration.extendsFrom(implementationConfiguration)
+            testRuntimeOnlyConfiguration.extendsFrom(runtimeOnlyConfiguration)
+
+            if (mainCompilation is KotlinCompilationToRunnableFiles && testCompilation is KotlinCompilationToRunnableFiles) {
+                val runtimeConfiguration = configurations.maybeCreate(mainCompilation.deprecatedRuntimeConfigurationName)
+                val testRuntimeConfiguration = configurations.maybeCreate(testCompilation.deprecatedRuntimeConfigurationName)
+                testRuntimeConfiguration.extendsFrom(runtimeConfiguration)
+            }
+        }
     }
 
-    private fun configureBuild(target: KotlinOnlyTarget<*>) {
+    protected fun configureBuild(target: KotlinTargetType) {
         val project = target.project
-        val testCompilation = target.compilations.getByName(KotlinCompilation.TEST_COMPILATION_NAME)
-        project.tasks.maybeCreate(buildNeededTaskName, DefaultTask::class.java).apply {
-            description = "Assembles and tests this project and all projects it depends on."
-            group = "build"
-            dependsOn("build")
-            if (testCompilation is KotlinCompilationToRunnableFiles) {
-                addDependsOnTaskInOtherProjects(this@apply, true, name, testCompilation.deprecatedRuntimeConfigurationName)
-            }
-        }
 
-        project.tasks.maybeCreate(buildDependentTaskName, DefaultTask::class.java).apply {
-            setDescription("Assembles and tests this project and all projects that depend on it.")
-            setGroup("build")
-            dependsOn("build")
-            doFirst {
-                if (!project.gradle.includedBuilds.isEmpty()) {
-                    project.logger.warn("[composite-build] Warning: `" + path + "` task does not build included builds.")
-                }
-            }
+        val buildNeeded = project.tasks.getByName(JavaBasePlugin.BUILD_NEEDED_TASK_NAME)
+        val buildDependent = project.tasks.getByName(JavaBasePlugin.BUILD_DEPENDENTS_TASK_NAME)
+
+        if (createTestCompilation) {
+            val testCompilation = target.compilations.getByName(KotlinCompilation.TEST_COMPILATION_NAME)
             if (testCompilation is KotlinCompilationToRunnableFiles) {
-                addDependsOnTaskInOtherProjects(this@apply, false, name, testCompilation.deprecatedRuntimeConfigurationName)
+                addDependsOnTaskInOtherProjects(buildNeeded, true, testCompilation.deprecatedRuntimeConfigurationName)
+                addDependsOnTaskInOtherProjects(buildDependent, false, testCompilation.deprecatedRuntimeConfigurationName)
             }
         }
     }
 
-    private fun addDependsOnTaskInOtherProjects(
-        task: Task, useDependedOn: Boolean, otherProjectTaskName: String,
-        configurationName: String
-    ) {
+    private fun addDependsOnTaskInOtherProjects(task: Task, useDependedOn: Boolean, configurationName: String) {
         val project = task.project
         val configuration = project.configurations.getByName(configurationName)
-        task.dependsOn(configuration.getTaskDependencyFromProjectDependency(useDependedOn, otherProjectTaskName))
-    }
-
-    private fun setCompatibilityOfAbstractCompileTasks(project: Project) = with (project) {
-        tasks.withType(AbstractKotlinCompile::class.java).all {
-            // Workaround: these are input properties and should not hold null values:
-            it.targetCompatibility = ""
-            it.sourceCompatibility = ""
-        }
+        task.dependsOn(configuration.getTaskDependencyFromProjectDependency(useDependedOn, task.name))
     }
 
     companion object {
-        const val buildNeededTaskName = "buildAllNeeded"
-        const val buildDependentTaskName = "buildAllDependents"
-
         const val testTaskNameSuffix = "test"
 
         fun defineConfigurationsForCompilation(
@@ -363,11 +309,389 @@ open class KotlinTargetConfigurator(
             }
         }
 
-        private val KotlinCompilation.deprecatedCompileConfigurationName: String
+
+        internal val KotlinCompilation.deprecatedCompileConfigurationName: String
             get() = disambiguateName("compile")
 
-        private val KotlinCompilationToRunnableFiles.deprecatedRuntimeConfigurationName: String
+        internal val KotlinCompilationToRunnableFiles.deprecatedRuntimeConfigurationName: String
             get() = disambiguateName("runtime")
+    }
+}
+
+open class KotlinTargetConfigurator<KotlinCompilationType: KotlinCompilation>(
+    buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
+    createDefaultSourceSets: Boolean,
+    createTestCompilation: Boolean
+) : AbstractKotlinTargetConfigurator<KotlinOnlyTarget<KotlinCompilationType>>(
+    buildOutputCleanupRegistry,
+    createDefaultSourceSets,
+    createTestCompilation
+) {
+
+    override fun configureArchivesAndComponent(target: KotlinOnlyTarget<KotlinCompilationType>) {
+        val project = target.project
+
+        val mainCompilation = target.compilations.getByName(KotlinCompilation.MAIN_COMPILATION_NAME)
+
+        val jar = project.tasks.create(target.artifactsTaskName, Jar::class.java)
+        jar.description = "Assembles a jar archive containing the main classes."
+        jar.group = BasePlugin.BUILD_GROUP
+        jar.from(mainCompilation.output)
+
+        val apiElementsConfiguration = project.configurations.getByName(target.apiElementsConfigurationName)
+
+        target.disambiguationClassifier?.let { jar.appendix = it.toLowerCase() }
+
+        // Workaround: adding the artifact during configuration seems to interfere with the Java plugin, which results into missing
+        // task dependency 'assemble -> jar' if the Java plugin is applied after this steps
+        project.afterEvaluate {
+            project.artifacts.add(Dependency.ARCHIVES_CONFIGURATION, jar) { jarArtifact ->
+                jarArtifact.builtBy(jar)
+                jarArtifact.type = ArtifactTypeDefinition.JAR_TYPE
+
+                addJar(apiElementsConfiguration, jarArtifact)
+
+                if (mainCompilation is KotlinCompilationToRunnableFiles) {
+                    val runtimeConfiguration = project.configurations.getByName(mainCompilation.deprecatedRuntimeConfigurationName)
+                    val runtimeElementsConfiguration = project.configurations.getByName(target.runtimeElementsConfigurationName)
+                    addJar(runtimeConfiguration, jarArtifact)
+                    addJar(runtimeElementsConfiguration, jarArtifact)
+                    // TODO Check Gradle's special split into variants for classes & resources -- do we need that too?
+                }
+            }
+        }
+    }
+
+    private fun addJar(configuration: Configuration, jarArtifact: PublishArtifact) {
+        val publications = configuration.outgoing
+
+        // Configure an implicit variant
+        publications.artifacts.add(jarArtifact)
+        publications.attributes.attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.JAR_TYPE)
+    }
+}
+
+
+open class KotlinNativeTargetConfigurator(
+    buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
+    private val kotlinPluginVersion: String
+) : AbstractKotlinTargetConfigurator<KotlinNativeTarget>(
+    buildOutputCleanupRegistry,
+    createDefaultSourceSets = true,
+    createTestCompilation = true
+) {
+    private val hostTargets = listOf(KonanTarget.LINUX_X64, KonanTarget.MACOS_X64, KonanTarget.MINGW_X64)
+
+    private val Collection<*>.isDimensionVisible: Boolean
+        get() = size > 1
+
+    private fun Project.createTestTask(compilation: KotlinNativeCompilation, testExecutableLinkTask: KotlinNativeCompile) {
+        val compilationSuffix = compilation.name.takeIf { it != KotlinCompilation.TEST_COMPILATION_NAME }.orEmpty()
+        val taskName = lowerCamelCaseName(compilation.target.targetName, compilationSuffix, testTaskNameSuffix)
+        val testTask = tasks.create(taskName, RunTestExecutable::class.java).apply {
+            group = LifecycleBasePlugin.VERIFICATION_GROUP
+            description = "Executes Kotlin/Native unit tests from the '${compilation.name}' compilation " +
+                    "for target '${compilation.target.name}'."
+            enabled = compilation.target.konanTarget.isCurrentHost
+
+            val testExecutableProperty = testExecutableLinkTask.outputFile
+            executable = testExecutableProperty.get().absolutePath
+            // TODO: Provide a normal test path!
+            outputDir = project.layout.buildDirectory.dir("test-results").get().asFile
+
+            if (project.hasProperty("teamcity.version")) {
+                args("--ktest_logger=TEAMCITY")
+            }
+
+            onlyIf { testExecutableProperty.get().exists() }
+            inputs.file(testExecutableProperty)
+            dependsOn(testExecutableLinkTask)
+        }
+        tasks.maybeCreate(LifecycleBasePlugin.CHECK_TASK_NAME).apply {
+            dependsOn(testTask)
+        }
+    }
+
+    private fun Project.binaryOutputDirectory(
+        buildType: NativeBuildType,
+        kind: NativeOutputKind,
+        compilation: KotlinNativeCompilation
+    ): File {
+        val targetSubDirectory = compilation.target.disambiguationClassifier?.let { "$it/" }.orEmpty()
+        val buildTypeSubDirectory = buildType.name.toLowerCase()
+        val kindSubDirectory = kind.outputDirectoryName
+
+        return buildDir.resolve("bin/$targetSubDirectory${compilation.name}/$buildTypeSubDirectory/$kindSubDirectory")
+    }
+
+    private fun Project. klibOutputDirectory(
+        compilation: KotlinNativeCompilation
+    ): File {
+        val targetSubDirectory = compilation.target.disambiguationClassifier?.let { "$it/" }.orEmpty()
+        return buildDir.resolve("classes/kotlin/$targetSubDirectory${compilation.name}")
+    }
+
+    private fun KotlinNativeCompile.addCompilerPlugins() {
+        SubpluginEnvironment
+            .loadSubplugins(project, kotlinPluginVersion)
+            .addSubpluginOptions<CommonCompilerArguments>(project, this, compilerPluginOptions)
+        compilerPluginClasspath = project.configurations.getByName(PLUGIN_CLASSPATH_CONFIGURATION_NAME)
+    }
+
+    private fun KotlinNativeCompile.registerOutputFiles(outputDirectory: File) {
+        val konanTarget = compilation.target.konanTarget
+
+        val prefix = outputKind.prefix(konanTarget)
+        val suffix = outputKind.suffix(konanTarget)
+        val baseName = if (compilation.isMainCompilation) project.name else compilation.name
+
+        outputFile.set(project.provider {
+            var filename = "$prefix$baseName$suffix"
+            if (outputKind == CompilerOutputKind.FRAMEWORK ||
+                outputKind == CompilerOutputKind.STATIC ||
+                outputKind == CompilerOutputKind.DYNAMIC ||
+                outputKind == CompilerOutputKind.PROGRAM && konanTarget == KonanTarget.WASM32
+            ) {
+                filename = filename.replace('-', '_')
+            }
+
+            outputDirectory.resolve(filename)
+        })
+
+        // Register outputs
+        if (outputKind == CompilerOutputKind.FRAMEWORK) {
+            outputs.dir(outputFile)
+        } else {
+            outputs.file(outputFile)
+        }
+
+        if (outputKind == CompilerOutputKind.STATIC || outputKind == CompilerOutputKind.DYNAMIC) {
+            outputs.file(project.provider {
+                val apiFileName = "$prefix${baseName}_api.h".replace('-', '_')
+                outputDirectory.resolve(apiFileName)
+            })
+        }
+    }
+
+    private fun Project.createBinaryLinkTasks(compilation: KotlinNativeCompilation) = whenEvaluated {
+        val konanTarget = compilation.target.konanTarget
+        val availableOutputKinds = compilation.outputKinds.filter { it.availableFor(konanTarget) }
+        val linkAll = project.tasks.maybeCreate(compilation.linkAllTaskName)
+
+        for (buildType in compilation.buildTypes) {
+            for (kind in availableOutputKinds) {
+                val compilerOutputKind = kind.compilerOutputKind
+
+                val linkTask = project.tasks.create(
+                    compilation.linkTaskName(kind, buildType),
+                    KotlinNativeCompile::class.java
+                ).apply {
+                    this.compilation = compilation
+                    outputKind = compilerOutputKind
+                    group = BasePlugin.BUILD_GROUP
+                    description = "Links ${kind.description} from the '${compilation.name}' " +
+                            "compilation for target '${compilation.platformType.name}'."
+                    enabled = compilation.target.konanTarget.enabledOnCurrentHost
+
+                    optimized = buildType.optimized
+                    debuggable = buildType.debuggable
+
+                    registerOutputFiles(binaryOutputDirectory(buildType, kind, compilation))
+                    addCompilerPlugins()
+
+                    dependsOn(compilation.compileKotlinTaskName)
+                    linkAll.dependsOn(this)
+                }
+
+                compilation.binaryTasks[kind to buildType] = linkTask
+
+                if (compilation.isTestCompilation &&
+                    buildType == NativeBuildType.DEBUG &&
+                    konanTarget in hostTargets
+                ) {
+                    // TODO: Refactor and move into the corresponding method of AbstractKotlinTargetConfigurator.
+                    createTestTask(compilation, linkTask)
+                }
+            }
+        }
+    }
+
+    private fun Project.createKlibArtifact(
+        compilation: KotlinNativeCompilation,
+        artifactFile: File,
+        classifier: String?,
+        producingTask: Task,
+        copy: Boolean = false
+    ) {
+        if (!compilation.target.konanTarget.enabledOnCurrentHost) {
+            return
+        }
+
+        val apiElements = configurations.getByName(compilation.target.apiElementsConfigurationName)
+
+        val realProducingTask: Task
+        // TODO: Someone remove this HACK PLEASE!
+        val realArtifactFile = if (copy) {
+            realProducingTask = project.tasks.create("copy${producingTask.name.capitalize()}", Copy::class.java) {
+                val targetSubDirectory = compilation.target.disambiguationClassifier?.let { "$it/" }.orEmpty()
+                it.destinationDir = project.buildDir.resolve("libs/$targetSubDirectory${compilation.name}")
+                it.from(artifactFile)
+                it.dependsOn(producingTask)
+            }
+            realProducingTask.destinationDir.resolve(artifactFile.name)
+        } else {
+            realProducingTask = producingTask
+            artifactFile
+        }
+
+        val klibArtifact = DefaultPublishArtifact(
+            compilation.name,
+            "klib",
+            "klib",
+            classifier,
+            Date(),
+            realArtifactFile,
+            realProducingTask
+        )
+        project.extensions.getByType(DefaultArtifactPublicationSet::class.java).addCandidate(klibArtifact)
+
+        with(apiElements.outgoing) {
+            artifacts.add(klibArtifact)
+            attributes.attribute(ArtifactAttributes.ARTIFACT_FORMAT, NativeArtifactFormat.KLIB)
+        }
+    }
+
+    private fun Project.createRegularKlibArtifact(
+        compilation: KotlinNativeCompilation,
+        compileTask: KotlinNativeCompile
+    ) = createKlibArtifact(compilation, compileTask.outputFile.get(), null, compileTask)
+
+    private fun Project.createCInteropKlibArtifact(
+        interop: DefaultCInteropSettings,
+        interopTask: CInteropProcess
+    ) = createKlibArtifact(interop.compilation, interopTask.outputFile, "cinterop-${interop.name}", interopTask, copy = true)
+
+
+    private fun Project.createKlibCompilationTask(compilation: KotlinNativeCompilation) {
+        val compileTask = tasks.create(
+            compilation.compileKotlinTaskName,
+            KotlinNativeCompile::class.java
+        ).apply {
+            this.compilation = compilation
+            outputKind = CompilerOutputKind.LIBRARY
+            group = BasePlugin.BUILD_GROUP
+            description = "Compiles a klibrary from the '${compilation.name}' " +
+                    "compilation for target '${compilation.platformType.name}'."
+            enabled = compilation.target.konanTarget.enabledOnCurrentHost
+
+            registerOutputFiles(klibOutputDirectory(compilation))
+            addCompilerPlugins()
+            compilation.output.tryAddClassesDir {
+                project.files(this.outputFile).builtBy(this)
+            }
+        }
+
+        project.tasks.getByName(compilation.compileAllTaskName).dependsOn(compileTask)
+
+        if (compilation.compilationName == KotlinCompilation.MAIN_COMPILATION_NAME) {
+            project.tasks.getByName(compilation.target.artifactsTaskName).apply {
+                dependsOn(compileTask)
+                dependsOn(compilation.linkAllTaskName)
+            }
+            project.tasks.getByName(LifecycleBasePlugin.ASSEMBLE_TASK_NAME).apply {
+                dependsOn(compileTask)
+                dependsOn(compilation.linkAllTaskName)
+            }
+            createRegularKlibArtifact(compilation, compileTask)
+        }
+    }
+
+    private fun Project.createCInteropTasks(compilation: KotlinNativeCompilation) {
+        compilation.cinterops.all { interop ->
+            val interopTask = tasks.create(interop.interopProcessingTaskName, CInteropProcess::class.java).apply {
+                settings = interop
+                destinationDir = provider { klibOutputDirectory(compilation) }
+                group = INTEROP_GROUP
+                description = "Generates Kotlin/Native interop library '${interop.name}' " +
+                        "for compilation '${compilation.name}'" +
+                        "of target '${konanTarget.name}'."
+                enabled = compilation.target.konanTarget.enabledOnCurrentHost
+
+                val interopOutput = project.files(outputFileProvider).builtBy(this)
+                with(compilation) {
+                    project.dependencies.add(compileDependencyConfigurationName, interopOutput)
+                    if (isMainCompilation) {
+                        target.compilations.findByName(TEST_COMPILATION_NAME)?.let {
+                            project.dependencies.add(it.compileDependencyConfigurationName, interopOutput)
+                        }
+                    }
+                    project.dependencies.add(target.apiElementsConfigurationName, interopOutput)
+                }
+            }
+            createCInteropKlibArtifact(interop, interopTask)
+        }
+    }
+
+    override fun configureArchivesAndComponent(target: KotlinNativeTarget): Unit = with(target.project) {
+        tasks.create(target.artifactsTaskName)
+        target.compilations.all {
+            createKlibCompilationTask(it)
+            createBinaryLinkTasks(it)
+        }
+
+        with(configurations.getByName(target.apiElementsConfigurationName)) {
+            outgoing.attributes.attribute(ArtifactAttributes.ARTIFACT_FORMAT, NativeArtifactFormat.KLIB)
+        }
+    }
+
+    protected fun configureCInterops(target: KotlinNativeTarget): Unit = with(target.project) {
+        target.compilations.all { compilation ->
+            createCInteropTasks(compilation)
+            compilation.cinterops.all {
+                defineConfigurationsForCInterop(compilation, it, target, configurations)
+            }
+        }
+
+        if (createTestCompilation) {
+            val mainCompilation = target.compilations.getByName(MAIN_COMPILATION_NAME)
+            target.compilations.findByName(TEST_COMPILATION_NAME)?.apply {
+                cinterops.all {
+                    it.dependencyFiles += mainCompilation.output
+                }
+            }
+        }
+    }
+
+    override fun configureTarget(target: KotlinNativeTarget) {
+        super.configureTarget(target)
+        configureCInterops(target)
+    }
+
+    object NativeArtifactFormat {
+        const val KLIB = "org.jetbrains.kotlin.klib"
+    }
+
+    companion object {
+        const val INTEROP_GROUP = "interop"
+
+        protected fun defineConfigurationsForCInterop(
+            compilation: KotlinNativeCompilation,
+            cinterop: CInteropSettings,
+            target: KotlinTarget,
+            configurations: ConfigurationContainer
+        ) {
+            val compileOnlyConfiguration = configurations.getByName(compilation.compileOnlyConfigurationName)
+            val implementationConfiguration = configurations.getByName(compilation.implementationConfigurationName)
+
+            cinterop.dependencyFiles = configurations.maybeCreate(cinterop.dependencyConfigurationName).apply {
+                extendsFrom(compileOnlyConfiguration, implementationConfiguration)
+                usesPlatformOf(target)
+                isVisible = false
+                isCanBeConsumed = false
+                attributes.attribute(USAGE_ATTRIBUTE, compilation.target.project.usageByName(Usage.JAVA_API))
+                description = "Dependencies for cinterop '${cinterop.name}' (compilation '${compilation.name}')."
+            }
+        }
     }
 }
 
@@ -383,5 +707,9 @@ internal fun Project.usageByName(usageName: String): Usage =
 
 fun Configuration.usesPlatformOf(target: KotlinTarget): Configuration {
     attributes.attribute(KotlinPlatformType.attribute, target.platformType)
+    // TODO: Provide an universal way to copy attributes from the target.
+    if (target is KotlinNativeTarget) {
+        attributes.attribute(KotlinNativeTarget.konanTargetAttribute, target.konanTarget.name)
+    }
     return this
 }

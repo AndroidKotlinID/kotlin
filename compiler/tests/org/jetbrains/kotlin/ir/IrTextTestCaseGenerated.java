@@ -269,11 +269,6 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/declarations/localDelegatedProperties.kt");
         }
 
-        @TestMetadata("localDelegatedPropertyWithSuspendOperators.kt")
-        public void testLocalDelegatedPropertyWithSuspendOperators() throws Exception {
-            runTest("compiler/testData/ir/irText/declarations/localDelegatedPropertyWithSuspendOperators.kt");
-        }
-
         @TestMetadata("localVarInDoWhile.kt")
         public void testLocalVarInDoWhile() throws Exception {
             runTest("compiler/testData/ir/irText/declarations/localVarInDoWhile.kt");
@@ -1147,6 +1142,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/variableAsFunctionCall.kt");
         }
 
+        @TestMetadata("variableAsFunctionCallWithGenerics.kt")
+        public void testVariableAsFunctionCallWithGenerics() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/variableAsFunctionCallWithGenerics.kt");
+        }
+
         @TestMetadata("when.kt")
         public void testWhen() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/when.kt");
@@ -1393,6 +1393,16 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("builtinMap.kt")
         public void testBuiltinMap() throws Exception {
             runTest("compiler/testData/ir/irText/stubs/builtinMap.kt");
+        }
+
+        @TestMetadata("constFromBuiltins.kt")
+        public void testConstFromBuiltins() throws Exception {
+            runTest("compiler/testData/ir/irText/stubs/constFromBuiltins.kt");
+        }
+
+        @TestMetadata("genericClassInDifferentModule.kt")
+        public void testGenericClassInDifferentModule() throws Exception {
+            runTest("compiler/testData/ir/irText/stubs/genericClassInDifferentModule.kt");
         }
 
         @TestMetadata("javaEnum.kt")

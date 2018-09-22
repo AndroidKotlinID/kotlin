@@ -22,6 +22,9 @@ import org.jetbrains.jps.model.java.JavaResourceRootType
 import org.jetbrains.jps.model.java.JavaSourceRootType
 import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 import org.jetbrains.kotlin.gradle.KotlinCompilation
+import org.jetbrains.kotlin.gradle.KotlinPlatform
+import org.jetbrains.kotlin.idea.configuration.KotlinSourceSetDataService
+import org.jetbrains.kotlin.idea.configuration.kotlinAndroidSourceSets
 import java.io.File
 
 class KotlinAndroidGradleMPPModuleDataService : AbstractProjectDataService<ModuleData, Void>() {
@@ -43,7 +46,7 @@ class KotlinAndroidGradleMPPModuleDataService : AbstractProjectDataService<Modul
             val compilation = sourceSetInfo.kotlinModule as? KotlinCompilation ?: continue
             val rootModel = modelsProvider.getModifiableRootModel(module)
             for (sourceSet in compilation.sourceSets) {
-                if (sourceSet.isAndroid) {
+                if (sourceSet.platform == KotlinPlatform.ANDROID) {
                     val sourceType = if (sourceSet.isTestModule) JavaSourceRootType.TEST_SOURCE else JavaSourceRootType.SOURCE
                     val resourceType = if (sourceSet.isTestModule) JavaResourceRootType.TEST_RESOURCE else JavaResourceRootType.RESOURCE
                     sourceSet.sourceDirs.forEach { addSourceRoot(it, sourceType, rootModel) }
@@ -57,6 +60,7 @@ class KotlinAndroidGradleMPPModuleDataService : AbstractProjectDataService<Modul
                     rootModel.addModuleOrderEntry(sourceSetModule)
                 }
             }
+            KotlinSourceSetDataService.configureFacet(moduleData, sourceSetInfo, nodeToImport, module, modelsProvider)
         }
     }
 

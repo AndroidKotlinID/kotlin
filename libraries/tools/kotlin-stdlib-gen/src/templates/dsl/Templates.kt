@@ -147,7 +147,12 @@ abstract class MemberTemplateDefinition<TParam> : MemberTemplate {
 
 
 private fun defaultPrimitives(f: Family): Set<PrimitiveType> =
-        if (f.isPrimitiveSpecialization) PrimitiveType.defaultPrimitives else emptySet()
+    when {
+        f == Family.Unsigned || f == Family.ArraysOfUnsigned -> PrimitiveType.unsignedPrimitives
+        f == Family.RangesOfPrimitives -> PrimitiveType.rangePrimitives
+        f.isPrimitiveSpecialization -> PrimitiveType.defaultPrimitives
+        else -> emptySet()
+    }
 
 @TemplateDsl
 class FamilyPrimitiveMemberDefinition : MemberTemplateDefinition<PrimitiveType?>() {
@@ -179,7 +184,7 @@ class FamilyPrimitiveMemberDefinition : MemberTemplateDefinition<PrimitiveType?>
         }
     }
 
-    override fun parametrize(): Sequence<Pair<Family, PrimitiveType?>> = buildSequence {
+    override fun parametrize(): Sequence<Pair<Family, PrimitiveType?>> = buildSequence<Pair<Family, PrimitiveType?>> {
         for ((family, primitives) in familyPrimitives) {
             if (primitives.isEmpty())
                 yield(family to null)

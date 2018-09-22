@@ -6,28 +6,34 @@
 package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
-import org.jetbrains.kotlin.backend.common.utils.isNullable
 import org.jetbrains.kotlin.backend.common.utils.isSubtypeOf
 import org.jetbrains.kotlin.backend.common.utils.isSubtypeOfClass
 import org.jetbrains.kotlin.descriptors.PropertyAccessorDescriptor
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
-import org.jetbrains.kotlin.ir.backend.js.utils.*
+import org.jetbrains.kotlin.ir.backend.js.ir.irCall
+import org.jetbrains.kotlin.ir.backend.js.utils.ConversionNames
+import org.jetbrains.kotlin.ir.backend.js.utils.Namer
+import org.jetbrains.kotlin.ir.backend.js.utils.OperatorNames
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
-import org.jetbrains.kotlin.ir.symbols.impl.IrFieldSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
-import org.jetbrains.kotlin.ir.util.isNullConst
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.SimpleType
+import org.jetbrains.kotlin.types.isNullable
 
 private typealias MemberToTransformer = MutableMap<SimpleMemberKey, (IrCall) -> IrExpression>
 private typealias SymbolToTransformer = MutableMap<IrFunctionSymbol, (IrCall) -> IrExpression>
@@ -135,6 +141,34 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
             add(irBuiltIns.lessOrEqualFunByOperandType, intrinsics.jsLtEq)
             add(irBuiltIns.greaterFunByOperandType, intrinsics.jsGt)
             add(irBuiltIns.greaterOrEqualFunByOperandType, intrinsics.jsGtEq)
+
+            // Arrays
+            add(context.intrinsics.array.sizeProperty, context.intrinsics.jsArrayLength, true)
+            add(context.intrinsics.array.getFunction, context.intrinsics.jsArrayGet, true)
+            add(context.intrinsics.array.setFunction, context.intrinsics.jsArraySet, true)
+            add(context.intrinsics.array.iterator, context.intrinsics.jsArrayIteratorFunction.owner, true)
+            for ((key, elementType) in context.intrinsics.primitiveArrays) {
+                add(key.sizeProperty, context.intrinsics.jsArrayLength, true)
+                add(key.getFunction, context.intrinsics.jsArrayGet, true)
+                add(key.setFunction, context.intrinsics.jsArraySet, true)
+                add(key.iterator, context.intrinsics.jsPrimitiveArrayIteratorFunctions[elementType]!!.owner, true)
+
+                // TODO irCall?
+                add(key.sizeConstructor) { call ->
+                    IrCallImpl(call.startOffset, call.endOffset, call.type, context.intrinsics.primitiveToSizeConstructor[elementType]!!).apply {
+                        putValueArgument(0, call.getValueArgument(0))
+                    }
+                }
+            }
+
+            add(context.irBuiltIns.stringClass.lengthProperty, context.intrinsics.jsArrayLength, true)
+            add(context.irBuiltIns.stringClass.getFunction, intrinsics.jsCharSequenceGet.owner, true)
+            add(context.irBuiltIns.stringClass.owner.declarations.filterIsInstance<IrFunction>().single { it.name.asString() == "subSequence"}.symbol,
+                intrinsics.jsCharSequenceSubSequence.owner, true)
+
+            add(intrinsics.charSequenceLengthPropertyGetterSymbol, intrinsics.jsCharSequenceLength.owner, true)
+            add(intrinsics.charSequenceGetFunctionSymbol, intrinsics.jsCharSequenceGet.owner, true)
+            add(intrinsics.charSequenceSubSequenceFunctionSymbol, intrinsics.jsCharSequenceSubSequence.owner, true)
         }
 
         memberToTransformer.run {
@@ -163,18 +197,13 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
 
             for (type in arrayOf(irBuiltIns.byteType, irBuiltIns.intType)) {
                 op(type, ConversionNames.TO_CHAR) {
-                    irCall(it, intrinsics.charConstructor, dispatchReceiverAsFirstArgument = true)
+                    irCall(it, intrinsics.charClassSymbol.constructors.single(), dispatchReceiverAsFirstArgument = true)
                 }
             }
 
             for (type in arrayOf(irBuiltIns.floatType, irBuiltIns.doubleType)) {
                 op(type, ConversionNames.TO_CHAR) {
-                    IrCallImpl(
-                        it.startOffset,
-                        it.endOffset,
-                        irBuiltIns.charType,
-                        intrinsics.charConstructor
-                    ).apply {
+                    JsIrBuilder.buildCall(intrinsics.charClassSymbol.constructors.single()).apply {
                         putValueArgument(0, irCall(it, intrinsics.jsNumberToInt, dispatchReceiverAsFirstArgument = true))
                     }
                 }
@@ -226,7 +255,7 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
             }
 
             put(Name.identifier("hashCode")) { call ->
-                if (call.symbol.owner.descriptor.isFakeOverriddenFromAny()) {
+                if (call.symbol.owner.isFakeOverriddenFromAny()) {
                     if (call.isSuperToAny()) {
                         irCall(call, intrinsics.jsGetObjectHashCode, dispatchReceiverAsFirstArgument = true)
                     } else {
@@ -276,38 +305,51 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
             put(IrStatementOrigin.PREFIX_DECR, context.intrinsics.jsPrefixDec)
             put(IrStatementOrigin.POSTFIX_INCR, context.intrinsics.jsPostfixInc)
             put(IrStatementOrigin.POSTFIX_DECR, context.intrinsics.jsPostfixDec)
+            put(IrStatementOrigin.GET_ARRAY_ELEMENT, context.intrinsics.jsArrayGet)
         }
     }
 
     override fun lower(irFile: IrFile) {
         irFile.transform(object : IrElementTransformerVoid() {
+            private fun <C> lowerConst(
+                irClass: IrClassSymbol,
+                carrierFactory: (Int, Int, IrType, C) -> IrExpression,
+                vararg args: C
+            ): IrExpression {
+                val constructor = irClass.constructors.single()
+                val argType = constructor.owner.valueParameters.first().type
+                return JsIrBuilder.buildCall(constructor).apply {
+                    for (i in args.indices) {
+                        putValueArgument(i, carrierFactory(UNDEFINED_OFFSET, UNDEFINED_OFFSET, argType, args[i]))
+                    }
+                }
+            }
+
+            private fun createLong(v: Long): IrExpression = lowerConst(context.intrinsics.longClassSymbol, IrConstImpl<*>::int, v.toInt(), (v shr 32).toInt())
 
             // TODO should this be a separate lowering?
             override fun <T> visitConst(expression: IrConst<T>): IrExpression {
-                if (expression.kind is IrConstKind.Long) {
-                    val value = IrConstKind.Long.valueOf(expression)
-                    val high = (value shr 32).toInt()
-                    val low = value.toInt()
-                    return IrCallImpl(
-                        expression.startOffset,
-                        expression.endOffset,
-                        irBuiltIns.longType,
-                        context.intrinsics.longConstructor
-                    ).apply {
-                        putValueArgument(0, JsIrBuilder.buildInt(context.irBuiltIns.intType, low))
-                        putValueArgument(1, JsIrBuilder.buildInt(context.irBuiltIns.intType, high))
-                    }
-                } else if (expression.kind is IrConstKind.Char) {
-                    return IrCallImpl(
-                        expression.startOffset,
-                        expression.endOffset,
-                        irBuiltIns.charType,
-                        context.intrinsics.charConstructor
-                    ).apply {
-                        putValueArgument(0, JsIrBuilder.buildInt(context.irBuiltIns.intType, IrConstKind.Char.valueOf(expression).toInt()))
+                with(context.intrinsics) {
+                    return when (expression.type.classifierOrNull) {
+                        uByteClassSymbol -> lowerConst(uByteClassSymbol, IrConstImpl<*>::byte, IrConstKind.Byte.valueOf(expression))
+
+                        uShortClassSymbol -> lowerConst(uShortClassSymbol, IrConstImpl<*>::short, IrConstKind.Short.valueOf(expression))
+
+                        uIntClassSymbol -> lowerConst(uIntClassSymbol, IrConstImpl<*>::int, IrConstKind.Int.valueOf(expression))
+
+                        uLongClassSymbol -> lowerConst(uLongClassSymbol, { _, _, _, v -> createLong(v) }, IrConstKind.Long.valueOf(expression))
+
+                        else -> when {
+                            expression.kind is IrConstKind.Char ->
+                                lowerConst(charClassSymbol, IrConstImpl<*>::int, IrConstKind.Char.valueOf(expression).toInt())
+
+                            expression.kind is IrConstKind.Long ->
+                                createLong(IrConstKind.Long.valueOf(expression))
+
+                            else -> super.visitConst(expression)
+                        }
                     }
                 }
-                return super.visitConst(expression)
             }
 
             override fun visitCall(expression: IrCall): IrExpression {
@@ -315,25 +357,36 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
 
                 if (call is IrCall) {
                     val symbol = call.symbol
+                    val declaration = symbol.owner
 
-                    if (symbol.isDynamic() || symbol.isEffectivelyExternal()) {
+                    if (declaration.annotations.any { it.superQualifierSymbol == intrinsics.doNotIntrinsifyAnnotationSymbol }) {
+                        return call
+                    }
+
+                    if (declaration.isDynamic() || declaration.isEffectivelyExternal()) {
                         when (call.origin) {
                             IrStatementOrigin.GET_PROPERTY -> {
-                                val fieldSymbol = IrFieldSymbolImpl((symbol.descriptor as PropertyAccessorDescriptor).correspondingProperty)
+                                val fieldSymbol = context.symbolTable.lazyWrapper.referenceField(
+                                    (symbol.descriptor as PropertyAccessorDescriptor).correspondingProperty
+                                )
                                 return JsIrBuilder.buildGetField(fieldSymbol, call.dispatchReceiver, type = call.type)
                             }
 
                             // assignment to a property
                             IrStatementOrigin.EQ -> {
                                 if (symbol.descriptor is PropertyAccessorDescriptor) {
-                                    val fieldSymbol = IrFieldSymbolImpl((symbol.descriptor as PropertyAccessorDescriptor).correspondingProperty)
-                                    return JsIrBuilder.buildSetField(fieldSymbol, call.dispatchReceiver, call.getValueArgument(0)!!, call.type)
+                                    val fieldSymbol = context.symbolTable.lazyWrapper.referenceField(
+                                        (symbol.descriptor as PropertyAccessorDescriptor).correspondingProperty
+                                    )
+                                    return call.run {
+                                        JsIrBuilder.buildSetField(fieldSymbol, dispatchReceiver, getValueArgument(0)!!, type)
+                                    }
                                 }
                             }
                         }
                     }
 
-                    if (symbol.isDynamic()) {
+                    if (declaration.isDynamic()) {
                         dynamicCallOriginToIrFunction[call.origin]?.let {
                             return irCall(call, it.symbol, dispatchReceiverAsFirstArgument = true)
                         }
@@ -343,19 +396,15 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
                         return it(call)
                     }
 
-                    // TODO: get rid of unbound symbols
-                    if (symbol.isBound) {
-
-                        (symbol.owner as? IrFunction)?.dispatchReceiverParameter?.let {
-                            val key = SimpleMemberKey(it.type, symbol.owner.name)
-                            memberToTransformer[key]?.let {
-                                return it(call)
-                            }
-                        }
-
-                        nameToTransformer[symbol.owner.name]?.let {
+                    (symbol.owner as? IrFunction)?.dispatchReceiverParameter?.let {
+                        val key = SimpleMemberKey(it.type, symbol.owner.name)
+                        memberToTransformer[key]?.let {
                             return it(call)
                         }
+                    }
+
+                    nameToTransformer[symbol.owner.name]?.let {
+                        return it(call)
                     }
                 }
 
@@ -407,14 +456,13 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
 
     private fun IrType.findEqualsMethod(rhs: IrType): IrSimpleFunction? {
         val classifier = classifierOrNull ?: return null
-        if (!classifier.isBound) return null
         return ((classifier.owner as? IrClass) ?: return null).declarations
             .filterIsInstance<IrSimpleFunction>()
             .filter {
                 it.name == Name.identifier("equals")
                         && it.valueParameters.size == 1
                         && rhs.isSubtypeOf(it.valueParameters[0].type)
-                        && !it.descriptor.isFakeOverriddenFromAny()
+                        && !it.isFakeOverriddenFromAny()
             }
             .maxWith(  // Find the most specific function
                 Comparator { f1, f2 ->
@@ -430,9 +478,10 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
     private fun withLongCoercion(intrinsic: IrSimpleFunction): (IrCall) -> IrExpression = { call ->
         assert(call.valueArgumentsCount == 1)
         val arg = call.getValueArgument(0)!!
-        val receiverType = call.dispatchReceiver!!.type
 
         if (arg.type.isLong()) {
+            val receiverType = call.dispatchReceiver!!.type
+
             when {
             // Double OP Long => Double OP Long.toDouble()
                 receiverType.isDouble() -> {
@@ -471,7 +520,7 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
             }
         }
 
-        if (receiverType.isLong()) {
+        if (call.dispatchReceiver!!.type.isLong()) {
             // LHS is Long => use as is
             call
         } else {
@@ -481,7 +530,6 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
 
     private fun transformEqualsMethodCall(call: IrCall): IrExpression {
         val symbol = call.symbol
-        if (!symbol.isBound) return call
         val function = (symbol.owner as? IrFunction) ?: return call
         val lhs = function.dispatchReceiverParameter ?: function.extensionReceiverParameter ?: return call
         val rhs = call.getValueArgument(0) ?: return call
@@ -489,7 +537,7 @@ class IntrinsicifyCallsLowering(private val context: JsIrBackendContext) : FileL
             is IdentityOperator -> irCall(call, intrinsics.jsEqeqeq.symbol)
             is EqualityOperator -> irCall(call, intrinsics.jsEqeq.symbol)
             is RuntimeFunctionCall -> irCall(call, intrinsics.jsEquals, true)
-            is RuntimeOrMethodCall -> if (symbol.owner.descriptor.isFakeOverriddenFromAny()) {
+            is RuntimeOrMethodCall -> if (symbol.owner.isFakeOverriddenFromAny()) {
                 if (call.isSuperToAny()) {
                     irCall(call, intrinsics.jsEqeqeq.symbol, dispatchReceiverAsFirstArgument = true)
                 } else {
@@ -507,6 +555,9 @@ fun shouldReplaceToStringWithRuntimeCall(call: IrCall): Boolean {
     //  - User defined extension functions Any?.toString() call can be lost during lowering.
     //  - Use direct method call for dynamic types???
     //  - Define Any?.toString() in runtime library and stop intrincifying extensions
+
+    if (call.valueArgumentsCount > 0)
+        return false
 
     val receiverParameterType = with(call.symbol.owner) {
         dispatchReceiverParameter ?: extensionReceiverParameter
@@ -568,7 +619,8 @@ fun translateEquals(lhs: IrType, rhs: IrType): EqualityLoweringType = when {
     lhs.isNullableBoolean() -> translateEqualsForNullableBoolean(rhs)
     lhs.isString() -> translateEqualsForString(rhs)
     lhs.isNullableString() -> translateEqualsForNullableString(rhs)
-    lhs.isNullable() -> RuntimeFunctionCall
+    // TODO: Fix unbound symbols (in inline)
+    lhs.toKotlinType().isNullable() -> RuntimeFunctionCall
     else -> RuntimeOrMethodCall
 }
 
@@ -643,67 +695,9 @@ fun translateEqualsForNullableString(rhs: IrType): EqualityLoweringType = when {
     else -> RuntimeFunctionCall
 }
 
-
-
 private fun IrType.isNullableJsNumber(): Boolean = isNullablePrimitiveType() && !isNullableLong() && !isNullableChar()
 
 private fun IrType.isJsNumber(): Boolean = isPrimitiveType() && !isLong() && !isChar()
-
-
-// TODO extract to common place?
-fun irCall(
-    call: IrCall,
-    newSymbol: IrFunctionSymbol,
-    dispatchReceiverAsFirstArgument: Boolean = false,
-    firstArgumentAsDispatchReceiver: Boolean = false
-): IrCall =
-    call.run {
-        IrCallImpl(
-            startOffset,
-            endOffset,
-            type,
-            newSymbol,
-            newSymbol.descriptor,
-            typeArgumentsCount,
-            origin
-        ).apply {
-            copyTypeAndValueArgumentsFrom(
-                call,
-                dispatchReceiverAsFirstArgument,
-                firstArgumentAsDispatchReceiver
-            )
-        }
-    }
-
-// TODO extract to common place?
-private fun IrCall.copyTypeAndValueArgumentsFrom(
-    call: IrCall,
-    dispatchReceiverAsFirstArgument: Boolean = false,
-    firstArgumentAsDispatchReceiver: Boolean = false
-) {
-    copyTypeArgumentsFrom(call)
-
-    var toValueArgumentIndex = 0
-    var fromValueArgumentIndex = 0
-
-    when {
-        dispatchReceiverAsFirstArgument -> {
-            putValueArgument(toValueArgumentIndex++, call.dispatchReceiver)
-        }
-        firstArgumentAsDispatchReceiver -> {
-            dispatchReceiver = call.getValueArgument(fromValueArgumentIndex++)
-        }
-        else -> {
-            dispatchReceiver = call.dispatchReceiver
-        }
-    }
-
-    extensionReceiver = call.extensionReceiver
-
-    while (fromValueArgumentIndex < call.valueArgumentsCount) {
-        putValueArgument(toValueArgumentIndex++, call.getValueArgument(fromValueArgumentIndex++))
-    }
-}
 
 private fun MemberToTransformer.op(type: IrType, name: Name, v: IrSimpleFunctionSymbol) {
     op(type, name, v = { irCall(it, v, dispatchReceiverAsFirstArgument = true) })
@@ -733,8 +727,8 @@ private fun SymbolToTransformer.add(from: IrFunctionSymbol, to: (IrCall) -> IrEx
     put(from, to)
 }
 
-private fun SymbolToTransformer.add(from: IrFunctionSymbol, to: IrSimpleFunction) {
-    put(from, { call -> irCall(call, to.symbol) })
+private fun SymbolToTransformer.add(from: IrFunctionSymbol, to: IrSimpleFunction, dispatchReceiverAsFirstArgument: Boolean = false) {
+    put(from, { call -> irCall(call, to.symbol, dispatchReceiverAsFirstArgument) })
 }
 
 private fun <K> MutableMap<K, (IrCall) -> IrExpression>.addWithPredicate(
@@ -768,3 +762,22 @@ private class SimpleMemberKey(val klass: IrType, val name: Name) {
         return result
     }
 }
+
+
+private val IrClassSymbol.sizeProperty
+    get() = owner.declarations.filterIsInstance<IrProperty>().first { it.name.asString() == "size" }.getter!!.symbol
+
+private val IrClassSymbol.getFunction
+    get() = owner.declarations.filterIsInstance<IrFunction>().first { it.name.asString() == "get" }.symbol
+
+private val IrClassSymbol.setFunction
+    get() = owner.declarations.filterIsInstance<IrFunction>().first { it.name.asString() == "set" }.symbol
+
+private val IrClassSymbol.iterator
+    get() = owner.declarations.filterIsInstance<IrFunction>().first { it.name.asString() == "iterator" }.symbol
+
+private val IrClassSymbol.sizeConstructor
+    get() = owner.declarations.filterIsInstance<IrConstructor>().first { it.valueParameters.size == 1 }.symbol
+
+private val IrClassSymbol.lengthProperty
+    get() = owner.declarations.filterIsInstance<IrProperty>().first { it.name.asString() == "length" }.getter!!.symbol

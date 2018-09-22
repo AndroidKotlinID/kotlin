@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.idea.configuration
 
-import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -30,15 +29,18 @@ import org.jetbrains.kotlin.idea.framework.GRADLE_SYSTEM_ID
 import org.jetbrains.kotlin.idea.framework.MAVEN_SYSTEM_ID
 import org.jetbrains.kotlin.idea.migration.CodeMigrationAction
 import org.jetbrains.kotlin.idea.migration.CodeMigrationToggleAction
+import org.jetbrains.kotlin.idea.migration.applicableMigrationTools
 import org.jetbrains.kotlin.idea.project.languageVersionSettings
 import org.jetbrains.kotlin.idea.util.application.runReadAction
+import org.jetbrains.kotlin.idea.util.runReadActionInSmartMode
 import org.jetbrains.kotlin.idea.versions.LibInfo
 
 class KotlinMigrationProjectComponent(val project: Project) {
+    @Volatile
     private var old: MigrationState? = null
-    private var new: MigrationState? = null
 
-    private var lastMigrationInfo: MigrationInfo? = null
+    @Volatile
+    private var importFinishListener: ((MigrationTestState?) -> Unit)? = null
 
     init {
         val connection = project.messageBus.connect()
@@ -47,57 +49,81 @@ class KotlinMigrationProjectComponent(val project: Project) {
         })
     }
 
-    @Synchronized
+    class MigrationTestState(val migrationInfo: MigrationInfo?, val hasApplicableTools: Boolean)
+
     @TestOnly
-    fun requestLastMigrationInfo(): MigrationInfo? {
-        val temp = lastMigrationInfo
-        lastMigrationInfo = null
-        return temp
+    fun setImportFinishListener(newListener: ((MigrationTestState?) -> Unit)?) {
+        synchronized(this) {
+            if (newListener != null && importFinishListener != null) {
+                importFinishListener!!.invoke(null)
+            }
+
+            importFinishListener = newListener
+        }
     }
 
-    @Synchronized
+    private fun notifyFinish(migrationInfo: MigrationInfo?, hasApplicableTools: Boolean) {
+        importFinishListener?.invoke(MigrationTestState(migrationInfo, hasApplicableTools))
+    }
+
     fun onImportAboutToStart() {
         if (!CodeMigrationToggleAction.isEnabled(project) || !hasChangesInProjectFiles(project)) {
             old = null
             return
         }
 
-        lastMigrationInfo = null
-
         old = MigrationState.build(project)
     }
 
-    @Synchronized
     fun onImportFinished() {
-        if (!CodeMigrationToggleAction.isEnabled(project)) {
+        if (!CodeMigrationToggleAction.isEnabled(project) || old == null) {
+            notifyFinish(null, false)
             return
         }
 
-        if (old == null) return;
+        ApplicationManager.getApplication().executeOnPooledThread {
+            var migrationInfo: MigrationInfo? = null
+            var hasApplicableTools = false
 
-        new = MigrationState.build(project)
+            try {
+                val new = project.runReadActionInSmartMode {
+                    MigrationState.build(project)
+                }
 
-        val migrationInfo = prepareMigrationInfo(old, new) ?: return
+                val localOld = old.also {
+                    old = null
+                } ?: return@executeOnPooledThread
 
-        old = null
-        new = null
+                migrationInfo = prepareMigrationInfo(localOld, new) ?: return@executeOnPooledThread
 
-        if (ApplicationManager.getApplication().isUnitTestMode) {
-            lastMigrationInfo = migrationInfo
-            return
-        }
+                if (applicableMigrationTools(migrationInfo).isEmpty()) {
+                    hasApplicableTools = false
+                    return@executeOnPooledThread
+                } else {
+                    hasApplicableTools = true
+                }
 
-        ApplicationManager.getApplication().invokeLater {
-            val migrationNotificationDialog = MigrationNotificationDialog(project, migrationInfo)
-            migrationNotificationDialog.show()
+                if (ApplicationManager.getApplication().isUnitTestMode) {
+                    return@executeOnPooledThread
+                }
 
-            if (migrationNotificationDialog.isOK) {
-                val action = ActionManager.getInstance().getAction(CodeMigrationAction.ACTION_ID)
+                ApplicationManager.getApplication().invokeLater {
+                    val migrationNotificationDialog = MigrationNotificationDialog(project, migrationInfo)
+                    migrationNotificationDialog.show()
 
-                val dataContext = DataManager.getInstance().dataContextFromFocus.result
-                val actionEvent = AnActionEvent.createFromAnAction(action, null, ActionPlaces.ACTION_SEARCH, dataContext)
+                    if (migrationNotificationDialog.isOK) {
+                        val action = ActionManager.getInstance().getAction(CodeMigrationAction.ACTION_ID)
 
-                action.actionPerformed(actionEvent)
+                        val dataContext = getDataContextFromDialog(migrationNotificationDialog)
+                        if (dataContext != null) {
+                            val actionEvent = AnActionEvent.createFromAnAction(action, null, ActionPlaces.ACTION_SEARCH, dataContext)
+
+                            action.actionPerformed(actionEvent)
+                        }
+                    }
+                }
+            } finally {
+                notifyFinish(migrationInfo, hasApplicableTools)
             }
         }
     }
@@ -222,15 +248,10 @@ private fun maxKotlinLibVersion(project: Project): LibInfo? {
                 continue
             }
 
-            val libName = library.name ?: continue
+            val libraryInfo = parseExternalLibraryName(library) ?: continue
 
-            val version = libName.substringAfterLastNullable(":") ?: continue
-            val artifactId = libName.substringBeforeLastNullable(":")?.substringAfterLastNullable(":") ?: continue
-
-            if (version.isBlank() || artifactId.isBlank()) continue
-
-            if (maxStdlibInfo == null || VersionComparatorUtil.COMPARATOR.compare(version, maxStdlibInfo.version) > 0) {
-                maxStdlibInfo = LibInfo(KOTLIN_GROUP_ID, artifactId, version)
+            if (maxStdlibInfo == null || VersionComparatorUtil.COMPARATOR.compare(libraryInfo.version, maxStdlibInfo.version) > 0) {
+                maxStdlibInfo = LibInfo(KOTLIN_GROUP_ID, libraryInfo.artifactId, libraryInfo.version)
             }
         }
 
@@ -257,14 +278,4 @@ private fun collectMaxCompilerSettings(project: Project): LanguageVersionSetting
 
         LanguageVersionSettingsImpl(maxLanguageVersion ?: LanguageVersion.LATEST_STABLE, maxApiVersion ?: ApiVersion.LATEST_STABLE)
     }
-}
-
-fun String.substringBeforeLastNullable(delimiter: String, missingDelimiterValue: String? = null): String? {
-    val index = lastIndexOf(delimiter)
-    return if (index == -1) missingDelimiterValue else substring(0, index)
-}
-
-fun String.substringAfterLastNullable(delimiter: String, missingDelimiterValue: String? = null): String? {
-    val index = lastIndexOf(delimiter)
-    return if (index == -1) missingDelimiterValue else substring(index + 1, length)
 }

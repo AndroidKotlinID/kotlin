@@ -6,21 +6,33 @@
 package org.jetbrains.kotlin.gradle.plugin.mpp
 
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.internal.cleanup.BuildOutputCleanupRegistry
 import org.gradle.internal.reflect.Instantiator
+import org.jetbrains.kotlin.compilerRunner.*
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.sources.applyLanguageSettingsToKotlinTask
 import org.jetbrains.kotlin.gradle.tasks.AndroidTasksProvider
 import org.jetbrains.kotlin.gradle.tasks.KotlinTasksProvider
+import org.jetbrains.kotlin.gradle.utils.NativeCompilerDownloader
+import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
+import org.jetbrains.kotlin.konan.target.HostManager
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 abstract class KotlinOnlyTargetPreset<T : KotlinCompilation>(
     protected val project: Project,
     private val instantiator: Instantiator,
     private val fileResolver: FileResolver,
-    private val buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
+    protected val buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
     protected val kotlinPluginVersion: String
 ) : KotlinTargetPreset<KotlinOnlyTarget<T>> {
+
+    protected open fun createKotlinTargetConfigurator(): KotlinTargetConfigurator<T> =
+        KotlinTargetConfigurator(buildOutputCleanupRegistry, createDefaultSourceSets = true, createTestCompilation = true)
 
     override fun createTarget(name: String): KotlinOnlyTarget<T> {
         val result = KotlinOnlyTarget<T>(project, platformType).apply {
@@ -31,7 +43,7 @@ abstract class KotlinOnlyTargetPreset<T : KotlinCompilation>(
             compilations = project.container(compilationFactory.itemClass, compilationFactory)
         }
 
-        KotlinTargetConfigurator(buildOutputCleanupRegistry).configureTarget(result)
+        createKotlinTargetConfigurator().configureTarget(result)
 
         result.compilations.all { compilation ->
             buildCompilationProcessor(compilation).run()
@@ -45,7 +57,7 @@ abstract class KotlinOnlyTargetPreset<T : KotlinCompilation>(
     internal abstract fun buildCompilationProcessor(compilation: T): KotlinSourceSetProcessor<*>
 }
 
-class KotlinUniversalTargetPreset(
+class KotlinMetadataTargetPreset(
     project: Project,
     instantiator: Instantiator,
     fileResolver: FileResolver,
@@ -77,8 +89,25 @@ class KotlinUniversalTargetPreset(
         )
 
     companion object {
-        const val PRESET_NAME = "universal"
+        const val PRESET_NAME = "metadata"
     }
+
+    override fun createKotlinTargetConfigurator(): KotlinTargetConfigurator<KotlinCommonCompilation> =
+        KotlinTargetConfigurator(buildOutputCleanupRegistry, createDefaultSourceSets = false, createTestCompilation = false)
+
+    override fun createTarget(name: String): KotlinOnlyTarget<KotlinCommonCompilation> =
+        super.createTarget(name).apply {
+            val mainCompilation = compilations.getByName(KotlinCompilation.MAIN_COMPILATION_NAME)
+            val commonMainSourceSet = project.kotlinExtension.sourceSets.getByName(KotlinSourceSet.COMMON_MAIN_SOURCE_SET_NAME)
+
+            mainCompilation.source(commonMainSourceSet)
+
+            project.afterEvaluate {
+                // Since there's no default source set, apply language settings from commonMain:
+                val compileKotlinMetadata = project.tasks.getByName(mainCompilation.compileKotlinTaskName) as KotlinCompile<*>
+                applyLanguageSettingsToKotlinTask(commonMainSourceSet.languageSettings, compileKotlinMetadata)
+            }
+        }
 }
 
 class KotlinJvmTargetPreset(
@@ -184,7 +213,7 @@ class KotlinJvmWithJavaTargetPreset(
 
         target.compilations.all { compilation ->
             // Set up dependency resolution using platforms:
-            KotlinTargetConfigurator.defineConfigurationsForCompilation(compilation, target, project.configurations)
+            AbstractKotlinTargetConfigurator.defineConfigurationsForCompilation(compilation, target, project.configurations)
         }
 
         target.compilations.getByName("test").run {
@@ -201,3 +230,75 @@ class KotlinJvmWithJavaTargetPreset(
         const val PRESET_NAME = "jvmWithJava"
     }
 }
+
+class KotlinNativeTargetPreset(
+    private val name: String,
+    val project: Project,
+    val konanTarget: KonanTarget,
+    private val buildOutputCleanupRegistry: BuildOutputCleanupRegistry,
+    private val kotlinPluginVersion: String
+) : KotlinTargetPreset<KotlinNativeTarget> {
+
+    override fun getName(): String = name
+
+    private fun setupNativeCompiler() = with(project) {
+        if (!hasProperty(KotlinNativeProjectProperty.KONAN_HOME_OVERRIDE)) {
+            NativeCompilerDownloader(this).downloadIfNeeded()
+            logger.info("Kotlin/Native distribution: $konanHome")
+        } else {
+            logger.info("User-provided Kotlin/Native distribution: $konanHome")
+        }
+    }
+
+    private fun stdlib(target: KonanTarget): FileCollection = with(project) {
+        files("${konanHome}/klib/common/stdlib")
+    }
+
+    private fun platformLibs(target: KonanTarget): FileCollection = with(project) {
+        files(provider {
+            file("${konanHome}/klib/platform/${target.name}").listFiles { file -> file.isDirectory } ?: emptyArray()
+        })
+    }
+
+    override fun createTarget(name: String): KotlinNativeTarget {
+        setupNativeCompiler()
+
+        val result = KotlinNativeTarget(project, konanTarget).apply {
+            targetName = name
+            disambiguationClassifier = name
+
+            val compilationFactory = KotlinNativeCompilationFactory(project, this)
+            compilations = project.container(compilationFactory.itemClass, compilationFactory)
+        }
+
+        KotlinNativeTargetConfigurator(buildOutputCleanupRegistry, kotlinPluginVersion).configureTarget(result)
+
+        // Allow IDE to resolve the libraries provided by the compiler by adding them into dependencies.
+        result.compilations.all {
+            val target = it.target.konanTarget
+            it.dependencies {
+                implementation(stdlib(target))
+                // If we use just implementation(platformLibs(target)), the IDE resolver duplicates the libraries
+                // TODO: switch back to implementation(platformLibs(target)) when this issue is fixed
+                platformLibs(target).files.forEach { platformLib -> implementation(project.files(platformLib)) }
+            }
+        }
+        return result
+    }
+}
+
+internal val KonanTarget.isCurrentHost: Boolean
+    get() = this == HostManager.host
+
+internal val KonanTarget.enabledOnCurrentHost
+    get() = HostManager().isEnabled(this)
+
+internal val KonanTarget.presetName: String
+    get() = when(this) {
+        KonanTarget.ANDROID_ARM32 -> "androidNativeArm32"
+        KonanTarget.ANDROID_ARM64 -> "androidNativeArm64"
+        else -> lowerCamelCaseName(*this.name.split('_').toTypedArray())
+    }
+
+internal val KotlinNativeCompilation.isMainCompilation: Boolean
+    get() = name == KotlinCompilation.MAIN_COMPILATION_NAME

@@ -346,7 +346,7 @@ class LazyModuleDependencies<M : ModuleInfo>(
 ) : ModuleDependencies {
     private val dependencies = storageManager.createLazyValue {
         val moduleDescriptor = resolverForProject.descriptorForModule(module)
-        buildSequence {
+        buildSequence<ModuleDescriptorImpl> {
             if (firstDependency != null) {
                 yield(resolverForProject.descriptorForModule(firstDependency))
             }
@@ -503,3 +503,6 @@ private object DiagnoseUnknownModuleInfoReporter {
 
     private fun otherError(message: String): Nothing = throw AssertionError(message)
 }
+
+@Suppress("UNCHECKED_CAST")
+fun <T> ModuleInfo.getCapability(capability: ModuleDescriptor.Capability<T>) = capabilities[capability] as? T

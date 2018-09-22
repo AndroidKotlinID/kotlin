@@ -16,6 +16,115 @@ package kotlin.ranges
 import kotlin.*
 import kotlin.text.*
 import kotlin.comparisons.*
+import kotlin.random.*
+
+/**
+ * Returns a random element from this range.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun IntRange.random(): Int {
+    return random(Random)
+}
+
+/**
+ * Returns a random element from this range.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun LongRange.random(): Long {
+    return random(Random)
+}
+
+/**
+ * Returns a random element from this range.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline fun CharRange.random(): Char {
+    return random(Random)
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+public fun IntRange.random(random: Random): Int {
+    try {
+        return random.nextInt(this)
+    } catch(e: IllegalArgumentException) {
+        throw NoSuchElementException(e.message)
+    }
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+public fun LongRange.random(random: Random): Long {
+    try {
+        return random.nextLong(this)
+    } catch(e: IllegalArgumentException) {
+        throw NoSuchElementException(e.message)
+    }
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness.
+ * 
+ * @throws IllegalArgumentException if this range is empty.
+ */
+@SinceKotlin("1.3")
+public fun CharRange.random(random: Random): Char {
+    try {
+        return random.nextInt(first.toInt(), last.toInt() + 1).toChar()
+    } catch(e: IllegalArgumentException) {
+        throw NoSuchElementException(e.message)
+    }
+}
+
+/**
+ * Returns `true` if this range contains the specified [element].
+ * 
+ * Always returns `false` if the [element] is `null`.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline operator fun IntRange.contains(element: Int?): Boolean {
+    return element != null && contains(element)
+}
+
+/**
+ * Returns `true` if this range contains the specified [element].
+ * 
+ * Always returns `false` if the [element] is `null`.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline operator fun LongRange.contains(element: Long?): Boolean {
+    return element != null && contains(element)
+}
+
+/**
+ * Returns `true` if this range contains the specified [element].
+ * 
+ * Always returns `false` if the [element] is `null`.
+ */
+@SinceKotlin("1.3")
+@kotlin.internal.InlineOnly
+public inline operator fun CharRange.contains(element: Char?): Boolean {
+    return element != null && contains(element)
+}
 
 /**
  * Checks if the specified [value] belongs to this range.
@@ -44,6 +153,7 @@ public operator fun ClosedRange<Short>.contains(value: Byte): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("doubleRangeContains")
 public operator fun ClosedRange<Double>.contains(value: Byte): Boolean {
     return contains(value.toDouble())
@@ -52,6 +162,7 @@ public operator fun ClosedRange<Double>.contains(value: Byte): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("floatRangeContains")
 public operator fun ClosedRange<Float>.contains(value: Byte): Boolean {
     return contains(value.toFloat())
@@ -60,6 +171,7 @@ public operator fun ClosedRange<Float>.contains(value: Byte): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("intRangeContains")
 public operator fun ClosedRange<Int>.contains(value: Double): Boolean {
     return value.toIntExactOrNull().let { if (it != null) contains(it) else false }
@@ -68,6 +180,7 @@ public operator fun ClosedRange<Int>.contains(value: Double): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("longRangeContains")
 public operator fun ClosedRange<Long>.contains(value: Double): Boolean {
     return value.toLongExactOrNull().let { if (it != null) contains(it) else false }
@@ -76,6 +189,7 @@ public operator fun ClosedRange<Long>.contains(value: Double): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("byteRangeContains")
 public operator fun ClosedRange<Byte>.contains(value: Double): Boolean {
     return value.toByteExactOrNull().let { if (it != null) contains(it) else false }
@@ -84,6 +198,7 @@ public operator fun ClosedRange<Byte>.contains(value: Double): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("shortRangeContains")
 public operator fun ClosedRange<Short>.contains(value: Double): Boolean {
     return value.toShortExactOrNull().let { if (it != null) contains(it) else false }
@@ -100,6 +215,7 @@ public operator fun ClosedRange<Float>.contains(value: Double): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("intRangeContains")
 public operator fun ClosedRange<Int>.contains(value: Float): Boolean {
     return value.toIntExactOrNull().let { if (it != null) contains(it) else false }
@@ -108,6 +224,7 @@ public operator fun ClosedRange<Int>.contains(value: Float): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("longRangeContains")
 public operator fun ClosedRange<Long>.contains(value: Float): Boolean {
     return value.toLongExactOrNull().let { if (it != null) contains(it) else false }
@@ -116,6 +233,7 @@ public operator fun ClosedRange<Long>.contains(value: Float): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("byteRangeContains")
 public operator fun ClosedRange<Byte>.contains(value: Float): Boolean {
     return value.toByteExactOrNull().let { if (it != null) contains(it) else false }
@@ -124,6 +242,7 @@ public operator fun ClosedRange<Byte>.contains(value: Float): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("shortRangeContains")
 public operator fun ClosedRange<Short>.contains(value: Float): Boolean {
     return value.toShortExactOrNull().let { if (it != null) contains(it) else false }
@@ -164,6 +283,7 @@ public operator fun ClosedRange<Short>.contains(value: Int): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("doubleRangeContains")
 public operator fun ClosedRange<Double>.contains(value: Int): Boolean {
     return contains(value.toDouble())
@@ -172,6 +292,7 @@ public operator fun ClosedRange<Double>.contains(value: Int): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("floatRangeContains")
 public operator fun ClosedRange<Float>.contains(value: Int): Boolean {
     return contains(value.toFloat())
@@ -204,6 +325,7 @@ public operator fun ClosedRange<Short>.contains(value: Long): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("doubleRangeContains")
 public operator fun ClosedRange<Double>.contains(value: Long): Boolean {
     return contains(value.toDouble())
@@ -212,6 +334,7 @@ public operator fun ClosedRange<Double>.contains(value: Long): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("floatRangeContains")
 public operator fun ClosedRange<Float>.contains(value: Long): Boolean {
     return contains(value.toFloat())
@@ -244,6 +367,7 @@ public operator fun ClosedRange<Byte>.contains(value: Short): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("doubleRangeContains")
 public operator fun ClosedRange<Double>.contains(value: Short): Boolean {
     return contains(value.toDouble())
@@ -252,6 +376,7 @@ public operator fun ClosedRange<Double>.contains(value: Short): Boolean {
 /**
  * Checks if the specified [value] belongs to this range.
  */
+@Deprecated("This `contains` operation mixing integer and floating point arguments has ambiguous semantics and is going to be removed.")
 @kotlin.jvm.JvmName("floatRangeContains")
 public operator fun ClosedRange<Float>.contains(value: Short): Boolean {
     return contains(value.toFloat())
