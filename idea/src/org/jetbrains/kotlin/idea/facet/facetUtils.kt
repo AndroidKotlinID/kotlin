@@ -24,6 +24,7 @@ import com.intellij.openapi.projectRoots.ProjectJdkTable
 import com.intellij.openapi.roots.ExternalProjectSystemRegistry
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ModuleRootModel
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.cli.common.arguments.*
@@ -33,6 +34,7 @@ import org.jetbrains.kotlin.idea.compiler.configuration.Kotlin2JvmCompilerArgume
 import org.jetbrains.kotlin.idea.compiler.configuration.KotlinCommonCompilerArgumentsHolder
 import org.jetbrains.kotlin.idea.compiler.configuration.KotlinCompilerSettings
 import org.jetbrains.kotlin.idea.configuration.externalCompilerVersion
+import org.jetbrains.kotlin.idea.core.isAndroidModule
 import org.jetbrains.kotlin.idea.framework.KotlinSdkType
 import org.jetbrains.kotlin.idea.platform.tooling
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
@@ -228,22 +230,35 @@ private val CommonCompilerArguments.ignoredFields: List<String>
     }
 
 private fun Module.configureSdkIfPossible(compilerArguments: CommonCompilerArguments, modelsProvider: IdeModifiableModelsProvider) {
+    // SDK for Android module is already configured by Android plugin at this point
+    if (isAndroidModule()) return
+
+    val projectSdk = ProjectRootManager.getInstance(project).projectSdk
     val allSdks = ProjectJdkTable.getInstance().allJdks
     val sdk = if (compilerArguments is K2JVMCompilerArguments) {
         val jdkHome = compilerArguments.jdkHome
-        allSdks.firstOrNull { it.sdkType is JavaSdk && FileUtil.comparePaths(it.homePath, jdkHome) == 0 }
+        when {
+            jdkHome != null -> allSdks.firstOrNull { it.sdkType is JavaSdk && FileUtil.comparePaths(it.homePath, jdkHome) == 0 }
+            projectSdk != null && projectSdk.sdkType is JavaSdk -> projectSdk
+            else -> allSdks.firstOrNull { it.sdkType is JavaSdk }
+        }
     } else {
         allSdks.firstOrNull { it.sdkType is KotlinSdkType }
-                ?: modelsProvider
-                    .modifiableModuleModel
-                    .modules
-                    .asSequence()
-                    .mapNotNull { modelsProvider.getModifiableRootModel(it).sdk }
-                    .firstOrNull { it.sdkType is KotlinSdkType }
-                ?: KotlinSdkType.INSTANCE.createSdkWithUniqueName(allSdks.toList())
+            ?: modelsProvider
+                .modifiableModuleModel
+                .modules
+                .asSequence()
+                .mapNotNull { modelsProvider.getModifiableRootModel(it).sdk }
+                .firstOrNull { it.sdkType is KotlinSdkType }
+            ?: KotlinSdkType.INSTANCE.createSdkWithUniqueName(allSdks.toList())
     }
 
-    modelsProvider.getModifiableRootModel(this).sdk = sdk
+    val rootModel = modelsProvider.getModifiableRootModel(this)
+    if (sdk == null || sdk == projectSdk) {
+        rootModel.inheritSdk()
+    } else {
+        rootModel.sdk = sdk
+    }
 }
 
 fun parseCompilerArgumentsToFacet(
