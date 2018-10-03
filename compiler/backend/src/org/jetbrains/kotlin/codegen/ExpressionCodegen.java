@@ -1939,11 +1939,15 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             Type sharedVarType = typeMapper.getSharedVarType(descriptor);
             Type varType = getVariableTypeNoSharing(variableDescriptor);
+            KotlinType delegateKotlinType =
+                    isDelegatedLocalVariable(descriptor)
+                    ? JvmCodegenUtil.getPropertyDelegateType((VariableDescriptorWithAccessors) descriptor, bindingContext)
+                    : null;
             if (sharedVarType != null) {
-                return StackValue.shared(index, varType, variableDescriptor);
+                return StackValue.shared(index, varType, variableDescriptor, delegateKotlinType);
             }
             else {
-                return adjustVariableValue(StackValue.local(index, varType, variableDescriptor), variableDescriptor);
+                return adjustVariableValue(StackValue.local(index, varType, variableDescriptor, delegateKotlinType), variableDescriptor);
             }
         }
         else {
@@ -2153,7 +2157,8 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         return StackValue.property(
                 propertyDescriptor, backingFieldOwner,
                 typeMapper.mapType(isDelegatedProperty && forceField ? delegateType : propertyDescriptor.getOriginal().getType()),
-                isStaticBackingField, fieldName, callableGetter, callableSetter, receiver, this, resolvedCall, skipLateinitAssertion
+                isStaticBackingField, fieldName, callableGetter, callableSetter, receiver, this, resolvedCall, skipLateinitAssertion,
+                isDelegatedProperty && forceField ? delegateType : null
         );
     }
 
@@ -2169,7 +2174,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         CallableMethod callableSetter =
                 setMethod != null ? typeMapper.mapToCallableMethod(context.accessibleDescriptor(setMethod, null), false) : null;
         return StackValue.property(propertyDescriptor, null, type, false, null, callableGetter, callableSetter, receiver, this,
-                                   null, false);
+                                   null, false, null);
     }
 
     @Override
@@ -3870,7 +3875,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             gen(expr, exprType, exprKotlinType);
         }
 
-        genInvokeAppendMethod(v, exprType.getSort() == Type.ARRAY ? OBJECT_TYPE : exprType, exprKotlinType);
+        genInvokeAppendMethod(v, exprType, exprKotlinType);
     }
 
     @Nullable
@@ -4123,9 +4128,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         Type varType = getVariableTypeNoSharing(variableDescriptor);
 
+        KotlinType delegateKotlinType = JvmCodegenUtil.getPropertyDelegateType(variableDescriptor, bindingContext);
         StackValue storeTo = sharedVarType == null ?
-                             StackValue.local(index, varType, variableDescriptor) :
-                             StackValue.shared(index, varType, variableDescriptor);
+                             StackValue.local(index, varType, variableDescriptor, delegateKotlinType) :
+                             StackValue.shared(index, varType, variableDescriptor, delegateKotlinType);
 
         storeTo.putReceiver(v, false);
         if (variableDescriptor.isLateInit()) {
@@ -4917,7 +4923,7 @@ The "returned" value of try expression with no finally is either the last expres
             @NotNull VariableDescriptorWithAccessors variableDescriptor,
             @NotNull KotlinTypeMapper typeMapper
     ) {
-        return StackValue.delegate(typeMapper.mapType(variableDescriptor.getType()), delegateValue, metadataValue, variableDescriptor, this);
+        return StackValue.localDelegate(typeMapper.mapType(variableDescriptor.getType()), delegateValue, metadataValue, variableDescriptor, this);
     }
 
     @NotNull
