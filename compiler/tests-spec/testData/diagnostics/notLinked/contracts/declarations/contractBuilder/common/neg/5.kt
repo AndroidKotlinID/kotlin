@@ -18,7 +18,7 @@ fun case_1(): Boolean {
 }
 
 fun case_2(): Boolean {
-    contract { returnsNotNull() implies (return return return true) }
+    <!ERROR_IN_CONTRACT_DESCRIPTION!>contract<!> { returnsNotNull() implies (return return return true) }
     return true
 }
 
@@ -31,10 +31,10 @@ fun case_3(): Boolean {
  UNEXPECTED BEHAVIOUR
  ISSUES: KT-26386
  */
-fun case_4(): Boolean? {
-    contract { returns(null) implies case_4() }
-    return null
-}
+//fun case_4(): Boolean? {
+//    contract { returns(null) implies case_4() }
+//    return null
+//}
 
 fun case_5(): Boolean? {
     contract { returns(null) implies <!TYPE_INFERENCE_EXPECTED_TYPE_MISMATCH, ERROR_IN_CONTRACT_DESCRIPTION!>listOf(0)<!> }
