@@ -569,6 +569,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/endsWithGroupingBy.kt");
             }
 
+            @TestMetadata("flatten.kt")
+            public void testFlatten() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/flatten.kt");
+            }
+
+            @TestMetadata("flatten2.kt")
+            public void testFlatten2() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/flatten2.kt");
+            }
+
             @TestMetadata("implicitReceiver.kt")
             public void testImplicitReceiver() throws Exception {
                 runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/implicitReceiver.kt");
@@ -999,6 +1009,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 @TestMetadata("toSortedSet.kt")
                 public void testToSortedSet() throws Exception {
                     runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/termination/toSortedSet.kt");
+                }
+
+                @TestMetadata("unzip.kt")
+                public void testUnzip() throws Exception {
+                    runTest("idea/testData/inspectionsLocal/collections/convertCallChainIntoSequence/termination/unzip.kt");
                 }
             }
         }
@@ -1526,9 +1541,39 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsCompareTo.kt");
             }
 
+            @TestMetadata("equalsDoubleSmartCast.kt")
+            public void testEqualsDoubleSmartCast() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsDoubleSmartCast.kt");
+            }
+
+            @TestMetadata("equalsDoubleSmartCastFromGeneric.kt")
+            public void testEqualsDoubleSmartCastFromGeneric() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsDoubleSmartCastFromGeneric.kt");
+            }
+
             @TestMetadata("equalsExtensionFunction.kt")
             public void testEqualsExtensionFunction() throws Exception {
                 runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsExtensionFunction.kt");
+            }
+
+            @TestMetadata("equalsFloatSmartCast.kt")
+            public void testEqualsFloatSmartCast() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsFloatSmartCast.kt");
+            }
+
+            @TestMetadata("equalsFloatingPointLiteral1.kt")
+            public void testEqualsFloatingPointLiteral1() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsFloatingPointLiteral1.kt");
+            }
+
+            @TestMetadata("equalsFloatingPointLiteral2.kt")
+            public void testEqualsFloatingPointLiteral2() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsFloatingPointLiteral2.kt");
+            }
+
+            @TestMetadata("equalsFloatingPointType.kt")
+            public void testEqualsFloatingPointType() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/equalsFloatingPointType.kt");
             }
 
             @TestMetadata("extensionFunction.kt")
@@ -5069,6 +5114,34 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("assertTrueWithMessage.kt")
         public void testAssertTrueWithMessage() throws Exception {
             runTest("idea/testData/inspectionsLocal/replaceAssertBooleanWithAssertEquality/assertTrueWithMessage.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/replaceArraysCopyOfWithCopyOf")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ReplaceArraysCopyOfWithCopyOf extends AbstractLocalInspectionTest {
+        public void testAllFilesPresentInReplaceArraysCopyOfWithCopyOf() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/replaceArraysCopyOfWithCopyOf"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("nonArraysCopyOf.kt")
+        public void testNonArraysCopyOf() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replaceArraysCopyOfWithCopyOf/nonArraysCopyOf.kt");
+            doTest(fileName);
+        }
+
+
+        @TestMetadata("qualified.kt")
+        public void testQualified() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replaceArraysCopyOfWithCopyOf/qualified.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/inspectionsLocal/replaceArraysCopyOfWithCopyOf/simple.kt");
+            doTest(fileName);
         }
     }
 

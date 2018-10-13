@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.ir.backend.js.lower.*
+import org.jetbrains.kotlin.ir.backend.js.lower.calls.CallsLowering
 import org.jetbrains.kotlin.ir.backend.js.lower.coroutines.CoroutineIntrinsicLowering
 import org.jetbrains.kotlin.ir.backend.js.lower.coroutines.SuspendFunctionsLowering
 import org.jetbrains.kotlin.ir.backend.js.lower.inline.FunctionInlining
@@ -102,14 +103,14 @@ private fun JsIrBackendContext.performInlining(moduleFragment: IrModuleFragment)
 
 private fun JsIrBackendContext.lower(moduleFragment: IrModuleFragment, dependencies: List<IrModuleFragment>) {
     moduleFragment.files.forEach(UnitMaterializationLowering(this)::lower)
+    moduleFragment.files.forEach(EnumClassLowering(this)::runOnFilePostfix)
+    moduleFragment.files.forEach(EnumUsageLowering(this)::lower)
     moduleFragment.files.forEach(VarargLowering(this)::lower)
     moduleFragment.files.forEach(LateinitLowering(this, true)::lower)
     moduleFragment.files.forEach(DefaultArgumentStubGenerator(this)::runOnFilePostfix)
     moduleFragment.files.forEach(DefaultParameterInjector(this)::runOnFilePostfix)
     moduleFragment.files.forEach(DefaultParameterCleaner(this)::runOnFilePostfix)
     moduleFragment.files.forEach(SharedVariablesLowering(this)::runOnFilePostfix)
-    moduleFragment.files.forEach(EnumClassLowering(this)::runOnFilePostfix)
-    moduleFragment.files.forEach(EnumUsageLowering(this)::lower)
     moduleFragment.files.forEach(ReturnableBlockLowering(this)::lower)
     moduleFragment.files.forEach(LocalDelegatedPropertiesLowering()::lower)
     moduleFragment.files.forEach(LocalDeclarationsLowering(this)::runOnFilePostfix)
@@ -131,7 +132,8 @@ private fun JsIrBackendContext.lower(moduleFragment: IrModuleFragment, dependenc
     moduleFragment.files.forEach(clble.getReferenceReplacer())
     moduleFragment.files.forEach(ClassReferenceLowering(this)::lower)
     moduleFragment.files.forEach(PrimitiveCompanionLowering(this)::lower)
-    moduleFragment.files.forEach(IntrinsicifyCallsLowering(this)::lower)
+    moduleFragment.files.forEach(ConstLowering(this)::lower)
+    moduleFragment.files.forEach(CallsLowering(this)::lower)
 }
 
 private fun FileLoweringPass.lower(files: List<IrFile>) = files.forEach { lower(it) }
