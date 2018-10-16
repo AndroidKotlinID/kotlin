@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.incremental.storage.version
+package org.jetbrains.kotlin.jps.incremental
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmBytecodeBinaryVersion
@@ -44,7 +44,7 @@ class CacheVersionManager(
             null
         }
 
-    override fun writeActualVersion(values: CacheVersion?) {
+    override fun writeVersion(values: CacheVersion?) {
         if (values == null) versionFile.delete()
         else {
             versionFile.parentFile.mkdirs()

@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.incremental.storage.version
+package org.jetbrains.kotlin.jps.incremental
 
 /**
  * Diff between actual and expected cache attributes.
@@ -26,10 +26,6 @@ data class CacheAttributesDiff<Attrs: Any>(
                 if (actual != null) CacheStatus.SHOULD_BE_CLEARED
                 else CacheStatus.CLEARED
             }
-
-    fun saveExpectedIfNeeded() {
-        if (expected != actual) manager.writeActualVersion(expected)
-    }
 
     override fun toString(): String {
         return "$status: actual=$actual -> expected=$expected"

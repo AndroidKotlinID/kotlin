@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.impl.IrExternalPackageFragmentSymbolImpl
+import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.getPropertyGetter
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -101,6 +102,7 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     val jsNumberToInt = getInternalFunction("numberToInt")
     val jsNumberToShort = getInternalFunction("numberToShort")
     val jsNumberToLong = getInternalFunction("numberToLong")
+    val jsNumberToChar = getInternalFunction("numberToChar")
     val jsToByte = getInternalFunction("toByte")
     val jsToShort = getInternalFunction("toShort")
     val jsToLong = getInternalFunction("toLong")
@@ -112,6 +114,9 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     val isArraySymbol = getInternalFunction("isArray")
     //    val isCharSymbol = getInternalFunction("isChar")
     val isObjectSymbol = getInternalFunction("isObject")
+
+    val isNumberSymbol = getInternalFunction("isNumber")
+    val isComparableSymbol = getInternalFunction("isComparable")
 
     val isPrimitiveArray = mapOf(
         PrimitiveType.BOOLEAN to getInternalFunction("isBooleanArray"),
@@ -143,6 +148,8 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     val jsCompareTo = getInternalFunction("compareTo")
     val jsEquals = getInternalFunction("equals")
 
+    val jsImul = getInternalFunction("imul")
+
     // Coroutines
 
     val jsCoroutineContext = context.symbolTable.referenceSimpleFunction(context.coroutineContextProperty.getter!!)
@@ -172,6 +179,7 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     )
 
     val charClassSymbol = getInternalClassWithoutPackage("kotlin.Char")
+    val charConstructor = charClassSymbol.constructors.single().owner
 
     val uByteClassSymbol = getInternalClassWithoutPackage("kotlin.UByte")
     val uShortClassSymbol = getInternalClassWithoutPackage("kotlin.UShort")
