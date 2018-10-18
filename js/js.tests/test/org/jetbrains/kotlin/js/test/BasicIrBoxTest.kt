@@ -73,7 +73,8 @@ private val runtimeSourcesCommon = listOfKtFilesFrom(
     "libraries/stdlib/js/src/kotlin/builtins.kt",
 
     // Inlining of js fun doesn't update the variables inside
-    "libraries/stdlib/js/src/kotlin/jsTypeOf.kt"
+    "libraries/stdlib/js/src/kotlin/jsTypeOf.kt",
+    "libraries/stdlib/js/src/kotlin/collections/utils.kt"
 )
 
 
@@ -113,7 +114,10 @@ abstract class BasicIrBoxTest(
     targetBackend = TargetBackend.JS_IR
 ) {
 
-    override var skipMinification = true
+    override val skipMinification = true
+
+    // TODO Design incremental compilation for IR and add test support
+    override val incrementalCompilationChecksEnabled = false
 
     private val compilationCache = mutableMapOf<String, Result>()
 
