@@ -2752,6 +2752,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/multipleAssignments.kt");
             }
 
+            @TestMetadata("nullableMutableList.kt")
+            public void testNullableMutableList() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/nullableMutableList.kt");
+            }
+
             @TestMetadata("simpleIf.kt")
             public void testSimpleIf() throws Exception {
                 runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/simpleIf.kt");
@@ -2790,6 +2795,31 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("simpleIfWithoutTerminatingAssignment.kt")
             public void testSimpleIfWithoutTerminatingAssignment() throws Exception {
                 runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/simpleIfWithoutTerminatingAssignment.kt");
+            }
+
+            @TestMetadata("typeMismatch.kt")
+            public void testTypeMismatch() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/typeMismatch.kt");
+            }
+
+            @TestMetadata("typeMismatch2.kt")
+            public void testTypeMismatch2() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/typeMismatch2.kt");
+            }
+
+            @TestMetadata("typeMismatch3.kt")
+            public void testTypeMismatch3() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/typeMismatch3.kt");
+            }
+
+            @TestMetadata("typeMismatchMutableList.kt")
+            public void testTypeMismatchMutableList() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/typeMismatchMutableList.kt");
+            }
+
+            @TestMetadata("typeMismatchMutableList2.kt")
+            public void testTypeMismatchMutableList2() throws Exception {
+                runTest("idea/testData/inspectionsLocal/liftOut/ifToAssignment/typeMismatchMutableList2.kt");
             }
         }
 
@@ -5847,6 +5877,89 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/setterBackingFieldAssignment")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class SetterBackingFieldAssignment extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSetterBackingFieldAssignment() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/setterBackingFieldAssignment"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("assignment.kt")
+        public void testAssignment() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/assignment.kt");
+        }
+
+        @TestMetadata("decrement.kt")
+        public void testDecrement() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/decrement.kt");
+        }
+
+        @TestMetadata("decrement2.kt")
+        public void testDecrement2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/decrement2.kt");
+        }
+
+        @TestMetadata("divAssign.kt")
+        public void testDivAssign() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/divAssign.kt");
+        }
+
+        @TestMetadata("functionCallWithSetterParam.kt")
+        public void testFunctionCallWithSetterParam() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/functionCallWithSetterParam.kt");
+        }
+
+        @TestMetadata("increment.kt")
+        public void testIncrement() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/increment.kt");
+        }
+
+        @TestMetadata("increment2.kt")
+        public void testIncrement2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/increment2.kt");
+        }
+
+        @TestMetadata("minusAssign.kt")
+        public void testMinusAssign() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/minusAssign.kt");
+        }
+
+        @TestMetadata("modAssign.kt")
+        public void testModAssign() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/modAssign.kt");
+        }
+
+        @TestMetadata("noAssignment.kt")
+        public void testNoAssignment() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/noAssignment.kt");
+        }
+
+        @TestMetadata("noAssignment2.kt")
+        public void testNoAssignment2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/noAssignment2.kt");
+        }
+
+        @TestMetadata("noBackingField.kt")
+        public void testNoBackingField() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/noBackingField.kt");
+        }
+
+        @TestMetadata("plusAssign.kt")
+        public void testPlusAssign() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/plusAssign.kt");
+        }
+
+        @TestMetadata("timesAssign.kt")
+        public void testTimesAssign() throws Exception {
+            runTest("idea/testData/inspectionsLocal/setterBackingFieldAssignment/timesAssign.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/simplifyAssertNotNull")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -6145,6 +6258,39 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/suspiciousVarProperty")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class SuspiciousVarProperty extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSuspiciousVarProperty() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/suspiciousVarProperty"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("hasBackingFieldRef.kt")
+        public void testHasBackingFieldRef() throws Exception {
+            runTest("idea/testData/inspectionsLocal/suspiciousVarProperty/hasBackingFieldRef.kt");
+        }
+
+        @TestMetadata("hasBackingFieldRef2.kt")
+        public void testHasBackingFieldRef2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/suspiciousVarProperty/hasBackingFieldRef2.kt");
+        }
+
+        @TestMetadata("hasSetter.kt")
+        public void testHasSetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/suspiciousVarProperty/hasSetter.kt");
+        }
+
+        @TestMetadata("noBackingFieldRef.kt")
+        public void testNoBackingFieldRef() throws Exception {
+            runTest("idea/testData/inspectionsLocal/suspiciousVarProperty/noBackingFieldRef.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/unlabeledReturnInsideLambda")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -6329,6 +6475,31 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionInSameClass2.kt");
         }
 
+        @TestMetadata("functionWithTypeParameter.kt")
+        public void testFunctionWithTypeParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionWithTypeParameter.kt");
+        }
+
+        @TestMetadata("functionWithTypeParameter2.kt")
+        public void testFunctionWithTypeParameter2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionWithTypeParameter2.kt");
+        }
+
+        @TestMetadata("functionWithTypeParameter3.kt")
+        public void testFunctionWithTypeParameter3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionWithTypeParameter3.kt");
+        }
+
+        @TestMetadata("functionWithTypeParameterInClass.kt")
+        public void testFunctionWithTypeParameterInClass() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionWithTypeParameterInClass.kt");
+        }
+
+        @TestMetadata("functionWithTypeParameterInClass2.kt")
+        public void testFunctionWithTypeParameterInClass2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/functionWithTypeParameterInClass2.kt");
+        }
+
         @TestMetadata("infix.kt")
         public void testInfix() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/infix.kt");
@@ -6347,6 +6518,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("propertyInSameClass.kt")
         public void testPropertyInSameClass() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/propertyInSameClass.kt");
+        }
+
+        @TestMetadata("propertyWithTypeParameter.kt")
+        public void testPropertyWithTypeParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/propertyWithTypeParameter.kt");
+        }
+
+        @TestMetadata("propertyWithTypeParameterInClass.kt")
+        public void testPropertyWithTypeParameterInClass() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/propertyWithTypeParameterInClass.kt");
+        }
+
+        @TestMetadata("propertyWithTypeParameterInClass2.kt")
+        public void testPropertyWithTypeParameterInClass2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/propertyWithTypeParameterInClass2.kt");
         }
     }
 
