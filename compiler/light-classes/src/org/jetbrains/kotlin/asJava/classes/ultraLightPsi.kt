@@ -10,6 +10,7 @@ import com.intellij.lang.Language
 import com.intellij.psi.*
 import com.intellij.psi.impl.PsiClassImplUtil
 import com.intellij.psi.impl.PsiImplUtil
+import com.intellij.psi.impl.PsiSuperMethodImplUtil
 import com.intellij.psi.impl.light.*
 import com.intellij.psi.util.TypeConversionUtil
 import org.jetbrains.annotations.NonNls
@@ -57,13 +58,15 @@ class KtUltraLightClass(classOrObject: KtClassOrObject, private val support: Ult
     override fun findLightClassData(): LightClassData = super.findLightClassData().also {
         if (!isClsDelegateLoaded) {
             isClsDelegateLoaded = true
-            check(tooComplex) { "Cls delegate shouldn't be loaded for not too complex ultra-light classes!" }
+            check(tooComplex) {
+                "Cls delegate shouldn't be loaded for not too complex ultra-light classes! Qualified name: $qualifiedName"
+            }
         }
     }
 
     private fun allSuperTypes() =
         getDescriptor()?.typeConstructor?.supertypes?.mapNotNull {
-            it.asPsiType(classOrObject, support, TypeMappingMode.SUPER_TYPE) as? PsiClassType
+            it.asPsiType(classOrObject, support, TypeMappingMode.SUPER_TYPE, this) as? PsiClassType
         }.orEmpty()
 
     override fun createExtendsList(): PsiReferenceList? =
@@ -92,6 +95,7 @@ class KtUltraLightClass(classOrObject: KtClassOrObject, private val support: Ult
     override fun getSuperClass(): PsiClass? = PsiClassImplUtil.getSuperClass(this)
     override fun getSupers(): Array<PsiClass> = PsiClassImplUtil.getSupers(this)
     override fun getSuperTypes(): Array<PsiClassType> = PsiClassImplUtil.getSuperTypes(this)
+    override fun getVisibleSignatures(): MutableCollection<HierarchicalMethodSignature> = PsiSuperMethodImplUtil.getVisibleSignatures(this)
 
     override fun getRBrace(): PsiElement? = null
     override fun getLBrace(): PsiElement? = null
@@ -290,7 +294,7 @@ class KtUltraLightClass(classOrObject: KtClassOrObject, private val support: Ult
         }
         val returnType: PsiType? by lazyPub {
             if (isConstructor) null
-            else methodReturnType(f)
+            else methodReturnType(f, wrapper)
         }
         method.setMethodReturnType { returnType }
         return wrapper
@@ -303,14 +307,14 @@ class KtUltraLightClass(classOrObject: KtClassOrObject, private val support: Ult
         }
     }
 
-    private fun methodReturnType(f: KtDeclaration): PsiType {
+    private fun methodReturnType(f: KtDeclaration, wrapper: KtUltraLightMethod): PsiType {
         val desc = f.resolve()?.let { if (it is PropertyDescriptor) it.getter else it }
         val kotlinType = (desc as? FunctionDescriptor)?.returnType ?: return PsiType.NULL
         val mode = when {
             typeMapper(support).forceBoxedReturnType(desc) -> TypeMappingMode.RETURN_TYPE_BOXED
             else -> TypeMappingMode.getOptimalModeForReturnType(kotlinType, false)
         }
-        return kotlinType.asPsiType(f, support, mode)
+        return kotlinType.asPsiType(f, support, mode, wrapper)
     }
 
     private fun lightMethod(name: String, declaration: KtDeclaration, forceStatic: Boolean): LightMethodBuilder {
@@ -413,10 +417,10 @@ class KtUltraLightClass(classOrObject: KtClassOrObject, private val support: Ult
 
         if (needsAccessor(ktGetter)) {
             val getterName = mangleIfNeeded(listOfNotNull(ktGetter, declaration), JvmAbi.getterName(propertyName))
-            val getterType: PsiType by lazyPub { methodReturnType(declaration) }
             val getterPrototype = lightMethod(getterName, ktGetter ?: declaration, onlyJvmStatic)
-                .setMethodReturnType { getterType }
             val getterWrapper = KtUltraLightMethod(getterPrototype, declaration, support, this)
+            val getterType: PsiType by lazyPub { methodReturnType(declaration, getterWrapper) }
+            getterPrototype.setMethodReturnType { getterType }
             addReceiverParameter(declaration, getterWrapper)
             result.add(getterWrapper)
         }
