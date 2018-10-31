@@ -18914,6 +18914,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 runTest("compiler/testData/codegen/box/reflection/annotations/annotationsOnJavaMembers.kt");
             }
 
+            @TestMetadata("classLiteralWithVoidDefault.kt")
+            public void testClassLiteralWithVoidDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/annotations/classLiteralWithVoidDefault.kt");
+            }
+
             @TestMetadata("findAnnotation.kt")
             public void testFindAnnotation() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/annotations/findAnnotation.kt");
@@ -20123,6 +20128,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("methodsFromObject.kt")
             public void testMethodsFromObject() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/mapping/methodsFromObject.kt");
+            }
+
+            @TestMetadata("methodsFromSuperInterface.kt")
+            public void testMethodsFromSuperInterface() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/mapping/methodsFromSuperInterface.kt");
             }
 
             @TestMetadata("openSuspendFun.kt")

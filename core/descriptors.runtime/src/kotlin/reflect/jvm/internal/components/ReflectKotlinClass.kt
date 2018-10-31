@@ -16,10 +16,13 @@
 
 package kotlin.reflect.jvm.internal.components
 
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.load.kotlin.KotlinJvmBinaryClass
 import org.jetbrains.kotlin.load.kotlin.header.KotlinClassHeader
 import org.jetbrains.kotlin.load.kotlin.header.ReadKotlinClassHeaderAnnotationVisitor
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.constants.ClassLiteralValue
 import org.jetbrains.kotlin.resolve.jvm.JvmPrimitiveType
@@ -185,17 +188,30 @@ private object ReflectClassStructure {
         visitor.visitEnd()
     }
 
+    // See FileBasedKotlinClass.resolveKotlinNameByType
     private fun Class<*>.classLiteralValue(): ClassLiteralValue {
         var currentClass = this
-        var nestedness = 0
+        var dimensions = 0
         while (currentClass.isArray) {
-            nestedness++
+            dimensions++
             currentClass = currentClass.componentType
         }
-        val classId =
-            if (!currentClass.isPrimitive) currentClass.classId
-            else ClassId.topLevel(JvmPrimitiveType.get(currentClass.name).primitiveType.typeFqName)
-        return ClassLiteralValue(classId, nestedness)
+        if (currentClass.isPrimitive) {
+            if (currentClass == Void.TYPE) {
+                // void.class is not representable in Kotlin, we approximate it by Unit::class
+                return ClassLiteralValue(ClassId.topLevel(KotlinBuiltIns.FQ_NAMES.unit.toSafe()), dimensions)
+            }
+
+            val primitiveType = JvmPrimitiveType.get(currentClass.name).primitiveType
+            if (dimensions > 0) {
+                return ClassLiteralValue(ClassId.topLevel(primitiveType.arrayTypeFqName), dimensions - 1)
+            }
+            return ClassLiteralValue(ClassId.topLevel(primitiveType.typeFqName), dimensions)
+        }
+
+        val javaClassId = currentClass.classId
+        val kotlinClassId = JavaToKotlinClassMap.mapJavaToKotlin(javaClassId.asSingleFqName()) ?: javaClassId
+        return ClassLiteralValue(kotlinClassId, dimensions)
     }
 
     private fun processAnnotationArgumentValue(visitor: KotlinJvmBinaryClass.AnnotationArgumentVisitor, name: Name, value: Any) {
