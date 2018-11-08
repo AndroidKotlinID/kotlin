@@ -2115,6 +2115,39 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/delegationToVarProperty")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class DelegationToVarProperty extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInDelegationToVarProperty() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/delegationToVarProperty"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("parameter.kt")
+        public void testParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/delegationToVarProperty/parameter.kt");
+        }
+
+        @TestMetadata("valParameter.kt")
+        public void testValParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/delegationToVarProperty/valParameter.kt");
+        }
+
+        @TestMetadata("varParameter.kt")
+        public void testVarParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/delegationToVarProperty/varParameter.kt");
+        }
+
+        @TestMetadata("varParameter2.kt")
+        public void testVarParameter2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/delegationToVarProperty/varParameter2.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/deprecatedCallableAddReplaceWith")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3896,6 +3929,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/basic.kt");
         }
 
+        @TestMetadata("companionClass.kt")
+        public void testCompanionClass() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/companionClass.kt");
+        }
+
+        @TestMetadata("companionClass2.kt")
+        public void testCompanionClass2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/companionClass2.kt");
+        }
+
+        @TestMetadata("companionClass3.kt")
+        public void testCompanionClass3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/companionClass3.kt");
+        }
+
+        @TestMetadata("companionClass4.kt")
+        public void testCompanionClass4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/companionClass4.kt");
+        }
+
         @TestMetadata("companionDoubleNested.kt")
         public void testCompanionDoubleNested() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/companionDoubleNested.kt");
@@ -3924,6 +3977,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("import.kt")
         public void testImport() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/import.kt");
+        }
+
+        @TestMetadata("inEnum.kt")
+        public void testInEnum() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/inEnum.kt");
+        }
+
+        @TestMetadata("inEnumEntry.kt")
+        public void testInEnumEntry() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/inEnumEntry.kt");
+        }
+
+        @TestMetadata("inEnumEntry2.kt")
+        public void testInEnumEntry2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/inEnumEntry2.kt");
+        }
+
+        @TestMetadata("inEnumEntry3.kt")
+        public void testInEnumEntry3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/inEnumEntry3.kt");
         }
 
         @TestMetadata("methodArgument.kt")

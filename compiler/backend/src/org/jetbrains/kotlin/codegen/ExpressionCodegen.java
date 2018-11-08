@@ -3548,8 +3548,8 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         return genEqualsForExpressionsOnStack(
                 opToken,
-                genLazyUnlessProvided(pregeneratedLeft, left, leftType),
-                genLazy(right, rightType)
+                genLazyUnlessProvided(pregeneratedLeft, left, leftType, kotlinType(left)),
+                genLazy(right, rightType, kotlinType(right))
         );
     }
 
@@ -3680,8 +3680,17 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     private StackValue genCmpWithZero(KtExpression exp, IElementType opToken, @Nullable StackValue pregeneratedExpr) {
+        StackValue argument;
+        if (pregeneratedExpr == null) {
+            KotlinType kotlinType = kotlinType(exp);
+            assert kotlinType != null : "No KotlinType for expression " + exp.getText();
+            argument = genLazy(exp, asmType(kotlinType), kotlinType);
+        }
+        else {
+            argument = pregeneratedExpr;
+        }
         return StackValue.compareIntWithZero(
-                pregeneratedExpr != null ? pregeneratedExpr : gen(exp),
+                argument,
                 (KtTokens.EQEQ == opToken || KtTokens.EQEQEQ == opToken) ? IFNE : IFEQ
         );
     }

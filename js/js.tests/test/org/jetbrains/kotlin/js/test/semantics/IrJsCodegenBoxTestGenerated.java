@@ -10455,6 +10455,16 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/inlineClasses/kt27140.kt");
         }
 
+        @TestMetadata("kt27705.kt")
+        public void testKt27705() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt27705.kt");
+        }
+
+        @TestMetadata("kt27706.kt")
+        public void testKt27706() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt27706.kt");
+        }
+
         @TestMetadata("noAssertionsOnInlineClassBasedOnNullableType.kt")
         public void testNoAssertionsOnInlineClassBasedOnNullableType() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/noAssertionsOnInlineClassBasedOnNullableType.kt");
@@ -16474,6 +16484,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/reflection/annotations/findAnnotation.kt");
             }
 
+            @TestMetadata("localClassParameterAnnotation.kt")
+            public void testLocalClassParameterAnnotation() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/annotations/localClassParameterAnnotation.kt");
+            }
+
             @TestMetadata("openSuspendFun.kt")
             public void testOpenSuspendFun() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/annotations/openSuspendFun.kt");
@@ -21027,9 +21042,19 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/unsignedTypes/boxConstValOfUnsignedType.kt");
         }
 
+        @TestMetadata("boxedUnsignedEqualsZero.kt")
+        public void testBoxedUnsignedEqualsZero() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/boxedUnsignedEqualsZero.kt");
+        }
+
         @TestMetadata("checkBasicUnsignedLiterals.kt")
         public void testCheckBasicUnsignedLiterals() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/checkBasicUnsignedLiterals.kt");
+        }
+
+        @TestMetadata("equalsImplForInlineClassWrappingNullableInlineClass.kt")
+        public void testEqualsImplForInlineClassWrappingNullableInlineClass() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/equalsImplForInlineClassWrappingNullableInlineClass.kt");
         }
 
         @TestMetadata("forEachIndexedInListOfUInts.kt")
@@ -21050,6 +21075,16 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("kt25784.kt")
         public void testKt25784() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/kt25784.kt");
+        }
+
+        @TestMetadata("literalEqualsNullableUnsigned.kt")
+        public void testLiteralEqualsNullableUnsigned() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/literalEqualsNullableUnsigned.kt");
+        }
+
+        @TestMetadata("nullableUnsignedEqualsLiteral.kt")
+        public void testNullableUnsignedEqualsLiteral() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/nullableUnsignedEqualsLiteral.kt");
         }
 
         @TestMetadata("signedToUnsignedLiteralConversion.kt")

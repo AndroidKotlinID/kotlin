@@ -73,6 +73,9 @@ import static org.jetbrains.kotlin.types.TypeUtils.isNullableType;
 import static org.jetbrains.org.objectweb.asm.Opcodes.*;
 
 public class AsmUtil {
+
+    public static final boolean IS_BUILT_WITH_ASM6 = Opcodes.API_VERSION <= Opcodes.ASM6;
+
     private static final Set<Type> STRING_BUILDER_OBJECT_APPEND_ARG_TYPES = Sets.newHashSet(
             getType(String.class),
             getType(StringBuffer.class),
@@ -825,8 +828,8 @@ public class AsmUtil {
         }
 
         return StackValue.operation(Type.BOOLEAN_TYPE, v -> {
-            left.put(leftType, v);
-            right.put(rightType, v);
+            left.put(AsmTypes.OBJECT_TYPE, left.kotlinType, v);
+            right.put(AsmTypes.OBJECT_TYPE, right.kotlinType, v);
             genAreEqualCall(v);
 
             if (opToken == KtTokens.EXCLEQ || opToken == KtTokens.EXCLEQEQEQ) {

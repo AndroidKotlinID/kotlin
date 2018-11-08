@@ -893,6 +893,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             runTest("js/js.translator/testData/box/coroutines/debugStatement.kt");
         }
 
+        @TestMetadata("inlineLambdaNonLocalReturn.kt")
+        public void testInlineLambdaNonLocalReturn() throws Exception {
+            runTest("js/js.translator/testData/box/coroutines/inlineLambdaNonLocalReturn.kt");
+        }
+
         @TestMetadata("localVarOptimization.kt")
         public void testLocalVarOptimization() throws Exception {
             runTest("js/js.translator/testData/box/coroutines/localVarOptimization.kt");
@@ -901,6 +906,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("nativeExceptions.kt")
         public void testNativeExceptions() throws Exception {
             runTest("js/js.translator/testData/box/coroutines/nativeExceptions.kt");
+        }
+
+        @TestMetadata("onlyInlineSuspendFunction.kt")
+        public void testOnlyInlineSuspendFunction() throws Exception {
+            runTest("js/js.translator/testData/box/coroutines/onlyInlineSuspendFunction.kt");
         }
     }
 
@@ -3521,6 +3531,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("inlineLambda.kt")
         public void testInlineLambda() throws Exception {
             runTest("js/js.translator/testData/box/incremental/inlineLambda.kt");
+        }
+
+        @TestMetadata("inlineModuleVariable.kt")
+        public void testInlineModuleVariable() throws Exception {
+            runTest("js/js.translator/testData/box/incremental/inlineModuleVariable.kt");
         }
 
         @TestMetadata("jsModule.kt")

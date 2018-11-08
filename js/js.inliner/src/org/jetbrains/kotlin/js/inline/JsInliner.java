@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.js.inline.context.FunctionContext;
 import org.jetbrains.kotlin.js.inline.context.InliningContext;
 import org.jetbrains.kotlin.js.inline.context.NamingContext;
 import org.jetbrains.kotlin.js.inline.util.*;
+import org.jetbrains.kotlin.js.translate.expression.InlineMetadata;
 import org.jetbrains.kotlin.resolve.inline.InlineStrategy;
 
 import java.util.*;
@@ -69,6 +70,8 @@ public class JsInliner extends JsVisitorWithContextImpl {
 
     private final List<JsNameBinding> additionalNameBindings = new ArrayList<>();
 
+    private final Set<JsName> inlinedModuleAliases = new HashSet<>();
+
     public static void process(
             @NotNull JsConfig.Reporter reporter,
             @NotNull JsConfig config,
@@ -94,9 +97,12 @@ public class JsInliner extends JsVisitorWithContextImpl {
             inliner.processImportStatement(statement);
         }
 
+        Map<JsName, JsImportedModule> moduleMap = fillModuleMap(buildModuleMap(fragments), fragmentsToProcess);
+
         for (JsProgramFragment fragment : fragmentsToProcess) {
             inliner.existingImports.clear();
             inliner.additionalNameBindings.clear();
+            inliner.inlinedModuleAliases.clear();
             inliner.existingNameBindings = CollectUtilsKt.collectNameBindings(Collections.singletonList(fragment));
 
             inliner.acceptStatement(fragment.getDeclarationBlock());
@@ -110,6 +116,7 @@ public class JsInliner extends JsVisitorWithContextImpl {
 
             fragment.getInitializerBlock().getStatements().addAll(0, initWrapper.getStatements());
             fragment.getNameBindings().addAll(inliner.additionalNameBindings);
+            inliner.addInlinedModules(fragment, moduleMap);
         }
 
         for (JsProgramFragment fragment : fragmentsToProcess) {
@@ -119,6 +126,29 @@ public class JsInliner extends JsVisitorWithContextImpl {
             RemoveUnusedFunctionDefinitionsKt.removeUnusedFunctionDefinitions(block, CollectUtilsKt.collectNamedFunctions(block));
         }
     }
+
+    private void addInlinedModules(JsProgramFragment fragment, Map<JsName, JsImportedModule> moduleMap) {
+        Set<JsName> localMap = buildModuleMap(Collections.singletonList(fragment)).keySet();
+        for (JsName inlinedModuleName : inlinedModuleAliases) {
+            if (!localMap.contains(inlinedModuleName)) {
+                fragment.getImportedModules().add(moduleMap.get(inlinedModuleName));
+            }
+        }
+    }
+
+    private static Map<JsName, JsImportedModule> buildModuleMap(List<JsProgramFragment> fragments) {
+        return fillModuleMap(new HashMap<>(), fragments);
+    }
+
+    private static Map<JsName, JsImportedModule> fillModuleMap(Map<JsName, JsImportedModule> map, List<JsProgramFragment> fragments) {
+        for (JsProgramFragment fragment : fragments) {
+            for (JsImportedModule module : fragment.getImportedModules()) {
+                map.put(module.getInternalName(), module);
+            }
+        }
+        return map;
+    }
+
 
     private JsInliner(
             @NotNull JsConfig config,
@@ -320,6 +350,61 @@ public class JsInliner extends JsVisitorWithContextImpl {
     }
 
     @Override
+    public void endVisit(@NotNull JsExpressionStatement x, @NotNull JsContext ctx) {
+        JsExpression e = x.getExpression();
+        if (e instanceof JsBinaryOperation) {
+            JsBinaryOperation binOp = (JsBinaryOperation) e;
+            if (binOp.getOperator() == JsBinaryOperator.ASG) {
+                JsFunction splitSuspendInlineFunction = splitExportedSuspendInlineFunctionDeclarations(binOp.getArg2());
+                if (splitSuspendInlineFunction != null) {
+                    binOp.setArg2(splitSuspendInlineFunction);
+                }
+            }
+        }
+
+        super.endVisit(x, ctx);
+    }
+
+    @Override
+    public void endVisit(@NotNull JsVars.JsVar x, @NotNull JsContext ctx) {
+        JsFunction splitSuspendInlineFunction = splitExportedSuspendInlineFunctionDeclarations(x.getInitExpression());
+        if (splitSuspendInlineFunction != null) {
+            x.setInitExpression(splitSuspendInlineFunction);
+        }
+    }
+
+    @Nullable
+    private JsFunction splitExportedSuspendInlineFunctionDeclarations(@NotNull JsExpression expression) {
+        InlineMetadata inlineMetadata = InlineMetadata.decompose(expression);
+        if (inlineMetadata != null) {
+            FunctionWithWrapper functionWithWrapper = inlineMetadata.getFunction();
+            JsFunction originalFunction = functionWithWrapper.getFunction();
+            if (MetadataProperties.getCoroutineMetadata(originalFunction) != null) {
+                JsContext<JsStatement> statementContext = getLastStatementLevelContext();
+
+                // This function will be exported to JS
+                JsFunction function = originalFunction.deepCopy();
+
+                // Original function should be not be transformed into a state machine
+                originalFunction.setName(null);
+                MetadataProperties.setCoroutineMetadata(originalFunction, null);
+                MetadataProperties.setInlineableCoroutineBody(originalFunction, true);
+                if (functionWithWrapper.getWrapperBody() != null) {
+                    // Extract local declarations
+                    applyWrapper(functionWithWrapper.getWrapperBody(), function, originalFunction, new JsInliningContext(statementContext));
+                }
+
+                // Keep the `defineInlineFunction` for the inliner to find
+                statementContext.addNext(expression.makeStmt());
+
+                // Return the function body to be used without inlining.
+                return function;
+            }
+        }
+        return null;
+    }
+
+    @Override
     protected void doAcceptStatementList(List<JsStatement> statements) {
         // at top level of js ast, contexts stack can be empty,
         // but there is no inline calls anyway
@@ -489,7 +574,7 @@ public class JsInliner extends JsVisitorWithContextImpl {
         }
     }
 
-    private static void replaceExpressionsWithLocalAliases(@NotNull JsStatement statement) {
+    private void replaceExpressionsWithLocalAliases(@NotNull JsStatement statement) {
         new JsVisitorWithContextImpl() {
             @Override
             public void endVisit(@NotNull JsNameRef x, @NotNull JsContext ctx) {
@@ -507,6 +592,7 @@ public class JsInliner extends JsVisitorWithContextImpl {
                     @SuppressWarnings("unchecked")
                     JsContext<JsNode> context = (JsContext) ctx;
                     context.replaceMe(alias.makeRef());
+                    inlinedModuleAliases.add(alias);
                 }
             }
 
