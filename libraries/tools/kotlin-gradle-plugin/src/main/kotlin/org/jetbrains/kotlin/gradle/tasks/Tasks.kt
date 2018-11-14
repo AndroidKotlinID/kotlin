@@ -15,8 +15,8 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
+import org.gradle.workers.WorkerExecutor
 import org.jetbrains.kotlin.build.DEFAULT_KOTLIN_SOURCE_FILES_EXTENSIONS
-import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.incremental.destinationAsFile
 import org.jetbrains.kotlin.utils.LibraryUtils
 import java.io.File
 import java.util.*
+import javax.inject.Inject
 import kotlin.properties.Delegates
 
 const val KOTLIN_BUILD_DIR_NAME = "kotlin"
@@ -248,6 +249,9 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         }
     }
 
+    internal open fun compilerRunner(): GradleCompilerRunner =
+        GradleCompilerRunner(this)
+
     override fun compile() {
         assert(false, { "unexpected call to compile()" })
     }
@@ -270,13 +274,17 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
         sourceRoots.log(this.name, logger)
         val args = prepareCompilerArguments()
         taskBuildDirectory.mkdirs()
-        callCompiler(args, sourceRoots, ChangedFiles(inputs))
+        callCompilerAsync(args, sourceRoots, ChangedFiles(inputs))
     }
 
     @Internal
     internal abstract fun getSourceRoots(): SourceRoots
 
-    internal abstract fun callCompiler(args: T, sourceRoots: SourceRoots, changedFiles: ChangedFiles)
+    /**
+     * Compiler might be executed asynchronuosly. Do not do anything requiring end of compilation after this function is called.
+     * @see [GradleKotlinCompilerWork]
+     */
+    internal abstract fun callCompilerAsync(args: T, sourceRoots: SourceRoots, changedFiles: ChangedFiles)
 
     override fun setupCompilerArgs(args: T, defaultsOnly: Boolean) {
         args.coroutinesState = when (coroutines) {
@@ -376,54 +384,41 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     @Internal
     override fun getSourceRoots() = SourceRoots.ForJvm.create(getSource(), sourceRootsContainer, sourceFilesExtensions)
 
-    override fun callCompiler(args: K2JVMCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
+    override fun callCompilerAsync(args: K2JVMCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
         sourceRoots as SourceRoots.ForJvm
 
         val messageCollector = GradleMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()
-        val compilerRunner = GradleCompilerRunner(project)
+        val compilerRunner = compilerRunner()
 
-        val environment = when {
-            !incremental ->
-                GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
-            else -> {
-                logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
-                GradleIncrementalCompilerEnvironment(
-                    computedCompilerClasspath,
-                    if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
-                    taskBuildDirectory,
-                    messageCollector, outputItemCollector, args,
-                    usePreciseJavaTracking = usePreciseJavaTracking,
-                    localStateDirs = outputDirectories,
-                    multiModuleICSettings = multiModuleICSettings
-                )
-            }
-        }
-
-        if (!incremental) {
-            clearOutputDirectories(reason = "IC is disabled for the task")
-        }
-
-        try {
-            val exitCode = compilerRunner.runJvmCompiler(
-                sourceRoots.kotlinSourceFiles,
-                commonSourceSet.toList(),
-                sourceRoots.javaSourceRoots,
-                javaPackagePrefix,
-                args,
-                environment
+        val icEnv = if (incremental) {
+            logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
+            IncrementalCompilationEnvironment(
+                if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
+                taskBuildDirectory,
+                usePreciseJavaTracking = usePreciseJavaTracking,
+                disableMultiModuleIC = disableMultiModuleIC(),
+                multiModuleICSettings = multiModuleICSettings
             )
+        } else null
 
-            disableMultiModuleICIfNeeded()
-            processCompilerExitCode(exitCode)
-        } catch (e: Throwable) {
-            cleanupOnError()
-            throw e
-        }
+        val environment = GradleCompilerEnvironment(
+            computedCompilerClasspath, messageCollector, outputItemCollector,
+            localStateDirectories = localStateDirectories(),
+            incrementalCompilationEnvironment = icEnv
+        )
+        compilerRunner.runJvmCompilerAsync(
+            sourceRoots.kotlinSourceFiles,
+            commonSourceSet.toList(),
+            sourceRoots.javaSourceRoots,
+            javaPackagePrefix,
+            args,
+            environment
+        )
     }
 
-    private fun disableMultiModuleICIfNeeded() {
-        if (!incremental || javaOutputDir == null) return
+    private fun disableMultiModuleIC(): Boolean {
+        if (!incremental || javaOutputDir == null) return false
 
         val illegalTask = project.tasks.matching {
             it is AbstractCompile &&
@@ -438,21 +433,10 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
                         "unknown task '$illegalTask' destination dir ${illegalTask.destinationDir} " +
                         "intersects with java destination dir $javaOutputDir"
             )
-            buildHistoryFile.delete()
-        }
-    }
-
-    private fun cleanupOnError() {
-        logger.kotlinInfo("deleting $destinationDir on error")
-        destinationDir.deleteRecursively()
-    }
-
-    private fun processCompilerExitCode(exitCode: ExitCode) {
-        if (exitCode != ExitCode.OK) {
-            cleanupOnError()
+            return true
         }
 
-        throwGradleExceptionIfError(exitCode)
+        return false
     }
 
     // override setSource to track source directory sets and files (for generated android folders)
@@ -466,6 +450,27 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         sourceRootsContainer.add(*sources)
         return super.source(*sources)
     }
+}
+
+@CacheableTask
+internal open class KotlinCompileWithWorkers @Inject constructor(
+    @Suppress("UnstableApiUsage") private val workerExecutor: WorkerExecutor
+) : KotlinCompile() {
+    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(this, workerExecutor)
+}
+
+@CacheableTask
+internal open class Kotlin2JsCompileWithWorkers @Inject constructor(
+    @Suppress("UnstableApiUsage") private val workerExecutor: WorkerExecutor
+) : Kotlin2JsCompile() {
+    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(this, workerExecutor)
+}
+
+@CacheableTask
+internal open class KotlinCompileCommonWithWorkers @Inject constructor(
+    @Suppress("UnstableApiUsage") private val workerExecutor: WorkerExecutor
+) : KotlinCompileCommon() {
+    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(this, workerExecutor)
 }
 
 @CacheableTask
@@ -512,7 +517,7 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
             ?.let { if (LibraryUtils.isKotlinJavascriptLibrary(it)) it else null }
             ?.absolutePath
 
-    override fun callCompiler(args: K2JSCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
+    override fun callCompilerAsync(args: K2JSCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
         sourceRoots as SourceRoots.KotlinOnly
 
         logger.debug("Calling compiler")
@@ -538,28 +543,23 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
 
         val messageCollector = GradleMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()
-        val compilerRunner = GradleCompilerRunner(project)
+        val compilerRunner = compilerRunner()
 
-        val environment = when {
-            incremental -> {
-                logger.warn(USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE)
-                GradleIncrementalCompilerEnvironment(
-                    computedCompilerClasspath,
-                    if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
-                    taskBuildDirectory,
-                    messageCollector,
-                    outputItemCollector,
-                    args,
-                    multiModuleICSettings = multiModuleICSettings
-                )
-            }
-            else -> {
-                GradleCompilerEnvironment(computedCompilerClasspath, messageCollector, outputItemCollector, args)
-            }
-        }
+        val icEnv = if (incremental) {
+            logger.warn(USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE)
+            IncrementalCompilationEnvironment(
+                if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
+                taskBuildDirectory,
+                multiModuleICSettings = multiModuleICSettings
+            )
+        } else null
 
-        val exitCode = compilerRunner.runJsCompiler(sourceRoots.kotlinSourceFiles, commonSourceSet.toList(), args, environment)
-        throwGradleExceptionIfError(exitCode)
+        val environment = GradleCompilerEnvironment(
+            computedCompilerClasspath, messageCollector, outputItemCollector,
+            localStateDirectories = localStateDirectories(),
+            incrementalCompilationEnvironment = icEnv
+        )
+        compilerRunner.runJsCompilerAsync(sourceRoots.kotlinSourceFiles, commonSourceSet.toList(), args, environment)
     }
 }
 
@@ -577,7 +577,9 @@ private fun Task.getGradleVersion(): ParsedGradleVersion? {
     return result
 }
 
-internal class GradleMessageCollector(val logger: Logger) : MessageCollector {
+internal class GradleMessageCollector(val logger: KotlinLogger) : MessageCollector {
+    constructor(logger: Logger) : this(GradleKotlinLogger(logger))
+
     private var hasErrors = false
 
     override fun hasErrors() = hasErrors
