@@ -20,6 +20,8 @@ object SerializationAnnotations {
     internal val serialOptionalFqName = FqName("kotlinx.serialization.Optional")
     internal val serialTransientFqName = FqName("kotlinx.serialization.Transient")
     internal val serialInfoFqName = FqName("kotlinx.serialization.SerialInfo")
+
+    internal val contextualFqName = FqName("kotlinx.serialization.ContextualSerialization")
 }
 
 object SerialEntityNames {
@@ -35,6 +37,9 @@ object SerialEntityNames {
     val KSERIALIZER_NAME_FQ = SerializationPackages.packageFqName.child(KSERIALIZER_NAME)
     val SERIALIZER_CLASS_NAME = Name.identifier(SERIALIZER_CLASS)
     val IMPL_NAME = Name.identifier("Impl")
+
+    val GENERATED_SERIALIZER_CLASS = Name.identifier("GeneratedSerializer")
+    val GENERATED_SERIALIZER_FQ = SerializationPackages.internalPackageFqName.child(GENERATED_SERIALIZER_CLASS)
 
     const val ENCODER_CLASS = "Encoder"
     const val STRUCTURE_ENCODER_CLASS = "CompositeEncoder"
@@ -56,6 +61,7 @@ object SerialEntityNames {
     val SERIAL_DESC_FIELD_NAME = Name.identifier(SERIAL_DESC_FIELD)
     val SAVE_NAME = Name.identifier(SAVE)
     val LOAD_NAME = Name.identifier(LOAD)
+    val GENERATED_DESCRIPTOR_GETTER = Name.identifier("childSerializers")
     val WRITE_SELF_NAME = Name.identifier("write\$Self")
     val SERIALIZER_PROVIDER_NAME = Name.identifier("serializer")
 
@@ -81,6 +87,7 @@ object CallingConventions {
     const val encode = "encode"
     const val decodeElementIndex = "decodeElementIndex"
     const val elementPostfix = "Element"
+    const val shouldEncodeDefault = "shouldEncodeElementDefault"
 
     const val addElement = "addElement"
     const val addAnnotation = "pushAnnotation"

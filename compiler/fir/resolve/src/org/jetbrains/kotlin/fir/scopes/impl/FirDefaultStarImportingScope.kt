@@ -10,7 +10,8 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirImportImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedPackageStarImport
 import org.jetbrains.kotlin.name.FqName
 
-class FirDefaultStarImportingScope(session: FirSession) : FirAbstractStarImportingScope(session) {
+class FirDefaultStarImportingScope(session: FirSession, lookupInFir: Boolean = false) :
+    FirAbstractStarImportingScope(session, lookupInFir) {
     // TODO: move relevant code in TargetPlatform from compiler:frontend and use here
     override val starImports = listOf(
         "kotlin",
@@ -19,7 +20,10 @@ class FirDefaultStarImportingScope(session: FirSession) : FirAbstractStarImporti
         "kotlin.ranges",
         "kotlin.sequences",
         "kotlin.text",
-        "kotlin.io"
+        "kotlin.io",
+        "java.lang",
+        // We should not (probably) import it for non-JVM projects
+        "kotlin.jvm"
     ).map {
         val fqName = FqName(it)
         FirResolvedPackageStarImport(

@@ -22,27 +22,25 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.psi.JavaDirectoryService
 import com.intellij.psi.codeStyle.CodeStyleManager
 import org.jetbrains.kotlin.analyzer.ModuleInfo
-import org.jetbrains.kotlin.builtins.KotlinBuiltIns
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.diagnostics.DiagnosticFactory
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
 import org.jetbrains.kotlin.idea.caches.resolve.analyzeWithContent
-import org.jetbrains.kotlin.idea.core.*
+import org.jetbrains.kotlin.idea.core.ShortenReferences
+import org.jetbrains.kotlin.idea.core.overrideImplement.OverrideMemberChooserObject.BodyType.EMPTY_OR_TEMPLATE
+import org.jetbrains.kotlin.idea.core.overrideImplement.OverrideMemberChooserObject.BodyType.NO_BODY
+import org.jetbrains.kotlin.idea.core.overrideImplement.OverrideMemberChooserObject.Companion.create
+import org.jetbrains.kotlin.idea.core.overrideImplement.generateActualMember
+import org.jetbrains.kotlin.idea.core.overrideImplement.generateTopLevelActual
+import org.jetbrains.kotlin.idea.core.toDescriptor
 import org.jetbrains.kotlin.idea.quickfix.KotlinQuickFixAction
 import org.jetbrains.kotlin.idea.quickfix.KotlinSingleIntentionActionFactory
-import org.jetbrains.kotlin.idea.refactoring.createKotlinFile
-import org.jetbrains.kotlin.idea.util.IdeDescriptorRenderers
 import org.jetbrains.kotlin.idea.util.actualsForExpected
 import org.jetbrains.kotlin.idea.util.application.executeWriteCommand
-import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
@@ -110,37 +108,7 @@ sealed class CreateActualFix<out D : KtNamedDeclaration>(
                 return actualDeclaration.containingKtFile
             }
         }
-        val name = declaration.name ?: return null
-
-        val expectedDir = declaration.containingFile.containingDirectory
-        val expectedPackage = JavaDirectoryService.getInstance().getPackage(expectedDir)
-
-        val actualDirectory = findOrCreateDirectoryForPackage(
-            actualModule, expectedPackage?.qualifiedName ?: ""
-        ) ?: return null
-        return runWriteAction {
-            val fileName = "$name.kt"
-            val existingFile = actualDirectory.findFile(fileName)
-            val packageDirective = declaration.containingKtFile.packageDirective
-            val packageName =
-                if (packageDirective?.packageNameExpression == null) actualDirectory.getPackage()?.qualifiedName
-                else packageDirective.fqName.asString()
-            if (existingFile is KtFile) {
-                val existingPackageDirective = existingFile.packageDirective
-                if (existingFile.declarations.isNotEmpty() &&
-                    existingPackageDirective?.fqName != packageDirective?.fqName
-                ) {
-                    val newName = KotlinNameSuggester.suggestNameByName(name) {
-                        actualDirectory.findFile("$it.kt") == null
-                    } + ".kt"
-                    createKotlinFile(newName, actualDirectory, packageName)
-                } else {
-                    existingFile
-                }
-            } else {
-                createKotlinFile(fileName, actualDirectory, packageName)
-            }
-        }
+        return createFileForDeclaration(actualModule, declaration)
     }
 
     companion object : KotlinSingleIntentionActionFactory() {
@@ -171,19 +139,7 @@ class CreateActualClassFix(
     generateClassOrObjectByExpectedClass(project, element, actualNeeded = true)
 }) {
 
-    override val elementType = run {
-        val element = element
-        when (element) {
-            is KtObjectDeclaration -> "object"
-            is KtClass -> when {
-                element.isInterface() -> "interface"
-                element.isEnum() -> "enum class"
-                element.isAnnotation() -> "annotation class"
-                else -> "class"
-            }
-            else -> "class"
-        }
-    }
+    override val elementType = element.getTypeDescription()
 }
 
 class CreateActualPropertyFix(
@@ -192,7 +148,7 @@ class CreateActualPropertyFix(
     actualPlatform: MultiTargetPlatform.Specific
 ) : CreateActualFix<KtProperty>(property, actualModule, actualPlatform, { project, element ->
     val descriptor = element.toDescriptor() as? PropertyDescriptor
-    descriptor?.let { generateProperty(project, element, descriptor, actualNeeded = true) }
+    descriptor?.let { generateProperty(project, element, descriptor) }
 }) {
 
     override val elementType = "property"
@@ -204,7 +160,7 @@ class CreateActualFunctionFix(
     actualPlatform: MultiTargetPlatform.Specific
 ) : CreateActualFix<KtFunction>(function, actualModule, actualPlatform, { project, element ->
     val descriptor = element.toDescriptor() as? FunctionDescriptor
-    descriptor?.let { generateFunction(project, element, descriptor, actualNeeded = true) }
+    descriptor?.let { generateFunction(project, element, descriptor) }
 }) {
 
     override val elementType = "function"
@@ -223,7 +179,8 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
     project: Project,
     expectedClass: KtClassOrObject,
     actualNeeded: Boolean,
-    existingDeclarations: List<KtDeclaration> = emptyList()
+    // If null, all expect class declarations are missed (so none from them exists)
+    missedDeclarations: List<KtDeclaration>? = null
 ): KtClassOrObject {
     fun areCompatible(first: KtFunction, second: KtFunction) =
         first.valueParameters.size == second.valueParameters.size &&
@@ -232,7 +189,7 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
                 }
 
     fun KtDeclaration.exists() =
-        existingDeclarations.any {
+        missedDeclarations != null && missedDeclarations.none {
             name == it.name && when (this) {
                 is KtConstructor<*> -> it is KtConstructor<*> && areCompatible(this, it)
                 is KtNamedFunction -> it is KtNamedFunction && areCompatible(this, it)
@@ -241,17 +198,7 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
             }
         }
 
-    val expectedText = expectedClass.text
-    val actualClass = if (expectedClass is KtObjectDeclaration) {
-        if (expectedClass.isCompanion()) {
-            createCompanionObject(expectedText)
-        } else {
-            createObject(expectedText)
-        }
-    } else {
-        createClass(expectedText)
-    }
-    val isInterface = expectedClass is KtClass && expectedClass.isInterface()
+    val actualClass = createClassCopyByText(expectedClass)
     actualClass.declarations.forEach {
         if (it.exists()) {
             it.delete()
@@ -260,22 +207,10 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
         when (it) {
             is KtEnumEntry -> return@forEach
             is KtClassOrObject -> it.delete()
-            is KtCallableDeclaration -> {
-                if (!isInterface && !it.hasModifier(KtTokens.ABSTRACT_KEYWORD)) {
-                    it.delete()
-                } else {
-                    it.addModifier(KtTokens.ACTUAL_KEYWORD)
-                    if (it is KtFunction) {
-                        it.removeParameterDefaultValues()
-                    }
-                }
-            }
+            is KtCallableDeclaration -> it.delete()
         }
     }
-    val primaryConstructor = actualClass.primaryConstructor
-    if (primaryConstructor != null && primaryConstructor.exists()) {
-        primaryConstructor.delete()
-    }
+    actualClass.primaryConstructor?.delete()
 
     val context = expectedClass.analyzeWithContent()
     actualClass.superTypeListEntries.zip(expectedClass.superTypeListEntries).forEach { (actualEntry, expectedEntry) ->
@@ -294,6 +229,7 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
             }
         }
     }
+    actualClass.replaceExpectModifier(actualNeeded)
 
     declLoop@ for (expectedDeclaration in expectedClass.declarations.filter { !it.exists() }) {
         val descriptor = expectedDeclaration.toDescriptor() ?: continue
@@ -305,12 +241,9 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
                     continue@declLoop
                 }
             is KtCallableDeclaration -> {
-                if (isInterface || expectedDeclaration.hasModifier(KtTokens.ABSTRACT_KEYWORD)) {
-                    continue@declLoop
-                }
                 when (expectedDeclaration) {
-                    is KtFunction -> generateFunction(project, expectedDeclaration, descriptor as FunctionDescriptor, actualNeeded = true)
-                    is KtProperty -> generateProperty(project, expectedDeclaration, descriptor as PropertyDescriptor, actualNeeded = true)
+                    is KtFunction -> generateFunction(project, expectedDeclaration, descriptor as FunctionDescriptor, actualClass)
+                    is KtProperty -> generateProperty(project, expectedDeclaration, descriptor as PropertyDescriptor, actualClass)
                     else -> continue@declLoop
                 }
             }
@@ -318,20 +251,16 @@ internal fun KtPsiFactory.generateClassOrObjectByExpectedClass(
         }
         actualClass.addDeclaration(actualDeclaration)
     }
-
-    actualClass.primaryConstructor?.let {
-        it.addModifier(KtTokens.ACTUAL_KEYWORD)
-        for (parameter in it.valueParameters) {
-            if (parameter.hasValOrVar()) {
-                parameter.addModifier(KtTokens.ACTUAL_KEYWORD)
-            }
+    val expectedPrimaryConstructor = expectedClass.primaryConstructor
+    if (actualClass is KtClass && expectedPrimaryConstructor?.exists() == false) {
+        val descriptor = expectedPrimaryConstructor.toDescriptor()
+        if (descriptor is FunctionDescriptor) {
+            val actualPrimaryConstructor = generateFunction(project, expectedPrimaryConstructor, descriptor, actualClass)
+            actualClass.createPrimaryConstructorIfAbsent().replace(actualPrimaryConstructor)
         }
-        it.removeParameterDefaultValues()
     }
 
-    return actualClass.apply {
-        replaceExpectModifier(actualNeeded)
-    }
+    return actualClass
 }
 
 private val forbiddenAnnotationFqNames = setOf(
@@ -340,74 +269,37 @@ private val forbiddenAnnotationFqNames = setOf(
     ExperimentalUsageChecker.USE_EXPERIMENTAL_FQ_NAME
 )
 
-private fun KtPsiFactory.generateFunction(
+private fun generateFunction(
     project: Project,
     expectedFunction: KtFunction,
     descriptor: FunctionDescriptor,
-    actualNeeded: Boolean
+    targetClass: KtClassOrObject? = null
 ): KtFunction {
-    val returnType = descriptor.returnType
-    val body = run {
-        if (expectedFunction.hasBody()) {
-            ""
-        } else if (returnType != null && !KotlinBuiltIns.isUnit(returnType)) {
-            val delegation = getFunctionBodyTextFromTemplate(
-                project,
-                TemplateKind.FUNCTION,
-                descriptor.name.asString(),
-                IdeDescriptorRenderers.SOURCE_CODE.renderType(returnType)
-            )
-
-            "{$delegation\n}"
-        } else {
-            "{}"
-        }
-    }
-
-    return (if (expectedFunction is KtSecondaryConstructor) {
-        createSecondaryConstructor(expectedFunction.text + " " + body)
+    val memberChooserObject = create(
+        expectedFunction, descriptor, descriptor,
+        if (descriptor.modality == Modality.ABSTRACT) NO_BODY else EMPTY_OR_TEMPLATE
+    )
+    return if (targetClass != null) {
+        memberChooserObject.generateActualMember(targetClass = targetClass, copyDoc = true)
     } else {
-        createFunction(expectedFunction.text + " " + body)
-    } as KtFunction).apply {
-        replaceExpectModifier(actualNeeded)
-        if (returnType != null && KotlinBuiltIns.isUnit(returnType)) {
-            typeReference = null
-        }
-        removeParameterDefaultValues()
-    }
+        memberChooserObject.generateTopLevelActual(project = project, copyDoc = true)
+    } as KtFunction
 }
 
-private fun KtFunction.removeParameterDefaultValues() {
-    for (valueParameter in valueParameters) {
-        val defaultValue = valueParameter.defaultValue
-        if (defaultValue != null) {
-            val equalsToken = valueParameter.equalsToken
-            valueParameter.deleteChildRange(equalsToken, defaultValue)
-        }
-    }
-}
-
-private fun KtPsiFactory.generateProperty(
+private fun generateProperty(
     project: Project,
     expectedProperty: KtProperty,
     descriptor: PropertyDescriptor,
-    actualNeeded: Boolean
+    targetClass: KtClassOrObject? = null
 ): KtProperty {
-    val body = buildString {
-        append("\nget()")
-        append(" = ")
-        append(getFunctionBodyTextFromTemplate(
-            project,
-            TemplateKind.FUNCTION,
-            descriptor.name.asString(),
-            descriptor.returnType?.let { IdeDescriptorRenderers.SOURCE_CODE.renderType(it) } ?: ""
-        ))
-        if (descriptor.isVar) {
-            append("\nset(value) {}")
-        }
-    }
-    return createProperty(expectedProperty.text + " " + body).apply {
-        replaceExpectModifier(actualNeeded)
-    }
+    val memberChooserObject = create(
+        expectedProperty, descriptor, descriptor,
+        if (descriptor.modality == Modality.ABSTRACT) NO_BODY else EMPTY_OR_TEMPLATE
+    )
+    return if (targetClass != null) {
+        memberChooserObject.generateActualMember(targetClass = targetClass, copyDoc = true)
+    } else {
+        memberChooserObject.generateTopLevelActual(project = project, copyDoc = true)
+    } as KtProperty
 }
 

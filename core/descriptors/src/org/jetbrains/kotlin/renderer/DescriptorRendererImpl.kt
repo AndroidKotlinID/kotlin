@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.resolve.constants.ConstantValue
 import org.jetbrains.kotlin.resolve.constants.KClassValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.declaresOrInheritsDefaultValue
+import org.jetbrains.kotlin.resolve.descriptorUtil.isAnnotationConstructor
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.ErrorUtils.UninferredParameterTypeConstructor
 import org.jetbrains.kotlin.types.TypeUtils.CANT_INFER_FUNCTION_PARAM_TYPE
@@ -128,10 +129,14 @@ internal class DescriptorRendererImpl(
     private fun StringBuilder.renderNormalizedType(type: KotlinType) {
         val abbreviated = type.unwrap() as? AbbreviatedType
         if (abbreviated != null) {
-            // TODO nullability is lost for abbreviated type?
-            renderNormalizedTypeAsIs(abbreviated.abbreviation)
-            if (renderUnabbreviatedType) {
-                renderAbbreviatedTypeExpansion(abbreviated)
+            if (renderTypeExpansions) {
+                renderNormalizedTypeAsIs(abbreviated.expandedType)
+            } else {
+                // TODO nullability is lost for abbreviated type?
+                renderNormalizedTypeAsIs(abbreviated.abbreviation)
+                if (renderUnabbreviatedType) {
+                    renderAbbreviatedTypeExpansion(abbreviated)
+                }
             }
             return
         }
@@ -467,19 +472,36 @@ internal class DescriptorRendererImpl(
         }
     }
 
-    private fun renderVisibility(visibility: Visibility, builder: StringBuilder) {
+    private fun renderVisibility(visibility: Visibility, builder: StringBuilder): Boolean {
         @Suppress("NAME_SHADOWING")
         var visibility = visibility
-        if (DescriptorRendererModifier.VISIBILITY !in modifiers) return
+        if (DescriptorRendererModifier.VISIBILITY !in modifiers) return false
         if (normalizedVisibilities) {
             visibility = visibility.normalize()
         }
-        if (!renderDefaultVisibility && visibility == Visibilities.DEFAULT_VISIBILITY) return
+        if (!renderDefaultVisibility && visibility == Visibilities.DEFAULT_VISIBILITY) return false
         builder.append(renderKeyword(visibility.displayName)).append(" ")
+        return true
     }
 
-    private fun renderModality(modality: Modality, builder: StringBuilder) {
+    private fun renderModality(modality: Modality, builder: StringBuilder, defaultModality: Modality) {
+        if (!renderDefaultModality && modality == defaultModality) return
         renderModifier(builder, DescriptorRendererModifier.MODALITY in modifiers, modality.name.toLowerCase())
+    }
+
+    private fun MemberDescriptor.implicitModalityWithoutExtensions(): Modality {
+        if (this is ClassDescriptor) {
+            return if (kind == ClassKind.INTERFACE) Modality.ABSTRACT else Modality.FINAL
+        }
+        val containingClassDescriptor = containingDeclaration as? ClassDescriptor ?: return Modality.FINAL
+        if (this !is CallableMemberDescriptor) return Modality.FINAL
+        if (this.overriddenDescriptors.isNotEmpty()) {
+            if (containingClassDescriptor.modality != Modality.FINAL) return Modality.OPEN
+        }
+        if (containingClassDescriptor.kind == ClassKind.INTERFACE && this.visibility != Visibilities.PRIVATE) {
+            return if (this.modality == Modality.ABSTRACT) Modality.ABSTRACT else Modality.OPEN
+        }
+        return Modality.FINAL
     }
 
     private fun renderModalityForCallable(callable: CallableMemberDescriptor, builder: StringBuilder) {
@@ -488,7 +510,7 @@ internal class DescriptorRendererImpl(
                 overridesSomething(callable)) {
                 return
             }
-            renderModality(callable.modality, builder)
+            renderModality(callable.modality, builder, callable.implicitModalityWithoutExtensions())
         }
     }
 
@@ -702,15 +724,16 @@ internal class DescriptorRendererImpl(
 
     private fun renderConstructor(constructor: ConstructorDescriptor, builder: StringBuilder) {
         builder.renderAnnotations(constructor)
-        renderVisibility(constructor.visibility, builder)
+        val visibilityRendered = renderVisibility(constructor.visibility, builder)
         renderMemberKind(constructor, builder)
 
-        if (renderConstructorKeyword) {
+        val constructorKeywordRendered = renderConstructorKeyword || !constructor.isPrimary || visibilityRendered
+        if (constructorKeywordRendered) {
             builder.append(renderKeyword("constructor"))
         }
+        val classDescriptor = constructor.containingDeclaration
         if (secondaryConstructorsAsPrimary) {
-            val classDescriptor = constructor.containingDeclaration
-            if (renderConstructorKeyword) {
+            if (constructorKeywordRendered) {
                 builder.append(" ")
             }
             renderName(classDescriptor, builder, true)
@@ -718,6 +741,19 @@ internal class DescriptorRendererImpl(
         }
 
         renderValueParameters(constructor.valueParameters, constructor.hasSynthesizedParameterNames(), builder)
+
+        if (renderConstructorDelegation && !constructor.isPrimary && classDescriptor is ClassDescriptor) {
+            val primaryConstructor = classDescriptor.unsubstitutedPrimaryConstructor
+            if (primaryConstructor != null) {
+                val parametersWithoutDefault = primaryConstructor.valueParameters.filter {
+                    !it.declaresDefaultValue() && it.varargElementType == null
+                }
+                if (parametersWithoutDefault.isNotEmpty()) {
+                    builder.append(" : ").append(renderKeyword("this"))
+                    builder.append(parametersWithoutDefault.joinToString(prefix = "(", postfix = ")", separator = ", ") { "" })
+                }
+            }
+        }
 
         if (secondaryConstructorsAsPrimary) {
             renderWhereSuffix(constructor.typeParameters, builder)
@@ -779,6 +815,12 @@ internal class DescriptorRendererImpl(
         renderModifier(builder, valueParameter.isCrossinline, "crossinline")
         renderModifier(builder, valueParameter.isNoinline, "noinline")
 
+        val containingDeclaration = valueParameter.containingDeclaration
+        if (renderAnnotationPropertiesInPrimaryConstructor && containingDeclaration.isAnnotationConstructor()) {
+            renderModifier(builder, actualPropertiesInPrimaryConstructor, "actual")
+            renderModifier(builder, true, "val")
+        }
+
         renderVariable(valueParameter, includeName, builder, topLevel)
 
         val withDefaultValue =
@@ -825,11 +867,11 @@ internal class DescriptorRendererImpl(
             if (!startFromDeclarationKeyword) {
                 renderPropertyAnnotations(property, builder)
                 renderVisibility(property.visibility, builder)
-                renderModifier(builder, property.isConst, "const")
+                renderModifier(builder, DescriptorRendererModifier.CONST in modifiers && property.isConst, "const")
                 renderMemberModifiers(property, builder)
                 renderModalityForCallable(property, builder)
                 renderOverride(property, builder)
-                renderModifier(builder, property.isLateInit, "lateinit")
+                renderModifier(builder, DescriptorRendererModifier.LATEINIT in modifiers && property.isLateInit, "lateinit")
                 renderMemberKind(property, builder)
             }
             renderValVarPrefix(property, builder)
@@ -913,7 +955,7 @@ internal class DescriptorRendererImpl(
             }
             if (!(klass.kind == ClassKind.INTERFACE && klass.modality == Modality.ABSTRACT ||
                   klass.kind.isSingleton && klass.modality == Modality.FINAL)) {
-                renderModality(klass.modality, builder)
+                renderModality(klass.modality, builder, klass.implicitModalityWithoutExtensions())
             }
             renderMemberModifiers(klass, builder)
             renderModifier(builder, DescriptorRendererModifier.INNER in modifiers && klass.isInner, "inner")

@@ -96,6 +96,11 @@ public class RawFirBuilderTestCaseGenerated extends AbstractRawFirBuilderTestCas
             runTest("compiler/testData/fir/rawBuilder/declarations/NestedSuperType.kt");
         }
 
+        @TestMetadata("noPrimaryConstructor.kt")
+        public void testNoPrimaryConstructor() throws Exception {
+            runTest("compiler/testData/fir/rawBuilder/declarations/noPrimaryConstructor.kt");
+        }
+
         @TestMetadata("simpleClass.kt")
         public void testSimpleClass() throws Exception {
             runTest("compiler/testData/fir/rawBuilder/declarations/simpleClass.kt");

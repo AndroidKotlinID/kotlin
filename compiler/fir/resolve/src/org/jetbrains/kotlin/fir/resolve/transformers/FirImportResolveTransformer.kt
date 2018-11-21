@@ -22,28 +22,33 @@ class FirImportResolveTransformer : FirTransformer<Nothing?>() {
         return element.compose()
     }
 
+    private lateinit var symbolProvider: FirSymbolProvider
+
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
+        symbolProvider = FirSymbolProvider.getInstance(file.session)
         return file.also { it.transformChildren(this, null) }.compose()
     }
 
     override fun transformImport(import: FirImport, data: Nothing?): CompositeTransformResult<FirImport> {
         val fqName = import.importedFqName ?: return import.compose()
-        val firProvider = FirSymbolProvider.getInstance(import.session)
 
         if (!fqName.isRoot) {
-            val lastPart = mutableListOf<String>()
+            val lastPart = StringBuilder()
             var firstPart = fqName
 
-            if (import.isAllUnder && firProvider.getPackage(firstPart) != null) {
+            if (import.isAllUnder && symbolProvider.getPackage(firstPart) != null) {
                 return FirResolvedPackageStarImport(import, firstPart).compose()
             }
 
             while (!firstPart.isRoot) {
-                lastPart.add(0, firstPart.shortName().asString())
+                if (lastPart.isNotEmpty())
+                    lastPart.insert(0, '.')
+                lastPart.insert(0, firstPart.shortName().asString())
+
                 firstPart = firstPart.parent()
 
-                val resolvedFqName = ClassId(firstPart, FqName.fromSegments(lastPart), false)
-                val foundSymbol = firProvider.getSymbolByFqName(resolvedFqName)
+                val resolvedFqName = ClassId(firstPart, FqName(lastPart.toString()), false)
+                val foundSymbol = symbolProvider.getSymbolByFqName(resolvedFqName)
 
                 if (foundSymbol != null) {
                     return FirResolvedImportImpl(import, resolvedFqName).compose()

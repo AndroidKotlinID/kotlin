@@ -20,54 +20,48 @@ import org.jetbrains.kotlin.backend.common.CodegenUtil.getMemberToGenerate
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.psi.KtPureClassOrObject
-import org.jetbrains.kotlin.psi.synthetics.findClassDescriptor
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
-import org.jetbrains.kotlinx.serialization.compiler.resolve.KSerializerDescriptorResolver.createTypedSerializerConstructorDescriptor
+import org.jetbrains.kotlinx.serialization.compiler.resolve.KSerializerDescriptorResolver.findSerializerConstructorForTypeArgumentsSerializers
 
 abstract class SerializerCodegen(
     protected val serializerDescriptor: ClassDescriptor,
     bindingContext: BindingContext
-) {
-    //    protected val serializerDescriptor: ClassDescriptor = declaration.findClassDescriptor(bindingContext)
-    protected val serializableDescriptor: ClassDescriptor = getSerializableClassDescriptorBySerializer(serializerDescriptor)!!
+) : AbstractSerialGenerator(bindingContext, serializerDescriptor) {
+    val serializableDescriptor: ClassDescriptor = getSerializableClassDescriptorBySerializer(serializerDescriptor)!!
     protected val serialName: String = serializableDescriptor.annotations.serialNameValue ?: serializableDescriptor.fqNameUnsafe.asString()
     protected val properties = SerializableProperties(serializableDescriptor, bindingContext)
     protected val orderedProperties = properties.serializableProperties
 
     fun generate() {
         check(properties.isExternallySerializable) { "Class ${serializableDescriptor.name} is not externally serializable" }
-        generateSerialDesc()
         val prop = generateSerializableClassPropertyIfNeeded()
+        if (prop)
+            generateSerialDesc()
         val save = generateSaveIfNeeded()
         val load = generateLoadIfNeeded()
-//        if (save || load || prop)
-//            generateSerialDesc()
-        if (serializableDescriptor.declaredTypeParameters.isNotEmpty() && typedSerializerConstructorNotDeclared()) {
-            generateGenericFieldsAndConstructor(createTypedSerializerConstructorDescriptor(serializerDescriptor, serializableDescriptor))
+        generateDescriptorGetterIfNeeded()
+        if (!prop && (save || load))
+            generateSerialDesc()
+        if (serializableDescriptor.declaredTypeParameters.isNotEmpty()) {
+            findSerializerConstructorForTypeArgumentsSerializers(serializerDescriptor, onlyIfSynthetic = true)?.let {
+                generateGenericFieldsAndConstructor(it)
+            }
         }
     }
 
-    // checks if user didn't declared constructor (KSerializer<T0>, KSerializer<T1>...) on a KSerializer<T<T0, T1...>>
-    private fun typedSerializerConstructorNotDeclared(): Boolean {
-        val serializableImplementationTypeArguments = extractKSerializerArgumentFromImplementation(serializerDescriptor)?.arguments
-                ?: throw AssertionError("Serializer does not implement KSerializer??")
-
-        val typeParamsCount = serializableImplementationTypeArguments.size
-        if (typeParamsCount == 0) return false //don't need it
-        val ctors = serializerDescriptor.constructors
-        val found =
-            ctors.any {
-                it.valueParameters.size == typeParamsCount && it.valueParameters.foldIndexed(false) { index, flag, parameterDescriptor ->
-                    val type = parameterDescriptor.type
-                    flag || (isKSerializer(type) && type.arguments.first() == serializableImplementationTypeArguments[index])
-                }
-            }
-        return !found
+    private fun generateDescriptorGetterIfNeeded(): Boolean {
+        val function = getMemberToGenerate(
+            serializerDescriptor, SerialEntityNames.GENERATED_DESCRIPTOR_GETTER.identifier,
+            { true }, { true }
+        ) ?: return false
+        generateChildSerializersGetter(function)
+        return true
     }
+
+    protected abstract fun generateChildSerializersGetter(function: FunctionDescriptor)
 
     protected val generatedSerialDescPropertyDescriptor = getPropertyToGenerate(
         serializerDescriptor, SerialEntityNames.SERIAL_DESC_FIELD,
@@ -77,9 +71,23 @@ abstract class SerializerCodegen(
         serializerDescriptor::checkSerializableClassPropertyResult
     ) { true }
 
+    val localSerializersFieldsDescriptors: List<PropertyDescriptor> = findLocalSerializersFieldDescriptors()
+
+    // Can be false if user specified inheritance from KSerializer explicitly
+    protected val isGeneratedSerializer = serializerDescriptor.typeConstructor.supertypes.any(::isGeneratedKSerializer)
+
+    private fun findLocalSerializersFieldDescriptors(): List<PropertyDescriptor> {
+        val count = serializableDescriptor.declaredTypeParameters.size
+        if (count == 0) return emptyList()
+        val propNames = (0 until count).map { "${SerialEntityNames.typeArgPrefix}$it" }
+        return propNames.mapNotNull { name ->
+            getPropertyToGenerate(serializerDescriptor, name) { isKSerializer(it.returnType) }
+        }
+    }
+
     protected abstract fun generateSerialDesc()
 
-    protected abstract fun generateGenericFieldsAndConstructor(typedConstructorDescriptor: ConstructorDescriptor)
+    protected abstract fun generateGenericFieldsAndConstructor(typedConstructorDescriptor: ClassConstructorDescriptor)
 
     protected abstract fun generateSerializableClassProperty(property: PropertyDescriptor)
 
@@ -133,7 +141,6 @@ abstract class SerializerCodegen(
     )
         .singleOrNull { property ->
             isKindOk(property.kind) &&
-                    property.modality != Modality.FINAL &&
                     property.returnType != null &&
                     isReturnTypeOk(property)
         }

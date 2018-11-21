@@ -7,13 +7,16 @@ package org.jetbrains.kotlin.fir
 
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinType
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
+import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.Printer
 
@@ -92,6 +95,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         visitMemberDeclaration(callableMember)
         val receiverType = callableMember.receiverType
         if (receiverType != null) {
+            print(" ")
             receiverType.accept(this)
             print(".")
         }
@@ -120,14 +124,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         }
     }
 
-    private fun FirMemberPlatformStatus.asString(): String {
-        return when (this) {
-            FirMemberPlatformStatus.DEFAULT -> ""
-            FirMemberPlatformStatus.EXPECT -> "expect "
-            FirMemberPlatformStatus.ACTUAL -> "actual "
-        }
-    }
-
     override fun visitMemberDeclaration(memberDeclaration: FirMemberDeclaration) {
         memberDeclaration.annotations.renderAnnotations()
         if (memberDeclaration.typeParameters.isNotEmpty()) {
@@ -136,11 +132,29 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             print("> ")
         }
         print(memberDeclaration.visibility.asString() + " " + memberDeclaration.modalityAsString() + " ")
-        print(memberDeclaration.platformStatus.asString())
+        if (memberDeclaration.isExpect) {
+            print("expect ")
+        }
+        if (memberDeclaration.isActual) {
+            print("actual ")
+        }
         if (memberDeclaration is FirCallableMember && memberDeclaration.isOverride) {
             print("override ")
         }
-        if (memberDeclaration is FirNamedFunction) {
+        if (memberDeclaration is FirClass) {
+            if (memberDeclaration.isInner) {
+                print("inner ")
+            }
+            if (memberDeclaration.isCompanion) {
+                print("companion ")
+            }
+            if (memberDeclaration.isData) {
+                print("data ")
+            }
+            if (memberDeclaration.isInline) {
+                print("inline ")
+            }
+        } else if (memberDeclaration is FirNamedFunction) {
             if (memberDeclaration.isOperator) {
                 print("operator ")
             }
@@ -159,6 +173,9 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         } else if (memberDeclaration is FirProperty) {
             if (memberDeclaration.isConst) {
                 print("const ")
+            }
+            if (memberDeclaration.isLateInit) {
+                print("lateinit ")
             }
         }
 
@@ -188,12 +205,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
 
     override fun visitClass(klass: FirClass) {
         visitMemberDeclaration(klass)
-        val attributes = listOfNotNull(
-            "inner".takeIf { klass.isInner },
-            "companion".takeIf { klass.isCompanion },
-            "data".takeIf { klass.isData }
-        )
-        print(attributes.joinToString(prefix = "(", postfix = ")"))
         if (klass.superTypes.isNotEmpty()) {
             print(" : ")
             klass.superTypes.renderSeparated()
@@ -324,7 +335,9 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         if (valueParameter.isVararg) {
             print("vararg ")
         }
-        print(valueParameter.name.toString() + ": ")
+        if (valueParameter.name != SpecialNames.NO_NAME_PROVIDED) {
+            print(valueParameter.name.toString() + ": ")
+        }
         valueParameter.returnType.accept(this)
         valueParameter.defaultValue?.let {
             print(" = ")
@@ -349,14 +362,34 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     }
 
     override fun visitCall(call: FirCall) {
-        visitExpression(call)
+        print("(")
+        call.arguments.renderSeparated()
+        print(")")
     }
 
     override fun visitAnnotationCall(annotationCall: FirAnnotationCall) {
+        print("@")
+        annotationCall.useSiteTarget?.let {
+            print(it.name)
+            print(":")
+        }
+        annotationCall.annotationType.accept(this)
         visitCall(annotationCall)
+        if (annotationCall.useSiteTarget == AnnotationUseSiteTarget.FILE) {
+            println()
+        } else {
+            print(" ")
+        }
     }
 
     override fun visitDelegatedConstructorCall(delegatedConstructorCall: FirDelegatedConstructorCall) {
+        if (delegatedConstructorCall.isSuper) {
+            print(": super<")
+        } else if (delegatedConstructorCall.isThis) {
+            print(": this<")
+        }
+        delegatedConstructorCall.constructedType.accept(this)
+        print(">")
         visitCall(delegatedConstructorCall)
     }
 
@@ -377,7 +410,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     }
 
     override fun visitImplicitType(implicitType: FirImplicitType) {
-        print("<implicit>")
+        print(if (implicitType is FirImplicitBuiltinType) "kotlin.${implicitType.name}" else "<implicit>")
     }
 
     override fun visitTypeWithNullability(typeWithNullability: FirTypeWithNullability) {
@@ -399,7 +432,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             print(".")
         }
         functionType.valueParameters.renderParameters()
-        print(": ")
+        print(" -> ")
         functionType.returnType.accept(this)
         print(" )")
         visitTypeWithNullability(functionType)
@@ -437,15 +470,27 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             is ConeTypeParameterType -> {
                 symbol.asString()
             }
+            is ConeFunctionType -> {
+                buildString {
+                    receiverType?.let {
+                        append(it.asString())
+                        append(".")
+                    }
+                    append("(")
+                    parameterTypes.joinTo(this) { it.asString() }
+                    append(") -> ")
+                    append(returnType.asString())
+                }
+            }
         }
     }
 
     override fun visitResolvedType(resolvedType: FirResolvedType) {
         resolvedType.annotations.renderAnnotations()
-        print("R/")
+        print("R|")
         val coneType = resolvedType.type
         print(coneType.asString())
-        print("/")
+        print("|")
         visitTypeWithNullability(resolvedType)
     }
 

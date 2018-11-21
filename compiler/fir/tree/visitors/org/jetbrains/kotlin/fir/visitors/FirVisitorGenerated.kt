@@ -90,6 +90,14 @@ abstract class FirVisitor<out R, in D> {
         return visitDeclaration(variable, data)
     }
 
+    open fun visitDeclarationStatus(declarationStatus: FirDeclarationStatus, data: D): R {
+        return visitElement(declarationStatus, data)
+    }
+
+    open fun visitResolvedDeclarationStatus(resolvedDeclarationStatus: FirResolvedDeclarationStatus, data: D): R {
+        return visitDeclarationStatus(resolvedDeclarationStatus, data)
+    }
+
     open fun visitImport(import: FirImport, data: D): R {
         return visitElement(import, data)
     }
@@ -164,6 +172,10 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitResolvedType(resolvedType: FirResolvedType, data: D): R {
         return visitTypeWithNullability(resolvedType, data)
+    }
+
+    open fun visitResolvedFunctionType(resolvedFunctionType: FirResolvedFunctionType, data: D): R {
+        return visitResolvedType(resolvedFunctionType, data)
     }
 
     open fun visitUserType(userType: FirUserType, data: D): R {

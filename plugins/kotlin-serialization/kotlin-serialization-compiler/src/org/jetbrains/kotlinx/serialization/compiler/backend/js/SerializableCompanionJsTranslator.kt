@@ -32,7 +32,8 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 class SerializableCompanionJsTranslator(
     declaration: ClassDescriptor,
     val translator: DeclarationBodyVisitor,
-    val context: TranslationContext): SerializableCompanionCodegen(declaration) {
+    val context: TranslationContext
+): SerializableCompanionCodegen(declaration, context.bindingContext()) {
 
     override fun generateSerializerGetter(methodDescriptor: FunctionDescriptor) {
         val f = context.buildFunction(methodDescriptor) {jsFun, context ->
@@ -42,7 +43,9 @@ class SerializableCompanionJsTranslator(
             } else {
                 val args = jsFun.parameters.map { JsNameRef(it.name) }
                 val ref = context.getInnerNameForDescriptor(
-                        KSerializerDescriptorResolver.createTypedSerializerConstructorDescriptor(serializer, serializableDescriptor))
+                    requireNotNull(
+                        KSerializerDescriptorResolver.findSerializerConstructorForTypeArgumentsSerializers(serializer)
+                    ) { "Generated serializer does not have constructor with required number of arguments" })
                 JsInvocation(ref.makeRef(), args)
             }
             +JsReturn(stmt)

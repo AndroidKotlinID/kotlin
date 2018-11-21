@@ -26,7 +26,17 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
     }
 
     public void testAllFilesPresentInResolve() throws Exception {
-        KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/fir/resolve"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true);
+        KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/fir/resolve"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true, "stdlib");
+    }
+
+    @TestMetadata("companion.kt")
+    public void testCompanion() throws Exception {
+        runTest("compiler/testData/fir/resolve/companion.kt");
+    }
+
+    @TestMetadata("derivedClass.kt")
+    public void testDerivedClass() throws Exception {
+        runTest("compiler/testData/fir/resolve/derivedClass.kt");
     }
 
     @TestMetadata("enum.kt")
@@ -39,9 +49,24 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         runTest("compiler/testData/fir/resolve/F.kt");
     }
 
+    @TestMetadata("ft.kt")
+    public void testFt() throws Exception {
+        runTest("compiler/testData/fir/resolve/ft.kt");
+    }
+
+    @TestMetadata("functionTypes.kt")
+    public void testFunctionTypes() throws Exception {
+        runTest("compiler/testData/fir/resolve/functionTypes.kt");
+    }
+
     @TestMetadata("genericFunctions.kt")
     public void testGenericFunctions() throws Exception {
         runTest("compiler/testData/fir/resolve/genericFunctions.kt");
+    }
+
+    @TestMetadata("nestedClass.kt")
+    public void testNestedClass() throws Exception {
+        runTest("compiler/testData/fir/resolve/nestedClass.kt");
     }
 
     @TestMetadata("NestedOfAliasedType.kt")
@@ -64,6 +89,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         runTest("compiler/testData/fir/resolve/simpleTypeAlias.kt");
     }
 
+    @TestMetadata("treeSet.kt")
+    public void testTreeSet() throws Exception {
+        runTest("compiler/testData/fir/resolve/treeSet.kt");
+    }
+
     @TestMetadata("TwoDeclarationsInSameFile.kt")
     public void testTwoDeclarationsInSameFile() throws Exception {
         runTest("compiler/testData/fir/resolve/TwoDeclarationsInSameFile.kt");
@@ -72,6 +102,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
     @TestMetadata("typeAliasWithGeneric.kt")
     public void testTypeAliasWithGeneric() throws Exception {
         runTest("compiler/testData/fir/resolve/typeAliasWithGeneric.kt");
+    }
+
+    @TestMetadata("typeParameterInPropertyReceiver.kt")
+    public void testTypeParameterInPropertyReceiver() throws Exception {
+        runTest("compiler/testData/fir/resolve/typeParameterInPropertyReceiver.kt");
     }
 
     @TestMetadata("typeParameterVsNested.kt")
@@ -97,6 +132,44 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         }
     }
 
+    @TestMetadata("compiler/testData/fir/resolve/fromBuilder")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class FromBuilder extends AbstractFirResolveTestCase {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInFromBuilder() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/fir/resolve/fromBuilder"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("complexTypes.kt")
+        public void testComplexTypes() throws Exception {
+            runTest("compiler/testData/fir/resolve/fromBuilder/complexTypes.kt");
+        }
+
+        @TestMetadata("enums.kt")
+        public void testEnums() throws Exception {
+            runTest("compiler/testData/fir/resolve/fromBuilder/enums.kt");
+        }
+
+        @TestMetadata("noPrimaryConstructor.kt")
+        public void testNoPrimaryConstructor() throws Exception {
+            runTest("compiler/testData/fir/resolve/fromBuilder/noPrimaryConstructor.kt");
+        }
+
+        @TestMetadata("simpleClass.kt")
+        public void testSimpleClass() throws Exception {
+            runTest("compiler/testData/fir/resolve/fromBuilder/simpleClass.kt");
+        }
+
+        @TestMetadata("typeParameters.kt")
+        public void testTypeParameters() throws Exception {
+            runTest("compiler/testData/fir/resolve/fromBuilder/typeParameters.kt");
+        }
+    }
+
     @TestMetadata("compiler/testData/fir/resolve/multifile")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -107,6 +180,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
 
         public void testAllFilesPresentInMultifile() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/fir/resolve/multifile"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("Annotations.kt")
+        public void testAnnotations() throws Exception {
+            runTest("compiler/testData/fir/resolve/multifile/Annotations.kt");
         }
 
         @TestMetadata("NestedSuperType.kt")

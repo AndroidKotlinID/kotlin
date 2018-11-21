@@ -18,7 +18,6 @@ import org.jetbrains.kotlin.fir.visitors.FirTransformer
 class FirValueParameterImpl(
     session: FirSession,
     psi: PsiElement?,
-    val isProperty: Boolean,
     name: Name,
     override var returnType: FirType,
     override val defaultValue: FirExpression?,
@@ -29,6 +28,6 @@ class FirValueParameterImpl(
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {
         returnType = returnType.transformSingle(transformer, data)
 
-        return this
+        return super<FirAbstractNamedAnnotatedDeclaration>.transformChildren(transformer, data)
     }
 }
