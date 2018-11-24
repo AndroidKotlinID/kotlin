@@ -8420,6 +8420,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/generics/nullability/functionalBound.kt");
                 }
 
+                @TestMetadata("inferNotNullTypeFromIntersectionOfNullableTypes.kt")
+                public void testInferNotNullTypeFromIntersectionOfNullableTypes() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/nullability/inferNotNullTypeFromIntersectionOfNullableTypes.kt");
+                }
+
+                @TestMetadata("kt25182.kt")
+                public void testKt25182() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/nullability/kt25182.kt");
+                }
+
                 @TestMetadata("nullToGeneric.kt")
                 public void testNullToGeneric() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/generics/nullability/nullToGeneric.kt");
@@ -9678,6 +9688,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("coercionWithExpectedTypeAndBound.kt")
                 public void testCoercionWithExpectedTypeAndBound() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionWithExpectedTypeAndBound.kt");
+                }
+
+                @TestMetadata("coercionWithExplicitTypeArgument.kt")
+                public void testCoercionWithExplicitTypeArgument() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionWithExplicitTypeArgument.kt");
                 }
 
                 @TestMetadata("coercionWithoutExpectedType.kt")
