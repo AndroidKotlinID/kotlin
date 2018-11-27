@@ -25,7 +25,6 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.containers.ConcurrentFactoryMap
 import org.jetbrains.kotlin.asJava.LightClassBuilder
 import org.jetbrains.kotlin.asJava.LightClassGenerationSupport
@@ -37,8 +36,6 @@ import org.jetbrains.kotlin.asJava.classes.lazyPub
 import org.jetbrains.kotlin.asJava.classes.shouldNotBeVisibleAsLightClass
 import org.jetbrains.kotlin.asJava.finder.JavaElementFinder
 import org.jetbrains.kotlin.codegen.JvmCodegenUtil
-import org.jetbrains.kotlin.codegen.state.JVM_SUPPRESS_WILDCARDS_ANNOTATION_FQ_NAME
-import org.jetbrains.kotlin.codegen.state.JVM_WILDCARD_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
@@ -52,9 +49,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
-import org.jetbrains.kotlin.psi.stubs.elements.KtStubElementTypes
 import org.jetbrains.kotlin.resolve.BindingContext
-import org.jetbrains.kotlin.resolve.annotations.JVM_STATIC_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.getAllSuperClassifiers
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
@@ -97,7 +92,9 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
             }
 
             override fun findAnnotation(owner: KtAnnotated, fqName: FqName): Pair<KtAnnotationEntry, AnnotationDescriptor>? {
-                val candidates = owner.annotationEntries.filter { it.shortName == fqName.shortName() || hasAlias(owner, fqName.shortName()) }
+                val candidates = owner.annotationEntries.filter {
+                    it.shortName == fqName.shortName() || owner.containingKtFile.hasAlias(it.shortName)
+                }
                 for (entry in candidates) {
                     val descriptor = analyze(entry).get(BindingContext.ANNOTATION, entry)
                     if (descriptor?.fqName == fqName) {
@@ -110,30 +107,15 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
     }
 
     private fun findTooComplexDeclaration(declaration: KtDeclaration): PsiElement? {
-        fun isNameOfUnsupportedJvmAnnotation(name: Name): Boolean {
-            if (!name.asString().startsWith("Jvm")) return false
-            if (name == JVM_STATIC_ANNOTATION_FQ_NAME.shortName()) return false
-            if (name == JVM_SUPPRESS_WILDCARDS_ANNOTATION_FQ_NAME.shortName()) return false
-            if (name == JVM_WILDCARD_ANNOTATION_FQ_NAME.shortName()) return false
-
-            return true
-        }
-
-        fun KtAnnotationEntry.seemsNonTrivial(): Boolean {
-            val name = shortName
-            return name == null || hasAlias(declaration, name) || isNameOfUnsupportedJvmAnnotation(name)
-        }
-
         if (declaration.hasExpectModifier() ||
             declaration.hasModifier(KtTokens.ANNOTATION_KEYWORD) ||
             declaration.hasModifier(KtTokens.INLINE_KEYWORD) && declaration is KtClassOrObject ||
             declaration.hasModifier(KtTokens.DATA_KEYWORD) ||
-            declaration.hasModifier(KtTokens.ENUM_KEYWORD) ||
-            declaration.hasModifier(KtTokens.SUSPEND_KEYWORD)) {
+            declaration.hasModifier(KtTokens.SUSPEND_KEYWORD)
+        ) {
             return declaration
         }
 
-        declaration.annotationEntries.find(KtAnnotationEntry::seemsNonTrivial)?.let { return it }
 
         if (declaration is KtClassOrObject) {
             declaration.superTypeListEntries.find { it is KtDelegatedSuperTypeEntry }?.let { return it }
@@ -152,9 +134,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
         }
         if (declaration is KtCallableDeclaration) {
             declaration.valueParameters.mapNotNull { findTooComplexDeclaration(it) }.firstOrNull()?.let { return it }
-            if (declaration.typeReference == null && (declaration as? KtFunction)?.hasBlockBody() != true) {
-                findPotentiallyReturnedAnonymousObject(declaration)?.let { return it }
-            }
             if (declaration.typeReference?.hasModifier(KtTokens.SUSPEND_KEYWORD) == true) {
                 return declaration.typeReference
             }
@@ -167,19 +146,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
 
     }
 
-    private fun findPotentiallyReturnedAnonymousObject(declaration: KtDeclaration): KtObjectDeclaration? {
-        val spine = declaration.containingKtFile.stubbedSpine
-        for (i in 0 until spine.stubCount) {
-            if (spine.getStubType(i) == KtStubElementTypes.OBJECT_DECLARATION) {
-                val obj = spine.getStubPsi(i) as KtObjectDeclaration
-                if (obj.isObjectLiteral() && PsiTreeUtil.isContextAncestor(declaration, obj, true)) {
-                    return obj
-                }
-            }
-        }
-        return null
-    }
-
     private fun implementsKotlinCollection(classOrObject: KtClassOrObject): Boolean {
         if (classOrObject.superTypeListEntries.isEmpty()) return false
 
@@ -188,7 +154,10 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
         } == true
     }
 
-    private fun hasAlias(element: KtElement, shortName: Name): Boolean = allAliases(element.containingKtFile)[shortName.asString()] == true
+    private fun KtFile.hasAlias(shortName: Name?): Boolean {
+        if (shortName == null) return false
+        return allAliases(this)[shortName.asString()] == true
+    }
 
     private fun allAliases(file: KtFile): ConcurrentMap<String, Boolean> = CachedValuesManager.getCachedValue(file) {
         val importAliases = file.importDirectives.mapNotNull { it.aliasName }.toSet()
@@ -217,7 +186,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
             )
         }
     }
-
 
     override fun createDataHolderForFacade(files: Collection<KtFile>, builder: LightClassBuilder): LightClassDataHolder.ForFacade {
         assert(!files.isEmpty()) { "No files in facade" }

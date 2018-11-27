@@ -99,6 +99,11 @@ public class UltraLightClassLoadingTestGenerated extends AbstractUltraLightClass
         runTest("compiler/testData/asJava/ultraLightClasses/inlineOnly.kt");
     }
 
+    @TestMetadata("jvmField.kt")
+    public void testJvmField() throws Exception {
+        runTest("compiler/testData/asJava/ultraLightClasses/jvmField.kt");
+    }
+
     @TestMetadata("jvmName.kt")
     public void testJvmName() throws Exception {
         runTest("compiler/testData/asJava/ultraLightClasses/jvmName.kt");
@@ -107,6 +112,11 @@ public class UltraLightClassLoadingTestGenerated extends AbstractUltraLightClass
     @TestMetadata("jvmOverloads.kt")
     public void testJvmOverloads() throws Exception {
         runTest("compiler/testData/asJava/ultraLightClasses/jvmOverloads.kt");
+    }
+
+    @TestMetadata("jvmSynthetic.kt")
+    public void testJvmSynthetic() throws Exception {
+        runTest("compiler/testData/asJava/ultraLightClasses/jvmSynthetic.kt");
     }
 
     @TestMetadata("jvmWildcardAnnotations.kt")
