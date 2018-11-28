@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
  * that can be found in the license/LICENSE.txt file.
  */
@@ -14,12 +14,13 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.tasks.SourceSet
 import org.gradle.util.ConfigureUtil
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
+import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.defaultSourceSetLanguageSettingsChecker
 import org.jetbrains.kotlin.gradle.plugin.sources.getSourceSetHierarchy
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import org.jetbrains.kotlin.gradle.utils.addExtendsFromRelation
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
@@ -27,37 +28,30 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.Callable
 
-internal fun KotlinCompilation.composeName(prefix: String? = null, suffix: String? = null): String {
+internal fun KotlinCompilation<*>.composeName(prefix: String? = null, suffix: String? = null): String {
     val compilationNamePart = compilationName.takeIf { it != KotlinCompilation.MAIN_COMPILATION_NAME }
     val targetNamePart = target.disambiguationClassifier
 
     return lowerCamelCaseName(prefix, targetNamePart, compilationNamePart, suffix)
 }
 
-internal val KotlinCompilation.defaultSourceSetName: String
+internal val KotlinCompilation<*>.defaultSourceSetName: String
     get() = lowerCamelCaseName(target.disambiguationClassifier, compilationName)
 
-internal class DefaultKotlinDependencyHandler(
-    val parent: HasKotlinDependencies,
-    val project: Project
-) : KotlinDependencyHandler {
-    override fun api(dependencyNotation: Any) = addDependency(parent.apiConfigurationName, dependencyNotation)
-
-    override fun implementation(dependencyNotation: Any) = addDependency(parent.implementationConfigurationName, dependencyNotation)
-
-    override fun compileOnly(dependencyNotation: Any) = addDependency(parent.compileOnlyConfigurationName, dependencyNotation)
-
-    override fun runtimeOnly(dependencyNotation: Any) = addDependency(parent.runtimeOnlyConfigurationName, dependencyNotation)
-
-    private fun addDependency(configurationName: String, dependencyNotation: Any) {
-        project.dependencies.add(configurationName, dependencyNotation)
-    }
-}
-
-abstract class AbstractKotlinCompilation(
+abstract class AbstractKotlinCompilation<T : KotlinCommonOptions>(
     target: KotlinTarget,
     override val compilationName: String
-) : KotlinCompilation, HasKotlinDependencies {
+) : KotlinCompilation<T>, HasKotlinDependencies {
+
+    override val kotlinOptions: T
+        get() = compileKotlinTask.kotlinOptions
+
+    override fun kotlinOptions(configure: T.() -> Unit) =
+        configure(kotlinOptions)
+
+    @Suppress("UNCHECKED_CAST")
+    override val compileKotlinTask: KotlinCompile<T>
+        get() = (target.project.tasks.getByName(compileKotlinTaskName) as KotlinCompile<T>)
 
     // Don't declare this property in the constructor to avoid NPE
     // when an overriding property of a subclass is accessed instead.
@@ -68,6 +62,12 @@ abstract class AbstractKotlinCompilation(
     override fun getAttributes(): AttributeContainer = attributeContainer
 
     override val kotlinSourceSets: MutableSet<KotlinSourceSet> = mutableSetOf()
+
+    override val defaultSourceSet: KotlinSourceSet
+        get() = target.project.kotlinExtension.sourceSets.getByName(defaultSourceSetName)
+
+    override fun defaultSourceSet(configure: KotlinSourceSet.() -> Unit) =
+        configure(defaultSourceSet)
 
     override val output: KotlinCompilationOutput by lazy {
         DefaultKotlinCompilationOutput(
@@ -101,7 +101,7 @@ abstract class AbstractKotlinCompilation(
                         addExtendsFromRelation(implementationConfigurationName, sourceSet.implementationConfigurationName, forced = false)
                         addExtendsFromRelation(compileOnlyConfigurationName, sourceSet.compileOnlyConfigurationName, forced = false)
 
-                        if (this is KotlinCompilationToRunnableFiles) {
+                        if (this is KotlinCompilationToRunnableFiles<*>) {
                             addExtendsFromRelation(runtimeOnlyConfigurationName, sourceSet.runtimeOnlyConfigurationName, forced = false)
                         }
 
@@ -163,13 +163,13 @@ abstract class AbstractKotlinCompilation(
     override fun toString(): String = "compilation '$compilationName' ($target)"
 }
 
-val KotlinCompilation.allKotlinSourceSets: Set<KotlinSourceSet>
+val KotlinCompilation<*>.allKotlinSourceSets: Set<KotlinSourceSet>
     get() = kotlinSourceSets.flatMapTo(mutableSetOf()) { it.getSourceSetHierarchy() }
 
-abstract class AbstractKotlinCompilationToRunnableFiles(
+abstract class AbstractKotlinCompilationToRunnableFiles<T : KotlinCommonOptions>(
     target: KotlinTarget,
     name: String
-) : AbstractKotlinCompilation(target, name), KotlinCompilationToRunnableFiles {
+) : AbstractKotlinCompilation<T>(target, name), KotlinCompilationToRunnableFiles<T> {
     override val runtimeDependencyConfigurationName: String
         get() = lowerCamelCaseName(
             target.disambiguationClassifier,
@@ -180,7 +180,7 @@ abstract class AbstractKotlinCompilationToRunnableFiles(
     override lateinit var runtimeDependencyFiles: FileCollection
 }
 
-internal fun KotlinCompilation.disambiguateName(simpleName: String): String {
+internal fun KotlinCompilation<*>.disambiguateName(simpleName: String): String {
     return lowerCamelCaseName(
         target.disambiguationClassifier,
         compilationName.takeIf { it != KotlinCompilation.MAIN_COMPILATION_NAME },
@@ -191,15 +191,18 @@ internal fun KotlinCompilation.disambiguateName(simpleName: String): String {
 open class KotlinJvmCompilation(
     target: KotlinTarget,
     name: String
-) : AbstractKotlinCompilationToRunnableFiles(target, name), KotlinCompilationWithResources {
+) : AbstractKotlinCompilationToRunnableFiles<KotlinJvmOptions>(target, name), KotlinCompilationWithResources<KotlinJvmOptions> {
     override val processResourcesTaskName: String
         get() = disambiguateName("processResources")
+
+    override val compileKotlinTask: org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+        get() = super.compileKotlinTask as org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 }
 
-class KotlinWithJavaCompilation(
-    target: KotlinWithJavaTarget,
+class KotlinWithJavaCompilation<KotlinOptionsType : KotlinCommonOptions>(
+    target: KotlinWithJavaTarget<KotlinOptionsType>,
     name: String
-) : AbstractKotlinCompilationToRunnableFiles(target, name), KotlinCompilationWithResources {
+) : AbstractKotlinCompilationToRunnableFiles<KotlinOptionsType>(target, name), KotlinCompilationWithResources<KotlinOptionsType> {
     lateinit var javaSourceSet: SourceSet
 
     override val output: KotlinCompilationOutput by lazy { KotlinWithJavaCompilationOutput(this) }
@@ -252,22 +255,50 @@ class KotlinWithJavaCompilation(
 class KotlinJvmAndroidCompilation(
     target: KotlinAndroidTarget,
     name: String
-) : AbstractKotlinCompilationToRunnableFiles(target, name)
+) : AbstractKotlinCompilationToRunnableFiles<KotlinJvmOptions>(target, name) {
+    override val compileKotlinTask: org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+        get() = super.compileKotlinTask as org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+}
 
 class KotlinJsCompilation(
     target: KotlinTarget,
     name: String
-) : AbstractKotlinCompilationToRunnableFiles(target, name)
+) : AbstractKotlinCompilationToRunnableFiles<KotlinJsOptions>(target, name), KotlinCompilationWithResources<KotlinJsOptions> {
+    override val processResourcesTaskName: String
+        get() = disambiguateName("processResources")
+
+    override val compileKotlinTask: Kotlin2JsCompile
+        get() = super.compileKotlinTask as Kotlin2JsCompile
+}
 
 class KotlinCommonCompilation(
     target: KotlinTarget,
     name: String
-) : AbstractKotlinCompilation(target, name)
+) : AbstractKotlinCompilation<KotlinMultiplatformCommonOptions>(target, name) {
+    override val compileKotlinTask: KotlinCompileCommon
+        get() = super.compileKotlinTask as KotlinCompileCommon
+
+    // TODO once we properly compile metadata for each source set, the default source sets will likely become just the source sets
+    // which are transformed to metadata
+    private val commonSourceSetName = when (compilationName) {
+        KotlinCompilation.MAIN_COMPILATION_NAME -> KotlinSourceSet.COMMON_MAIN_SOURCE_SET_NAME
+        else -> error("Custom metadata compilations are not supported yet")
+    }
+
+    override val defaultSourceSet: KotlinSourceSet
+        get() = target.project.kotlinExtension.sourceSets.getByName(commonSourceSetName)
+}
 
 class KotlinNativeCompilation(
     override val target: KotlinNativeTarget,
     name: String
-) : AbstractKotlinCompilation(target, name), KotlinCompilationWithResources {
+) : AbstractKotlinCompilation<KotlinCommonOptions>(target, name), KotlinCompilationWithResources<KotlinCommonOptions> {
+
+    override val kotlinOptions: KotlinCommonOptions
+        get() = compileKotlinTask.kotlinOptions
+
+    override val compileKotlinTask: KotlinNativeCompile
+        get() = super.compileKotlinTask as KotlinNativeCompile
 
     private val project: Project
         get() = target.project

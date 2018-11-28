@@ -21,7 +21,6 @@ import org.gradle.api.Project
 import java.util.*
 
 open class KaptExtension {
-
     open var generateStubs: Boolean = false
 
     open var inheritedAnnotations: Boolean = true
@@ -33,6 +32,10 @@ open class KaptExtension {
     open var mapDiagnosticLocations: Boolean = false
 
     open var strictMode: Boolean = false
+    
+    open var showProcessorTimings: Boolean = false
+
+    open var detectMemoryLeaks: String = "default"
 
     @Deprecated("Use `annotationProcessor()` and `annotationProcessors()` instead")
     open var processors: String = ""

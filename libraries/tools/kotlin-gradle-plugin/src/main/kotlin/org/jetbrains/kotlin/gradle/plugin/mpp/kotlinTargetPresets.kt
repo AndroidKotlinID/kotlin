@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.compilerRunner.KotlinNativeProjectProperty
 import org.jetbrains.kotlin.compilerRunner.hasProperty
 import org.jetbrains.kotlin.compilerRunner.konanHome
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.applyLanguageSettingsToKotlinTask
@@ -28,7 +29,7 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.io.File
 import java.util.*
 
-abstract class KotlinOnlyTargetPreset<T : KotlinCompilation>(
+abstract class KotlinOnlyTargetPreset<T : KotlinCompilation<*>>(
     protected val project: Project,
     private val instantiator: Instantiator,
     private val fileResolver: FileResolver,
@@ -42,6 +43,7 @@ abstract class KotlinOnlyTargetPreset<T : KotlinCompilation>(
         val result = KotlinOnlyTarget<T>(project, platformType).apply {
             targetName = name
             disambiguationClassifier = name
+            preset = this@KotlinOnlyTargetPreset
 
             val compilationFactory = createCompilationFactory(this)
             compilations = project.container(compilationFactory.itemClass, compilationFactory)
@@ -177,6 +179,7 @@ class KotlinAndroidTargetPreset(
     override fun createTarget(name: String): KotlinAndroidTarget {
         val result = KotlinAndroidTarget(name, project).apply {
             disambiguationClassifier = name
+            preset = this@KotlinAndroidTargetPreset
         }
 
         KotlinAndroidPlugin.applyToTarget(
@@ -195,15 +198,16 @@ class KotlinAndroidTargetPreset(
 class KotlinJvmWithJavaTargetPreset(
     private val project: Project,
     private val kotlinPluginVersion: String
-) : KotlinTargetPreset<KotlinWithJavaTarget> {
+) : KotlinTargetPreset<KotlinWithJavaTarget<KotlinJvmOptions>> {
 
     override fun getName(): String = PRESET_NAME
 
-    override fun createTarget(name: String): KotlinWithJavaTarget {
+    override fun createTarget(name: String): KotlinWithJavaTarget<KotlinJvmOptions> {
         project.plugins.apply(JavaPlugin::class.java)
 
-        val target = KotlinWithJavaTarget(project, KotlinPlatformType.jvm, name).apply {
+        val target = KotlinWithJavaTarget<KotlinJvmOptions>(project, KotlinPlatformType.jvm, name).apply {
             disambiguationClassifier = name
+            preset = this@KotlinJvmWithJavaTargetPreset
         }
 
         AbstractKotlinPlugin.configureTarget(target) { compilation ->
@@ -314,6 +318,7 @@ class KotlinNativeTargetPreset(
         val result = KotlinNativeTarget(project, konanTarget).apply {
             targetName = name
             disambiguationClassifier = name
+            preset = this@KotlinNativeTargetPreset
 
             val compilationFactory = KotlinNativeCompilationFactory(project, this)
             compilations = project.container(compilationFactory.itemClass, compilationFactory)

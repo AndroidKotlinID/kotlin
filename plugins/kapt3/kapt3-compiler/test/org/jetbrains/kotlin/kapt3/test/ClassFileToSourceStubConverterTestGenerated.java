@@ -44,6 +44,11 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("plugins/kapt3/kapt3-compiler/testData/converter"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
     }
 
+    @TestMetadata("annotationWithFqNames.kt")
+    public void testAnnotationWithFqNames() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/annotationWithFqNames.kt");
+    }
+
     @TestMetadata("annotations.kt")
     public void testAnnotations() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/annotations.kt");
@@ -264,6 +269,11 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/kt27126.kt");
     }
 
+    @TestMetadata("lazyProperty.kt")
+    public void testLazyProperty() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/lazyProperty.kt");
+    }
+
     @TestMetadata("leadingDollars.kt")
     public void testLeadingDollars() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/leadingDollars.kt");
@@ -367,6 +377,11 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
     @TestMetadata("strangeNames.kt")
     public void testStrangeNames() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/strangeNames.kt");
+    }
+
+    @TestMetadata("suspendErrorTypes.kt")
+    public void testSuspendErrorTypes() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/suspendErrorTypes.kt");
     }
 
     @TestMetadata("topLevel.kt")
