@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.backend.common.ir.copyTo
+import org.jetbrains.kotlin.backend.common.ir.copyTypeParametersFrom
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
@@ -74,6 +75,7 @@ class InlineClassLowering(val context: BackendContext) {
                                     typeHint = irClass.defaultType.toKotlinType(),
                                     irType = irClass.defaultType
                                 )
+                                thisVar.parent = result
                             }
                         }
 
@@ -85,6 +87,13 @@ class InlineClassLowering(val context: BackendContext) {
 
                             parameterMapping[expression.symbol]?.let { return irGet(it) }
                             return expression
+                        }
+
+                        override fun visitDeclaration(declaration: IrDeclaration): IrStatement {
+                            declaration.transformChildrenVoid(this)
+                            if (declaration.parent == irConstructor)
+                                declaration.parent = result
+                            return declaration
                         }
 
                         override fun visitReturn(expression: IrReturn): IrExpression {
@@ -120,9 +129,7 @@ class InlineClassLowering(val context: BackendContext) {
             function.body!!.transformChildrenVoid(object : IrElementTransformerVoid() {
                 override fun visitDeclaration(declaration: IrDeclaration): IrStatement {
                     declaration.transformChildrenVoid(this)
-
-                    // TODO: Variable parents might not be initialized
-                    if (declaration !is IrVariable && declaration.parent == function)
+                    if (declaration.parent == function)
                         declaration.parent = staticMethod
 
                     return declaration
@@ -227,6 +234,7 @@ class InlineClassLowering(val context: BackendContext) {
 
     private fun createStaticBodilessMethod(function: IrFunction): IrSimpleFunction {
         val descriptor = WrappedSimpleFunctionDescriptor()
+
         return IrFunctionImpl(
             function.startOffset,
             function.endOffset,
@@ -235,18 +243,14 @@ class InlineClassLowering(val context: BackendContext) {
             function.name.toInlineClassImplementationName(),
             function.visibility,
             Modality.FINAL,
+            function.returnType,
             function.isInline,
             function.isExternal,
             (function is IrSimpleFunction && function.isTailrec),
             (function is IrSimpleFunction && function.isSuspend)
         ).apply {
             descriptor.bind(this)
-            returnType = when (function) {
-                is IrSimpleFunction -> function.returnType
-                is IrConstructor -> function.parentAsClass.defaultType
-                else -> error("Unknown function type")
-            }
-            typeParameters += function.typeParameters
+            copyTypeParametersFrom(function)
             annotations += function.annotations
             dispatchReceiverParameter = null
             extensionReceiverParameter = function.extensionReceiverParameter?.copyTo(this)

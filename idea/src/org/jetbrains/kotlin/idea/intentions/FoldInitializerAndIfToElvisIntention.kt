@@ -23,7 +23,9 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
+import org.jetbrains.kotlin.descriptors.VariableDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
+import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.core.setType
 import org.jetbrains.kotlin.idea.inspections.IntentionBasedInspection
@@ -35,9 +37,11 @@ import org.jetbrains.kotlin.psi.psiUtil.PsiChildRange
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.siblings
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
+import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import org.jetbrains.kotlin.types.isError
 import org.jetbrains.kotlin.types.typeUtil.isNothing
+import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
 import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
@@ -142,6 +146,12 @@ class FoldInitializerAndIfToElvisIntention :
             val initializer = prevStatement.initializer ?: return null
             val then = ifExpression.then ?: return null
             val typeReference = (operationExpression as? KtIsExpression)?.typeReference
+
+            if (typeReference != null) {
+                val checkedType = ifExpression.analyze(BodyResolveMode.PARTIAL)[BindingContext.TYPE, typeReference]
+                val variableType = (prevStatement.resolveToDescriptorIfAny() as? VariableDescriptor)?.type
+                if (checkedType != null && variableType != null && !checkedType.isSubtypeOf(variableType)) return null
+            }
 
             val statement = if (then is KtBlockExpression) then.statements.singleOrNull() else then
             statement ?: return null

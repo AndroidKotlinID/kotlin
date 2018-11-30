@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.jvm.lower
 
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
+import org.jetbrains.kotlin.backend.common.makePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
@@ -34,6 +35,11 @@ import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.resolve.calls.components.hasDefaultValue
 import org.jetbrains.kotlin.resolve.jvm.annotations.findJvmOverloadsAnnotation
 
+val JvmOverloadsAnnotationPhase = makePhase(
+    ::JvmOverloadsAnnotationLowering,
+    name = "JvmOverloadsAnnotation",
+    description = "Handle JvmOverloads annotations"
+)
 
 class JvmOverloadsAnnotationLowering(val context: JvmBackendContext) : ClassLoweringPass {
 
@@ -61,17 +67,18 @@ class JvmOverloadsAnnotationLowering(val context: JvmBackendContext) : ClassLowe
             is IrConstructorSymbol -> IrConstructorImpl(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET,
                 JvmLoweredDeclarationOrigin.JVM_OVERLOADS_WRAPPER,
-                wrapperSymbol
+                wrapperSymbol,
+                returnType = target.returnType
             )
             is IrSimpleFunctionSymbol -> IrFunctionImpl(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET,
                 JvmLoweredDeclarationOrigin.JVM_OVERLOADS_WRAPPER,
-                wrapperSymbol
+                wrapperSymbol,
+                returnType = target.returnType
             )
             else -> error("expected IrConstructorSymbol or IrSimpleFunctionSymbol")
         }
 
-        wrapperIrFunction.returnType = target.returnType
         wrapperIrFunction.createParameterDeclarations()
 
         val call = if (target is IrConstructor)

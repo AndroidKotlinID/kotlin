@@ -2007,6 +2007,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/experimental.kt");
             }
 
+            @TestMetadata("explicitScope.kt")
+            public void testExplicitScope() throws Exception {
+                runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/explicitScope.kt");
+            }
+
+            @TestMetadata("globalScope.kt")
+            public void testGlobalScope() throws Exception {
+                runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/globalScope.kt");
+            }
+
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/simple.kt");
@@ -2015,11 +2025,6 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("simplest.kt")
             public void testSimplest() throws Exception {
                 runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/simplest.kt");
-            }
-
-            @TestMetadata("withParent.kt")
-            public void testWithParent() throws Exception {
-                runTest("idea/testData/inspectionsLocal/coroutines/redundantAsync/withParent.kt");
             }
 
             @TestMetadata("withStartAndContext.kt")
@@ -3280,6 +3285,44 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class MapGetWithNotNullAssertionOperator extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInMapGetWithNotNullAssertionOperator() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("get.kt")
+        public void testGet() throws Exception {
+            runTest("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator/get.kt");
+        }
+
+        @TestMetadata("getValue.kt")
+        public void testGetValue() throws Exception {
+            runTest("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator/getValue.kt");
+        }
+
+        @TestMetadata("indexedAccess.kt")
+        public void testIndexedAccess() throws Exception {
+            runTest("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator/indexedAccess.kt");
+        }
+
+        @TestMetadata("list.kt")
+        public void testList() throws Exception {
+            runTest("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator/list.kt");
+        }
+
+        @TestMetadata("noNotNullAssersion.kt")
+        public void testNoNotNullAssersion() throws Exception {
+            runTest("idea/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator/noNotNullAssersion.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/mayBeConstant")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3762,6 +3805,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/nestedLambdaShadowedImplicitParameter/notUseParameter.kt");
         }
 
+        @TestMetadata("notUsedItInParentLambda.kt")
+        public void testNotUsedItInParentLambda() throws Exception {
+            runTest("idea/testData/inspectionsLocal/nestedLambdaShadowedImplicitParameter/notUsedItInParentLambda.kt");
+        }
+
         @TestMetadata("receiver.kt")
         public void testReceiver() throws Exception {
             runTest("idea/testData/inspectionsLocal/nestedLambdaShadowedImplicitParameter/receiver.kt");
@@ -4082,6 +4130,36 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("sameNameMemberVariable.kt")
         public void testSameNameMemberVariable() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameMemberVariable.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberFunction.kt")
+        public void testSameNameSuperMemberFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberFunction.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberFunction2.kt")
+        public void testSameNameSuperMemberFunction2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberFunction2.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberFunction3.kt")
+        public void testSameNameSuperMemberFunction3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberFunction3.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberVariable.kt")
+        public void testSameNameSuperMemberVariable() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberVariable.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberVariable2.kt")
+        public void testSameNameSuperMemberVariable2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberVariable2.kt");
+        }
+
+        @TestMetadata("sameNameSuperMemberVariable3.kt")
+        public void testSameNameSuperMemberVariable3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/sameNameSuperMemberVariable3.kt");
         }
     }
 

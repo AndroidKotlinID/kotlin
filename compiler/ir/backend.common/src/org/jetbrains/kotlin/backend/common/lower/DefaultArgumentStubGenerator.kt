@@ -5,10 +5,7 @@
 
 package org.jetbrains.kotlin.backend.common.lower
 
-import org.jetbrains.kotlin.backend.common.BodyLoweringPass
-import org.jetbrains.kotlin.backend.common.CommonBackendContext
-import org.jetbrains.kotlin.backend.common.DeclarationContainerLoweringPass
-import org.jetbrains.kotlin.backend.common.FunctionLoweringPass
+import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedClassConstructorDescriptor
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedValueParameterDescriptor
@@ -34,10 +31,21 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.defaultType
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.transformDeclarationsFlat
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
+
+fun makeDefaultArgumentStubPhase(skipInlineMethods: Boolean) = object : CompilerPhase<CommonBackendContext, IrFile> {
+    override val name = "DefaultArgumentsStubGenerator"
+    override val description = "Generate synthetic stubs for functions with default parameter values"
+
+    override fun invoke(context: CommonBackendContext, input: IrFile): IrFile {
+        DefaultArgumentStubGenerator(context, skipInlineMethods).lower(input)
+        return input
+    }
+}
 
 // TODO: fix expect/actual default parameters
 
@@ -99,6 +107,7 @@ open class DefaultArgumentStubGenerator constructor(val context: CommonBackendCo
                     }, irInt(0))
 
                     val expressionBody = valueParameter.defaultValue!!
+                    expressionBody.patchDeclarationParents(newIrFunction)
 
                     expressionBody.transformChildrenVoid(object : IrElementTransformerVoid() {
                         override fun visitGetValue(expression: IrGetValue): IrExpression {
@@ -119,6 +128,7 @@ open class DefaultArgumentStubGenerator constructor(val context: CommonBackendCo
                 }
 
                 val temporaryVariable = irTemporary(argument, nameHint = parameter.name.asString())
+                temporaryVariable.parent = newIrFunction
 
                 params.add(temporaryVariable)
                 variables[valueParameter] = temporaryVariable
@@ -422,6 +432,7 @@ private fun buildFunctionDeclaration(irFunction: IrFunction, origin: IrDeclarati
                 IrConstructorSymbolImpl(descriptor),
                 irFunction.name,
                 irFunction.visibility,
+                irFunction.returnType,
                 irFunction.isInline,
                 false,
                 false
@@ -442,6 +453,7 @@ private fun buildFunctionDeclaration(irFunction: IrFunction, origin: IrDeclarati
                 name,
                 irFunction.visibility,
                 Modality.FINAL,
+                irFunction.returnType,
                 irFunction.isInline,
                 false,
                 false,

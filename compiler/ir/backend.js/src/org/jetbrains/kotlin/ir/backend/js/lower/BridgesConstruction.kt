@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.bridges.FunctionHandle
 import org.jetbrains.kotlin.backend.common.bridges.generateBridges
 import org.jetbrains.kotlin.backend.common.ir.copyTo
-import org.jetbrains.kotlin.backend.common.ir.isStatic
+import org.jetbrains.kotlin.backend.common.ir.copyTypeParametersFrom
 import org.jetbrains.kotlin.backend.common.ir.isSuspend
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlockBody
@@ -104,6 +104,8 @@ class BridgesConstruction(val context: JsIrBackendContext) : ClassLoweringPass {
         // TODO: Support offsets for debug info
         val irFunction = JsIrBuilder.buildFunction(
             bridge.name,
+            bridge.returnType,
+            delegateTo.parent,
             bridge.visibility,
             bridge.modality, // TODO: should copy modality?
             bridge.isInline,
@@ -118,11 +120,9 @@ class BridgesConstruction(val context: JsIrBackendContext) : ClassLoweringPass {
                 IrValueParameterImpl(startOffset, endOffset, origin, descriptor, type, varargElementType).also { it.parent = this@apply }
             }
             extensionReceiverParameter = bridge.extensionReceiverParameter?.copyTo(this)
-            typeParameters += bridge.typeParameters
+            copyTypeParametersFrom(bridge)
             valueParameters += bridge.valueParameters.map { p -> p.copyTo(this) }
             annotations += bridge.annotations
-            returnType = bridge.returnType
-            parent = delegateTo.parent
             overriddenSymbols.addAll(delegateTo.overriddenSymbols)
         }
 

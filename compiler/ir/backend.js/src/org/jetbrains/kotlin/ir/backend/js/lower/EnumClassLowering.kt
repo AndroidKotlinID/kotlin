@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import java.util.*
 
@@ -72,10 +73,11 @@ class EnumUsageLowering(val context: JsIrBackendContext) : FileLoweringPass {
 
     private fun lowerEnumEntry(enumEntry: IrEnumEntry, klass: IrClass) =
         context.enumEntryToGetInstanceFunction.getOrPut(enumEntry.symbol) {
-            JsIrBuilder.buildFunction(createEntryAccessorName(klass.name.identifier, enumEntry)).also {
-                it.returnType = enumEntry.getType(klass)
-                it.parent = klass
-            }
+            JsIrBuilder.buildFunction(
+                createEntryAccessorName(klass.name.identifier, enumEntry),
+                returnType = enumEntry.getType(klass),
+                parent = klass
+            )
         }.run { JsIrBuilder.buildCall(symbol) }
 }
 
@@ -331,6 +333,9 @@ class EnumClassTransformer(val context: JsIrBackendContext, private val irClass:
         for ((entry, instanceVar) in enumEntries.zip(entryInstances)) {
             +irSetVar(instanceVar.symbol, entry.initializerExpression!!)
         }
+    }.also {
+        // entry.initializerExpression can have local declarations
+        it.acceptVoid(PatchDeclarationParentsVisitor(irClass))
     }
 
     private fun createEntryInstancesInitializedVar(): IrVariable {
@@ -416,18 +421,20 @@ class EnumClassTransformer(val context: JsIrBackendContext, private val irClass:
             loweredConstructorSymbol,
             enumConstructor.name,
             enumConstructor.visibility,
+            enumConstructor.returnType,
             enumConstructor.isInline,
             enumConstructor.isExternal,
             enumConstructor.isPrimary
         ).apply {
             loweredConstructorDescriptor.bind(this)
             parent = enumClass
-            returnType = enumConstructor.returnType
             valueParameters += JsIrBuilder.buildValueParameter("name", 0, context.irBuiltIns.stringType).also { it.parent = this }
             valueParameters += JsIrBuilder.buildValueParameter("ordinal", 1, context.irBuiltIns.intType).also { it.parent = this }
             copyParameterDeclarationsFrom(enumConstructor)
             body = enumConstructor.body
             loweredEnumConstructors[enumConstructor.symbol] = this
+
+            this.acceptVoid(PatchDeclarationParentsVisitor(enumClass))
         }
     }
 
@@ -442,18 +449,13 @@ class EnumClassTransformer(val context: JsIrBackendContext, private val irClass:
     private fun buildFunction(
         name: String,
         returnType: IrType = context.irBuiltIns.unitType
-    ) = JsIrBuilder.buildFunction(name).also {
-        it.returnType = returnType
-        it.parent = irClass
-    }
+    ) = JsIrBuilder.buildFunction(name, returnType, irClass)
 
     private fun buildFunction(
         name: String,
         returnType: IrType = context.irBuiltIns.unitType,
         bodyBuilder: IrBlockBodyBuilder.() -> Unit
-    ) = JsIrBuilder.buildFunction(name).also {
-        it.returnType = returnType
-        it.parent = irClass
+    ) = JsIrBuilder.buildFunction(name, returnType, irClass).also {
         it.body = context.createIrBuilder(it.symbol).irBlockBody(it, bodyBuilder)
     }
 

@@ -43,9 +43,9 @@ data class CallableReferenceKey(
 
 // TODO: generate $metadata$ property and fill it with corresponding KFunction/KProperty interface
 class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringPass {
-    private val callableNameConst = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KCALLABLE_NAME)
-    private val getterConst = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KPROPERTY_GET)
-    private val setterConst = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KPROPERTY_SET)
+    private val callableNameConst get() = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KCALLABLE_NAME)
+    private val getterConst get() = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KPROPERTY_GET)
+    private val setterConst get() = JsIrBuilder.buildString(context.irBuiltIns.stringType, Namer.KPROPERTY_SET)
     private val callableToFactoryFunction = context.callableReferencesCache
 
     private val newDeclarations = mutableListOf<IrDeclaration>()
@@ -327,13 +327,13 @@ class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringP
             //
             val cacheName = "${factoryFunction.name}_${Namer.KCALLABLE_CACHE_SUFFIX}"
             val type = factoryFunction.returnType
-            val irNull = JsIrBuilder.buildNull(context.irBuiltIns.nothingNType)
-            val cacheVar = JsIrBuilder.buildVar(type, factoryFunction.parent, cacheName, true, initializer = irNull)
+            val irNull = { JsIrBuilder.buildNull(context.irBuiltIns.nothingNType) }
+            val cacheVar = JsIrBuilder.buildVar(type, factoryFunction.parent, cacheName, true, initializer = irNull())
 
-            val irCacheValue = JsIrBuilder.buildGetValue(cacheVar.symbol)
+            val irCacheValue = { JsIrBuilder.buildGetValue(cacheVar.symbol) }
             val irIfCondition = JsIrBuilder.buildCall(context.irBuiltIns.eqeqSymbol).apply {
-                putValueArgument(0, irCacheValue)
-                putValueArgument(1, irNull)
+                putValueArgument(0, irCacheValue())
+                putValueArgument(1, irNull())
             }
             val irSetCache =
                 JsIrBuilder.buildSetVariable(cacheVar.symbol, JsIrBuilder.buildGetValue(varSymbol), context.irBuiltIns.unitType)
@@ -344,7 +344,7 @@ class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringP
             val irThenBranch = JsIrBuilder.buildBlock(context.irBuiltIns.unitType, thenStatements)
             val irIfNode = JsIrBuilder.buildIfElse(context.irBuiltIns.unitType, irIfCondition, irThenBranch)
             statements += irIfNode
-            returnValue = irCacheValue
+            returnValue = irCacheValue()
             returnStatements = listOf(cacheVar)
         } else {
             statements += bodyStatements
@@ -394,7 +394,9 @@ class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringP
 
         callable.dispatchReceiverParameter?.let { dispatch ->
             if (reference.dispatchReceiver == null) {
-                result.add(JsIrBuilder.buildValueParameter(dispatch.name, result.size, dispatch.type.boxIfInlined()).also { it.parent = closure })
+                result.add(JsIrBuilder.buildValueParameter(dispatch.name, result.size, dispatch.type.boxIfInlined()).also {
+                    it.parent = closure
+                })
             } else {
                 // do not add dispatch receiver in result signature if it is bound
                 capturedParams--
@@ -434,10 +436,7 @@ class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringP
 
         val boundValueParameters = receivers + declaration.valueParameters.filter { it.origin == BOUND_VALUE_PARAMETER }
 
-        val factoryDeclaration = JsIrBuilder.buildFunction(getterName, declaration.visibility)
-
-        factoryDeclaration.parent = implicitDeclarationFile
-        factoryDeclaration.returnType = reference.type
+        val factoryDeclaration = JsIrBuilder.buildFunction(getterName, reference.type, implicitDeclarationFile, declaration.visibility)
 
         for ((i, p) in boundValueParameters.withIndex()) {
             val descriptor = WrappedValueParameterDescriptor()
@@ -491,18 +490,22 @@ class CallableReferenceLowering(val context: JsIrBackendContext) : FileLoweringP
         arity: Int
     ): IrFunction {
         val closureName = createClosureInstanceName(declaration)
+        val returnType = declaration.returnType.boxIfInlined()
         val closureFunction =
-            JsIrBuilder.buildFunction(closureName, Visibilities.LOCAL, origin = JsIrBackendContext.callableClosureOrigin)
-                .also { it.parent = factoryFunction }
+            JsIrBuilder.buildFunction(
+                closureName,
+                returnType,
+                factoryFunction,
+                Visibilities.LOCAL,
+                origin = JsIrBackendContext.callableClosureOrigin
+            )
 
         // the params which are passed to closure
         val boundParamSymbols = factoryFunction.valueParameters.map { it.symbol }
         val unboundParamDeclarations = generateSignatureForClosure(declaration, factoryFunction, closureFunction, reference, arity)
         val unboundParamSymbols = unboundParamDeclarations.map { it.symbol }
-        val returnType = declaration.returnType.boxIfInlined()
 
         closureFunction.valueParameters += unboundParamDeclarations
-        closureFunction.returnType = returnType
 
         val callTarget = context.ir.defaultParameterDeclarationsCache[declaration] ?: declaration
 

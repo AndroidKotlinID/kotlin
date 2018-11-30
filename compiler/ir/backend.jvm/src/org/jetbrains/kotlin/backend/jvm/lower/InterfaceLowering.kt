@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.lower.DECLARATION_ORIGIN_FUNCTION_FOR_DEFAULT_PARAMETER
 import org.jetbrains.kotlin.backend.common.lower.InitializersLowering.Companion.clinitName
 import org.jetbrains.kotlin.backend.common.lower.VariableRemapperDesc
+import org.jetbrains.kotlin.backend.common.makePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.descriptors.*
@@ -26,6 +27,12 @@ import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.org.objectweb.asm.Opcodes
+
+val InterfacePhase = makePhase(
+    ::InterfaceLowering,
+    name = "Interface",
+    description = "Move default implementations of interface members to DefaultImpls class"
+)
 
 class InterfaceLowering(val context: JvmBackendContext) : IrElementTransformerVoid(), ClassLoweringPass {
 
@@ -116,11 +123,11 @@ internal fun FunctionDescriptor.createFunctionAndMapVariables(
 ) =
     IrFunctionImpl(
         oldFunction.startOffset, oldFunction.endOffset, origin, IrSimpleFunctionSymbolImpl(this),
-        visibility = visibility
+        visibility = visibility,
+        returnType = oldFunction.returnType
     ).apply {
         parent = parentClass
         body = oldFunction.body
-        returnType = oldFunction.returnType
         createParameterDeclarations(symbolTable)
         // TODO: do we really need descriptor here? This workaround is about copying `dispatchReceiver` descriptor
         val mapping: Map<ValueDescriptor, IrValueParameter> =

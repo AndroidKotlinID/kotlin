@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.ir.backend.js.lower.coroutines
 import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.descriptors.*
 import org.jetbrains.kotlin.backend.common.ir.copyParameterDeclarationsFrom
+import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.backend.common.ir.isSuspend
 import org.jetbrains.kotlin.backend.common.lower.SymbolWithIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
@@ -257,8 +258,9 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 })
             }
         }
-
-        return coroutine.coroutineClass
+        val coroutineClass = coroutine.coroutineClass
+        coroutineClass.patchDeclarationParents(coroutineClass.parent)
+        return coroutineClass
     }
 
     private class BuiltCoroutine(
@@ -440,6 +442,8 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
 
             fun createFakeOverride(irFunction: IrSimpleFunction) = JsIrBuilder.buildFunction(
                 irFunction.name,
+                irFunction.returnType,
+                this,
                 irFunction.visibility,
                 Modality.FINAL,
                 irFunction.isInline,
@@ -448,8 +452,6 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 irFunction.isSuspend,
                 IrDeclarationOrigin.FAKE_OVERRIDE
             ).apply {
-                parent = this@setSuperSymbolsAndAddFakeOverrides
-                returnType = irFunction.returnType
                 overriddenSymbols += irFunction.symbol
                 copyParameterDeclarationsFrom(irFunction)
             }
@@ -498,6 +500,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                     symbol,
                     Name.special("<init>"),
                     irFunction.visibility,
+                    coroutineClass.defaultType,
                     false,
                     false,
                     false
@@ -505,10 +508,11 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
 
                 descriptor.bind(declaration)
                 declaration.parent = coroutineClass
-                declaration.returnType = coroutineClass.defaultType
 
-                declaration.valueParameters += functionParameters.map {
-                    JsIrBuilder.buildValueParameter(it.name, it.index, it.type, it.origin).also { p -> p.parent = declaration }
+                declaration.valueParameters += functionParameters.mapIndexed { index: Int, parameter: IrValueParameter ->
+                    JsIrBuilder.buildValueParameter(parameter.name, index, parameter.type, parameter.origin).also { p ->
+                        p.parent = declaration
+                    }
                 }
                 declaration.valueParameters += JsIrBuilder.buildValueParameter(
                     completion.name,
@@ -567,6 +571,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                         symbol,
                         Name.special("<init>"),
                         irFunction.visibility,
+                        coroutineClass.defaultType,
                         false,
                         false,
                         false
@@ -574,7 +579,6 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
 
                     descriptor.bind(declaration)
                     declaration.parent = coroutineClass
-                    declaration.returnType = coroutineClass.defaultType
 
                     boundParams.mapIndexedTo(declaration.valueParameters) { i, p ->
                         JsIrBuilder.buildValueParameter(p.name, i, p.type, p.origin).also { it.parent = declaration }
@@ -627,6 +631,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                     Name.identifier("create"),
                     Visibilities.PRIVATE,
                     Modality.FINAL,
+                    coroutineClass.defaultType,
                     false,
                     false,
                     false,
@@ -636,7 +641,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 descriptor.bind(declaration)
                 declaration.parent = coroutineClass
                 declaration.returnType = coroutineClass.defaultType
-                declaration.dispatchReceiverParameter = coroutineClassThis
+                declaration.dispatchReceiverParameter = coroutineClassThis.copyTo(declaration)
 
                 unboundArgs.mapIndexedTo(declaration.valueParameters) { i, p ->
                     JsIrBuilder.buildValueParameter(p.name, i, p.type, p.origin).also { it.parent = declaration }
@@ -655,7 +660,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                     declaration.overriddenSymbols += superFunctionDeclaration.symbol
                 }
 
-                val thisReceiver = coroutineClassThis
+                val thisReceiver = declaration.dispatchReceiverParameter!!
                 val irBuilder = context.createIrBuilder(symbol, irFunction.startOffset, irFunction.endOffset)
                 declaration.body = irBuilder.irBlockBody(irFunction.startOffset, irFunction.endOffset) {
                     +irReturn(
@@ -703,6 +708,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                     Name.identifier("invoke"),
                     Visibilities.PRIVATE,
                     Modality.FINAL,
+                    irFunction.returnType,
                     false,
                     false,
                     false,
@@ -712,7 +718,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 descriptor.bind(declaration)
                 declaration.parent = coroutineClass
                 declaration.returnType = irFunction.returnType
-                declaration.dispatchReceiverParameter = coroutineClassThis
+                declaration.dispatchReceiverParameter = coroutineClassThis.copyTo(declaration)
 
                 declaration.overriddenSymbols += suspendFunctionInvokeFunctionDeclaration.symbol
                 declaration.overriddenSymbols += functionInvokeFunctionDeclaration.symbol
@@ -724,7 +730,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 val resultSetter = context.coroutineImplResultSymbol.setter!!
                 val exceptionSetter = context.coroutineImplExceptionProperty.setter!!
 
-                val thisReceiver = coroutineClassThis
+                val thisReceiver = declaration.dispatchReceiverParameter!!
                 val irBuilder = context.createIrBuilder(symbol, irFunction.startOffset, irFunction.endOffset)
                 declaration.body = irBuilder.irBlockBody(irFunction.startOffset, irFunction.endOffset) {
                     val dispatchReceiverCall = irCall(createFunction).apply {
@@ -793,6 +799,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                         doResumeFunction.name,
                         doResumeFunction.visibility,
                         Modality.FINAL,
+                        context.irBuiltIns.anyNType,
                         doResumeFunction.isInline,
                         doResumeFunction.isExternal,
                         doResumeFunction.isTailrec,
@@ -803,12 +810,12 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                     function.overriddenSymbols += doResumeFunction.symbol
                     function.parent = coroutineClass
                     function.returnType = context.irBuiltIns.anyNType
-                    function.dispatchReceiverParameter = coroutineClassThis
+                    function.dispatchReceiverParameter = coroutineClassThis.copyTo(function)
                     doResumeFunction.valueParameters.mapTo(function.valueParameters) {
                         JsIrBuilder.buildValueParameter(it.name, it.index, it.type, it.origin).also { p -> p.parent = function }
                     }
 
-                    val thisReceiver = JsIrBuilder.buildGetValue(coroutineClassThis.symbol)
+                    val thisReceiver = JsIrBuilder.buildGetValue(function.dispatchReceiverParameter!!.symbol)
                     suspendResult = JsIrBuilder.buildVar(
                         context.irBuiltIns.anyNType,
                         function,
@@ -937,7 +944,7 @@ internal class SuspendFunctionsLowering(val context: JsIrBackendContext): FileLo
                 }
             }
 
-            function.transform(LiveLocalsTransformer(localToPropertyMap, JsIrBuilder.buildGetValue(thisReceiver), unit), null)
+            function.transform(LiveLocalsTransformer(localToPropertyMap, { JsIrBuilder.buildGetValue(thisReceiver) } , unit), null)
         }
 
         private fun computeLivenessAtSuspensionPoints(body: IrBody): Map<IrCall, List<IrValueDeclaration>> {

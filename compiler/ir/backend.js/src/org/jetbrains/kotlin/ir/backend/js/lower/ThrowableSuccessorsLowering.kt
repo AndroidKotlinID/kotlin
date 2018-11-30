@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.ir.backend.js.lower
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.atMostOne
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedPropertyDescriptor
+import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
@@ -39,9 +40,9 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
     private val propertySetter = context.intrinsics.jsSetJSField.symbol
     private val eqeqeqSymbol = context.irBuiltIns.eqeqSymbol
 
-    private val messageName = JsIrBuilder.buildString(stringType, "message")
-    private val causeName = JsIrBuilder.buildString(stringType, "cause")
-    private val nameName = JsIrBuilder.buildString(stringType, "name")
+    private val messageName get() = JsIrBuilder.buildString(stringType, "message")
+    private val causeName get() = JsIrBuilder.buildString(stringType, "cause")
+    private val nameName get() = JsIrBuilder.buildString(stringType, "name")
 
     private val throwableClass = context.symbolTable.referenceClass(
         context.getClass(JsIrBackendContext.KOTLIN_PACKAGE_FQN.child(Name.identifier("Throwable")))
@@ -120,15 +121,15 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
         }
 
         private fun extractConstructorParameters(expression: IrFunctionAccessExpression): Pair<IrExpression, IrExpression> {
-            val nullValue = IrConstImpl.constNull(expression.startOffset, expression.endOffset, nothingNType)
+            val nullValue = { IrConstImpl.constNull(expression.startOffset, expression.endOffset, nothingNType) }
             return when {
-                expression.valueArgumentsCount == 0 -> Pair(nullValue, nullValue)
+                expression.valueArgumentsCount == 0 -> Pair(nullValue(), nullValue())
                 expression.valueArgumentsCount == 2 -> expression.run { Pair(getValueArgument(0)!!, getValueArgument(1)!!) }
                 else -> {
                     val arg = expression.getValueArgument(0)!!
                     when {
-                        arg.type.makeNotNull().isThrowable() -> Pair(nullValue, arg)
-                        else -> Pair(arg, nullValue)
+                        arg.type.makeNotNull().isThrowable() -> Pair(nullValue(), arg)
+                        else -> Pair(arg, nullValue())
                     }
                 }
             }
@@ -180,12 +181,10 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
 
         private fun createPropertyAccessor(fakeAccessor: IrSimpleFunction, field: IrField) {
             val name = fakeAccessor.name
-            val function = JsIrBuilder.buildFunction(name).apply {
-                parent = fakeAccessor.parent
+            val function = JsIrBuilder.buildFunction(name, fakeAccessor.returnType, fakeAccessor.parent).apply {
                 overriddenSymbols += fakeAccessor.overriddenSymbols
-                returnType = fakeAccessor.returnType
                 correspondingProperty = fakeAccessor.correspondingProperty
-                dispatchReceiverParameter = fakeAccessor.dispatchReceiverParameter
+                dispatchReceiverParameter = fakeAccessor.dispatchReceiverParameter?.copyTo(this)
             }
 
             val thisReceiver = JsIrBuilder.buildGetValue(function.dispatchReceiverParameter!!.symbol)
@@ -230,7 +229,7 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
             }
 
             val klass = successor.klass
-            val receiver = IrGetValueImpl(expression.startOffset, expression.endOffset, klass.thisReceiver!!.symbol)
+            val receiver = { IrGetValueImpl(expression.startOffset, expression.endOffset, klass.thisReceiver!!.symbol) }
 
             val fillStatements = fillThrowableInstance(expression, receiver, messageArg, causeArg)
 
@@ -241,21 +240,21 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
 
         private fun fillThrowableInstance(
             expression: IrFunctionAccessExpression,
-            receiver: IrExpression,
+            receiver: () -> IrExpression,
             messageArg: IrExpression,
             causeArg: IrExpression
         ): List<IrStatement> {
 
             val setMessage = expression.run {
-                IrSetFieldImpl(startOffset, endOffset, successor.message.symbol, receiver, messageArg, unitType)
+                IrSetFieldImpl(startOffset, endOffset, successor.message.symbol, receiver(), messageArg, unitType)
             }
 
             val setCause = expression.run {
-                IrSetFieldImpl(startOffset, endOffset, successor.cause.symbol, receiver, causeArg, unitType)
+                IrSetFieldImpl(startOffset, endOffset, successor.cause.symbol, receiver(), causeArg, unitType)
             }
 
             val setStackTrace = IrCallImpl(expression.startOffset, expression.endOffset, unitType, captureStackFunction).apply {
-                putValueArgument(0, receiver)
+                putValueArgument(0, receiver())
             }
 
             return listOf(setMessage, setCause, setStackTrace)
@@ -265,10 +264,10 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
             expression: IrFunctionAccessExpression,
             parent: IrDeclarationParent
         ): Triple<IrExpression, IrExpression, List<IrStatement>> {
-            val nullValue = IrConstImpl.constNull(expression.startOffset, expression.endOffset, nothingNType)
+            val nullValue = { IrConstImpl.constNull(expression.startOffset, expression.endOffset, nothingNType) }
             // Wrap parameters into variables to keep original evaluation order
             return when {
-                expression.valueArgumentsCount == 0 -> Triple(nullValue, nullValue, emptyList())
+                expression.valueArgumentsCount == 0 -> Triple(nullValue(), nullValue(), emptyList())
                 expression.valueArgumentsCount == 2 -> {
                     val msg = expression.getValueArgument(0)!!
                     val cus = expression.getValueArgument(1)!!
@@ -277,7 +276,7 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
 
                     val check = JsIrBuilder.buildCall(eqeqeqSymbol, booleanType).apply {
                         putValueArgument(0, JsIrBuilder.buildGetValue(irValM.symbol))
-                        putValueArgument(1, nullValue)
+                        putValueArgument(1, nullValue())
                     }
 
                     val msgElvis = JsIrBuilder.buildIfElse(
@@ -293,7 +292,7 @@ class ThrowableSuccessorsLowering(context: JsIrBackendContext) : FileLoweringPas
                     val argValue = JsIrBuilder.buildGetValue(irVal.symbol)
                     when {
                         arg.type.makeNotNull().isThrowable() -> Triple(safeCallToString(irVal), argValue, listOf(irVal))
-                        else -> Triple(argValue, nullValue, listOf(irVal))
+                        else -> Triple(argValue, nullValue(), listOf(irVal))
                     }
                 }
             }

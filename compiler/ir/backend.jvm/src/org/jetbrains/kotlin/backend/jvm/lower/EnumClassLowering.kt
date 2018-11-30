@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.jvm.lower
 
 import gnu.trove.TObjectIntHashMap
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
+import org.jetbrains.kotlin.backend.common.makePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmPropertyDescriptorImpl
 import org.jetbrains.kotlin.backend.jvm.descriptors.createValueParameter
@@ -31,6 +32,12 @@ import org.jetbrains.kotlin.psi2ir.findSingleFunction
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.org.objectweb.asm.Opcodes
 import java.util.*
+
+val EnumClassPhase = makePhase(
+    ::EnumClassLowering,
+    name = "EnumClass",
+    description = "Handle enum classes"
+)
 
 class EnumClassLowering(val context: JvmBackendContext) : ClassLoweringPass {
     override fun lower(irClass: IrClass) {
@@ -123,10 +130,10 @@ class EnumClassLowering(val context: JvmBackendContext) : ClassLoweringPass {
             return IrConstructorImpl(
                 enumConstructor.startOffset, enumConstructor.endOffset, enumConstructor.origin,
                 loweredConstructorDescriptor,
+                loweredConstructorDescriptor.returnType.toIrType()!!,
                 enumConstructor.body!! // will be transformed later
             ).apply {
                 parent = enumClass
-                returnType = loweredConstructorDescriptor.returnType.toIrType()!!
                 createParameterDeclarations()
                 loweredEnumConstructors[constructorDescriptor] = this
                 constructorDescriptor.valueParameters.forEach {

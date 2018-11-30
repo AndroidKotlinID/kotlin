@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.common.lower
 
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
+import org.jetbrains.kotlin.backend.common.CompilerPhase
 import org.jetbrains.kotlin.backend.common.ir.SetDeclarationsParentVisitor
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.Modality
@@ -18,16 +19,31 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.IrBlock
+import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrInstanceInitializerCall
+import org.jetbrains.kotlin.ir.expressions.IrStatementOriginImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
+
+fun makeInitializersPhase(declarationOrigin: IrDeclarationOrigin, clinitNeeded: Boolean) = object :
+    CompilerPhase<CommonBackendContext, IrFile> {
+    override val name = "Initializers"
+    override val description = "Handle initializer statements"
+
+    override fun invoke(context: CommonBackendContext, input: IrFile): IrFile {
+        InitializersLowering(context, declarationOrigin, clinitNeeded).lower(input)
+        return input
+    }
+}
 
 object SYNTHESIZED_INIT_BLOCK: IrStatementOriginImpl("SYNTHESIZED_INIT_BLOCK")
 
@@ -43,6 +59,7 @@ class InitializersLowering(
         val staticInitializerStatements = handleStatics(irClass)
         if (clinitNeeded && staticInitializerStatements.isNotEmpty())
             createStaticInitializationMethod(irClass, staticInitializerStatements)
+        irClass.patchDeclarationParents(irClass.parent)
     }
 
     fun handleNonStatics(irClass: IrClass) =
@@ -125,10 +142,10 @@ class InitializersLowering(
             IrFunctionImpl(
                 irClass.startOffset, irClass.endOffset, declarationOrigin,
                 staticInitializerDescriptor,
+                context.irBuiltIns.unitType,
                 IrBlockBodyImpl(irClass.startOffset, irClass.endOffset,
                                 staticInitializerStatements.map { it.copy(irClass) })
             ).apply {
-                returnType = context.irBuiltIns.unitType
                 accept(SetDeclarationsParentVisitor, this)
             }
         )

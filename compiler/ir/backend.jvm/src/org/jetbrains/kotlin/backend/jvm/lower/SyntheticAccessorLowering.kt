@@ -5,10 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.lower
 
-import org.jetbrains.kotlin.backend.common.FileLoweringPass
-import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
-import org.jetbrains.kotlin.backend.common.IrElementVisitorVoidWithContext
-import org.jetbrains.kotlin.backend.common.ScopeWithIr
+import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedClassConstructorDescriptor
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.backend.common.descriptors.WrappedValueParameterDescriptor
@@ -31,6 +28,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrConstructorSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
+import org.jetbrains.kotlin.ir.types.impl.IrUninitializedType
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
@@ -38,6 +36,13 @@ import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorUtils
+
+val SyntheticAccessorPhase = makePhase(
+    ::SyntheticAccessorLowering,
+    name = "SyntheticAccessor",
+    description = "Introduce synthetic accessors",
+    prerequisite = setOf(ObjectClassPhase)
+)
 
 class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTransformerVoidWithContext(), FileLoweringPass {
     private val pendingTransformations = mutableListOf<Function0<Unit>>()
@@ -100,6 +105,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
             IrConstructorSymbolImpl(accessorDescriptor),
             name,
             Visibilities.PUBLIC,
+            IrUninitializedType,
             isInline = false,
             isExternal = false,
             isPrimary = false
@@ -155,6 +161,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
             source.descriptor.accessorName(),
             Visibilities.PUBLIC,
             Modality.FINAL,
+            IrUninitializedType,
             isInline = false,
             isExternal = false,
             isTailrec = false,
@@ -194,6 +201,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
             fieldSymbol.descriptor.accessorNameForGetter(),
             Visibilities.PUBLIC,
             Modality.FINAL,
+            fieldSymbol.owner.type,
             isInline = false,
             isExternal = false,
             isTailrec = false,
@@ -223,7 +231,6 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                 )
             }
 
-            accessor.returnType = fieldSymbol.owner.type
             accessor.body = createAccessorBodyForGetter(fieldSymbol.owner, accessor)
         }.symbol
     }
@@ -253,6 +260,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
             fieldSymbol.descriptor.accessorNameForSetter(),
             Visibilities.PUBLIC,
             Modality.FINAL,
+            returnType = context.irBuiltIns.unitType,
             isInline = false,
             isExternal = false,
             isTailrec = false,
@@ -299,7 +307,6 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                 }
             )
 
-            accessor.returnType = context.irBuiltIns.unitType
             accessor.body = createAccessorBodyForSetter(fieldSymbol.owner, accessor)
         }.symbol
     }
