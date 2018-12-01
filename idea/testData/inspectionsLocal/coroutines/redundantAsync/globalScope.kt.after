@@ -3,7 +3,5 @@
 package kotlinx.coroutines
 
 suspend fun test(ctx: CoroutineContext) {
-    coroutineScope {
-        withContext(ctx, CoroutineStart.LAZY) { 42 }
-    }
+    withContext(ctx) { 42 }
 }

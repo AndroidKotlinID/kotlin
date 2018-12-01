@@ -33,7 +33,6 @@ fun <T> CoroutineScope.async(
 
 suspend fun <T> withContext(
     context: CoroutineContext,
-    start: CoroutineStart = CoroutineStart.DEFAULT,
     block: suspend CoroutineScope.() -> T
 ) {
     TODO()
@@ -41,4 +40,7 @@ suspend fun <T> withContext(
 
 suspend fun <R> coroutineScope(block: suspend CoroutineScope.() -> R): R = GlobalScope.block()
 
+operator fun CoroutineContext.plus(other: CoroutineContext): CoroutineContext {
+    TODO()
+}
 
