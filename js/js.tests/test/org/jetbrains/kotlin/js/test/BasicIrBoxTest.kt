@@ -135,6 +135,16 @@ abstract class BasicIrBoxTest(
             // TODO: split input files to some parts (global common, local common, test)
             .filterNot { it.virtualFilePath.contains(BasicBoxTest.COMMON_FILES_DIR_PATH) }
 
+//        config.configuration.put(CommonConfigurationKeys.EXCLUDED_ELEMENTS_FROM_DUMPING, setOf("<JS_IR_RUNTIME>"))
+        config.configuration.put(
+            CommonConfigurationKeys.PHASES_TO_VALIDATE_AFTER,
+            setOf(
+                "RemoveInlineFunctionsWithReifiedTypeParametersLowering",
+                "InnerClassConstructorCallsLowering",
+                "InlineClassLowering", "ConstLowering"
+            )
+        )
+
         val runtimeConfiguration = config.configuration.copy()
 
         // TODO: is it right in general? Maybe sometimes we need to compile with newer versions or with additional language features.
@@ -151,6 +161,7 @@ abstract class BasicIrBoxTest(
         )
 
         if (runtimeResult == null) {
+            runtimeConfiguration.put(CommonConfigurationKeys.MODULE_NAME, "JS_IR_RUNTIME")
             runtimeResult = compile(config.project, runtimeSources.map(::createPsiFile), runtimeConfiguration)
             runtimeFile.write(runtimeResult!!.generatedCode)
         }
@@ -158,6 +169,11 @@ abstract class BasicIrBoxTest(
         val dependencyNames = config.configuration[JSConfigurationKeys.LIBRARIES]!!.map { File(it).name }
         val dependencies = listOf(runtimeResult!!.moduleDescriptor) + dependencyNames.mapNotNull { compilationCache[it]?.moduleDescriptor }
         val irDependencies = listOf(runtimeResult!!.moduleFragment) + compilationCache.values.map { it.moduleFragment }
+
+//        config.configuration.put(CommonConfigurationKeys.PHASES_TO_DUMP_STATE, setOf("UnitMaterializationLowering"))
+//        config.configuration.put(CommonConfigurationKeys.PHASES_TO_DUMP_STATE_BEFORE, setOf("ReturnableBlockLowering"))
+//        config.configuration.put(CommonConfigurationKeys.PHASES_TO_DUMP_STATE_AFTER, setOf("MultipleCatchesLowering"))
+//        config.configuration.put(CommonConfigurationKeys.PHASES_TO_VALIDATE, setOf("ALL"))
 
         val result = compile(
             config.project,
