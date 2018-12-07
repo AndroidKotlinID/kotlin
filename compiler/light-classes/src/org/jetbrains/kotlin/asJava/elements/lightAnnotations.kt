@@ -24,7 +24,6 @@ import org.jetbrains.annotations.NotNull
 import org.jetbrains.annotations.Nullable
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.asJava.LightClassGenerationSupport
-import org.jetbrains.kotlin.asJava.classes.KtUltraLightParameter
 import org.jetbrains.kotlin.asJava.classes.cannotModify
 import org.jetbrains.kotlin.asJava.classes.lazyPub
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
@@ -44,7 +43,6 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getType
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedValueArgument
 import org.jetbrains.kotlin.resolve.descriptorUtil.declaresOrInheritsDefaultValue
-import org.jetbrains.kotlin.resolve.jvm.annotations.findJvmOverloadsAnnotation
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.TypeUtils
@@ -234,7 +232,7 @@ class KtLightEmptyAnnotationParameterList(parent: PsiElement) : KtLightElementBa
     override fun getAttributes(): Array<PsiNameValuePair> = emptyArray()
 }
 
-class KtLightNullabilityAnnotation(val member: KtLightElement<*, PsiModifierListOwner>, parent: PsiElement) :
+open class KtLightNullabilityAnnotation<D : KtLightElement<*, PsiModifierListOwner>>(val member: D, parent: PsiElement) :
     KtLightAbstractAnnotation(parent, {
     // searching for last because nullability annotations are generated after backend generates source annotations
         getClsNullabilityAnnotation(member) ?: KtLightNonExistentAnnotation(member)
@@ -260,7 +258,6 @@ class KtLightNullabilityAnnotation(val member: KtLightElement<*, PsiModifierList
 
         if (annotatedElement is KtParameter) {
             if (annotatedElement.containingClassOrObject?.isAnnotation() == true) return null
-            if (isNullableInJvmOverloads(annotatedElement)) return Nullable::class.java.name
         }
 
         // don't annotate property setters
@@ -289,20 +286,9 @@ class KtLightNullabilityAnnotation(val member: KtLightElement<*, PsiModifierList
         }
     }
 
-    private fun isNullableInJvmOverloads(annotatedElement: KtParameter): Boolean {
-        if (annotatedElement.ownerFunction?.let { it.analyze()[BindingContext.DECLARATION_TO_DESCRIPTOR, it]?.findJvmOverloadsAnnotation() } == null) return false
-        val lightParameterList = (member as? PsiParameter)?.parent as? PsiParameterList ?: return false
-        val lastParameter = (lightParameterList.parameters.lastOrNull() as? KtLightElement<*, *>)?.kotlinOrigin
-        return lastParameter == annotatedElement
-    }
-
     internal fun KtTypeReference.getType(): KotlinType? = analyze()[BindingContext.TYPE, this]
 
     private fun getTargetType(annotatedElement: PsiElement): KotlinType? {
-        if (member is KtUltraLightParameter) {
-            return member.getTypeForNullability()
-        }
-
         if (annotatedElement is KtTypeReference) {
             annotatedElement.getType()?.let { return it }
         }

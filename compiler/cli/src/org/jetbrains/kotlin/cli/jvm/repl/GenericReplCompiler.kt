@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.cli.jvm.repl
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import org.jetbrains.kotlin.builtins.isFunctionType
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.repl.*
@@ -27,12 +28,8 @@ import org.jetbrains.kotlin.codegen.CompilationErrorHandler
 import org.jetbrains.kotlin.codegen.KotlinCodegenFacade
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.psi.KtBlockExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtScript
-import org.jetbrains.kotlin.psi.KtScriptInitializer
-import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
+import org.jetbrains.kotlin.resolve.lazy.descriptors.LazyScriptDescriptor
 import org.jetbrains.kotlin.script.KotlinScriptDefinition
 import org.jetbrains.kotlin.script.ScriptDependenciesProvider
 import java.io.File
@@ -92,6 +89,8 @@ open class GenericReplCompiler(
                 else -> error("Unexpected result ${analysisResult::class.java}")
             }
 
+            val type = (scriptDescriptor as LazyScriptDescriptor).resultValue?.returnType
+
             val generationState = GenerationState.Builder(
                 psiFile.project,
                 ClassBuilderFactories.BINARIES,
@@ -100,7 +99,9 @@ open class GenericReplCompiler(
                 listOf(psiFile),
                 compilerConfiguration
             ).build()
-            generationState.replSpecific.scriptResultFieldName = SCRIPT_RESULT_FIELD_NAME
+
+            generationState.replSpecific.resultType = type
+            generationState.replSpecific.scriptResultFieldName = scriptResultFieldName(codeLine.no)
             generationState.replSpecific.earlierScriptsForReplInterpreter = compilerState.history.map { it.item }
             generationState.beforeCompile()
             KotlinCodegenFacade.generatePackage(
@@ -113,23 +114,19 @@ open class GenericReplCompiler(
             val generatedClassname = makeScriptBaseName(codeLine)
             compilerState.history.push(LineId(codeLine), scriptDescriptor)
 
-            val expression = psiFile.getChildOfType<KtScript>()?.getChildOfType<KtBlockExpression>()?.getChildOfType<KtScriptInitializer>()
-                ?.getChildOfType<KtExpression>()
-
-            val type = expression?.let {
-                compilerState.analyzerEngine.trace.bindingContext.getType(it)
-            }?.let {
-                DescriptorRenderer.FQ_NAMES_IN_TYPES.renderType(it)
-            }
+            val classes = generationState.factory.asList().map { CompiledClassData(it.relativePath, it.asByteArray()) }
 
             return ReplCompileResult.CompiledClasses(
                 LineId(codeLine),
                 compilerState.history.map { it.id },
                 generatedClassname,
-                generationState.factory.asList().map { CompiledClassData(it.relativePath, it.asByteArray()) },
+                classes,
                 generationState.replSpecific.hasResult,
                 classpathAddendum ?: emptyList(),
-                type
+                generationState.replSpecific.resultType?.let {
+                    DescriptorRenderer.FQ_NAMES_IN_TYPES.renderType(it)
+                },
+                type?.isFunctionType ?: false
             )
         }
     }

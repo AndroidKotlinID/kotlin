@@ -22,13 +22,11 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.psi.KtEnumEntry
-import org.jetbrains.kotlin.psi.KtNamedDeclaration
-import org.jetbrains.kotlin.psi.KtObjectDeclaration
-import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.jvm.annotations.TRANSIENT_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.VOLATILE_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOriginKind
+import org.jetbrains.kotlin.types.KotlinType
 
 internal open class KtUltraLightField(
     protected val declaration: KtNamedDeclaration,
@@ -36,7 +34,8 @@ internal open class KtUltraLightField(
     private val containingClass: KtUltraLightClass,
     private val support: UltraLightSupport,
     modifiers: Set<String>
-) : LightFieldBuilder(name, PsiType.NULL, declaration), KtLightField {
+) : LightFieldBuilder(name, PsiType.NULL, declaration), KtLightField,
+    KtUltraLightElementWithNullabilityAnnotation<KtDeclaration, PsiField> {
     private val modList = object : KtLightSimpleModifierList(this, modifiers) {
         override fun hasModifierProperty(name: String): Boolean = when (name) {
             PsiModifier.VOLATILE -> hasFieldAnnotation(VOLATILE_ANNOTATION_FQ_NAME)
@@ -60,13 +59,11 @@ internal open class KtUltraLightField(
 
     override fun getLanguage(): Language = KotlinLanguage.INSTANCE
 
-    private val _type: PsiType by lazyPub {
-        fun nonExistent() = JavaPsiFacade.getElementFactory(project).createTypeFromText("error.NonExistentClass", declaration)
+    private val propertyDescriptor: PropertyDescriptor? by lazyPub {
+        declaration.resolve() as? PropertyDescriptor
+    }
 
-        val propertyDescriptor: PropertyDescriptor? by lazyPub {
-            declaration.resolve() as? PropertyDescriptor
-        }
-
+    private val kotlinType: KotlinType? by lazyPub {
         when {
             declaration is KtProperty && declaration.hasDelegate() ->
                 propertyDescriptor
@@ -74,17 +71,32 @@ internal open class KtUltraLightField(
                         val context = LightClassGenerationSupport.getInstance(project).analyze(declaration)
                         PropertyCodegen.getDelegateTypeForProperty(declaration, it, context)
                     }
-                    ?.let { it.asPsiType(support, TypeMappingMode.getOptimalModeForValueParameter(it), this) }
+            declaration is KtObjectDeclaration ->
+                (declaration.resolve() as? ClassDescriptor)?.defaultType
+            declaration is KtEnumEntry -> {
+                (containingClass.kotlinOrigin.resolve() as? ClassDescriptor)?.defaultType
+            }
+            else -> {
+                declaration.getKotlinType()
+            }
+        }
+    }
+
+    override val kotlinTypeForNullabilityAnnotation: KotlinType?
+        // We don't generate nullability annotations for non-backing fields in backend
+        get() = kotlinType?.takeUnless { declaration is KtEnumEntry || declaration is KtObjectDeclaration }
+
+    override val psiTypeForNullabilityAnnotation: PsiType?
+        get() = type
+
+    private val _type: PsiType by lazyPub {
+        fun nonExistent() = JavaPsiFacade.getElementFactory(project).createTypeFromText("error.NonExistentClass", declaration)
+
+        when {
+            (declaration is KtProperty && declaration.hasDelegate()) || declaration is KtEnumEntry || declaration is KtObjectDeclaration ->
+                kotlinType?.asPsiType(support, TypeMappingMode.DEFAULT, this)
                     ?.let(TypeConversionUtil::erasure)
                     ?: nonExistent()
-            declaration is KtObjectDeclaration ->
-                KtLightClassForSourceDeclaration.create(declaration)?.let { JavaPsiFacade.getElementFactory(project).createType(it) }
-                    ?: nonExistent()
-            declaration is KtEnumEntry -> {
-                (containingClass.kotlinOrigin.resolve() as? ClassDescriptor)
-                    ?.defaultType?.asPsiType(support, TypeMappingMode.DEFAULT, this)
-                    ?: nonExistent()
-            }
             else -> {
                 val kotlinType = declaration.getKotlinType() ?: return@lazyPub PsiType.NULL
                 val descriptor = propertyDescriptor ?: return@lazyPub PsiType.NULL

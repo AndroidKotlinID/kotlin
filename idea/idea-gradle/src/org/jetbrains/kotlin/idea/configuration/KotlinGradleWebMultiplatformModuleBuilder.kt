@@ -109,6 +109,9 @@ class KotlinGradleWebMultiplatformModuleBuilder : KotlinGradleAbstractMultiplatf
                         routing {
                             get("/") {
                                 call.respondHtml {
+                                    head {
+                                        title("Hello from Ktor!")
+                                    }
                                     body {
                                         +"${"$"}{hello()} from Ktor. Check me value: ${"$"}{Sample().checkMe()}"
                                         div {
@@ -229,7 +232,7 @@ class KotlinGradleWebMultiplatformModuleBuilder : KotlinGradleAbstractMultiplatf
 
     override fun buildMultiPlatformPart(): String {
         return """
-            def ktor_version = '1.0.0-beta-1'
+            def ktor_version = '1.0.1'
             def logback_version = '1.2.3'
 
             kotlin {

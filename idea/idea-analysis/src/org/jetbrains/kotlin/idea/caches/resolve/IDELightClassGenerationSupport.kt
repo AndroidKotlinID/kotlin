@@ -50,10 +50,12 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.getAllSuperClassifiers
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import org.jetbrains.kotlin.resolve.lazy.NoDescriptorForDeclarationException
+import org.jetbrains.kotlin.resolve.source.getPsi
 import java.util.concurrent.ConcurrentMap
 
 class IDELightClassGenerationSupport(private val project: Project) : LightClassGenerationSupport() {
@@ -101,7 +103,27 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
                         return Pair(entry, descriptor)
                     }
                 }
+
+                if (owner is KtPropertyAccessor) {
+                    // We might have from the beginning just resolve the descriptor of the accessor
+                    // But we trying to avoid analysis in case property doesn't have any relevant annotations at all
+                    // (in case of `findAnnotation` returns null)
+                    if (findAnnotation(owner.property, fqName) == null) return null
+
+                    val accessorDescriptor = owner.resolveToDescriptorIfAny() ?: return null
+
+                    // Just reuse the logic of use-site targeted annotation from the compiler
+                    val annotationDescriptor = accessorDescriptor.annotations.findAnnotation(fqName) ?: return null
+                    val entry = annotationDescriptor.source.getPsi() as? KtAnnotationEntry ?: return null
+
+                    return entry to annotationDescriptor
+                }
+
                 return null
+            }
+
+            override val deprecationResolver: DeprecationResolver by lazyPub {
+                element.getResolutionFacade().getFrontendService(DeprecationResolver::class.java)
             }
         })
     }
@@ -110,7 +132,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
         if (declaration.hasExpectModifier() ||
             declaration.hasModifier(KtTokens.ANNOTATION_KEYWORD) ||
             declaration.hasModifier(KtTokens.INLINE_KEYWORD) && declaration is KtClassOrObject ||
-            declaration.hasModifier(KtTokens.DATA_KEYWORD) ||
             declaration.hasModifier(KtTokens.SUSPEND_KEYWORD)
         ) {
             return declaration
@@ -118,8 +139,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
 
 
         if (declaration is KtClassOrObject) {
-            declaration.superTypeListEntries.find { it is KtDelegatedSuperTypeEntry }?.let { return it }
-
             declaration.primaryConstructor?.let { findTooComplexDeclaration(it) }?.let { return it }
 
             for (d in declaration.declarations) {

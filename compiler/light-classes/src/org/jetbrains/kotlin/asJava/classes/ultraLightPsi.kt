@@ -15,10 +15,14 @@ import com.intellij.psi.impl.light.LightParameterListBuilder
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.asJava.LightClassGenerationSupport
 import org.jetbrains.kotlin.asJava.builder.LightClassData
+import org.jetbrains.kotlin.asJava.elements.KtLightDeclaration
 import org.jetbrains.kotlin.asJava.elements.KtLightField
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
+import org.jetbrains.kotlin.backend.common.CodegenUtil
+import org.jetbrains.kotlin.backend.common.DataClassMethodGenerator
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.codegen.JvmCodegenUtil
+import org.jetbrains.kotlin.codegen.kotlinType
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotated
@@ -31,10 +35,13 @@ import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClass
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.DelegationResolver
+import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.annotations.JVM_STATIC_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.annotations.argumentValue
 import org.jetbrains.kotlin.resolve.constants.EnumValue
+import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
 import org.jetbrains.kotlin.resolve.descriptorUtil.isPublishedApi
 import org.jetbrains.kotlin.resolve.inline.isInlineOnly
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_OVERLOADS_FQ_NAME
@@ -287,7 +294,68 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
                 }
             }
         }
+
+        addMethodsFromDataClass(result)
+        addDelegatesToInterfaceMethods(result)
+
         result
+    }
+
+    private fun addMethodsFromDataClass(result: MutableList<KtLightMethod>) {
+        if (!classOrObject.hasModifier(DATA_KEYWORD)) return
+        val descriptor = classOrObject.resolve() as? ClassDescriptor ?: return
+        val bindingContext = classOrObject.analyze()
+
+        // Force resolving data class members set
+        descriptor.unsubstitutedMemberScope.getContributedDescriptors()
+
+        object : DataClassMethodGenerator(classOrObject, bindingContext) {
+            private fun addFunction(descriptor: FunctionDescriptor, declarationForOrigin: KtDeclaration? = null) {
+                result.add(createGeneratedMethodFromDescriptor(descriptor, declarationForOrigin))
+            }
+
+            override fun generateComponentFunction(function: FunctionDescriptor, parameter: ValueParameterDescriptor) {
+                addFunction(function, DescriptorToSourceUtils.descriptorToDeclaration(parameter) as? KtDeclaration)
+            }
+
+            override fun generateCopyFunction(function: FunctionDescriptor, constructorParameters: List<KtParameter>) {
+                addFunction(function)
+            }
+
+            override fun generateToStringMethod(function: FunctionDescriptor, properties: List<PropertyDescriptor>) {
+                addFunction(function)
+            }
+
+            override fun generateHashCodeMethod(function: FunctionDescriptor, properties: List<PropertyDescriptor>) {
+                addFunction(function)
+            }
+
+            override fun generateEqualsMethod(function: FunctionDescriptor, properties: List<PropertyDescriptor>) {
+                addFunction(function)
+            }
+        }.generate()
+    }
+
+    private fun addDelegatesToInterfaceMethods(result: MutableList<KtLightMethod>) {
+        classOrObject.superTypeListEntries.filterIsInstance<KtDelegatedSuperTypeEntry>().forEach {
+            addDelegatesToInterfaceMethods(it, result)
+        }
+    }
+
+    private fun addDelegatesToInterfaceMethods(superTypeEntry: KtDelegatedSuperTypeEntry, result: MutableList<KtLightMethod>) {
+        val classDescriptor = classOrObject.resolve() as? ClassDescriptor ?: return
+        val typeReference = superTypeEntry.typeReference ?: return
+        val bindingContext = typeReference.analyze()
+
+        val superClassDescriptor = CodegenUtil.getSuperClassBySuperTypeListEntry(superTypeEntry, bindingContext) ?: return
+        val delegationType = superTypeEntry.delegateExpression.kotlinType(bindingContext) ?: return
+
+        for (delegate in DelegationResolver.getDelegates(classDescriptor, superClassDescriptor, delegationType).keys) {
+            when (delegate) {
+                is PropertyDescriptor -> delegate.accessors.mapTo(result, this::createGeneratedMethodFromDescriptor)
+                is FunctionDescriptor -> result.add(createGeneratedMethodFromDescriptor(delegate))
+            }
+        }
     }
 
     private fun createConstructors(): List<KtLightMethod> {
@@ -330,12 +398,13 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
         else -> PsiModifier.PUBLIC
     }
 
-    private fun noArgConstructor(visibility: String, declaration: KtDeclaration): KtUltraLightMethod = KtUltraLightMethod(
-        LightMethodBuilder(manager, language, name.orEmpty()).setConstructor(true).addModifier(visibility),
-        declaration,
-        support,
-        this
-    )
+    private fun noArgConstructor(visibility: String, declaration: KtDeclaration): KtUltraLightMethod =
+        KtUltraLightMethodForSourceDeclaration(
+            LightMethodBuilder(manager, language, name.orEmpty()).setConstructor(true).addModifier(visibility),
+            declaration,
+            support,
+            this
+        )
 
     private fun isHiddenByDeprecation(declaration: KtDeclaration): Boolean {
         val deprecated = support.findAnnotation(declaration, FqName("kotlin.Deprecated"))?.second
@@ -376,7 +445,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
             else computeMethodName(ktFunction, ktFunction.name ?: SpecialNames.NO_NAME_PROVIDED.asString())
 
         val method = lightMethod(name.orEmpty(), ktFunction, forceStatic, forcePrivate)
-        val wrapper = KtUltraLightMethod(method, ktFunction, support, this)
+        val wrapper = KtUltraLightMethodForSourceDeclaration(method, ktFunction, support, this)
         addReceiverParameter(ktFunction, wrapper)
 
 
@@ -384,7 +453,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
             if (numberOfDefaultParametersToAdd >= 0)
                 numberOfDefaultParametersToAdd
             else
-                // Just to avoid computing the actual number of default parameters, we use an upper bound
+            // Just to avoid computing the actual number of default parameters, we use an upper bound
                 ktFunction.valueParameters.size
 
         for (parameter in ktFunction.valueParameters) {
@@ -393,7 +462,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
                 remainingNumberOfDefaultParametersToAdd--
             }
 
-            method.addParameter(KtUltraLightParameter(parameter.name.orEmpty(), parameter, support, wrapper, null, ktFunction))
+            method.addParameter(KtUltraLightParameterForSource(parameter.name.orEmpty(), parameter, support, wrapper, ktFunction))
         }
         val returnType: PsiType? by lazyPub {
             if (isConstructor) null
@@ -405,7 +474,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
 
     private fun addReceiverParameter(callable: KtCallableDeclaration, method: KtUltraLightMethod) {
         val receiver = callable.receiverTypeReference ?: return
-        method.delegate.addParameter(KtUltraLightParameter("\$self", callable, support, method, receiver, callable))
+        method.delegate.addParameter(KtUltraLightReceiverParameter(callable, support, method))
     }
 
     private fun methodReturnType(ktDeclaration: KtDeclaration, wrapper: KtUltraLightMethod): PsiType {
@@ -546,7 +615,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
         if (needsAccessor(ktGetter)) {
             val getterName = computeMethodName(ktGetter ?: declaration, JvmAbi.getterName(propertyName))
             val getterPrototype = lightMethod(getterName, ktGetter ?: declaration, onlyJvmStatic)
-            val getterWrapper = KtUltraLightMethod(getterPrototype, declaration, support, this)
+            val getterWrapper = KtUltraLightMethodForSourceDeclaration(getterPrototype, declaration, support, this)
             val getterType: PsiType by lazyPub { methodReturnType(declaration, getterWrapper) }
             getterPrototype.setMethodReturnType { getterType }
             addReceiverParameter(declaration, getterWrapper)
@@ -557,11 +626,14 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
             val setterName = computeMethodName(ktSetter ?: declaration, JvmAbi.setterName(propertyName))
             val setterPrototype = lightMethod(setterName, ktSetter ?: declaration, onlyJvmStatic)
                 .setMethodReturnType(PsiType.VOID)
-            val setterWrapper = KtUltraLightMethod(setterPrototype, declaration, support, this)
+            val setterWrapper = KtUltraLightMethodForSourceDeclaration(setterPrototype, declaration, support, this)
             addReceiverParameter(declaration, setterWrapper)
-            val parameterOrigin = ktSetter?.parameter ?: declaration
+            val setterParameter = ktSetter?.parameter
             setterPrototype.addParameter(
-                KtUltraLightParameter(propertyName, parameterOrigin, support, setterWrapper, null, declaration)
+                if (setterParameter != null)
+                    KtUltraLightParameterForSource(propertyName, setterParameter, support, setterWrapper, declaration)
+                else
+                    KtUltraLightParameterForSetterParameter(propertyName, declaration, support, setterWrapper, declaration)
             )
             result.add(setterWrapper)
         }
@@ -596,4 +668,11 @@ interface UltraLightSupport {
     val moduleName: String
     fun findAnnotation(owner: KtAnnotated, fqName: FqName): Pair<KtAnnotationEntry, AnnotationDescriptor>?
     fun isTooComplexForUltraLightGeneration(element: KtClassOrObject): Boolean
+    val deprecationResolver: DeprecationResolver
+}
+
+interface KtUltraLightElementWithNullabilityAnnotation<out T : KtDeclaration, out D : PsiModifierListOwner> : KtLightDeclaration<T, D>,
+    PsiModifierListOwner {
+    val kotlinTypeForNullabilityAnnotation: KotlinType?
+    val psiTypeForNullabilityAnnotation: PsiType?
 }
