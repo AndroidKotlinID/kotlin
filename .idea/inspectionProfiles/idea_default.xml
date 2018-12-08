@@ -113,6 +113,8 @@
           <Problem reference="com.intellij.execution.configurations.LocatableConfigurationBase" reason="Generalized in 183. Use LocatableConfigurationBaseAny instead in signatures." />
           <Problem reference="com.intellij.execution.configurations.ModuleBasedConfiguration" reason="Generalized in 183. Use ModuleBasedConfigurationElement instead." />
           <Problem reference="com.intellij.util.AstLoadingFilter" reason="Absent in 181. Almost all methods were renamed in 183. Use org.jetbrains.kotlin.util.AstLoadingFilter instead." />
+          <Problem reference="com.intellij.testFramework.codeInsight.hierarchy.HierarchyViewTestFixture" reason="Absent in &lt;= 181. Use org.jetbrains.kotlin.test.HierarchyViewTestFixture instead." />
+          <Problem reference="org.jetbrains.kotlin.test.HierarchyViewTestFixtureCompat" reason="Do not use the wrapper for 181 directly. Use org.jetbrains.kotlin.test.HierarchyViewTestFixture instead." />
         </list>
       </option>
     </inspection_tool>
@@ -292,6 +294,9 @@
     </inspection_tool>
     <inspection_tool class="PackageDirectoryMismatch" enabled="true" level="WARNING" enabled_by_default="false">
       <scope name="all except testData" level="WARNING" enabled="true" />
+    </inspection_tool>
+    <inspection_tool class="PackageName" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="namePattern" value="[a-z_][a-z\d_]*(\.[a-z_][a-zA-Z\d_]*)*" />
     </inspection_tool>
     <inspection_tool class="ProblematicAPIUsage" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="problems">
