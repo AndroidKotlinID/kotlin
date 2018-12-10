@@ -153,13 +153,12 @@ fun IrClass.addSimpleDelegatingConstructor(
 val IrCall.isSuspend get() = (symbol.owner as? IrSimpleFunction)?.isSuspend == true
 val IrFunctionReference.isSuspend get() = (symbol.owner as? IrSimpleFunction)?.isSuspend == true
 
-
 fun IrValueParameter.copyTo(
     irFunction: IrFunction,
-    shift: Int = 0,
+    origin: IrDeclarationOrigin = this.origin,
+    index: Int = this.index,
     startOffset: Int = this.startOffset,
     endOffset: Int = this.endOffset,
-    origin: IrDeclarationOrigin = this.origin,
     name: Name = this.name,
     type: IrType = this.type.remapTypeParameters(this.parent as IrTypeParametersContainer, irFunction),
     varargElementType: IrType? = this.varargElementType
@@ -170,7 +169,7 @@ fun IrValueParameter.copyTo(
     defaultValueCopy?.patchDeclarationParents(irFunction)
     return IrValueParameterImpl(
         startOffset, endOffset, origin, symbol,
-        name, shift + index, type, varargElementType, isCrossinline, isNoinline
+        name, index, type, varargElementType, isCrossinline, isNoinline
     ).also {
         descriptor.bind(it)
         it.parent = irFunction
@@ -205,7 +204,7 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
     extensionReceiverParameter = from.extensionReceiverParameter?.copyTo(this)
 
     val shift = valueParameters.size
-    valueParameters += from.valueParameters.map { it.copyTo(this, shift) }
+    valueParameters += from.valueParameters.map { it.copyTo(this, index = it.index + shift) }
 }
 
 fun IrTypeParametersContainer.copyTypeParametersFrom(
@@ -243,22 +242,22 @@ fun IrFunction.copyValueParametersToStatic(
     assert(target.valueParameters.isEmpty())
 
     var shift = 0
-    source.dispatchReceiverParameter?.apply {
+    source.dispatchReceiverParameter?.let { p ->
         target.valueParameters.add(
-            copyTo(
+            p.copyTo(
                 target,
-                origin = origin,
-                shift = shift++,
+                origin = p.origin,
+                index = p.index + shift++,
                 name = Name.identifier("\$this")
             )
         )
     }
-    source.extensionReceiverParameter?.apply {
+    source.extensionReceiverParameter?.let { p ->
         target.valueParameters.add(
-            copyTo(
+            p.copyTo(
                 target,
-                origin = origin,
-                shift = shift++,
+                origin = p.origin,
+                index = p.index + shift++,
                 name = Name.identifier("\$receiver")
             )
         )
@@ -268,7 +267,7 @@ fun IrFunction.copyValueParametersToStatic(
             oldValueParameter.copyTo(
                 target,
                 origin = origin,
-                shift = shift
+                index = oldValueParameter.index + shift
             )
         )
     }

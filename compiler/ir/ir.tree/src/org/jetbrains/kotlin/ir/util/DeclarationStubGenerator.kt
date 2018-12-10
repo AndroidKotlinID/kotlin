@@ -20,11 +20,11 @@ import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrPropertyImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.ir.declarations.lazy.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrErrorExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
+import org.jetbrains.kotlin.load.java.descriptors.JavaCallableMemberDescriptor
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.hasBackingField
@@ -82,21 +82,14 @@ class DeclarationStubGenerator(
     internal fun generatePropertyStub(
         descriptor: PropertyDescriptor,
         bindingContext: BindingContext? = null
-    ): IrProperty =
-        IrPropertyImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin, descriptor).also { irProperty ->
-            if (descriptor.hasBackingField(bindingContext)) {
-                irProperty.backingField = generateFieldStub(descriptor)
-            }
+    ): IrProperty = symbolTable.referenceProperty(descriptor) {
+        IrLazyProperty(
+            UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin, descriptor,
+            this, typeTranslator, bindingContext
+        )
+    }
 
-            irProperty.getter = descriptor.getter?.let { generateFunctionStub(it, createPropertyIfNeeded = false) }?.apply {
-                correspondingProperty = irProperty
-            }
-            irProperty.setter = descriptor.setter?.let { generateFunctionStub(it, createPropertyIfNeeded = false) }?.apply {
-                correspondingProperty = irProperty
-            }
-        }
-
-    private fun generateFieldStub(descriptor: PropertyDescriptor): IrField {
+    fun generateFieldStub(descriptor: PropertyDescriptor, bindingContext: BindingContext? = null): IrField {
         val referenced = symbolTable.referenceField(descriptor)
         if (referenced.isBound) {
             return referenced.owner
@@ -114,6 +107,7 @@ class DeclarationStubGenerator(
             descriptor.original,
             descriptor.type.toIrType()
         ).apply {
+            correspondingProperty = generatePropertyStub(descriptor, bindingContext)
             initializer = descriptor.compileTimeInitializer?.let {
                 IrExpressionBodyImpl(
                     constantValueGenerator.generateConstantValueAsExpression(
@@ -140,7 +134,10 @@ class DeclarationStubGenerator(
         val origin =
             if (descriptor.kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE)
                 IrDeclarationOrigin.FAKE_OVERRIDE
-            else origin
+            else if (origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB && descriptor is JavaCallableMemberDescriptor)
+                IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
+            else
+                origin
         return symbolTable.declareSimpleFunction(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET,
             origin,

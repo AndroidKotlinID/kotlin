@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.ir.util.isAnnotationClass
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.resolve.source.PsiSourceElement
 import org.jetbrains.org.objectweb.asm.Type
+import java.io.File
 
 class IrFrameMap : FrameMapBase<IrSymbol>()
 
@@ -56,7 +57,7 @@ fun JvmBackendContext.getSourceMapper(declaration: IrClass): DefaultSourceMapper
         SourceInfo.createInfoForIr(
             endLineNumber + 1,
             this.state.typeMapper.mapType(declaration.descriptor).internalName,
-            declaration.descriptor.psiElement!!.containingFile.name
+            declaration.fileParent.name
         )
     )
 }
