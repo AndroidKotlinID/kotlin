@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.protobuf.GeneratedMessageLite
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.DescriptorUtils.isInterface
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
+import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyPrivateApi
 import org.jetbrains.kotlin.resolve.descriptorUtil.nonSourceAnnotations
 import org.jetbrains.kotlin.resolve.jvm.annotations.hasJvmDefaultAnnotation
 import org.jetbrains.kotlin.serialization.DescriptorSerializer
@@ -47,6 +48,21 @@ class JvmSerializerExtension(private val bindings: JvmSerializationBindings, sta
     override val metadataVersion = state.metadataVersion
 
     override fun shouldUseTypeTable(): Boolean = useTypeTable
+    override fun shouldSerializeFunction(descriptor: FunctionDescriptor): Boolean {
+        return classBuilderMode != ClassBuilderMode.ABI || descriptor.visibility != Visibilities.PRIVATE
+    }
+
+    override fun shouldSerializeProperty(descriptor: PropertyDescriptor): Boolean {
+        return classBuilderMode != ClassBuilderMode.ABI || descriptor.visibility != Visibilities.PRIVATE
+    }
+
+    override fun shouldSerializeTypeAlias(descriptor: TypeAliasDescriptor): Boolean {
+        return classBuilderMode != ClassBuilderMode.ABI || descriptor.visibility != Visibilities.PRIVATE
+    }
+
+    override fun shouldSerializeNestedClass(descriptor: ClassDescriptor): Boolean {
+        return classBuilderMode != ClassBuilderMode.ABI || !descriptor.isEffectivelyPrivateApi
+    }
 
     override fun serializeClass(
             descriptor: ClassDescriptor,
@@ -103,7 +119,7 @@ class JvmSerializerExtension(private val bindings: JvmSerializationBindings, sta
         for (localVariable in localVariables) {
             val propertyDescriptor = createFreeFakeLocalPropertyDescriptor(localVariable)
             val serializer = DescriptorSerializer.createForLambda(this)
-            proto.addExtension(extension, serializer.propertyProto(propertyDescriptor).build())
+            proto.addExtension(extension, serializer.propertyProto(propertyDescriptor)?.build() ?: continue)
         }
     }
 

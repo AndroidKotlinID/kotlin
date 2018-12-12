@@ -2542,6 +2542,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         public void testNormal() throws Exception {
             runTest("idea/testData/inspectionsLocal/forEachParameterNotUsed/normal.kt");
         }
+
+        @TestMetadata("repeat.kt")
+        public void testRepeat() throws Exception {
+            runTest("idea/testData/inspectionsLocal/forEachParameterNotUsed/repeat.kt");
+        }
+
+        @TestMetadata("safe.kt")
+        public void testSafe() throws Exception {
+            runTest("idea/testData/inspectionsLocal/forEachParameterNotUsed/safe.kt");
+        }
+
+        @TestMetadata("sequence.kt")
+        public void testSequence() throws Exception {
+            runTest("idea/testData/inspectionsLocal/forEachParameterNotUsed/sequence.kt");
+        }
+
+        @TestMetadata("string.kt")
+        public void testString() throws Exception {
+            runTest("idea/testData/inspectionsLocal/forEachParameterNotUsed/string.kt");
+        }
     }
 
     @TestMetadata("idea/testData/inspectionsLocal/ImplicitNullableNothingType")
@@ -4447,6 +4467,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantLambdaArrow"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("forEach.kt")
+        public void testForEach() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/forEach.kt");
+        }
+
+        @TestMetadata("forEachWithIt.kt")
+        public void testForEachWithIt() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/forEachWithIt.kt");
+        }
+
         @TestMetadata("hasArguments.kt")
         public void testHasArguments() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/hasArguments.kt");
@@ -4480,6 +4510,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("inIfWhenEntry2.kt")
         public void testInIfWhenEntry2() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/inIfWhenEntry2.kt");
+        }
+
+        @TestMetadata("it.kt")
+        public void testIt() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/it.kt");
         }
 
         @TestMetadata("simple.kt")

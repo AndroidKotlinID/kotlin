@@ -152,6 +152,9 @@ import org.jetbrains.kotlin.jps.incremental.AbstractJsProtoComparisonTest
 import org.jetbrains.kotlin.jps.incremental.AbstractJvmProtoComparisonTest
 import org.jetbrains.kotlin.kapt.cli.test.AbstractArgumentParsingTest
 import org.jetbrains.kotlin.kapt.cli.test.AbstractKaptToolIntegrationTest
+import org.jetbrains.kotlin.jvm.abi.AbstractCompareJvmAbiTest
+import org.jetbrains.kotlin.jvm.abi.AbstractCompileAgainstJvmAbiTest
+import org.jetbrains.kotlin.jvm.abi.AbstractJvmAbiContentTest
 import org.jetbrains.kotlin.kapt3.test.AbstractClassFileToSourceStubConverterTest
 import org.jetbrains.kotlin.kapt3.test.AbstractKotlinKaptContextTest
 import org.jetbrains.kotlin.noarg.AbstractBlackBoxCodegenTestForNoArg
@@ -1066,6 +1069,20 @@ fun main(args: Array<String>) {
 
         testClass<AbstractParcelBytecodeListingTest> {
             model("parcel/codegen")
+        }
+    }
+
+    testGroup("plugins/jvm-abi-gen/test", "plugins/jvm-abi-gen/testData") {
+        testClass<AbstractCompareJvmAbiTest> {
+            model("compare", recursive = false, extension = null)
+        }
+
+        testClass<AbstractJvmAbiContentTest> {
+            model("content", recursive = false, extension = null)
+        }
+
+        testClass<AbstractCompileAgainstJvmAbiTest> {
+            model("compile", recursive = false, extension = null)
         }
     }
 

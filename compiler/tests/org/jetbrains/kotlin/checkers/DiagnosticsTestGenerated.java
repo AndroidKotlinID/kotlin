@@ -1681,6 +1681,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/callableReference/sam.kt");
             }
 
+            @TestMetadata("subtypeArgumentFromRHSForReference.kt")
+            public void testSubtypeArgumentFromRHSForReference() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/subtypeArgumentFromRHSForReference.kt");
+            }
+
             @TestMetadata("unused.kt")
             public void testUnused() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/unused.kt");
@@ -7943,6 +7948,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/generics/argumentsForT.kt");
             }
 
+            @TestMetadata("capturingOfDeepNestedType.kt")
+            public void testCapturingOfDeepNestedType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/generics/capturingOfDeepNestedType.kt");
+            }
+
             @TestMetadata("commonSupertypeContravariant.kt")
             public void testCommonSupertypeContravariant() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/generics/commonSupertypeContravariant.kt");
@@ -8428,6 +8438,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("kt25182.kt")
                 public void testKt25182() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/generics/nullability/kt25182.kt");
+                }
+
+                @TestMetadata("notNullSmartcastOnIntersectionOfNullables.kt")
+                public void testNotNullSmartcastOnIntersectionOfNullables() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/nullability/notNullSmartcastOnIntersectionOfNullables.kt");
                 }
 
                 @TestMetadata("nullToGeneric.kt")

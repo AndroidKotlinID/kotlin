@@ -210,6 +210,7 @@ extra["compilerModules"] = arrayOf(
             emptyArray()
         },
         ":compiler:frontend",
+        ":compiler:frontend.common",
         ":compiler:frontend.java",
         ":compiler:frontend.script",
         ":compiler:cli-common",
@@ -479,6 +480,7 @@ tasks {
                   ":compiler:container:test",
                   ":compiler:tests-java8:test",
                   ":compiler:tests-spec:remoteRunTests")
+        dependsOn(":plugins:jvm-abi-gen:test")
     }
 
     create("jsCompilerTest") {

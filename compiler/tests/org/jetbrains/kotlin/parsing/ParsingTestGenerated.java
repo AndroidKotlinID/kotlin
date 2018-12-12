@@ -870,6 +870,11 @@ public class ParsingTestGenerated extends AbstractParsingTest {
                     runTest("compiler/testData/psi/annotation/at/primaryConstructor.kt");
                 }
 
+                @TestMetadata("recoveryWhitespaceBeforeColon.kt")
+                public void testRecoveryWhitespaceBeforeColon() throws Exception {
+                    runTest("compiler/testData/psi/annotation/at/recoveryWhitespaceBeforeColon.kt");
+                }
+
                 @TestMetadata("validDeclarations.kt")
                 public void testValidDeclarations() throws Exception {
                     runTest("compiler/testData/psi/annotation/at/validDeclarations.kt");
