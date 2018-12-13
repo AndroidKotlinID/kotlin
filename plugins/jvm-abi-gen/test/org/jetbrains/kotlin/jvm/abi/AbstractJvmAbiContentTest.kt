@@ -1,9 +1,10 @@
 package org.jetbrains.kotlin.jvm.abi
 
-import com.intellij.testFramework.UsefulTestCase
+import com.intellij.openapi.util.io.systemIndependentPath
 import org.jetbrains.kotlin.codegen.BytecodeListingTextCollectingVisitor
 import org.jetbrains.kotlin.incremental.isClassFile
 import org.jetbrains.kotlin.jvm.abi.asm.ABI_EXTENSION_ASM_API_VERSION
+import org.jetbrains.kotlin.test.testFramework.KtUsefulTestCase
 import org.jetbrains.org.objectweb.asm.*
 import java.io.File
 
@@ -28,12 +29,12 @@ abstract class AbstractJvmAbiContentTest : BaseJvmAbiTest() {
         }
 
         val actual = classToBytecode.entries
-            .sortedBy { it.key.relativeTo(baseDir) }
+            .sortedBy { it.key.relativeTo(baseDir).systemIndependentPath }
             .joinToString("\n") { it.value }
         val signaturesFile = testDir.resolve("signatures.txt")
         if (!signaturesFile.exists()) {
             signaturesFile.writeText("")
         }
-        UsefulTestCase.assertSameLinesWithFile(signaturesFile.canonicalPath, actual)
+        KtUsefulTestCase.assertSameLinesWithFile(signaturesFile.canonicalPath, actual)
     }
 }

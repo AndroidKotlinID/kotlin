@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.idea.debugger.evaluate
 
 import com.intellij.debugger.SourcePosition
+import com.intellij.debugger.engine.evaluation.EvaluateException
 import com.intellij.debugger.engine.evaluation.EvaluationContextImpl
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.project.Project
@@ -218,22 +219,12 @@ class KotlinDebuggerCaches(project: Project) {
     }
 
     data class CompiledDataDescriptor(
-            val classes: List<ClassToLoad>,
-            val sourcePosition: SourcePosition,
-            val parameters: ParametersDescriptor
+        val classes: List<ClassToLoad>,
+        val sourcePosition: SourcePosition,
+        val parameters: List<Parameter>
     )
 
-    class ParametersDescriptor : Iterable<Parameter> {
-        private val list = ArrayList<Parameter>()
-
-        fun add(name: String, jetType: KotlinType, value: Value? = null) {
-            list.add(Parameter(name, jetType, value))
-        }
-
-        override fun iterator() = list.iterator()
-    }
-
-    data class Parameter(val callText: String, val type: KotlinType, val value: Value? = null)
+    data class Parameter(val callText: String, val type: KotlinType, val value: Value? = null, val error: EvaluateException? = null)
 
     class ComputedClassNames(val classNames: List<String>, val shouldBeCached: Boolean) {
         companion object {

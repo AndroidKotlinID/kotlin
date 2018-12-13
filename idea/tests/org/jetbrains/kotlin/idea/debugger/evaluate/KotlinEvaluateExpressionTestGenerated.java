@@ -136,6 +136,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/extractVariablesFromCall.kt");
         }
 
+        @TestMetadata("fieldGetters.kt")
+        public void testFieldGetters() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/fieldGetters.kt");
+        }
+
         @TestMetadata("fileWithError.kt")
         public void testFileWithError() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/fileWithError.kt");
@@ -181,6 +186,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/inlineFunctionBreakpointVariants.kt");
         }
 
+        @TestMetadata("inlineMethodsInSignature.kt")
+        public void testInlineMethodsInSignature() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/inlineMethodsInSignature.kt");
+        }
+
         @TestMetadata("innerClass.kt")
         public void testInnerClass() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/innerClass.kt");
@@ -201,6 +211,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/internalProperty.kt");
         }
 
+        @TestMetadata("javaStaticMethods.kt")
+        public void testJavaStaticMethods() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/javaStaticMethods.kt");
+        }
+
         @TestMetadata("kt12206BasePropertyWithoutBackingField.kt")
         public void testKt12206BasePropertyWithoutBackingField() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt12206BasePropertyWithoutBackingField.kt");
@@ -209,6 +224,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
         @TestMetadata("kt17514.kt")
         public void testKt17514() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt17514.kt");
+        }
+
+        @TestMetadata("kt22366.kt")
+        public void testKt22366() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt22366.kt");
         }
 
         @TestMetadata("kt5554OnlyIntsShouldBeCoerced.kt")
@@ -869,6 +889,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
         @TestMetadata("extensionMemberProperty.kt")
         public void testExtensionMemberProperty() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/multipleBreakpoints/extensionMemberProperty.kt");
+        }
+
+        @TestMetadata("fieldVariable.kt")
+        public void testFieldVariable() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/multipleBreakpoints/fieldVariable.kt");
         }
 
         @TestMetadata("funFromOuterClassInLamdba.kt")

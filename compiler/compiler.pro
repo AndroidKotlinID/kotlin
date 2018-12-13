@@ -200,6 +200,7 @@ messages/**)
 -keep class org.jetbrains.org.objectweb.asm.tree.FieldNode { *; }
 -keep class org.jetbrains.org.objectweb.asm.tree.ParameterNode { *; }
 -keep class org.jetbrains.org.objectweb.asm.tree.TypeAnnotationNode { *; }
+-keep class org.jetbrains.org.objectweb.asm.tree.InsnList { *; }
 
 -keep class org.jetbrains.org.objectweb.asm.signature.SignatureReader { *; }
 -keep class org.jetbrains.org.objectweb.asm.signature.SignatureVisitor { *; }
@@ -236,6 +237,9 @@ messages/**)
 
 # for kapt
 -keep class com.intellij.openapi.project.Project { *; }
+-keepclassmembers class com.intellij.util.PathUtil {
+    public static java.lang.String getJarPathForClass(java.lang.Class);
+}
 
 -keepclassmembers class com.intellij.util.PathUtil {
     public static java.lang.String getJarPathForClass(java.lang.Class);
