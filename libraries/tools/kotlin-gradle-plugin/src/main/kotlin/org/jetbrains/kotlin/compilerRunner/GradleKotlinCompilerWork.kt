@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.compilerRunner
 
 import org.gradle.api.Project
+import org.gradle.api.invocation.Gradle
 import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
@@ -17,16 +18,18 @@ import org.jetbrains.kotlin.gradle.plugin.kotlinDebug
 import org.jetbrains.kotlin.gradle.tasks.GradleMessageCollector
 import org.jetbrains.kotlin.gradle.tasks.clearLocalStateDirectories
 import org.jetbrains.kotlin.gradle.tasks.throwGradleExceptionIfError
+import org.jetbrains.kotlin.gradle.utils.stackTraceAsString
 import org.jetbrains.kotlin.incremental.ChangedFiles
 import org.jetbrains.kotlin.incremental.DELETE_MODULE_FILE_PROPERTY
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.PrintStream
-import java.io.Serializable
+import java.io.*
 import java.net.URLClassLoader
 import java.rmi.RemoteException
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import javax.inject.Inject
+import kotlin.concurrent.thread
 
 internal class ProjectFilesForCompilation(
     val projectRootFile: File,
@@ -155,8 +158,8 @@ internal class GradleKotlinCompilerWork @Inject constructor(
                     log.isDebugEnabled
                 )
             } catch (e: Throwable) {
-                log.warn("Caught an exception trying to connect to Kotlin Daemon")
-                e.printStackTrace()
+                log.error("Caught an exception trying to connect to Kotlin Daemon:")
+                log.error(e.stackTraceAsString())
                 null
             }
         if (connection == null) {
@@ -183,8 +186,8 @@ internal class GradleKotlinCompilerWork @Inject constructor(
             }
             exitCodeFromProcessExitCode(log, res.get())
         } catch (e: Throwable) {
-            log.warn("Compilation with Kotlin compile daemon was not successful")
-            e.printStackTrace()
+            log.error("Compilation with Kotlin compile daemon was not successful")
+            log.error(e.stackTraceAsString())
             null
         }
         // todo: can we clear cache on the end of session?
@@ -249,6 +252,20 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         runToolInSeparateProcess(compilerArgs, compilerClassName, compilerFullClasspath, log, loggingMessageCollector)
 
     private fun compileInProcess(): ExitCode {
+        // in-process compiler should always be run in a different thread
+        // to avoid leaking thread locals from compiler (see KT-28037)
+        val threadPool = Executors.newSingleThreadExecutor()
+        try {
+            val future = threadPool.submit(Callable {
+                compileInProcessImpl()
+            })
+            return future.get()
+        } finally {
+            threadPool.shutdown()
+        }
+    }
+
+    private fun compileInProcessImpl(): ExitCode {
         val stream = ByteArrayOutputStream()
         val out = PrintStream(stream)
         // todo: cache classloader?

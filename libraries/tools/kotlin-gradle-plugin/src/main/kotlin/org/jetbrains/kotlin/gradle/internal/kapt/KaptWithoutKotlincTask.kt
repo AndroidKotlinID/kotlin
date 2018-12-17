@@ -84,6 +84,10 @@ open class KaptWithoutKotlincTask @Inject constructor(private val workerExecutor
         workerExecutor.submit(KaptExecution::class.java) { config ->
             config.isolationMode = IsolationMode.PROCESS
             config.params(optionsForWorker, findToolsJar(), kaptClasspath)
+            if (project.findProperty("kapt.workers.log.classloading") == "true") {
+                // for tests
+                config.forkOptions.jvmArgs("-verbose:class")
+            }
             logger.info("Kapt worker classpath: ${config.classpath}")
         }
 
@@ -100,19 +104,24 @@ private class KaptExecution @Inject constructor(
         private const val JAVAC_CONTEXT_CLASS = "com.sun.tools.javac.util.Context"
 
         private fun kaptClass(classLoader: ClassLoader) = Class.forName("org.jetbrains.kotlin.kapt3.base.Kapt", true, classLoader)
+        private var cachedClassLoaderWithToolsJar: ClassLoader? = null
+        private var cachedKaptClassLoader: ClassLoader? = null
     }
 
     override fun run(): Unit = with(optionsForWorker) {
         val kaptClasspathUrls = kaptClasspath.map { it.toURI().toURL() }.toTypedArray()
         val rootClassLoader = findRootClassLoader()
 
-        val classLoaderWithToolsJar = if (toolsJar != null && !javacIsAlreadyHere()) {
+        val classLoaderWithToolsJar = cachedClassLoaderWithToolsJar ?: if (toolsJar != null && !javacIsAlreadyHere()) {
             URLClassLoader(arrayOf(toolsJar.toURI().toURL()), rootClassLoader)
         } else {
             rootClassLoader
         }
+        cachedClassLoaderWithToolsJar = classLoaderWithToolsJar
 
-        val kaptClassLoader = URLClassLoader(kaptClasspathUrls, classLoaderWithToolsJar)
+        val kaptClassLoader = cachedKaptClassLoader ?: URLClassLoader(kaptClasspathUrls, classLoaderWithToolsJar)
+        cachedKaptClassLoader = kaptClassLoader
+
         val kaptMethod = kaptClass(kaptClassLoader).declaredMethods.single { it.name == "kapt" }
         kaptMethod.invoke(null, createKaptOptions(kaptClassLoader))
     }
