@@ -11,8 +11,11 @@ package org.w3c.dom
 
 import kotlin.js.*
 import org.khronos.webgl.*
+import org.w3c.css.masking.*
+import org.w3c.dom.clipboard.*
 import org.w3c.dom.css.*
 import org.w3c.dom.events.*
+import org.w3c.dom.mediacapture.*
 import org.w3c.dom.parsing.*
 import org.w3c.dom.pointerevents.*
 import org.w3c.dom.svg.*
@@ -23,6 +26,18 @@ import org.w3c.notifications.*
 import org.w3c.performance.*
 import org.w3c.workers.*
 import org.w3c.xhr.*
+
+/**
+ * Exposes the JavaScript [Navigator](https://developer.mozilla.org/en/docs/Web/API/Navigator) to Kotlin
+ */
+public external abstract class Navigator : NavigatorID, NavigatorLanguage, NavigatorOnLine, NavigatorContentUtils, NavigatorCookies, NavigatorPlugins, NavigatorConcurrentHardware {
+    open val serviceWorker: ServiceWorkerContainer
+    open val maxTouchPoints: Int
+    open val mediaDevices: MediaDevices
+    open val clipboard: Clipboard
+    fun vibrate(pattern: dynamic): Boolean
+    fun getUserMedia(constraints: MediaStreamConstraints, successCallback: (MediaStream) -> Unit, errorCallback: (dynamic) -> Unit): Unit
+}
 
 /**
  * Exposes the JavaScript [Document](https://developer.mozilla.org/en/docs/Web/API/Document) to Kotlin
@@ -146,9 +161,9 @@ public external open class Document : Node, GlobalEventHandlers, DocumentAndElem
     override var ontoggle: ((Event) -> dynamic)?
     override var onvolumechange: ((Event) -> dynamic)?
     override var onwaiting: ((Event) -> dynamic)?
-    override var oncopy: ((Event) -> dynamic)?
-    override var oncut: ((Event) -> dynamic)?
-    override var onpaste: ((Event) -> dynamic)?
+    override var oncopy: ((ClipboardEvent) -> dynamic)?
+    override var oncut: ((ClipboardEvent) -> dynamic)?
+    override var onpaste: ((ClipboardEvent) -> dynamic)?
     override val fullscreenElement: Element?
     override val children: HTMLCollection
     override val firstElementChild: Element?
@@ -822,8 +837,8 @@ public external abstract class MediaError {
 public external abstract class AudioTrackList : EventTarget {
     open val length: Int
     open var onchange: ((Event) -> dynamic)?
-    open var onaddtrack: ((Event) -> dynamic)?
-    open var onremovetrack: ((Event) -> dynamic)?
+    open var onaddtrack: ((TrackEvent) -> dynamic)?
+    open var onremovetrack: ((TrackEvent) -> dynamic)?
     fun getTrackById(id: String): AudioTrack?
 }
 @kotlin.internal.InlineOnly inline operator fun AudioTrackList.get(index: Int): AudioTrack? = asDynamic()[index]
@@ -846,8 +861,8 @@ public external abstract class VideoTrackList : EventTarget {
     open val length: Int
     open val selectedIndex: Int
     open var onchange: ((Event) -> dynamic)?
-    open var onaddtrack: ((Event) -> dynamic)?
-    open var onremovetrack: ((Event) -> dynamic)?
+    open var onaddtrack: ((TrackEvent) -> dynamic)?
+    open var onremovetrack: ((TrackEvent) -> dynamic)?
     fun getTrackById(id: String): VideoTrack?
 }
 @kotlin.internal.InlineOnly inline operator fun VideoTrackList.get(index: Int): VideoTrack? = asDynamic()[index]
@@ -866,8 +881,8 @@ public external abstract class VideoTrack : UnionAudioTrackOrTextTrackOrVideoTra
 public external abstract class TextTrackList : EventTarget {
     open val length: Int
     open var onchange: ((Event) -> dynamic)?
-    open var onaddtrack: ((Event) -> dynamic)?
-    open var onremovetrack: ((Event) -> dynamic)?
+    open var onaddtrack: ((TrackEvent) -> dynamic)?
+    open var onremovetrack: ((TrackEvent) -> dynamic)?
     fun getTrackById(id: String): TextTrack?
 }
 @kotlin.internal.InlineOnly inline operator fun TextTrackList.get(index: Int): TextTrack? = asDynamic()[index]
@@ -2231,9 +2246,9 @@ public external interface WindowEventHandlers {
 }
 
 public external interface DocumentAndElementEventHandlers {
-    var oncopy: ((Event) -> dynamic)?
-    var oncut: ((Event) -> dynamic)?
-    var onpaste: ((Event) -> dynamic)?
+    var oncopy: ((ClipboardEvent) -> dynamic)?
+    var oncut: ((ClipboardEvent) -> dynamic)?
+    var onpaste: ((ClipboardEvent) -> dynamic)?
 }
 
 /**
@@ -2251,15 +2266,6 @@ public external interface WindowOrWorkerGlobalScope {
     fun clearInterval(handle: Int = definedExternally): Unit
     fun createImageBitmap(image: dynamic, options: ImageBitmapOptions = definedExternally): Promise<ImageBitmap>
     fun createImageBitmap(image: dynamic, sx: Int, sy: Int, sw: Int, sh: Int, options: ImageBitmapOptions = definedExternally): Promise<ImageBitmap>
-}
-
-/**
- * Exposes the JavaScript [Navigator](https://developer.mozilla.org/en/docs/Web/API/Navigator) to Kotlin
- */
-public external abstract class Navigator : NavigatorID, NavigatorLanguage, NavigatorOnLine, NavigatorContentUtils, NavigatorCookies, NavigatorPlugins, NavigatorConcurrentHardware {
-    open val serviceWorker: ServiceWorkerContainer
-    open val maxTouchPoints: Int
-    fun vibrate(pattern: dynamic): Boolean
 }
 
 /**

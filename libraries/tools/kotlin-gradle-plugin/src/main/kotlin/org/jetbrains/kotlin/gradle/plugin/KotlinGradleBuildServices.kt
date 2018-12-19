@@ -22,6 +22,8 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.Logging
 import org.jetbrains.kotlin.compilerRunner.DELETED_SESSION_FILE_PREFIX
 import org.jetbrains.kotlin.compilerRunner.GradleCompilerRunner
+import org.jetbrains.kotlin.gradle.logging.TaskLoggers
+import org.jetbrains.kotlin.gradle.logging.kotlinDebug
 import org.jetbrains.kotlin.gradle.utils.relativeToRoot
 import org.jetbrains.kotlin.utils.addToStdlib.sumByLong
 import java.lang.management.ManagementFactory
@@ -66,6 +68,7 @@ internal class KotlinGradleBuildServices private constructor(gradle: Gradle) : B
     // but it is called before any plugin can attach build listener
     fun buildStarted() {
         startMemory = getUsedMemoryKb()
+        TaskLoggers.clear()
     }
 
     override fun buildFinished(result: BuildResult) {
@@ -97,6 +100,7 @@ internal class KotlinGradleBuildServices private constructor(gradle: Gradle) : B
             log.lifecycle("[KOTLIN][PERF] Used memory after build: $endMem kb (difference since build start: ${"%+d".format(endMem - startMem)} kb)")
         }
 
+        TaskLoggers.clear()
         gradle.removeListener(this)
         instance = null
         log.kotlinDebug(DISPOSE_MESSAGE)

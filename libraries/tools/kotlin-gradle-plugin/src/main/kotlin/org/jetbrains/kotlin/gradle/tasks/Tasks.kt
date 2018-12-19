@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.gradle.tasks
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.FileCollection
-import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.BasePluginConvention
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.Optional
@@ -21,15 +20,15 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compilerRunner.*
 import org.jetbrains.kotlin.daemon.common.MultiModuleICSettings
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.incremental.ChangedFiles
 import org.jetbrains.kotlin.gradle.internal.CompilerArgumentAwareWithInput
 import org.jetbrains.kotlin.gradle.internal.prepareCompilerArguments
+import org.jetbrains.kotlin.gradle.logging.GradlePrintingMessageCollector
+import org.jetbrains.kotlin.gradle.logging.kotlinDebug
+import org.jetbrains.kotlin.gradle.logging.kotlinWarn
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.utils.ParsedGradleVersion
 import org.jetbrains.kotlin.gradle.utils.isParentOf
@@ -45,12 +44,12 @@ import javax.inject.Inject
 import kotlin.properties.Delegates
 
 const val KOTLIN_BUILD_DIR_NAME = "kotlin"
-const val USING_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin incremental compilation"
-const val USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE = "Using experimental Kotlin/JS incremental compilation"
+const val USING_JVM_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin/JVM incremental compilation"
+const val USING_JS_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin/JS incremental compilation"
 
 abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCompile(), CompilerArgumentAwareWithInput<T> {
     private fun useCompilerClasspathConfigurationMessage(propertyName: String) {
-        project.logger.kotlinWarn(
+        logger.kotlinWarn(
             "'$path.$propertyName' is deprecated and will be removed soon. " +
                     "Use '$COMPILER_CLASSPATH_CONFIGURATION_NAME' " +
                     "configuration for customizing compiler classpath."
@@ -94,7 +93,7 @@ abstract class AbstractKotlinCompileTool<T : CommonToolArguments>() : AbstractCo
                 try {
                     project.configurations.getByName(COMPILER_CLASSPATH_CONFIGURATION_NAME).resolve().toList()
                 } catch (e: Exception) {
-                    project.logger.error(
+                    logger.error(
                         "Could not resolve compiler classpath. " +
                                 "Check if Kotlin Gradle plugin repository is configured in $project."
                     )
@@ -296,7 +295,7 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
 
         logger.kotlinDebug { "args.coroutinesState=${args.coroutinesState}" }
 
-        if (project.logger.isDebugEnabled) {
+        if (logger.isDebugEnabled) {
             args.verbose = true
         }
 
@@ -387,12 +386,12 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     override fun callCompilerAsync(args: K2JVMCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
         sourceRoots as SourceRoots.ForJvm
 
-        val messageCollector = GradleMessageCollector(logger)
+        val messageCollector = GradlePrintingMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()
         val compilerRunner = compilerRunner()
 
         val icEnv = if (incremental) {
-            logger.info(USING_INCREMENTAL_COMPILATION_MESSAGE)
+            logger.info(USING_JVM_INCREMENTAL_COMPILATION_MESSAGE)
             IncrementalCompilationEnvironment(
                 if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
                 taskBuildDirectory,
@@ -428,7 +427,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         }.firstOrNull() as? AbstractCompile
 
         if (illegalTask != null) {
-            project.logger.info(
+            logger.info(
                 "Kotlin inter-project IC is disabled: " +
                         "unknown task '$illegalTask' destination dir ${illegalTask.destinationDir} " +
                         "intersects with java destination dir $javaOutputDir"
@@ -474,7 +473,12 @@ internal open class KotlinCompileCommonWithWorkers @Inject constructor(
 }
 
 @CacheableTask
-open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), KotlinJsCompile {
+open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), KotlinJsCompile {
+
+    init {
+        incremental = true
+    }
+
     private val kotlinOptionsImpl = KotlinJsOptionsImpl()
 
     override val kotlinOptions: KotlinJsOptions
@@ -541,12 +545,12 @@ open class Kotlin2JsCompile() : AbstractKotlinCompile<K2JSCompilerArguments>(), 
 
         logger.kotlinDebug("compiling with args ${ArgumentUtils.convertArgumentsToStringList(args)}")
 
-        val messageCollector = GradleMessageCollector(logger)
+        val messageCollector = GradlePrintingMessageCollector(logger)
         val outputItemCollector = OutputItemsCollectorImpl()
         val compilerRunner = compilerRunner()
 
         val icEnv = if (incremental) {
-            logger.warn(USING_EXPERIMENTAL_JS_INCREMENTAL_COMPILATION_MESSAGE)
+            logger.info(USING_JS_INCREMENTAL_COMPILATION_MESSAGE)
             IncrementalCompilationEnvironment(
                 if (hasFilesInTaskBuildDirectory()) changedFiles else ChangedFiles.Unknown(),
                 taskBuildDirectory,
@@ -572,55 +576,8 @@ private fun Task.getGradleVersion(): ParsedGradleVersion? {
     val gradleVersion = project.gradle.gradleVersion
     val result = ParsedGradleVersion.parse(gradleVersion)
     if (result == null) {
-        project.logger.kotlinDebug("Could not parse gradle version: $gradleVersion")
+        logger.kotlinDebug("Could not parse gradle version: $gradleVersion")
     }
     return result
 }
 
-internal class GradleMessageCollector(val logger: KotlinLogger) : MessageCollector {
-    constructor(logger: Logger) : this(GradleKotlinLogger(logger))
-
-    private var hasErrors = false
-
-    override fun hasErrors() = hasErrors
-
-    override fun clear() {
-        // Do nothing
-    }
-
-    override fun report(severity: CompilerMessageSeverity, message: String, location: CompilerMessageLocation?) {
-        fun formatMsg(prefix: String) =
-            buildString {
-                append("$prefix: ")
-
-                location?.apply {
-                    append("$path: ")
-                    if (line > 0 && column > 0) {
-                        append("($line, $column): ")
-                    }
-                }
-
-                append(message)
-            }
-
-        when (severity) {
-            CompilerMessageSeverity.ERROR,
-            CompilerMessageSeverity.EXCEPTION -> {
-                hasErrors = true
-                logger.error(formatMsg("e"))
-            }
-
-            CompilerMessageSeverity.WARNING,
-            CompilerMessageSeverity.STRONG_WARNING -> {
-                logger.warn(formatMsg("w"))
-            }
-            CompilerMessageSeverity.INFO -> {
-                logger.info(formatMsg("i"))
-            }
-            CompilerMessageSeverity.LOGGING,
-            CompilerMessageSeverity.OUTPUT -> {
-                logger.debug(formatMsg("v"))
-            }
-        }!! // !! is used to force compile-time exhaustiveness
-    }
-}

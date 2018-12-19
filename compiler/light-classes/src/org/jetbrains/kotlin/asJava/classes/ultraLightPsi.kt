@@ -377,6 +377,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
     private fun shouldGenerateNoArgOverload(primary: KtPrimaryConstructor): Boolean {
         return !primary.hasModifier(PRIVATE_KEYWORD) &&
                 !classOrObject.hasModifier(INNER_KEYWORD) && !isEnum &&
+                !classOrObject.hasModifier(SEALED_KEYWORD) &&
                 primary.valueParameters.isNotEmpty() &&
                 primary.valueParameters.all { it.defaultValue != null } &&
                 classOrObject.allConstructors.none { it.valueParameters.isEmpty() }
@@ -669,6 +670,8 @@ interface UltraLightSupport {
     fun findAnnotation(owner: KtAnnotated, fqName: FqName): Pair<KtAnnotationEntry, AnnotationDescriptor>?
     fun isTooComplexForUltraLightGeneration(element: KtClassOrObject): Boolean
     val deprecationResolver: DeprecationResolver
+    val typeMapper: KotlinTypeMapper
+    val moduleDescriptor: ModuleDescriptor
 }
 
 interface KtUltraLightElementWithNullabilityAnnotation<out T : KtDeclaration, out D : PsiModifierListOwner> : KtLightDeclaration<T, D>,

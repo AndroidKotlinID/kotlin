@@ -10,16 +10,19 @@ import com.intellij.psi.impl.PsiImplUtil
 import com.intellij.psi.impl.PsiSuperMethodImplUtil
 import com.intellij.psi.impl.light.LightMethodBuilder
 import com.intellij.psi.impl.light.LightTypeParameterListBuilder
+import com.intellij.psi.search.LocalSearchScope
+import com.intellij.psi.search.SearchScope
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.asJava.builder.LightMemberOriginForDeclaration
+import org.jetbrains.kotlin.asJava.elements.KtLightAbstractAnnotation
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 import org.jetbrains.kotlin.asJava.elements.KtLightMethodImpl
 import org.jetbrains.kotlin.asJava.elements.KtLightSimpleModifierList
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.codegen.FunctionCodegen
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.psi.*
-import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOriginKind
 import org.jetbrains.kotlin.types.KotlinType
 
@@ -56,7 +59,8 @@ internal abstract class KtUltraLightMethod(
         val list = KotlinLightReferenceListBuilder(manager, language, PsiReferenceList.Role.THROWS_LIST)
         computeDescriptor()?.let {
             for (ex in FunctionCodegen.getThrownExceptions(it)) {
-                list.addReference(ex.fqNameSafe.asString())
+                val psiClassType = ex.defaultType.asPsiType(support, TypeMappingMode.DEFAULT, list) as? PsiClassType ?: continue
+                list.addReference(psiClassType)
             }
         }
         list
@@ -109,12 +113,15 @@ internal class KtUltraLightMethodForDescriptor(
 
     override val kotlinTypeForNullabilityAnnotation: KotlinType?
         get() = descriptor.returnType
+
+    override val givenAnnotations: List<KtLightAbstractAnnotation>
+        get() = descriptor.obtainLightAnnotations(support, this)
 }
 
 internal abstract class KtUltraLightParameter(
     name: String,
     override val kotlinOrigin: KtDeclaration?,
-    private val support: UltraLightSupport,
+    protected val support: UltraLightSupport,
     method: KtLightMethod
 ) : org.jetbrains.kotlin.asJava.elements.LightParameter(
     name,
@@ -131,6 +138,7 @@ internal abstract class KtUltraLightParameter(
     override fun getModifierList(): PsiModifierList = lightModifierList
 
     override fun getNavigationElement(): PsiElement = kotlinOrigin ?: method.navigationElement
+    override fun getUseScope(): SearchScope = kotlinOrigin?.useScope ?: LocalSearchScope(this)
 
     override fun isValid() = parent.isValid
 
@@ -246,4 +254,7 @@ internal class KtUltraLightParameterForDescriptor(
     override fun computeContainingDescriptor() = descriptor.containingDeclaration as? CallableMemberDescriptor
 
     override fun isVarArgs() = (descriptor as? ValueParameterDescriptor)?.varargElementType != null
+
+    override val givenAnnotations: List<KtLightAbstractAnnotation>
+        get() = descriptor.obtainLightAnnotations(support, this)
 }

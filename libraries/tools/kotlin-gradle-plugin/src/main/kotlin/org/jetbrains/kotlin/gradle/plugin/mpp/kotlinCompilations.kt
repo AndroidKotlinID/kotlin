@@ -15,13 +15,11 @@ import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.tasks.SourceSet
 import org.gradle.util.ConfigureUtil
 import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.defaultSourceSetLanguageSettingsChecker
 import org.jetbrains.kotlin.gradle.plugin.sources.getSourceSetHierarchy
-import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
+import org.jetbrains.kotlin.gradle.tasks.*
 import org.jetbrains.kotlin.gradle.utils.addExtendsFromRelation
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import java.io.File
@@ -321,7 +319,8 @@ class KotlinNativeCompilation(
             target.compilations.getByName(it)
         }
 
-    internal val binaryTasks = mutableMapOf<Pair<NativeOutputKind, NativeBuildType>, KotlinNativeCompile>()
+     // Used only to support the old APIs. TODO: Remove when the old APIs are removed.
+    internal val binaryTasks = mutableMapOf<Pair<NativeOutputKind, NativeBuildType>, NativeBinary>()
 
     // Native-specific DSL.
     var extraOpts = mutableListOf<String>()
@@ -376,10 +375,9 @@ class KotlinNativeCompilation(
     }
 
     // Task accessors.
+    fun findLinkTask(kind: NativeOutputKind, buildType: NativeBuildType): KotlinNativeLink? = binaryTasks[kind to buildType]?.linkTask
 
-    fun findLinkTask(kind: NativeOutputKind, buildType: NativeBuildType): KotlinNativeCompile? = binaryTasks[kind to buildType]
-
-    fun getLinkTask(kind: NativeOutputKind, buildType: NativeBuildType): KotlinNativeCompile =
+    fun getLinkTask(kind: NativeOutputKind, buildType: NativeBuildType): KotlinNativeLink =
         findLinkTask(kind, buildType)
             ?: throw IllegalArgumentException("Cannot find a link task for the binary kind '$kind' and the build type '$buildType'")
 
@@ -403,13 +401,6 @@ class KotlinNativeCompilation(
     override val processResourcesTaskName: String
         get() = disambiguateName("processResources")
 
-    val linkAllTaskName: String
-        get() = lowerCamelCaseName(
-            "link",
-            compilationName.takeIf { it != "main" }.orEmpty(),
-            target.disambiguationClassifier
-        )
-
     fun linkTaskName(kind: NativeOutputKind, buildType: NativeBuildType): String =
         lowerCamelCaseName(
             "link",
@@ -430,11 +421,10 @@ class KotlinNativeCompilation(
         )
 
     override val compileAllTaskName: String
-        get() = lowerCamelCaseName(
-            target.disambiguationClassifier,
-            compilationName.takeIf { it != KotlinCompilation.MAIN_COMPILATION_NAME }.orEmpty(),
-            "klibrary"
-        )
+        get() = lowerCamelCaseName(target.disambiguationClassifier, compilationName, "klibrary")
+
+    val binariesTaskName: String
+        get() = lowerCamelCaseName(target.disambiguationClassifier, compilationName, "binaries")
 
     override fun addSourcesToCompileTask(sourceSet: KotlinSourceSet, addAsCommonSources: Boolean) {
         allSources.add(sourceSet.kotlin)

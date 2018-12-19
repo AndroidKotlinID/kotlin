@@ -4,14 +4,13 @@
  */
 package org.jetbrains.kotlin.gradle
 
+import org.jetbrains.kotlin.gradle.plugin.ProjectLocalConfigurations
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinMultiplatformPlugin
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeOutputKind
 import org.jetbrains.kotlin.gradle.plugin.mpp.UnusedSourceSetsChecker
 import org.jetbrains.kotlin.gradle.plugin.sources.METADATA_CONFIGURATION_NAME_SUFFIX
 import org.jetbrains.kotlin.gradle.plugin.sources.SourceSetConsistencyChecks
-import org.jetbrains.kotlin.gradle.util.checkBytecodeContains
-import org.jetbrains.kotlin.gradle.util.isWindows
-import org.jetbrains.kotlin.gradle.util.modify
-import org.jetbrains.kotlin.gradle.util.testResolveAllConfigurations
+import org.jetbrains.kotlin.gradle.util.*
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.junit.Assert
@@ -74,6 +73,9 @@ class NewMultiplatformIT : BaseGradleIT() {
                 listOf(jvmJarName, jsJarName, metadataJarName, "sample-lib/1.0/sample-lib-1.0.module").forEach {
                     Assert.assertTrue("$it should exist", groupDir.resolve(it).exists())
                 }
+
+                val gradleMetadata = groupDir.resolve("sample-lib/1.0/sample-lib-1.0.module").readText()
+                assertFalse(gradleMetadata.contains(ProjectLocalConfigurations.ATTRIBUTE.name))
 
                 listOf(jvmJarName, jsJarName, metadataJarName, wasmKlibName, nativeKlibName).forEach {
                     val pom = groupDir.resolve(it.replaceAfterLast('.', "pom"))
@@ -140,14 +142,23 @@ class NewMultiplatformIT : BaseGradleIT() {
                     Assert.assertTrue(resolve("sample-app.klib").exists())
                 }
 
-                assertFileExists("build/bin/wasm32/main/debug/executable/sample_app.wasm.js")
-                assertFileExists("build/bin/wasm32/main/debug/executable/sample_app.wasm")
-                assertFileExists("build/bin/wasm32/main/release/executable/sample_app.wasm.js")
-                assertFileExists("build/bin/wasm32/main/release/executable/sample_app.wasm")
+                assertFileExists("build/bin/wasm32/mainDebugExecutable/main.wasm.js")
+                assertFileExists("build/bin/wasm32/mainDebugExecutable/main.wasm")
+                assertFileExists("build/bin/wasm32/mainReleaseExecutable/main.wasm.js")
+                assertFileExists("build/bin/wasm32/mainReleaseExecutable/main.wasm")
 
-                val nativeExeName = if (isWindows) "sample-app.exe" else "sample-app.kexe"
-                assertFileExists("build/bin/$nativeHostTargetName/main/release/executable/$nativeExeName")
-                assertFileExists("build/bin/$nativeHostTargetName/main/debug/executable/$nativeExeName")
+                val nativeExeName = if (isWindows) "main.exe" else "main.kexe"
+                assertFileExists("build/bin/$nativeHostTargetName/mainReleaseExecutable/$nativeExeName")
+                assertFileExists("build/bin/$nativeHostTargetName/mainDebugExecutable/$nativeExeName")
+
+                // Check that linker options was correctly passed to the K/N compiler.
+                output.lineSequence().filter {
+                    it.contains("Run tool: konanc") && it.contains("-p program")
+                }.toList().also {
+                    assertTrue(it.isNotEmpty())
+                }.forEach {
+                    assertTrue(it.contains("-linker-options -L."))
+                }
             }
 
             build("assemble", "resolveRuntimeDependencies") {
@@ -166,6 +177,12 @@ class NewMultiplatformIT : BaseGradleIT() {
 
             build("clean", "assemble", "--rerun-tasks") {
                 checkAppBuild()
+            }
+
+            // Check that binary getters initially introduced in 1.3 work.
+            build("checkBinaryGetters") {
+                assertTrue(output.contains("Wasm binary file: main.wasm"))
+                assertTrue(output.contains("Wasm link task: linkMainReleaseExecutableWasm32"))
             }
         }
 
@@ -741,27 +758,27 @@ class NewMultiplatformIT : BaseGradleIT() {
 
     @Test
     fun testCanProduceNativeLibraries() = with(Project("new-mpp-native-libraries", gradleVersion)) {
-        val baseName = "native_lib"
+        val baseName = "main"
 
         val sharedPrefix = CompilerOutputKind.DYNAMIC.prefix(HostManager.host)
         val sharedSuffix = CompilerOutputKind.DYNAMIC.suffix(HostManager.host)
         val sharedPaths = listOf(
-            "build/bin/$nativeHostTargetName/main/debug/shared/$sharedPrefix$baseName$sharedSuffix",
-            "build/bin/$nativeHostTargetName/main/release/shared/$sharedPrefix$baseName$sharedSuffix"
+            "build/bin/$nativeHostTargetName/mainDebugShared/$sharedPrefix$baseName$sharedSuffix",
+            "build/bin/$nativeHostTargetName/mainReleaseShared/$sharedPrefix$baseName$sharedSuffix"
         )
 
         val staticPrefix = CompilerOutputKind.STATIC.prefix(HostManager.host)
         val staticSuffix = CompilerOutputKind.STATIC.suffix(HostManager.host)
         val staticPaths = listOf(
-            "build/bin/$nativeHostTargetName/main/debug/static/$staticPrefix$baseName$staticSuffix",
-            "build/bin/$nativeHostTargetName/main/release/static/$staticPrefix$baseName$staticSuffix"
+            "build/bin/$nativeHostTargetName/mainDebugStatic/$staticPrefix$baseName$staticSuffix",
+            "build/bin/$nativeHostTargetName/mainReleaseStatic/$staticPrefix$baseName$staticSuffix"
         )
 
         val headerPaths = listOf(
-            "build/bin/$nativeHostTargetName/main/debug/shared/$sharedPrefix${baseName}_api.h",
-            "build/bin/$nativeHostTargetName/main/release/shared/$sharedPrefix${baseName}_api.h",
-            "build/bin/$nativeHostTargetName/main/debug/static/$staticPrefix${baseName}_api.h",
-            "build/bin/$nativeHostTargetName/main/release/static/$staticPrefix${baseName}_api.h"
+            "build/bin/$nativeHostTargetName/mainDebugShared/$sharedPrefix${baseName}_api.h",
+            "build/bin/$nativeHostTargetName/mainReleaseShared/$sharedPrefix${baseName}_api.h",
+            "build/bin/$nativeHostTargetName/mainDebugStatic/$staticPrefix${baseName}_api.h",
+            "build/bin/$nativeHostTargetName/mainReleaseStatic/$staticPrefix${baseName}_api.h"
         )
 
         val klibPrefix = CompilerOutputKind.LIBRARY.prefix(HostManager.host)
@@ -771,24 +788,24 @@ class NewMultiplatformIT : BaseGradleIT() {
         val frameworkPrefix = CompilerOutputKind.FRAMEWORK.prefix(HostManager.host)
         val frameworkSuffix = CompilerOutputKind.FRAMEWORK.suffix(HostManager.host)
         val frameworkPaths = listOf(
-            "build/bin/$nativeHostTargetName/main/debug/framework/$frameworkPrefix$baseName$frameworkSuffix.dSYM",
-            "build/bin/$nativeHostTargetName/main/debug/framework/$frameworkPrefix$baseName$frameworkSuffix",
-            "build/bin/$nativeHostTargetName/main/release/framework/$frameworkPrefix$baseName$frameworkSuffix"
+            "build/bin/$nativeHostTargetName/mainDebugFramework/$frameworkPrefix$baseName$frameworkSuffix.dSYM",
+            "build/bin/$nativeHostTargetName/mainDebugFramework/$frameworkPrefix$baseName$frameworkSuffix",
+            "build/bin/$nativeHostTargetName/mainReleaseFramework/$frameworkPrefix$baseName$frameworkSuffix"
         )
             .takeIf { HostManager.hostIsMac }
             .orEmpty()
 
         val taskSuffix = nativeHostTargetName.capitalize()
         val linkTasks = listOf(
-            ":linkDebugShared$taskSuffix",
-            ":linkReleaseShared$taskSuffix",
-            ":linkDebugStatic$taskSuffix",
-            ":linkReleaseStatic$taskSuffix"
+            ":linkMainDebugShared$taskSuffix",
+            ":linkMainReleaseShared$taskSuffix",
+            ":linkMainDebugStatic$taskSuffix",
+            ":linkMainReleaseStatic$taskSuffix"
         )
 
         val klibTask = ":compileKotlin$taskSuffix"
 
-        val frameworkTasks = listOf(":linkDebugFramework$taskSuffix", ":linkReleaseFramework$taskSuffix")
+        val frameworkTasks = listOf(":linkMainDebugFramework$taskSuffix", ":linkMainReleaseFramework$taskSuffix")
             .takeIf { HostManager.hostIsMac }
             .orEmpty()
 
@@ -827,6 +844,158 @@ class NewMultiplatformIT : BaseGradleIT() {
             if (HostManager.hostIsMac) {
                 assertTasksUpToDate(frameworkTasks.drop(1))
                 assertTasksExecuted(frameworkTasks[0])
+            }
+        }
+    }
+
+    @Test
+    fun testNativeBinaryKotlinDSL() = doTestNativeBinaryDSL("kotlin-dsl")
+
+    @Test
+    fun testNativeBinaryGroovyDSL() = doTestNativeBinaryDSL("groovy-dsl")
+
+    private fun doTestNativeBinaryDSL(
+        projectName: String,
+        gradleVersionRequired: GradleVersionRequired = gradleVersion
+    ) = with(transformProjectWithPluginsDsl(projectName, gradleVersionRequired, "new-mpp-native-binaries")) {
+        val hostSuffix = nativeHostTargetName.capitalize()
+        val binaries = mutableListOf(
+            "debugExecutable" to "native-binary",
+            "releaseExecutable" to "native-binary",
+            "fooDebugExecutable" to "foo",
+            "fooReleaseExecutable" to "foo",
+            "barReleaseExecutable" to "bar",
+            "bazReleaseExecutable" to "my-baz",
+            "testDebugExecutable" to "test",
+            "test2ReleaseExecutable" to "test2",
+            "releaseStatic" to "native_binary",
+            "releaseShared" to "native_binary"
+        )
+
+        val linkTasks = binaries.map { (name, _) -> "link${name.capitalize()}$hostSuffix" }
+        val outputFiles = binaries.map { (name, fileBaseName) ->
+            val outputKind = NativeOutputKind.values().single { name.endsWith(it.taskNameClassifier, true) }.compilerOutputKind
+            val prefix = outputKind.prefix(HostManager.host)
+            val suffix = outputKind.suffix(HostManager.host)
+            val fileName = "$prefix$fileBaseName$suffix"
+            "build/bin/$nativeHostTargetName/$name/$fileName"
+        }
+
+        val runTasks = listOf(
+            "runDebugExecutable",
+            "runReleaseExecutable",
+            "runFooDebugExecutable",
+            "runFooReleaseExecutable",
+            "runBarReleaseExecutable",
+            "runBazReleaseExecutable",
+            "runTest2ReleaseExecutable"
+        ).map { "$it$hostSuffix" }.toMutableList()
+
+        val binariesTasks = arrayOf("${nativeHostTargetName}MainBinaries", "${nativeHostTargetName}TestBinaries")
+
+        // Check that all link and run tasks are generated.
+        build(*binariesTasks) {
+            assertSuccessful()
+            assertTasksExecuted(linkTasks.map { ":$it" })
+            outputFiles.forEach {
+                assertFileExists(it)
+            }
+            // Check that getters work fine.
+            assertTrue(output.contains("Check link task: linkReleaseShared$hostSuffix"))
+            assertTrue(output.contains("Check run task: runFooReleaseExecutable$hostSuffix"))
+        }
+
+        build("tasks") {
+            assertSuccessful()
+            runTasks.forEach {
+                assertTrue(output.contains(it), "The 'tasks' output doesn't contain a task ${it}")
+            }
+        }
+
+        // Clean the build to check that run tasks build corresponding binaries.
+        build("clean") {
+            assertSuccessful()
+        }
+
+        // Check that run tasks work find and an entry point can be specified.
+        build("runDebugExecutable$hostSuffix") {
+            assertSuccessful()
+            assertTrue(output.contains("<root>.main"))
+        }
+
+        build("runBazReleaseExecutable$hostSuffix") {
+            assertSuccessful()
+            assertTrue(output.contains("foo.main"))
+        }
+
+        build("runTest2ReleaseExecutable$hostSuffix") {
+            assertSuccessful()
+            assertTrue(output.contains("tests.foo"))
+        }
+
+        // Check that we still have a default test task and it can be executed properly.
+        build("${nativeHostTargetName}Test") {
+            assertSuccessful()
+            assertTrue(output.contains("tests.foo"))
+        }
+
+        fun CompiledProject.checkFrameworkCompilationCommandLine(check: (String) -> Unit) {
+            output.lineSequence().filter {
+                it.contains("Run tool: konanc") && it.contains("-p framework")
+            }.toList().also {
+                assertTrue(it.isNotEmpty())
+            }.forEach(check)
+        }
+        if (HostManager.hostIsMac) {
+
+            // Check dependency exporting and bitcode embedding in frameworks.
+            // For release builds
+            build("linkReleaseFrameworkIos") {
+                assertSuccessful()
+                assertFileExists("build/bin/ios/releaseFramework/native_binary.framework")
+                fileInWorkingDir("build/bin/ios/releaseFramework/native_binary.framework/Headers/native_binary.h")
+                    .readText().contains("+ (int32_t)exported")
+                // Check that by default release frameworks have bitcode embedded.
+                checkFrameworkCompilationCommandLine {
+                    assertTrue(it.contains("-Xembed-bitcode"))
+                    assertTrue(it.contains("-opt"))
+                }
+            }
+
+            // For debug builds
+            build("linkDebugFrameworkIos") {
+                assertSuccessful()
+                assertFileExists("build/bin/ios/debugFramework/native_binary.framework")
+                fileInWorkingDir("build/bin/ios/debugFramework/native_binary.framework/Headers/native_binary.h")
+                    .readText().contains("+ (int32_t)exported")
+                // Check that by default debug frameworks have bitcode marker embedded.
+                checkFrameworkCompilationCommandLine {
+                    assertTrue(it.contains("-Xembed-bitcode-marker"))
+                    assertTrue(it.contains("-g"))
+                }
+            }
+
+            // Check manual disabling bitcode embedding and custom command line args.
+            build("linkCustomReleaseFrameworkIos") {
+                assertSuccessful()
+                checkFrameworkCompilationCommandLine {
+                    assertTrue(it.contains("-linker-options -L."))
+                    assertTrue(it.contains("-Xtime"))
+                    assertFalse(it.contains("-Xembed-bitcode-marker"))
+                    assertFalse(it.contains("-Xembed-bitcode"))
+                }
+            }
+
+            // Check that plugin doesn't allow exporting dependencies not added in the API configuration.
+            val buildFile = listOf("build.gradle", "build.gradle.kts").map { projectDir.resolve(it) }.single { it.exists() }
+            buildFile.modify {
+                it.replace("api(project(\":exported\"))", "")
+            }
+            build("linkReleaseFrameworkIos") {
+                assertFailed()
+                val failureMsg = "Following dependencies exported in the releaseFramework binary " +
+                        "are not specified as API-dependencies of a corresponding source set"
+                assertTrue(output.contains(failureMsg))
             }
         }
     }

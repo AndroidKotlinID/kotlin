@@ -168,6 +168,7 @@ abstract class BaseGradleIT {
         val withDaemon: Boolean = false,
         val daemonOptionSupported: Boolean = true,
         val incremental: Boolean? = null,
+        val incrementalJs: Boolean? = null,
         val androidHome: File? = null,
         val javaHome: File? = null,
         val androidGradlePluginVersion: String? = null,
@@ -460,9 +461,11 @@ abstract class BaseGradleIT {
     }
 
     fun CompiledProject.getOutputForTask(taskName: String): String {
-        val taskOutputRegex = ("\\[LIFECYCLE] \\[class org\\.gradle(?:\\.internal\\.buildevents)?\\.TaskExecutionLogger] :$taskName" +
+        val taskOutputRegex = ("(?:\\[LIFECYCLE] \\[class org\\.gradle(?:\\.internal\\.buildevents)?\\.TaskExecutionLogger] :$taskName|" +
+                "\\[org\\.gradle\\.execution\\.plan\\.DefaultPlanExecutor\\] :$taskName.*?started)" +
                 "([\\s\\S]+?)" +
-                "Finished executing task ':$taskName'").toRegex()
+                "(?:Finished executing task ':$taskName'|" +
+                "\\[org\\.gradle\\.execution\\.plan\\.DefaultPlanExecutor\\] :$taskName.*?completed)").toRegex()
 
         return taskOutputRegex.find(output)?.run { groupValues[1] } ?: error("Cannot find output for task $taskName")
     }
@@ -561,8 +564,8 @@ abstract class BaseGradleIT {
             add("-Pkotlin_version=" + options.kotlinVersion)
             options.incremental?.let {
                 add("-Pkotlin.incremental=$it")
-                add("-Pkotlin.incremental.js=$it")
             }
+            options.incrementalJs?.let { add("-Pkotlin.incremental.js=$it") }
             options.usePreciseJavaTracking?.let { add("-Pkotlin.incremental.usePreciseJavaTracking=$it") }
             options.androidGradlePluginVersion?.let { add("-Pandroid_tools_version=$it") }
             if (options.debug) {

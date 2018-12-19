@@ -1744,6 +1744,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/callableReference"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM_IR, true);
         }
 
+        @TestMetadata("classesAreSynthetic.kt")
+        public void testClassesAreSynthetic() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/classesAreSynthetic.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/callableReference/bound")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -15998,6 +16003,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("kt2663_2.kt")
         public void testKt2663_2() throws Exception {
             runTest("compiler/testData/codegen/box/objects/kt2663_2.kt");
+        }
+
+        @TestMetadata("kt2663_3.kt")
+        public void testKt2663_3() throws Exception {
+            runTest("compiler/testData/codegen/box/objects/kt2663_3.kt");
         }
 
         @TestMetadata("kt2675.kt")
