@@ -14,6 +14,7 @@ import kotlin.script.experimental.dependencies.AsyncDependenciesResolver
 import kotlin.script.experimental.dependencies.DependenciesResolver
 import kotlin.script.experimental.dependencies.ScriptDependencies
 import kotlin.script.experimental.dependencies.ScriptReport
+import kotlin.script.experimental.host.FileScriptSource
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvm.JvmDependency
 import kotlin.script.experimental.jvm.compat.mapToLegacyScriptReportPosition
@@ -44,11 +45,13 @@ class BridgeDependenciesResolver(
 
             val defaultImports = scriptCompilationConfiguration[ScriptCompilationConfiguration.defaultImports]?.toList() ?: emptyList()
 
-            fun ScriptCompilationConfiguration.toDependencies(classpath: List<File>): ScriptDependencies = ScriptDependencies(
-                classpath = classpath,
-                sources = this[ScriptCompilationConfiguration.ide.dependenciesSources].toClassPathOrEmpty(),
-                imports = defaultImports
-            )
+            fun ScriptCompilationConfiguration.toDependencies(classpath: List<File>): ScriptDependencies =
+                ScriptDependencies(
+                    classpath = classpath,
+                    sources = this[ScriptCompilationConfiguration.ide.dependenciesSources].toClassPathOrEmpty(),
+                    imports = defaultImports,
+                    scripts = this[ScriptCompilationConfiguration.importScripts].toFilesOrEmpty()
+                )
 
             val refineResults = scriptCompilationConfiguration.refineWith(
                 scriptCompilationConfiguration[ScriptCompilationConfiguration.refineConfigurationOnAnnotations]?.handler,
@@ -76,11 +79,8 @@ class BridgeDependenciesResolver(
             }
 
             return DependenciesResolver.ResolveResult.Success(
-                ScriptDependencies(
-                    classpath = newClasspath, // TODO: maybe it should return only increment from the initial config
-                    sources = refinedConfiguration[ScriptCompilationConfiguration.ide.dependenciesSources].toClassPathOrEmpty(),
-                    imports = defaultImports
-                ),
+                // TODO: consider returning only increment from the initial config
+                refinedConfiguration.toDependencies(newClasspath),
                 diagnostics
             )
         } catch (e: Throwable) {
@@ -95,8 +95,8 @@ internal fun List<ScriptDiagnostic>.mapScriptReportsToDiagnostics() =
     map { ScriptReport(it.message, mapToLegacyScriptReportSeverity(it.severity), mapToLegacyScriptReportPosition(it.location)) }
 
 internal fun ScriptContents.toScriptSource(): SourceCode = when {
+    file != null -> FileScriptSource(file!!, text?.toString())
     text != null -> text!!.toString().toScriptSource()
-    file != null -> file!!.toScriptSource()
     else -> throw IllegalArgumentException("Unable to convert script contents $this into script source")
 }
 

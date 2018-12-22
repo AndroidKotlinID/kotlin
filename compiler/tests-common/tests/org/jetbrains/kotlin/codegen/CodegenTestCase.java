@@ -18,8 +18,8 @@ import kotlin.script.experimental.dependencies.ScriptDependencies;
 import kotlin.text.Charsets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.kotlin.TestsCompiletimeError;
 import org.jetbrains.kotlin.TestsCompilerError;
+import org.jetbrains.kotlin.TestsCompiletimeError;
 import org.jetbrains.kotlin.backend.common.output.OutputFile;
 import org.jetbrains.kotlin.backend.common.output.SimpleOutputFileCollection;
 import org.jetbrains.kotlin.checkers.CheckerTestUtil;
@@ -70,7 +70,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.jetbrains.kotlin.checkers.CompilerTestLanguageVersionSettingsKt.API_VERSION_DIRECTIVE;
 import static org.jetbrains.kotlin.checkers.CompilerTestLanguageVersionSettingsKt.parseLanguageVersionSettings;
 import static org.jetbrains.kotlin.cli.common.output.OutputUtilsKt.writeAllTo;
 import static org.jetbrains.kotlin.codegen.CodegenTestUtil.*;
@@ -168,7 +167,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
             @NotNull String coroutinesPackage
     ) {
         LanguageVersionSettings explicitLanguageVersionSettings = null;
-        LanguageVersion explicitLanguageVersion = null;
+        boolean disableReleaseCoroutines = false;
 
         List<String> kotlinConfigurationFlags = new ArrayList<>(0);
         for (TestFile testFile : testFilesWithConfigurationDirectives) {
@@ -184,17 +183,18 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
 
             String version = InTextDirectivesUtils.findStringWithPrefixes(testFile.content, "// LANGUAGE_VERSION:");
             if (version != null) {
-                assertDirectivesToNull(explicitLanguageVersionSettings, explicitLanguageVersion);
-                explicitLanguageVersion = LanguageVersion.fromVersionString(version);
+                throw new AssertionError(
+                        "Do not use LANGUAGE_VERSION directive in compiler tests because it's prone to limiting the test\n" +
+                        "to a specific language version, which will become obsolete at some point and the test won't check\n" +
+                        "things like feature intersection with newer releases. Use `// !LANGUAGE: [+-]FeatureName` directive instead,\n" +
+                        "where FeatureName is an entry of the enum `LanguageFeature`\n"
+                );
             }
+
             if (!InTextDirectivesUtils.findLinesWithPrefixesRemoved(testFile.content, "// COMMON_COROUTINES_TEST").isEmpty()) {
-                assert(!testFile.content.contains("COROUTINES_PACKAGE")) : "Must replace COROUTINES_PACKAGE prior to tests compilation";
-                if (!coroutinesPackage.isEmpty()) {
-                    if (coroutinesPackage.equals("kotlin.coroutines.experimental")) {
-                        explicitLanguageVersion = LanguageVersion.KOTLIN_1_2;
-                    } else {
-                        explicitLanguageVersion = LanguageVersion.KOTLIN_1_3;
-                    }
+                assert !testFile.content.contains("COROUTINES_PACKAGE") : "Must replace COROUTINES_PACKAGE prior to tests compilation";
+                if (coroutinesPackage.equals("kotlin.coroutines.experimental")) {
+                    disableReleaseCoroutines = true;
                 }
             }
 
@@ -202,7 +202,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
 
             LanguageVersionSettings fileLanguageVersionSettings = parseLanguageVersionSettings(directives);
             if (fileLanguageVersionSettings != null) {
-                assertDirectivesToNull(explicitLanguageVersionSettings, null);
+                assert explicitLanguageVersionSettings == null : "Should not specify !LANGUAGE directive twice";
                 explicitLanguageVersionSettings = fileLanguageVersionSettings;
             }
         }
@@ -210,24 +210,17 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
         if (explicitLanguageVersionSettings != null) {
             CommonConfigurationKeysKt.setLanguageVersionSettings(configuration, explicitLanguageVersionSettings);
         }
-        else if (explicitLanguageVersion != null) {
+        else if (disableReleaseCoroutines) {
             CompilerTestLanguageVersionSettings compilerLanguageVersionSettings = new CompilerTestLanguageVersionSettings(
-                    Collections.emptyMap(),
-                    ApiVersion.createByLanguageVersion(explicitLanguageVersion),
-                    explicitLanguageVersion,
+                    Collections.singletonMap(LanguageFeature.ReleaseCoroutines, LanguageFeature.State.DISABLED),
+                    ApiVersion.LATEST_STABLE,
+                    LanguageVersion.LATEST_STABLE,
                     Collections.emptyMap()
             );
-            CommonConfigurationKeysKt.setLanguageVersionSettings(
-                    configuration,
-                    compilerLanguageVersionSettings
-            );
+            CommonConfigurationKeysKt.setLanguageVersionSettings(configuration, compilerLanguageVersionSettings);
         }
 
         updateConfigurationWithFlags(configuration, kotlinConfigurationFlags);
-    }
-
-    private static void assertDirectivesToNull(@Nullable LanguageVersionSettings settings, @Nullable LanguageVersion version) {
-        assert settings == null && version == null : "Should not specify LANGUAGE_VERSION twice or together with !LANGUAGE directive";
     }
 
     private static final Map<String, Class<?>> FLAG_NAMESPACE_TO_CLASS = ImmutableMap.of(
@@ -724,13 +717,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
     protected ConfigurationKind extractConfigurationKind(@NotNull List<TestFile> files) {
         boolean addRuntime = false;
         boolean addReflect = false;
-        boolean addCoroutines = false;
         for (TestFile file : files) {
-            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "COMMON_COROUTINES_TEST") ||
-                InTextDirectivesUtils.isDirectiveDefined(file.content, "!LANGUAGE: +ReleaseCoroutines") ||
-                InTextDirectivesUtils.isDirectiveDefined(file.content, "LANGUAGE_VERSION: 1.3")) {
-                addCoroutines = true;
-            }
             if (InTextDirectivesUtils.isDirectiveDefined(file.content, "WITH_RUNTIME")) {
                 addRuntime = true;
             }
@@ -740,7 +727,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
         }
 
         return addReflect ? ConfigurationKind.ALL :
-               (addRuntime || addCoroutines) ? ConfigurationKind.NO_KOTLIN_REFLECT :
+               addRuntime ? ConfigurationKind.NO_KOTLIN_REFLECT :
                ConfigurationKind.JDK_ONLY;
     }
 

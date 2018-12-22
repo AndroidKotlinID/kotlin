@@ -167,7 +167,7 @@ internal class Kotlin2JvmSourceSetProcessor(
             Kapt3KotlinGradleSubplugin.createAptConfigurationIfNeeded(project, kotlinCompilation.compilationName)
         }
 
-        ScriptingGradleSubplugin.createDiscoveryConfigurationIfNeeded(project, kotlinCompilation.compilationName)
+        ScriptingGradleSubplugin.configureForSourceSet(project, kotlinCompilation.compilationName)
 
         project.afterEvaluate { project ->
             val javaTask = javaSourceSet?.let { project.tasks.findByName(it.compileJavaTaskName) as JavaCompile }
@@ -816,7 +816,7 @@ internal fun configureJavaTask(kotlinTask: KotlinCompile, javaTask: AbstractComp
      * It's important to modify javaTask.classpath only in doFirst,
      * because Android plugin uses ConventionMapping to modify it too (see JavaCompileConfigAction.execute),
      * and setting classpath explicitly prevents usage of Android mappings.
-     * Also classpath setted by Android can be modified after excecution of some tasks (see VarianConfiguration.getCompileClasspath)
+     * Also classpath set by Android can be modified after execution of some tasks (see VarianConfiguration.getCompileClasspath)
      * ex. it adds some support libraries jars after execution of prepareComAndroidSupportSupportV42311Library task,
      * so it's only safe to modify javaTask.classpath right before its usage
      */

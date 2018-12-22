@@ -189,10 +189,6 @@ messages/**)
     void dispose();
 }
 
--keepclassmembers class org.jetbrains.org.objectweb.asm.Opcodes {
-    *** ASM5;
-}
-
 -keep class org.jetbrains.org.objectweb.asm.tree.AnnotationNode { *; }
 -keep class org.jetbrains.org.objectweb.asm.tree.ClassNode { *; }
 -keep class org.jetbrains.org.objectweb.asm.tree.LocalVariableNode { *; }
@@ -249,3 +245,6 @@ messages/**)
 -keep class org.jetbrains.kotlin.psi.psiUtil.PsiUtilsKt { *; }
 
 -keep class net.jpountz.lz4.* { *; }
+
+# used in LazyScriptDescriptor
+-keep class org.jetbrains.kotlin.utils.addToStdlib.AddToStdlibKt { *; }

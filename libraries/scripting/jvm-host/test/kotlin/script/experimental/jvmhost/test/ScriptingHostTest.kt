@@ -5,6 +5,7 @@
 
 package kotlin.script.experimental.jvmhost.test
 
+import junit.framework.TestCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
@@ -14,6 +15,7 @@ import java.security.MessageDigest
 import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.BasicScriptingHost
+import kotlin.script.experimental.host.FileScriptSource
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvmhost.*
@@ -21,7 +23,11 @@ import kotlin.script.experimental.jvmhost.impl.CompiledScriptClassLoader
 import kotlin.script.experimental.jvmhost.impl.KJvmCompiledScript
 import kotlin.script.templates.standard.SimpleScriptTemplate
 
-class ScriptingHostTest {
+class ScriptingHostTest : TestCase() {
+
+    companion object {
+        const val TEST_DATA_DIR = "libraries/scripting/jvm-host/testData"
+    }
 
     @Test
     fun testSimpleUsage() {
@@ -31,6 +37,63 @@ class ScriptingHostTest {
         }
         Assert.assertEquals(greeting, output)
     }
+
+    @Test
+    fun testSimpleRequire() {
+        val greeting = "Hello from required!"
+        val script = "val subj = RequiredClass().value\nprintln(\"Hello from \$subj!\")"
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate> {
+            importScripts(File(TEST_DATA_DIR, "importTest/requiredSrc.kt").toScriptSource())
+        }
+        val output = captureOut {
+            BasicJvmScriptingHost().eval(script.toScriptSource(), compilationConfiguration, null).throwOnFailure()
+        }
+        Assert.assertEquals(greeting, output)
+    }
+
+    @Test
+    fun testSimpleImport() {
+        val greeting = "Hello from helloWithVal script!\nHello from imported helloWithVal script!"
+        val script = "println(\"Hello from imported \$helloScriptName script!\")"
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate> {
+            refineConfiguration {
+                beforeCompiling { ctx ->
+                    val importedScript = File(TEST_DATA_DIR, "importTest/helloWithVal.kts")
+                    if ((ctx.script as? FileScriptSource)?.file?.canonicalFile == importedScript.canonicalFile) {
+                        ctx.compilationConfiguration
+                    } else {
+                        ScriptCompilationConfiguration(ctx.compilationConfiguration) {
+                            importScripts(importedScript.toScriptSource())
+                        }
+                    }.asSuccess()
+                }
+            }
+        }
+        val output = captureOut {
+            BasicJvmScriptingHost().eval(script.toScriptSource(), compilationConfiguration, null).throwOnFailure()
+        }
+        Assert.assertEquals(greeting, output)
+    }
+
+    @Test
+    fun testImportError() {
+        val script = "println(\"Hello from imported \$helloScriptName script!\")"
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate> {
+            refineConfiguration {
+                beforeCompiling { ctx ->
+                    ScriptCompilationConfiguration(ctx.compilationConfiguration) {
+                        importScripts(File(TEST_DATA_DIR, "missing_script.kts").toScriptSource())
+                    }.asSuccess()
+                }
+            }
+        }
+        val res = BasicJvmScriptingHost().eval(script.toScriptSource(), compilationConfiguration, null)
+        assertTrue(res is ResultWithDiagnostics.Failure)
+        val report = res.reports.find { it.message.startsWith("Source file or directory not found") }
+        assertNotNull(report)
+        assertEquals("/script.kts", report?.sourcePath)
+    }
+
 
     @Test
     fun testMemoryCache() {
@@ -141,7 +204,11 @@ class ScriptingHostTest {
 
 fun ResultWithDiagnostics<*>.throwOnFailure(): ResultWithDiagnostics<*> = apply {
     if (this is ResultWithDiagnostics.Failure) {
-        throw Exception("Compilation/evaluation failed:\n  ${reports.joinToString("\n  ") { it.exception?.toString() ?: it.message }}")
+        val firstExceptionFromReports = reports.find { it.exception != null }?.exception
+        throw Exception(
+            "Compilation/evaluation failed:\n  ${reports.joinToString("\n  ") { it.exception?.toString() ?: it.message }}",
+            firstExceptionFromReports
+        )
     }
 }
 

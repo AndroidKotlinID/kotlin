@@ -22,7 +22,6 @@ import com.intellij.codeInsight.InferredAnnotationsManager
 import com.intellij.codeInsight.runner.JavaMainMethodProvider
 import com.intellij.core.*
 import com.intellij.ide.highlighter.JavaFileType
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.lang.MetaLanguage
 import com.intellij.lang.java.JavaParserDefinition
 import com.intellij.openapi.Disposable
@@ -69,6 +68,7 @@ import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PRO
 import org.jetbrains.kotlin.cli.common.config.ContentRoot
 import org.jetbrains.kotlin.cli.common.config.KotlinSourceRoot
 import org.jetbrains.kotlin.cli.common.config.kotlinSourceRoots
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.ERROR
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.STRONG_WARNING
@@ -241,16 +241,13 @@ class KotlinCoreEnvironment private constructor(
         }
 
         sourceFiles += createKtFiles(project)
-        sourceFiles.sortBy { it.virtualFile.path }
 
         if (scriptDefinitionProvider != null) {
-            ScriptDependenciesProvider.getInstance(project).let { importsProvider ->
-                configuration.addJvmClasspathRoots(
-                    sourceFiles.mapNotNull(importsProvider::getScriptDependencies)
-                        .flatMap { it.classpath }
-                        .distinctBy { it.absolutePath })
-            }
+            val (classpath, newSources, _) = collectScriptsCompilationDependencies(configuration, project, sourceFiles)
+            configuration.addJvmClasspathRoots(classpath)
+            sourceFiles += newSources
         }
+        sourceFiles.sortBy { it.virtualFile.path }
 
         val jdkHome = configuration.get(JVMConfigurationKeys.JDK_HOME)
         val jrtFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.JRT_PROTOCOL)
@@ -427,58 +424,10 @@ class KotlinCoreEnvironment private constructor(
 
     fun getSourceFiles(): List<KtFile> = sourceFiles
 
-    private fun createKtFiles(project: Project): List<KtFile> {
-        val sourceRoots = getSourceRootsCheckingForDuplicates()
+    private fun createKtFiles(project: Project): List<KtFile> =
+        createSourceFilesFromSourceRoots(configuration, project, getSourceRootsCheckingForDuplicates())
 
-        val localFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL)
-        val psiManager = PsiManager.getInstance(project)
-
-        val processedFiles = hashSetOf<VirtualFile>()
-        val result = mutableListOf<KtFile>()
-
-        val virtualFileCreator = PreprocessedFileCreator(project)
-
-        for ((sourceRootPath, isCommon) in sourceRoots) {
-            val vFile = localFileSystem.findFileByPath(sourceRootPath)
-            if (vFile == null) {
-                val message = "Source file or directory not found: $sourceRootPath"
-
-                val buildFilePath = configuration.get(JVMConfigurationKeys.MODULE_XML_FILE)
-                if (buildFilePath != null && Logger.isInitialized()) {
-                    LOG.warn("$message\n\nbuild file path: $buildFilePath\ncontent:\n${buildFilePath.readText()}")
-                }
-
-                report(ERROR, message)
-                continue
-            }
-
-            if (!vFile.isDirectory && vFile.fileType != KotlinFileType.INSTANCE) {
-                report(ERROR, "Source entry is not a Kotlin file: $sourceRootPath")
-                continue
-            }
-
-            for (file in File(sourceRootPath).walkTopDown()) {
-                if (!file.isFile) continue
-
-                val virtualFile = localFileSystem.findFileByPath(file.absolutePath)?.let(virtualFileCreator::create)
-                if (virtualFile != null && processedFiles.add(virtualFile)) {
-                    val psiFile = psiManager.findFile(virtualFile)
-                    if (psiFile is KtFile) {
-                        result.add(psiFile)
-                        if (isCommon) {
-                            psiFile.isCommonSource = true
-                        }
-                    }
-                }
-            }
-        }
-
-        return result
-    }
-
-    private fun report(severity: CompilerMessageSeverity, message: String) {
-        configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY).report(severity, message)
-    }
+    internal fun report(severity: CompilerMessageSeverity, message: String) = report(configuration, severity, message)
 
     companion object {
         private val LOG = Logger.getInstance(KotlinCoreEnvironment::class.java)
@@ -530,6 +479,67 @@ class KotlinCoreEnvironment private constructor(
 
         // used in the daemon for jar cache cleanup
         val applicationEnvironment: JavaCoreApplicationEnvironment? get() = ourApplicationEnvironment
+
+        internal fun report(
+            configuration: CompilerConfiguration,
+            severity: CompilerMessageSeverity,
+            message: String,
+            location: CompilerMessageLocation? = null
+        ) {
+            configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY).report(severity, message, location)
+        }
+
+        internal fun createSourceFilesFromSourceRoots(
+            configuration: CompilerConfiguration,
+            project: Project,
+            sourceRoots: List<KotlinSourceRoot>,
+            reportLocation: CompilerMessageLocation? = null
+        ): MutableList<KtFile> {
+            val localFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL)
+            val psiManager = PsiManager.getInstance(project)
+
+            val processedFiles = hashSetOf<VirtualFile>()
+            val result = mutableListOf<KtFile>()
+
+            val virtualFileCreator = PreprocessedFileCreator(project)
+
+            for ((sourceRootPath, isCommon) in sourceRoots) {
+                val vFile = localFileSystem.findFileByPath(sourceRootPath)
+                if (vFile == null) {
+                    val message = "Source file or directory not found: $sourceRootPath"
+
+                    val buildFilePath = configuration.get(JVMConfigurationKeys.MODULE_XML_FILE)
+                    if (buildFilePath != null && Logger.isInitialized()) {
+                        KotlinCoreEnvironment.LOG.warn("$message\n\nbuild file path: $buildFilePath\ncontent:\n${buildFilePath.readText()}")
+                    }
+
+                    report(configuration, ERROR, message, reportLocation)
+                    continue
+                }
+
+                if (!vFile.isDirectory && vFile.fileType != KotlinFileType.INSTANCE) {
+                    report(configuration, ERROR, "Source entry is not a Kotlin file: $sourceRootPath", reportLocation)
+                    continue
+                }
+
+                for (file in File(sourceRootPath).walkTopDown()) {
+                    if (!file.isFile) continue
+
+                    val virtualFile = localFileSystem.findFileByPath(file.absolutePath)?.let(virtualFileCreator::create)
+                    if (virtualFile != null && processedFiles.add(virtualFile)) {
+                        val psiFile = psiManager.findFile(virtualFile)
+                        if (psiFile is KtFile) {
+                            result.add(psiFile)
+                            if (isCommon) {
+                                psiFile.isCommonSource = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            return result
+        }
 
         private fun getOrCreateApplicationEnvironmentForProduction(configuration: CompilerConfiguration): JavaCoreApplicationEnvironment {
             synchronized(APPLICATION_LOCK) {
@@ -701,3 +711,4 @@ class KotlinCoreEnvironment private constructor(
         }
     }
 }
+

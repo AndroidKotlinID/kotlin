@@ -4,6 +4,7 @@
  */
 package kotlin.script.experimental.jvmhost.impl
 
+import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.CharsetToolkit
@@ -16,24 +17,30 @@ import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
-import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.cli.jvm.compiler.NoScopeRecordCliBindingTrace
-import org.jetbrains.kotlin.cli.jvm.compiler.TopDownAnalyzerFacadeForJVM
+import org.jetbrains.kotlin.cli.jvm.compiler.*
 import org.jetbrains.kotlin.cli.jvm.config.JvmClasspathRoot
 import org.jetbrains.kotlin.cli.jvm.config.JvmModulePathRoot
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
 import org.jetbrains.kotlin.cli.jvm.modules.CoreJrtFileSystem
 import org.jetbrains.kotlin.codegen.ClassBuilderFactories
+import org.jetbrains.kotlin.codegen.CompilationErrorHandler
 import org.jetbrains.kotlin.codegen.KotlinCodegenFacade
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.config.*
+import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.KotlinLanguage
-import org.jetbrains.kotlin.parsing.KotlinParserDefinition
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.NameUtils
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtScript
 import org.jetbrains.kotlin.script.KotlinScriptDefinition
 import org.jetbrains.kotlin.script.util.KotlinJars
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import java.io.File
+import java.util.*
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlin.reflect.full.starProjectedType
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.dependencies.DependenciesResolver
 import kotlin.script.experimental.host.ScriptingHostConfiguration
@@ -56,6 +63,12 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
 
         fun failure(vararg diagnostics: ScriptDiagnostic): ResultWithDiagnostics.Failure =
             ResultWithDiagnostics.Failure(*messageCollector.diagnostics.toTypedArray(), *diagnostics)
+
+        fun failure(message: String): ResultWithDiagnostics.Failure =
+            ResultWithDiagnostics.Failure(
+                *messageCollector.diagnostics.toTypedArray(),
+                message.asErrorDiagnostics(path = script.locationId)
+            )
 
         try {
             setIdeaIoUseFallback()
@@ -122,18 +135,25 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
 
             val psiFileFactory: PsiFileFactoryImpl = PsiFileFactory.getInstance(environment.project) as PsiFileFactoryImpl
             val scriptText = getMergedScriptText(script, updatedConfiguration)
-            val scriptFileName = "script" // TODO: extract from file/url if available
+            val scriptFileName = script.name ?: "script.${updatedConfiguration[ScriptCompilationConfiguration.fileExtension]}"
             val virtualFile = LightVirtualFile(
-                "$scriptFileName${KotlinParserDefinition.STD_SCRIPT_EXT}",
+                scriptFileName,
                 KotlinLanguage.INSTANCE,
                 StringUtil.convertLineSeparators(scriptText)
             ).apply {
                 charset = CharsetToolkit.UTF8_CHARSET
             }
             val psiFile: KtFile = psiFileFactory.trySetupPsiForFile(virtualFile, KotlinLanguage.INSTANCE, true, false) as KtFile?
-                ?: return failure("Unable to make PSI file from script".asErrorDiagnostics())
+                ?: return failure("Unable to make PSI file from script")
 
-            val sourceFiles = listOf(psiFile)
+            val ktScript = psiFile.declarations.firstIsInstanceOrNull<KtScript>()
+                ?: return failure("Not a script file")
+
+            val sourceFiles = arrayListOf(psiFile)
+            val (classpath, newSources, sourceDependencies) =
+                collectScriptsCompilationDependencies(kotlinCompilerConfiguration, environment.project, sourceFiles)
+            kotlinCompilerConfiguration.addJvmClasspathRoots(classpath)
+            sourceFiles.addAll(newSources)
 
             analyzerWithCompilerReport.analyzeAndReport(sourceFiles) {
                 val project = environment.project
@@ -147,7 +167,7 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
             }
             val analysisResult = analyzerWithCompilerReport.analysisResult
 
-            if (!analysisResult.shouldGenerateCode) return failure("no code to generate".asErrorDiagnostics())
+            if (!analysisResult.shouldGenerateCode) return failure("no code to generate")
             if (analysisResult.isError() || messageCollector.hasErrors()) return failure()
 
             val generationState = GenerationState.Builder(
@@ -158,19 +178,43 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
                 sourceFiles,
                 kotlinCompilerConfiguration
             ).build()
-            generationState.beforeCompile()
-            KotlinCodegenFacade.generatePackage(
-                generationState,
-                psiFile.script!!.containingKtFile.packageFqName,
-                setOf(psiFile.script!!.containingKtFile),
-                org.jetbrains.kotlin.codegen.CompilationErrorHandler.THROW_EXCEPTION
+
+            KotlinCodegenFacade.compileCorrectFiles(generationState, CompilationErrorHandler.THROW_EXCEPTION)
+
+            val scriptDependenciesStack = ArrayDeque<KtScript>()
+
+            fun makeOtherScripts(script: KtScript): List<KJvmCompiledScript<*>> {
+
+                // TODO: ensure that it is caught earlier (as well) since it would be more economical
+                if (scriptDependenciesStack.contains(script))
+                    throw IllegalArgumentException("Unable to handle recursive script dependencies")
+                scriptDependenciesStack.push(script)
+
+                val containingKtFile = script.containingKtFile
+                val otherScripts: List<KJvmCompiledScript<*>> =
+                    sourceDependencies.find { it.scriptFile == containingKtFile }?.sourceDependencies?.mapNotNull { sourceFile ->
+                        sourceFile.declarations.firstIsInstanceOrNull<KtScript>()?.let {
+                            KJvmCompiledScript<Any>(
+                                containingKtFile.virtualFile?.path, updatedConfiguration, it.fqName.asString(), makeOtherScripts(it)
+                            )
+                        }
+                    } ?: emptyList()
+
+                scriptDependenciesStack.pop()
+                return otherScripts
+            }
+
+            val compiledScript = KJvmCompiledScript<Any>(
+                script.locationId,
+                updatedConfiguration,
+                ktScript.fqName.asString(),
+                makeOtherScripts(ktScript),
+                KJvmCompiledModule(generationState)
             )
 
-            val res = KJvmCompiledScript<Any>(updatedConfiguration, generationState, scriptFileName.capitalize())
-
-            return ResultWithDiagnostics.Success(res, messageCollector.diagnostics)
+            return ResultWithDiagnostics.Success(compiledScript, messageCollector.diagnostics)
         } catch (ex: Throwable) {
-            return failure(ex.asDiagnostics())
+            return failure(ex.asDiagnostics(path = script.locationId))
         }
     }
 }
@@ -201,25 +245,46 @@ internal class ScriptDiagnosticsMessageCollector : MessageCollector {
         }
         if (mappedSeverity != null) {
             val mappedLocation = location?.let {
-                SourceCode.Location(SourceCode.Position(it.line, it.column))
+                if (it.line < 0 && it.column < 0) null // special location created by CompilerMessageLocation.create
+                else SourceCode.Location(SourceCode.Position(it.line, it.column))
             }
-            _diagnostics.add(ScriptDiagnostic(message, mappedSeverity, mappedLocation))
+            _diagnostics.add(ScriptDiagnostic(message, mappedSeverity, location?.path, mappedLocation))
         }
     }
 }
 
 // A bridge to the current scripting
-
+// mostly copies functionality from KotlinScriptDefinitionAdapterFromNewAPI[Base]
+// reusing it requires structural changes that doesn't seem justified now, since the internals of the scripting should be reworked soon anyway
+// TODO: either finish refactoring of the scripting internals or reuse KotlinScriptDefinitionAdapterFromNewAPI[BAse] here
 internal class BridgeScriptDefinition(
-    scriptCompilationConfiguration: ScriptCompilationConfiguration,
-    hostConfiguration: ScriptingHostConfiguration,
+    val scriptCompilationConfiguration: ScriptCompilationConfiguration,
+    val hostConfiguration: ScriptingHostConfiguration,
     updateClasspath: (List<File>) -> Unit
-) : KotlinScriptDefinition(
-    hostConfiguration.getScriptingClass(
-        scriptCompilationConfiguration.getOrError(ScriptCompilationConfiguration.baseClass),
-        BridgeScriptDefinition::class
-    )
-) {
+) : KotlinScriptDefinition(Any::class) {
+
+    val baseClass: KClass<*> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        getScriptingClass(scriptCompilationConfiguration.getOrError(ScriptCompilationConfiguration.baseClass))
+    }
+
+    override val template: KClass<*> get() = baseClass
+
+    override val name: String
+        get() = scriptCompilationConfiguration[ScriptCompilationConfiguration.displayName] ?: "Kotlin Script"
+
+    override val fileType: LanguageFileType = KotlinFileType.INSTANCE
+
+    override fun isScript(fileName: String): Boolean =
+        fileName.endsWith(".$fileExtension")
+
+    override fun getScriptName(script: KtScript): Name {
+        val fileBasedName = NameUtils.getScriptNameForFile(script.containingKtFile.name)
+        return Name.identifier(fileBasedName.identifier.removeSuffix(".$fileExtension"))
+    }
+
+    override val fileExtension: String
+        get() = scriptCompilationConfiguration[ScriptCompilationConfiguration.fileExtension] ?: super.fileExtension
+
     override val acceptedAnnotations = run {
         val cl = this::class.java.classLoader
         scriptCompilationConfiguration[ScriptCompilationConfiguration.refineConfigurationOnAnnotations]?.annotations
@@ -227,6 +292,33 @@ internal class BridgeScriptDefinition(
             ?: emptyList()
     }
 
+    override val implicitReceivers: List<KType> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        scriptCompilationConfiguration[ScriptCompilationConfiguration.implicitReceivers]
+            .orEmpty()
+            .map { getScriptingClass(it).starProjectedType }
+    }
+
+    override val providedProperties: List<Pair<String, KType>> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        scriptCompilationConfiguration[ScriptCompilationConfiguration.providedProperties]
+            ?.map { (k, v) -> k to getScriptingClass(v).starProjectedType }.orEmpty()
+    }
+
+    override val additionalCompilerArguments: List<String>
+        get() = scriptCompilationConfiguration[ScriptCompilationConfiguration.compilerOptions]
+            .orEmpty()
+
     override val dependencyResolver: DependenciesResolver =
         BridgeDependenciesResolver(scriptCompilationConfiguration, updateClasspath)
+
+    private val scriptingClassGetter by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        hostConfiguration[ScriptingHostConfiguration.getScriptingClass]
+            ?: throw IllegalArgumentException("Expecting 'getScriptingClass' property in the scripting environment")
+    }
+
+    private fun getScriptingClass(type: KotlinType) =
+        scriptingClassGetter(
+            type,
+            KotlinScriptDefinition::class, // Assuming that the KotlinScriptDefinition class is loaded in the proper classloader
+            hostConfiguration
+        )
 }

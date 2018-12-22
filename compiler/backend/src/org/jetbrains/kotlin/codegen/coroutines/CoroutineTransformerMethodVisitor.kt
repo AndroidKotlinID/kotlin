@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.codegen.optimization.DeadCodeEliminationMethodTransf
 import org.jetbrains.kotlin.codegen.optimization.boxing.isPrimitiveUnboxing
 import org.jetbrains.kotlin.codegen.optimization.common.*
 import org.jetbrains.kotlin.codegen.optimization.fixStack.FixStackMethodTransformer
-import org.jetbrains.kotlin.codegen.optimization.fixStack.top
 import org.jetbrains.kotlin.codegen.optimization.transformer.MethodTransformer
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.config.isReleaseCoroutines
@@ -354,8 +353,8 @@ class CoroutineTransformerMethodVisitor(
         methodNode.instructions.resetLabels()
         methodNode.accept(
             MaxStackFrameSizeAndLocalsCalculator(
-                Opcodes.ASM5, methodNode.access, methodNode.desc,
-                object : MethodVisitor(Opcodes.ASM5) {
+                Opcodes.API_VERSION, methodNode.access, methodNode.desc,
+                object : MethodVisitor(Opcodes.API_VERSION) {
                     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
                         methodNode.maxStack = maxStack
                     }
@@ -948,7 +947,7 @@ private fun allSuspensionPointsAreTailCalls(
     }
 }
 
-internal class IgnoringCopyOperationSourceInterpreter : SourceInterpreter(OPTIMIZATION_ASM_API_VERSION) {
+internal class IgnoringCopyOperationSourceInterpreter : SourceInterpreter(Opcodes.API_VERSION) {
     override fun copyOperation(insn: AbstractInsnNode?, value: SourceValue?) = value
 }
 

@@ -78,6 +78,11 @@ val ScriptCompilationConfigurationKeys.providedProperties by PropertiesCollectio
 val ScriptCompilationConfigurationKeys.defaultImports by PropertiesCollection.key<List<String>>()
 
 /**
+ * The list of script sources that should be compiled along with the script and imported into it
+ */
+val ScriptCompilationConfigurationKeys.importScripts by PropertiesCollection.key<List<SourceCode>>()
+
+/**
  * The list of script dependencies - platform specific
  */
 val ScriptCompilationConfigurationKeys.dependencies by PropertiesCollection.key<List<ScriptDependency>>()
@@ -218,6 +223,12 @@ interface ScriptCompiler {
 interface CompiledScript<out ScriptBase : Any> {
 
     /**
+     * The location identifier for the script source, taken from SourceCode.locationId
+     */
+    val sourceLocationId: String?
+        get() = null
+
+    /**
      * The compilation configuration used for script compilation
      */
     val compilationConfiguration: ScriptCompilationConfiguration
@@ -228,4 +239,10 @@ interface CompiledScript<out ScriptBase : Any> {
      * @return result wrapper, if successful - with loaded KClass
      */
     suspend fun getClass(scriptEvaluationConfiguration: ScriptEvaluationConfiguration?): ResultWithDiagnostics<KClass<*>>
+
+    /**
+     * The scripts compiled along with this one in one module, imported or otherwise included into compilation
+     */
+    val otherScripts: List<CompiledScript<*>>
+        get() = emptyList()
 }

@@ -1,5 +1,4 @@
-// WITH_RUNTIME
-
+// IGNORE_BACKEND: JVM_IR
 fun uint(vararg us: UInt): UIntArray = us
 
 // FILE: NoBoxing.kt
