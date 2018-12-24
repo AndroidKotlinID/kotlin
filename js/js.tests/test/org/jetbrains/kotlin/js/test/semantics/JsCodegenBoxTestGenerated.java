@@ -2183,6 +2183,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/casts/functions/asFunKBig.kt");
             }
 
+            @TestMetadata("asFunKSmall.kt")
+            public void testAsFunKSmall() throws Exception {
+                runTest("compiler/testData/codegen/box/casts/functions/asFunKSmall.kt");
+            }
+
             @TestMetadata("isFunKBig.kt")
             public void testIsFunKBig() throws Exception {
                 runTest("compiler/testData/codegen/box/casts/functions/isFunKBig.kt");
@@ -2196,6 +2201,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             @TestMetadata("reifiedAsFunKBig.kt")
             public void testReifiedAsFunKBig() throws Exception {
                 runTest("compiler/testData/codegen/box/casts/functions/reifiedAsFunKBig.kt");
+            }
+
+            @TestMetadata("reifiedAsFunKSmall.kt")
+            public void testReifiedAsFunKSmall() throws Exception {
+                runTest("compiler/testData/codegen/box/casts/functions/reifiedAsFunKSmall.kt");
             }
 
             @TestMetadata("reifiedIsFunKBig.kt")
@@ -2312,6 +2322,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             @TestMetadata("safeAsWithMutable.kt")
             public void testSafeAsWithMutable() throws Exception {
                 runTest("compiler/testData/codegen/box/casts/mutableCollections/safeAsWithMutable.kt");
+            }
+
+            @TestMetadata("weirdMutableCasts.kt")
+            public void testWeirdMutableCasts() throws Exception {
+                runTest("compiler/testData/codegen/box/casts/mutableCollections/weirdMutableCasts.kt");
             }
         }
     }
@@ -5029,6 +5044,16 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("kt25912.kt")
         public void testKt25912_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/kt25912.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("kt28844.kt")
+        public void testKt28844_1_2() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/kt28844.kt", "kotlin.coroutines.experimental");
+        }
+
+        @TestMetadata("kt28844.kt")
+        public void testKt28844_1_3() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/kt28844.kt", "kotlin.coroutines");
         }
 
         @TestMetadata("lastExpressionIsLoop.kt")
@@ -11327,6 +11352,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             @TestMetadata("innerClassConstructor.kt")
             public void testInnerClassConstructor() throws Exception {
                 runTest("compiler/testData/codegen/box/inlineClasses/hiddenConstructor/innerClassConstructor.kt");
+            }
+
+            @TestMetadata("kt28855.kt")
+            public void testKt28855() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/hiddenConstructor/kt28855.kt");
             }
 
             @TestMetadata("primaryConstructor.kt")
