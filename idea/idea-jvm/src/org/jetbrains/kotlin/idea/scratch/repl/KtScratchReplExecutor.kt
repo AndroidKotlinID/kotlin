@@ -40,7 +40,9 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
     private lateinit var osProcessHandler: OSProcessHandler
 
     override fun execute() {
-        val module = file.getModule() ?: return error(file, "Module should be selected")
+        handler.onStart(file)
+
+        val module = file.getModule() ?: return errorOccurs("Module should be selected", isFatal = true)
         val cmdLine = KotlinConsoleKeeper.createCommandLine(module)
 
         LOG.printDebugMessage("Execute REPL: ${cmdLine.commandLineString}")
@@ -56,6 +58,14 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
         sendCommandToProcess(":quit")
     }
 
+    override fun stop() {
+        try {
+            osProcessHandler.process.destroy()
+        } finally {
+            handler.onFinish(file)
+        }
+    }
+
     private fun sendCommandToProcess(command: String) {
         LOG.printDebugMessage("Send to REPL: ${command}")
 
@@ -67,11 +77,6 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
         val bytes = ("$xmlRes\n").toByteArray(charset)
         processInputOS.write(bytes)
         processInputOS.flush()
-    }
-
-    private fun error(file: ScratchFile, message: String) {
-        handlers.forEach { it.error(file, message) }
-        handlers.forEach { it.onFinish(file) }
     }
 
     private class ReplHistory {
@@ -108,7 +113,7 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
         }
 
         override fun notifyProcessTerminated(exitCode: Int) {
-            handlers.forEach { it.onFinish(file) }
+            handler.onFinish(file)
         }
 
         private fun strToSource(s: String, encoding: Charset = Charsets.UTF_8) = InputSource(ByteArrayInputStream(s.toByteArray(encoding)))
@@ -118,8 +123,7 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
             val output = try {
                 factory.newDocumentBuilder().parse(strToSource(text))
             } catch (e: Exception) {
-                handlers.forEach { it.error(file, "Couldn't parse REPL output: $text") }
-                return
+                return handler.error(file, "Couldn't parse REPL output: $text")
             }
 
             val root = output.firstChild as Element
@@ -142,7 +146,7 @@ class KtScratchReplExecutor(file: ScratchFile) : ScratchExecutor(file) {
                 }
 
                 if (lastExpression != null) {
-                    handlers.forEach { it.handle(file, lastExpression, result) }
+                    handler.handle(file, lastExpression, result)
                 }
             }
         }

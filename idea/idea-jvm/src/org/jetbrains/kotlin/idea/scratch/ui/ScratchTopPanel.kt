@@ -18,11 +18,12 @@ package org.jetbrains.kotlin.idea.scratch.ui
 
 
 import com.intellij.application.options.ModulesComboBox
-import com.intellij.execution.ui.ConfigurationModuleSelector
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
@@ -38,6 +39,7 @@ import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
 import org.jetbrains.kotlin.idea.scratch.actions.ClearScratchAction
 import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
+import org.jetbrains.kotlin.idea.scratch.actions.StopScratchAction
 import org.jetbrains.kotlin.idea.scratch.addScratchPanel
 import org.jetbrains.kotlin.idea.scratch.removeScratchPanel
 import javax.swing.*
@@ -59,36 +61,37 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
     private val isReplCheckbox: JCheckBox
     private val isMakeBeforeRunCheckbox: JCheckBox
 
+    private val actionsToolbar: ActionToolbar
+
     init {
-        add(createActionsToolbar())
+        actionsToolbar = createActionsToolbar()
+        add(actionsToolbar.component)
 
         moduleChooser = createModuleChooser(scratchFile.project)
         add(JLabel("Use classpath of module"))
         add(moduleChooser)
 
-        add(JSeparator(SwingConstants.VERTICAL))
-
-        isReplCheckbox = JCheckBox("Use REPL", false)
-        add(isReplCheckbox)
-        isReplCheckbox.addItemListener {
-            scratchFile.getPsiFile()?.virtualFile?.apply {
-                scratchPanelConfig = (scratchPanelConfig ?: ScratchPanelConfig()).copy(isRepl = isReplCheckbox.isSelected)
-            }
-        }
-
-        add(JSeparator(SwingConstants.VERTICAL))
-
-        isMakeBeforeRunCheckbox = JCheckBox("Make before Run", false)
+        isMakeBeforeRunCheckbox = JCheckBox("Make before Run")
         add(isMakeBeforeRunCheckbox)
         isMakeBeforeRunCheckbox.addItemListener {
-            scratchFile.getPsiFile()?.virtualFile?.apply {
-                scratchPanelConfig = (scratchPanelConfig ?: ScratchPanelConfig()).copy(isMakeBeforeRun = isMakeBeforeRunCheckbox.isSelected)
+            scratchFile.saveOptions {
+                copy(isMakeBeforeRun = isMakeBeforeRunCheckbox.isSelected)
             }
         }
 
         add(JSeparator(SwingConstants.VERTICAL))
 
-        (scratchFile.getPsiFile()?.virtualFile?.scratchPanelConfig ?: ScratchPanelConfig()).let {
+        isReplCheckbox = JCheckBox("Use REPL")
+        add(isReplCheckbox)
+        isReplCheckbox.addItemListener {
+            scratchFile.saveOptions {
+                copy(isRepl = isReplCheckbox.isSelected)
+            }
+        }
+
+        add(JSeparator(SwingConstants.VERTICAL))
+
+        scratchFile.options.let {
             isReplCheckbox.isSelected = it.isRepl
             isMakeBeforeRunCheckbox.isSelected = it.isMakeBeforeRun
         }
@@ -110,9 +113,6 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         }
     }
 
-    fun isRepl() = isReplCheckbox.isSelected
-    fun isMakeBeforeRun() = isMakeBeforeRunCheckbox.isSelected
-
     @TestOnly
     fun setReplMode(isSelected: Boolean) {
         isReplCheckbox.isSelected = isSelected
@@ -123,14 +123,21 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         isMakeBeforeRunCheckbox.isSelected = isSelected
     }
 
-    private fun createActionsToolbar(): JComponent {
+    fun updateToolbar() {
+        ApplicationManager.getApplication().invokeLater {
+            actionsToolbar.updateActionsImmediately()
+        }
+    }
+
+    private fun createActionsToolbar(): ActionToolbar {
         val toolbarGroup = DefaultActionGroup().apply {
             add(RunScratchAction())
+            add(StopScratchAction())
             addSeparator()
             add(ClearScratchAction())
         }
 
-        return ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true).component
+        return ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true)
     }
 
     private fun createModuleChooser(project: Project): ModulesComboBox {
@@ -141,5 +148,3 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         }
     }
 }
-
-data class ScratchPanelConfig(val isRepl: Boolean = false, val isMakeBeforeRun: Boolean = false)
