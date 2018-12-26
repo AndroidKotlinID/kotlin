@@ -34,6 +34,11 @@ public class HighlightingTestGenerated extends AbstractHighlightingTest {
         runTest("idea/testData/highlighter/Annotations.kt");
     }
 
+    @TestMetadata("Destructuring.kt")
+    public void testDestructuring() throws Exception {
+        runTest("idea/testData/highlighter/Destructuring.kt");
+    }
+
     @TestMetadata("Dynamic.kt")
     public void testDynamic() throws Exception {
         runTest("idea/testData/highlighter/Dynamic.kt");
@@ -107,6 +112,11 @@ public class HighlightingTestGenerated extends AbstractHighlightingTest {
     @TestMetadata("Todo.kt")
     public void testTodo() throws Exception {
         runTest("idea/testData/highlighter/Todo.kt");
+    }
+
+    @TestMetadata("TopLevelDestructuring.kt")
+    public void testTopLevelDestructuring() throws Exception {
+        runTest("idea/testData/highlighter/TopLevelDestructuring.kt");
     }
 
     @TestMetadata("TopLevelOpenSuspendFun.kt")
