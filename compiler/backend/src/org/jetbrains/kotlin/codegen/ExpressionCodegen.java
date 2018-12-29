@@ -97,8 +97,7 @@ import static org.jetbrains.kotlin.codegen.JvmCodegenUtil.*;
 import static org.jetbrains.kotlin.codegen.binding.CodegenBinding.*;
 import static org.jetbrains.kotlin.codegen.inline.InlineCodegenUtilsKt.*;
 import static org.jetbrains.kotlin.resolve.BindingContext.*;
-import static org.jetbrains.kotlin.resolve.BindingContextUtils.getDelegationConstructorCall;
-import static org.jetbrains.kotlin.resolve.BindingContextUtils.isVarCapturedInClosure;
+import static org.jetbrains.kotlin.resolve.BindingContextUtils.*;
 import static org.jetbrains.kotlin.resolve.DescriptorUtils.*;
 import static org.jetbrains.kotlin.resolve.jvm.AsmTypes.*;
 import static org.jetbrains.kotlin.types.expressions.ExpressionTypingUtils.isFunctionExpression;
@@ -3030,7 +3029,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
     public int indexOfLocalNotDelegated(KtReferenceExpression lhs) {
         DeclarationDescriptor declarationDescriptor = bindingContext.get(REFERENCE_TARGET, lhs);
-        if (isVarCapturedInClosure(bindingContext, declarationDescriptor)) {
+        if (isBoxedLocalCapturedInClosure(bindingContext, declarationDescriptor)) {
             return -1;
         }
         if (declarationDescriptor instanceof LocalVariableDescriptor && ((LocalVariableDescriptor) declarationDescriptor).isDelegated()) {
@@ -4039,6 +4038,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         else if (property.hasModifier(KtTokens.LATEINIT_KEYWORD)) {
             initializeLocalVariable(property, null);
         }
+        else if (!property.isVar()) {
+            initializeLocalVariableWithFakeDefaultValue(property);
+        }
 
         return StackValue.none();
     }
@@ -4180,6 +4182,50 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         }
 
         storeTo.storeSelector(resultType, resultKotlinType, v);
+    }
+
+    // This is a workaround to avoid bugs with incorrect range of uninitialized variable:
+    // 1) JDI error 305
+    // 2) Expected R, got . in code with contracts
+    // 3) D8 dropping the whole LVT
+    private void initializeLocalVariableWithFakeDefaultValue(@NotNull KtProperty variableDeclaration) {
+        LocalVariableDescriptor variableDescriptor = (LocalVariableDescriptor) getVariableDescriptorNotNull(variableDeclaration);
+
+        // For this kind of variables we generate boxes, i.e. we regard them as
+        if (isCapturedInClosureWithExactlyOnceEffect(bindingContext, variableDescriptor)) return;
+
+        assert !variableDeclaration.isVar() && !variableDeclaration.hasDelegateExpressionOrInitializer() &&
+                !variableDescriptor.isLateInit() : variableDeclaration.getText() + " in not variable declaration without initializer";
+
+        KotlinType kotlinType = variableDescriptor.getType();
+        Type type = typeMapper.mapType(kotlinType);
+
+        if (type == Type.VOID_TYPE) return;
+
+        int index = lookupLocalIndex(variableDescriptor);
+        assert index >= 0: variableDescriptor + " is not in frame map";
+
+        switch (type.getSort()) {
+            case Type.BOOLEAN:
+            case Type.CHAR:
+            case Type.BYTE:
+            case Type.SHORT:
+            case Type.INT:
+                v.iconst(0);
+                break;
+            case Type.FLOAT:
+                v.fconst(0.0f);
+                break;
+            case Type.LONG:
+                v.lconst(0L);
+                break;
+            case Type.DOUBLE:
+                v.dconst(0.0);
+                break;
+            default:
+                v.aconst(null);
+        }
+        v.store(index, type);
     }
 
     @NotNull

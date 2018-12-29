@@ -620,6 +620,7 @@ public class FunctionCodegen {
                     isReleaseCoroutines);
         }
 
+        Label methodEntry = null;
         Label methodEnd;
 
         int functionFakeIndex = -1;
@@ -648,15 +649,21 @@ public class FunctionCodegen {
                     parentCodegen.state, signature, functionDescriptor.getExtensionReceiverParameter(),
                     functionDescriptor.getValueParameters(), isStaticMethod(context.getContextKind(), functionDescriptor)
             );
+            // Manually add `continuation` parameter to frame map, thus it will not overlap with fake indices
+            if (functionDescriptor.isSuspend() && CoroutineCodegenUtilKt.isSuspendFunctionNotSuspensionView(functionDescriptor)) {
+                FunctionDescriptor view = CoroutineCodegenUtilKt.getOrCreateJvmSuspendFunctionView(functionDescriptor, parentCodegen.state);
+                ValueParameterDescriptor continuationValueDescriptor = view.getValueParameters().get(view.getValueParameters().size() - 1);
+                frameMap.enter(continuationValueDescriptor, typeMapper.mapType(continuationValueDescriptor));
+            }
             if (context.isInlineMethodContext()) {
-                functionFakeIndex = frameMap.enterTemp(Type.INT_TYPE);
+                functionFakeIndex = newFakeTempIndex(mv, frameMap);
             }
 
             if (context instanceof InlineLambdaContext) {
-                lambdaFakeIndex = frameMap.enterTemp(Type.INT_TYPE);
+                lambdaFakeIndex = newFakeTempIndex(mv, frameMap);
             }
 
-            Label methodEntry = new Label();
+            methodEntry = new Label();
             mv.visitLabel(methodEntry);
             context.setMethodStartLabel(methodEntry);
 
@@ -708,10 +715,11 @@ public class FunctionCodegen {
 
         //TODO: it's best to move all below logic to 'generateLocalVariableTable' method
         if (context.isInlineMethodContext() && functionFakeIndex != -1) {
+            assert methodEntry != null : "methodEntry is not initialized";
             mv.visitLocalVariable(
                     JvmAbi.LOCAL_VARIABLE_NAME_PREFIX_INLINE_FUNCTION + typeMapper.mapAsmMethod(functionDescriptor).getName(),
                     Type.INT_TYPE.getDescriptor(), null,
-                    methodBegin, methodEnd,
+                    methodEntry, methodEnd,
                     functionFakeIndex);
         }
 
@@ -728,12 +736,20 @@ public class FunctionCodegen {
                     functionName = inlineArgumentDescriptor.getContainingDeclaration().getName().asString();
                 }
             }
+            assert methodEntry != null : "methodEntry is not initialized";
             mv.visitLocalVariable(
                     JvmAbi.LOCAL_VARIABLE_NAME_PREFIX_INLINE_ARGUMENT + "-" + functionName + "-" + lambdaLocalName,
                     Type.INT_TYPE.getDescriptor(), null,
-                    methodBegin, methodEnd,
+                    methodEntry, methodEnd,
                     lambdaFakeIndex);
         }
+    }
+
+    private static int newFakeTempIndex(@NotNull MethodVisitor mv, FrameMap frameMap) {
+        int fakeIndex = frameMap.enterTemp(Type.INT_TYPE);
+        mv.visitLdcInsn(0);
+        mv.visitVarInsn(ISTORE, fakeIndex);
+        return fakeIndex;
     }
 
     private static boolean isCompatibilityStubInDefaultImpls(
