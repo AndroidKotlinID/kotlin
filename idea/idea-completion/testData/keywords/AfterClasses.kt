@@ -10,6 +10,9 @@ class B {
     }
 }
 
+class AfterClasses {
+}
+
 <caret>
 
 // EXIST:  abstract

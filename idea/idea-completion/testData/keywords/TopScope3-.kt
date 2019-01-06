@@ -1,24 +1,23 @@
-enum class Test {
-    ;
-
-    <caret>
-}
+<caret>
 
 // EXIST:  abstract
+// EXIST:  class
 // EXIST:  enum class
 // EXIST:  final
-// EXIST:  inner
+// EXIST:  fun
+// EXIST:  import
 // EXIST:  internal
+// EXIST:  object
 // EXIST:  open
-// EXIST:  override
+// EXIST:  package
 // EXIST:  private
-// EXIST:  protected
 // EXIST:  public
-// EXIST:  companion object
+// EXIST:  interface
+// EXIST:  val
+// EXIST:  var
 // EXIST:  operator
 // EXIST:  infix
 // EXIST:  sealed class
-// EXIST:  lateinit var
 // EXIST:  data class
 // EXIST:  inline
 // EXIST:  tailrec
@@ -26,18 +25,8 @@ enum class Test {
 // EXIST:  annotation class
 // EXIST:  const val
 // EXIST:  suspend
-// EXIST: fun
 // EXIST:  typealias
 // EXIST:  expect
 // EXIST:  actual
-
-/* TODO: items below are not valid here */
-// EXIST: class
-// EXIST: constructor
-// EXIST: init
-// EXIST: interface
-// EXIST: object
-// EXIST: val
-// EXIST: var
-
+// EXIST:  lateinit var
 // NOTHING_ELSE
