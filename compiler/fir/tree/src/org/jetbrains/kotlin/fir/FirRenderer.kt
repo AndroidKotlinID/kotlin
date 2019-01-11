@@ -170,6 +170,9 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             if (memberDeclaration.isExternal) {
                 print("external ")
             }
+            if (memberDeclaration.isSuspend) {
+                print("suspend ")
+            }
         } else if (memberDeclaration is FirProperty) {
             if (memberDeclaration.isConst) {
                 print("const ")
@@ -359,6 +362,10 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
 
     override fun visitExpression(expression: FirExpression) {
         print("STUB")
+    }
+
+    override fun <T> visitConstExpression(constExpression: FirConstExpression<T>) {
+        print("${constExpression.kind}(${constExpression.value})")
     }
 
     override fun visitCall(call: FirCall) {

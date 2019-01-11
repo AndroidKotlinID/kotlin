@@ -1471,6 +1471,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forInCharSequence.kt");
         }
 
+        @TestMetadata("forInOptimizableUnsignedRange.kt")
+        public void testForInOptimizableUnsignedRange() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/forLoop/forInOptimizableUnsignedRange.kt");
+        }
+
         @TestMetadata("forInRangeSpecializedToUntil.kt")
         public void testForInRangeSpecializedToUntil() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forInRangeSpecializedToUntil.kt");
@@ -2878,6 +2883,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         @TestMetadata("inOptimizableRange.kt")
         public void testInOptimizableRange() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/ranges/inOptimizableRange.kt");
+        }
+
+        @TestMetadata("inOptimizableUnsignedRange.kt")
+        public void testInOptimizableUnsignedRange() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/ranges/inOptimizableUnsignedRange.kt");
         }
 
         @TestMetadata("inUntil.kt")
