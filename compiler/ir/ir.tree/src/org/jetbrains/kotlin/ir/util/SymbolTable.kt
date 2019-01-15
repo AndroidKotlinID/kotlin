@@ -32,6 +32,19 @@ import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 
+interface IrDeserializer {
+    fun findDeserializedDeclaration(symbol: IrSymbol): IrDeclaration?
+    // We need a separate method for properties, because properties
+    // are treated differently in the SymbolTable.
+    // See SymbolTable.propertyTable and SymbolTable.referenceProperty.
+    // There was an attempt to solve this asymmetry in the symbol table
+    // using property symbols, but it was not successful.
+    // For now we have to live with a special treatment of properties.
+    // TODO: eventually get rid of this asymmetry.
+    fun findDeserializedDeclaration(propertyDescriptor: PropertyDescriptor): IrProperty?
+    fun declareForwardDeclarations()
+}
+
 interface ReferenceSymbolTable {
     fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol
 

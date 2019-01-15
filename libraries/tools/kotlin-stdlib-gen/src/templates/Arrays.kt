@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
  * that can be found in the license/LICENSE.txt file.
  */
 
@@ -77,6 +77,12 @@ object ArrayOps : TemplateGroupBase() {
             body { "return storage.contentEquals(other.storage)" }
             return@builder
         }
+        doc {
+            doc + """
+            The elements are compared for equality with the [equals][Any.equals] function.
+            For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
+            """
+        }
         on(Platform.JVM) {
             inlineOnly()
             body { "return java.util.Arrays.equals(this, other)" }
@@ -93,18 +99,16 @@ object ArrayOps : TemplateGroupBase() {
             }
         }
         on(Platform.Native) {
+            fun notEq(operand1: String, operand2: String) = when {
+                primitive?.isFloatingPoint() == true -> "!$operand1.equals($operand2)"
+                else -> "$operand1 != $operand2"
+            }
             body {
                 """
-                if (this === other) {
-                    return true
-                }
-                if (size != other.size) {
-                    return false
-                }
+                if (this === other) return true
+                if (size != other.size) return false
                 for (i in indices) {
-                    if (this[i] != other[i]) {
-                        return false
-                    }
+                    if (${notEq("this[i]", "other[i]")}) return false
                 }
                 return true
                 """
@@ -124,6 +128,9 @@ object ArrayOps : TemplateGroupBase() {
 
             If two corresponding elements are nested arrays, they are also compared deeply.
             If any of arrays contains itself on any nesting level the behavior is undefined.
+
+            The elements of other types are compared for equality with the [equals][Any.equals] function.
+            For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
             """
         }
         returns("Boolean")
@@ -884,10 +891,7 @@ object ArrayOps : TemplateGroupBase() {
         returns("Unit")
         on(Platform.JS) {
             body {
-                """
-                if (size > 1)
-                    sort { a: T, b: T -> a.compareTo(b) }
-                """
+                """if (size > 1) sortArray(this)"""
             }
             specialFor(ArraysOfPrimitives) {
                 if (primitive != PrimitiveType.Long) {
@@ -897,6 +901,10 @@ object ArrayOps : TemplateGroupBase() {
                     }
                     on(Backend.IR) {
                         body { "this.asDynamic().sort()" }
+                    }
+                } else {
+                    body {
+                        """if (size > 1) sort { a: T, b: T -> a.compareTo(b) }"""
                     }
                 }
             }
@@ -939,10 +947,7 @@ object ArrayOps : TemplateGroupBase() {
         }
         on(Platform.JS) {
             body {
-                """
-                if (size > 1)
-                    sort { a, b -> comparator.compare(a, b) }
-                """
+                """if (size > 1) sortArrayWith(this, comparator)"""
             }
         }
         on(Platform.Native) {
@@ -950,15 +955,21 @@ object ArrayOps : TemplateGroupBase() {
         }
     }
 
-    val f_sort_comparison = fn("sort(noinline comparison: (a: T, b: T) -> Int)") {
+    val f_sort_comparison = fn("sort(comparison: (a: T, b: T) -> Int)") {
         platforms(Platform.JS)
         include(ArraysOfObjects, ArraysOfPrimitives)
         exclude(PrimitiveType.Boolean)
     } builder {
-        inlineOnly()
         returns("Unit")
         doc { "Sorts the array in-place according to the order specified by the given [comparison] function." }
-        body { "asDynamic().sort(comparison)" }
+        specialFor(ArraysOfPrimitives) {
+            inlineOnly()
+            signature("sort(noinline comparison: (a: T, b: T) -> Int)")
+            body { "asDynamic().sort(comparison)" }
+        }
+        specialFor(ArraysOfObjects) {
+            body { """if (size > 1) sortArrayWith(this, comparison)""" }
+        }
     }
 
     val f_sort_objects = fn("sort()") {
@@ -1070,8 +1081,6 @@ object ArrayOps : TemplateGroupBase() {
             on(Platform.JS) {
                 when (primitive) {
                     PrimitiveType.Char -> {}
-                    PrimitiveType.Boolean, PrimitiveType.Long ->
-                        body { "return copyOf().unsafeCast<Array<T>>()" }
                     else ->
                         body { "return js(\"[]\").slice.call(this)" }
                 }

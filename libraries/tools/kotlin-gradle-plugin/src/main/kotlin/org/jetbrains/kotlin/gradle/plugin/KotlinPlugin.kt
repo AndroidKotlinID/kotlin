@@ -6,6 +6,7 @@ import com.android.builder.model.SourceProvider
 import groovy.lang.Closure
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.MutableVersionConstraint
 import org.gradle.api.attributes.Usage
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.SourceDirectorySet
@@ -17,6 +18,7 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.CompileClasspathNormalizer
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
@@ -380,7 +382,6 @@ internal abstract class AbstractKotlinPlugin(
             { compilation -> buildSourceSetProcessor(project, compilation, kotlinPluginVersion) }
         )
 
-        configureAttributes(target)
         configureProjectGlobalSettings(project, kotlinPluginVersion)
         registry.register(KotlinModelBuilder(kotlinPluginVersion, null))
     }
@@ -397,6 +398,7 @@ internal abstract class AbstractKotlinPlugin(
         ) {
             setUpJavaSourceSets(target)
             configureSourceSetDefaults(target, buildSourceSetProcessor)
+            configureAttributes(target)
         }
 
         private fun configureClassInspectionForIC(project: Project) {
@@ -452,6 +454,18 @@ internal abstract class AbstractKotlinPlugin(
                 val kotlinSourceSet = project.kotlinExtension.sourceSets.maybeCreate(kotlinCompilation.defaultSourceSetName)
                 kotlinCompilation.source(kotlinSourceSet)
             }
+
+            // Since the 'java' plugin (as opposed to 'java-library') doesn't known anything about the 'api' configurations,
+            // add the API dependencies of the main compilation directly to the 'apiElements' configuration, so that the 'api' dependencies
+            // are properly published with the 'compile' scope (KT-28355):
+            project.whenEvaluated {
+                project.configurations.apply {
+                    val apiElementsConfiguration = getByName(kotlinTarget.apiElementsConfigurationName)
+                    val mainCompilation = kotlinTarget.compilations.getByName(KotlinCompilation.MAIN_COMPILATION_NAME)
+                    val compilationApiConfiguration = getByName(mainCompilation.apiConfigurationName)
+                    apiElementsConfiguration.extendsFrom(compilationApiConfiguration)
+                }
+            }
         }
 
         private fun configureAttributes(
@@ -462,7 +476,7 @@ internal abstract class AbstractKotlinPlugin(
             // Setup the consuming configurations:
             project.dependencies.attributesSchema.attribute(KotlinPlatformType.attribute)
             kotlinTarget.compilations.all { compilation ->
-                AbstractKotlinTargetConfigurator.defineConfigurationsForCompilation(compilation, kotlinTarget, project.configurations)
+                AbstractKotlinTargetConfigurator.defineConfigurationsForCompilation(compilation)
             }
 
             project.configurations.getByName("default").apply {
@@ -501,11 +515,21 @@ internal abstract class AbstractKotlinPlugin(
 internal fun configureDefaultVersionsResolutionStrategy(project: Project, kotlinPluginVersion: String) {
     project.configurations.all { configuration ->
         if (isGradleVersionAtLeast(4, 4)) {
+            fun MutableVersionConstraint.chooseVersion(version: String) {
+                if (isGradleVersionAtLeast(5, 0)) {
+                    // In Gradle 5.0, the semantics of 'prefer' has changed to be much less imperative, and now it's 'require' that we need:
+                    val requireMethod = javaClass.getMethod("require", String::class.java)
+                    requireMethod(this, version)
+                } else {
+                    prefer(version)
+                }
+            }
+
             // Use the API introduced in Gradle 4.4 to modify the dependencies directly before they are resolved:
             configuration.withDependencies { dependencySet ->
                 dependencySet.filterIsInstance<ExternalDependency>()
                     .filter { it.group == "org.jetbrains.kotlin" && it.version.isNullOrEmpty() }
-                    .forEach { it.version { constraint -> constraint.prefer(kotlinPluginVersion) } }
+                    .forEach { it.version { constraint -> constraint.chooseVersion(kotlinPluginVersion) } }
             }
         } else {
             configuration.resolutionStrategy.eachDependency { details ->
@@ -598,22 +622,16 @@ internal open class KotlinAndroidPlugin(
 
     override fun apply(project: Project) {
         val androidTarget = KotlinAndroidTarget("", project)
-        val tasksProvider = AndroidTasksProvider(androidTarget.targetName)
-
-        applyToTarget(
-            project, androidTarget, tasksProvider,
-            kotlinPluginVersion
-        )
+        applyToTarget(kotlinPluginVersion, androidTarget)
         registry.register(KotlinModelBuilder(kotlinPluginVersion, androidTarget))
     }
 
     companion object {
-        fun applyToTarget(
-            project: Project,
-            kotlinTarget: KotlinAndroidTarget,
-            tasksProvider: KotlinTasksProvider,
-            kotlinPluginVersion: String
-        ) {
+        fun androidTargetHandler(
+            kotlinPluginVersion: String,
+            androidTarget: KotlinAndroidTarget
+        ): AbstractAndroidProjectHandler<*> {
+            val tasksProvider = AndroidTasksProvider(androidTarget.targetName)
 
             val version = loadAndroidPluginVersion()
             if (version != null) {
@@ -630,7 +648,7 @@ internal open class KotlinAndroidPlugin(
 
             val legacyVersionThreshold = "2.5.0"
 
-            val variantProcessor = if (compareVersionNumbers(version, legacyVersionThreshold) < 0) {
+            return if (compareVersionNumbers(version, legacyVersionThreshold) < 0) {
                 LegacyAndroidAndroidProjectHandler(kotlinTools)
             } else {
                 val android25ProjectHandlerClass = Class.forName("org.jetbrains.kotlin.gradle.plugin.Android25ProjectHandler")
@@ -639,8 +657,13 @@ internal open class KotlinAndroidPlugin(
                 }
                 ctor.newInstance(kotlinTools) as AbstractAndroidProjectHandler<*>
             }
+        }
 
-            variantProcessor.handleProject(project, kotlinTarget)
+        fun applyToTarget(
+            kotlinPluginVersion: String,
+            kotlinTarget: KotlinAndroidTarget
+        ) {
+            androidTargetHandler(kotlinPluginVersion, kotlinTarget).configureTarget(kotlinTarget)
         }
     }
 }
@@ -659,10 +682,13 @@ abstract class AbstractAndroidProjectHandler<V>(private val kotlinConfigurationT
     abstract fun forEachVariant(project: Project, action: (V) -> Unit): Unit
     abstract fun getTestedVariantData(variantData: V): V?
     abstract fun getResDirectories(variantData: V): FileCollection
+    abstract fun getVariantName(variant: V): String
+    abstract fun getFlavorNames(variant: V): List<String>
+    abstract fun getBuildTypeName(variant: V): String
+    abstract fun getLibraryOutputTask(variant: V): AbstractArchiveTask?
 
     protected abstract fun getSourceProviders(variantData: V): Iterable<SourceProvider>
     protected abstract fun getAllJavaSources(variantData: V): Iterable<File>
-    protected abstract fun getVariantName(variant: V): String
     protected abstract fun getJavaTask(variantData: V): AbstractCompile?
     protected abstract fun addJavaSourceDirectoryToVariantModel(variantData: V, javaSourceDirectory: File): Unit
 
@@ -682,7 +708,8 @@ abstract class AbstractAndroidProjectHandler<V>(private val kotlinConfigurationT
 
     protected abstract fun wrapVariantDataForKapt(variantData: V): KaptVariantData<V>
 
-    fun handleProject(project: Project, kotlinAndroidTarget: KotlinAndroidTarget) {
+    fun configureTarget(kotlinAndroidTarget: KotlinAndroidTarget) {
+        val project = kotlinAndroidTarget.project
         val ext = project.extensions.getByName("android") as BaseExtension
 
         ext.sourceSets.all { sourceSet ->
@@ -705,11 +732,11 @@ abstract class AbstractAndroidProjectHandler<V>(private val kotlinConfigurationT
         ext.addExtension(KOTLIN_OPTIONS_DSL_NAME, kotlinOptions)
 
         project.afterEvaluate { project ->
-            forEachVariant(project) { variant ->
-                val variantName = getVariantName(variant)
-                val compilation = kotlinAndroidTarget.compilations.create(variantName)
-                setUpDependencyResolution(variant, compilation)
-            }
+        forEachVariant(project) { variant ->
+            val variantName = getVariantName(variant)
+            val compilation = kotlinAndroidTarget.compilations.create(variantName)
+            setUpDependencyResolution(variant, compilation)
+        }
 
             val androidPluginIds = listOf(
                 "android", "com.android.application", "android-library", "com.android.library",

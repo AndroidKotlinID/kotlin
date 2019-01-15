@@ -23,6 +23,8 @@ sealed class KotlinSourceRootType(val isTest: Boolean) : JpsElementTypeBase<Java
 
     override fun isTestRoot() = isTest
 
+    override fun isForTests() = isTest
+
     override fun equals(other: Any?) = if (super.equals(other)) true else isSameRootType(this, other)
 }
 

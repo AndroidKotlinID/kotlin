@@ -73,7 +73,10 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
         val outerProject = Project("sample-lib", gradleVersion, "new-mpp-lib-and-app")
         val innerProject = Project("simpleProject").apply {
             setupWorkingDir()
-            gradleBuildScript().modify { it.replace("apply plugin: \"kotlin\"", "") }
+            gradleBuildScript().modify {
+                it.replace("apply plugin: \"kotlin\"", "")
+                    .replace("\"org.jetbrains.kotlin:kotlin-stdlib\"", "\"org.jetbrains.kotlin:kotlin-stdlib:\$kotlin_version\"")
+            }
         }
 
         with(outerProject) {
@@ -225,6 +228,12 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
         """.trimIndent())
         testResolveAllConfigurations("sample-lib")
     }
+
+    @Test
+    fun testJvmWithJavaProjectCanBeResolvedInAllConfigurations() =
+        with(Project("new-mpp-jvm-with-java-multi-module", GradleVersionRequired.AtLeast("4.7"))) {
+            testResolveAllConfigurations("app")
+        }
 
     @Test
     fun testConfigurationsWithNoExplicitUsageResolveRuntime() =

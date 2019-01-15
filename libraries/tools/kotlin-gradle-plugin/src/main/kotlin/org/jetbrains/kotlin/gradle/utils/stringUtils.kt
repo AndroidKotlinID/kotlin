@@ -13,3 +13,10 @@ internal fun lowerCamelCaseName(vararg nameParts: String?): String {
         transform = String::capitalize
     )
 }
+
+internal fun dashSeparatedName(nameParts: Iterable<String?>) = dashSeparatedName(*nameParts.toList().toTypedArray())
+
+internal fun dashSeparatedName(vararg nameParts: String?): String {
+    val nonEmptyParts = nameParts.mapNotNull { it?.takeIf(String::isNotEmpty) }
+    return nonEmptyParts.joinToString(separator = "-")
+}

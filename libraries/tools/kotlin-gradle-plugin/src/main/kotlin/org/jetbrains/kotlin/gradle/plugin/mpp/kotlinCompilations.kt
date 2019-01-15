@@ -61,6 +61,9 @@ abstract class AbstractKotlinCompilation<T : KotlinCommonOptions>(
 
     override val kotlinSourceSets: MutableSet<KotlinSourceSet> = mutableSetOf()
 
+    override val allKotlinSourceSets: Set<KotlinSourceSet>
+        get() = kotlinSourceSets.flatMapTo(mutableSetOf()) { it.getSourceSetHierarchy() }
+
     override val defaultSourceSet: KotlinSourceSet
         get() = target.project.kotlinExtension.sourceSets.getByName(defaultSourceSetName)
 
@@ -81,13 +84,22 @@ abstract class AbstractKotlinCompilation<T : KotlinCommonOptions>(
                 commonSourceSet += sourceSet.kotlin
             }
         }
-        // Note! Invocation of getByName results in preliminary task instantiation. After fix of this issue the following code should be uncommented:
+
+        // Note! Invocation of withType-all results in preliminary task instantiation.
+        // After fix of this issue the following code should be uncommented:
 //        if (useLazyTaskConfiguration) {
 //            (target.project.tasks.named(compileKotlinTaskName) as TaskProvider<AbstractKotlinCompile<*>>).configure {
 //                it.configureAction()
 //            }
 //        }
-        (target.project.tasks.getByName(compileKotlinTaskName) as AbstractKotlinCompile<*>).configureAction()
+
+        target.project.tasks
+            // To configure a task that may have not yet been created at this point, use 'withType-matching-all`:
+            .withType(AbstractKotlinCompile::class.java)
+            .matching { it.name == compileKotlinTaskName }
+            .all { compileKotlinTask ->
+                compileKotlinTask.configureAction()
+            }
     }
 
     override fun source(sourceSet: KotlinSourceSet) {
@@ -168,9 +180,6 @@ abstract class AbstractKotlinCompilation<T : KotlinCommonOptions>(
 
     override fun toString(): String = "compilation '$compilationName' ($target)"
 }
-
-val KotlinCompilation<*>.allKotlinSourceSets: Set<KotlinSourceSet>
-    get() = kotlinSourceSets.flatMapTo(mutableSetOf()) { it.getSourceSetHierarchy() }
 
 abstract class AbstractKotlinCompilationToRunnableFiles<T : KotlinCommonOptions>(
     target: KotlinTarget,
@@ -264,6 +273,9 @@ class KotlinJvmAndroidCompilation(
 ) : AbstractKotlinCompilationToRunnableFiles<KotlinJvmOptions>(target, name) {
     override val compileKotlinTask: org.jetbrains.kotlin.gradle.tasks.KotlinCompile
         get() = super.compileKotlinTask as org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+    override val relatedConfigurationNames: List<String>
+        get() = super.relatedConfigurationNames + listOf("${name}ApiElements", "${name}RuntimeElements")
 }
 
 class KotlinJsCompilation(

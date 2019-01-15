@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.applyLanguageSettingsToKotlinTask
-import org.jetbrains.kotlin.gradle.tasks.AndroidTasksProvider
 import org.jetbrains.kotlin.gradle.tasks.KotlinTasksProvider
 import org.jetbrains.kotlin.gradle.utils.NativeCompilerDownloader
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
@@ -56,6 +55,9 @@ abstract class KotlinOnlyTargetPreset<T : KotlinCompilation<*>>(
 
         result.compilations.all { compilation ->
             buildCompilationProcessor(compilation).run()
+            if (compilation.name == KotlinCompilation.MAIN_COMPILATION_NAME) {
+                sourcesJarTask(compilation, result.targetName, result.targetName.toLowerCase())
+            }
         }
 
         return result
@@ -185,11 +187,7 @@ class KotlinAndroidTargetPreset(
             preset = this@KotlinAndroidTargetPreset
         }
 
-        KotlinAndroidPlugin.applyToTarget(
-            project, result, AndroidTasksProvider(name),
-            kotlinPluginVersion
-        )
-
+        KotlinAndroidPlugin.applyToTarget(kotlinPluginVersion, result)
         return result
     }
 
@@ -215,11 +213,6 @@ class KotlinJvmWithJavaTargetPreset(
 
         AbstractKotlinPlugin.configureTarget(target) { compilation ->
             Kotlin2JvmSourceSetProcessor(project, KotlinTasksProvider(name), compilation, kotlinPluginVersion)
-        }
-
-        target.compilations.all { compilation ->
-            // Set up dependency resolution using platforms:
-            AbstractKotlinTargetConfigurator.defineConfigurationsForCompilation(compilation, target, project.configurations)
         }
 
         target.compilations.getByName("test").run {

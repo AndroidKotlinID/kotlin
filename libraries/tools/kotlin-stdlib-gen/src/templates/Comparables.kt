@@ -174,15 +174,14 @@ object ComparableOps : TemplateGroupBase() {
                     body { "return minOf(a.toInt(), b.toInt()).$convertBack" }
                 }
             }
-            if (primitive?.isIntegral() == false) {
+            if (primitive?.isFloatingPoint() == true) {
                 on(Platform.Native) {
                     body {
                         """
-                        // TODO: Check +/-0.0
                         return when {
                             a.isNaN() -> a
                             b.isNaN() -> b
-                            else -> $defaultImpl
+                            else -> if (a.compareTo(b) <= 0) a else b
                         }
                         """
                     }
@@ -314,16 +313,11 @@ object ComparableOps : TemplateGroupBase() {
                     body { "return maxOf(a.toInt(), b.toInt()).$convertBack" }
                 }
             }
-            if (primitive?.isIntegral() == false) {
+            if (primitive?.isFloatingPoint() == true) {
                 on(Platform.Native) {
                     body {
                         """
-                        // TODO: Check +/-0.0
-                        return when {
-                            a.isNaN() -> a
-                            b.isNaN() -> b
-                            else -> $defaultImpl
-                        }
+                        return if (a.compareTo(b) >= 0) a else b
                         """
                     }
                 }

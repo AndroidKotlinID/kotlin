@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license 
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license 
  * that can be found in the license/LICENSE.txt file.
  */
 
@@ -97,6 +97,9 @@ public actual fun CharArray.asList(): List<Char> {
  * 
  * If two corresponding elements are nested arrays, they are also compared deeply.
  * If any of arrays contains itself on any nesting level the behavior is undefined.
+ * 
+ * The elements of other types are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun <T> Array<out T>.contentDeepEquals(other: Array<out T>): Boolean {
@@ -131,6 +134,9 @@ public actual fun <T> Array<out T>.contentDeepToString(): String {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun <T> Array<out T>.contentEquals(other: Array<out T>): Boolean {
@@ -140,6 +146,9 @@ public actual infix fun <T> Array<out T>.contentEquals(other: Array<out T>): Boo
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun ByteArray.contentEquals(other: ByteArray): Boolean {
@@ -149,6 +158,9 @@ public actual infix fun ByteArray.contentEquals(other: ByteArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun ShortArray.contentEquals(other: ShortArray): Boolean {
@@ -158,6 +170,9 @@ public actual infix fun ShortArray.contentEquals(other: ShortArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun IntArray.contentEquals(other: IntArray): Boolean {
@@ -167,6 +182,9 @@ public actual infix fun IntArray.contentEquals(other: IntArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun LongArray.contentEquals(other: LongArray): Boolean {
@@ -176,6 +194,9 @@ public actual infix fun LongArray.contentEquals(other: LongArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun FloatArray.contentEquals(other: FloatArray): Boolean {
@@ -185,6 +206,9 @@ public actual infix fun FloatArray.contentEquals(other: FloatArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun DoubleArray.contentEquals(other: DoubleArray): Boolean {
@@ -194,6 +218,9 @@ public actual infix fun DoubleArray.contentEquals(other: DoubleArray): Boolean {
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun BooleanArray.contentEquals(other: BooleanArray): Boolean {
@@ -203,6 +230,9 @@ public actual infix fun BooleanArray.contentEquals(other: BooleanArray): Boolean
 /**
  * Returns `true` if the two specified arrays are *structurally* equal to one another,
  * i.e. contain the same number of the same elements in the same order.
+ * 
+ * The elements are compared for equality with the [equals][Any.equals] function.
+ * For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
  */
 @SinceKotlin("1.1")
 public actual infix fun CharArray.contentEquals(other: CharArray): Boolean {
@@ -1128,8 +1158,7 @@ public actual fun IntArray.sort(): Unit {
  * Sorts the array in-place.
  */
 public actual fun LongArray.sort(): Unit {
-    if (size > 1)
-        sort { a: Long, b: Long -> a.compareTo(b) }
+    if (size > 1) sort { a: Long, b: Long -> a.compareTo(b) }
 }
 
 /**
@@ -1171,16 +1200,14 @@ public actual fun CharArray.sort(): Unit {
  * Sorts the array in-place according to the natural order of its elements.
  */
 public actual fun <T : Comparable<T>> Array<out T>.sort(): Unit {
-    if (size > 1)
-        sort { a: T, b: T -> a.compareTo(b) }
+    if (size > 1) sortArray(this)
 }
 
 /**
  * Sorts the array in-place according to the order specified by the given [comparison] function.
  */
-@kotlin.internal.InlineOnly
-public inline fun <T> Array<out T>.sort(noinline comparison: (a: T, b: T) -> Int): Unit {
-    asDynamic().sort(comparison)
+public fun <T> Array<out T>.sort(comparison: (a: T, b: T) -> Int): Unit {
+    if (size > 1) sortArrayWith(this, comparison)
 }
 
 /**
@@ -1243,8 +1270,7 @@ public inline fun CharArray.sort(noinline comparison: (a: Char, b: Char) -> Int)
  * Sorts the array in-place according to the order specified by the given [comparator].
  */
 public actual fun <T> Array<out T>.sortWith(comparator: Comparator<in T>): Unit {
-    if (size > 1)
-        sort { a, b -> comparator.compare(a, b) }
+    if (size > 1) sortArrayWith(this, comparator)
 }
 
 /**
@@ -1272,7 +1298,7 @@ public actual fun IntArray.toTypedArray(): Array<Int> {
  * Returns a *typed* object array containing all of the elements of this primitive array.
  */
 public actual fun LongArray.toTypedArray(): Array<Long> {
-    return copyOf().unsafeCast<Array<Long>>()
+    return js("[]").slice.call(this)
 }
 
 /**
@@ -1293,7 +1319,7 @@ public actual fun DoubleArray.toTypedArray(): Array<Double> {
  * Returns a *typed* object array containing all of the elements of this primitive array.
  */
 public actual fun BooleanArray.toTypedArray(): Array<Boolean> {
-    return copyOf().unsafeCast<Array<Boolean>>()
+    return js("[]").slice.call(this)
 }
 
 /**

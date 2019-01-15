@@ -6,14 +6,20 @@
 package org.jetbrains.kotlin.gradle.plugin.mpp
 
 import groovy.lang.Closure
+import groovy.util.Node
+import groovy.util.NodeList
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.XmlProvider
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
 import org.gradle.api.internal.FeaturePreviews
+import org.gradle.api.internal.component.SoftwareComponentInternal
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.api.internal.plugins.DslObject
 import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.publish.PublicationContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal
@@ -28,6 +34,7 @@ import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.DefaultLanguageSettingsBuilder
 import org.jetbrains.kotlin.gradle.utils.SingleWarningPerBuild
+import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.presetName
 
@@ -86,8 +93,6 @@ class KotlinMultiplatformPlugin(
             KotlinMetadataTargetPreset(project, instantiator, fileResolver, kotlinPluginVersion),
             METADATA_TARGET_NAME
         )
-        configureSourceJars(project)
-
         configurePublishingWithMavenPublish(project)
 
         // propagate compiler plugin options to the source set language settings
@@ -155,7 +160,7 @@ class KotlinMultiplatformPlugin(
         }
 
         val targets = project.multiplatformExtension!!.targets
-        val kotlinSoftwareComponent = KotlinSoftwareComponent(project, "kotlin", targets)
+        val kotlinSoftwareComponent = project.multiplatformExtension!!.rootSoftwareComponent
 
         project.extensions.configure(PublishingExtension::class.java) { publishing ->
 
@@ -170,61 +175,43 @@ class KotlinMultiplatformPlugin(
                 publishTask.onlyIf { publishTask.publication != rootPublication || project.multiplatformExtension!!.isGradleMetadataAvailable }
             }
 
-            fun createTargetPublication(target: KotlinTarget) {
-                val variant = target.component as KotlinVariant
-                val name = target.name
-
-                val variantPublication = publishing.publications.create(name, MavenPublication::class.java).apply {
-                    // do this in whenEvaluated since older Gradle versions seem to check the files in the variant eagerly:
-                    project.whenEvaluated {
-                        from(variant)
-                        (project.tasks.findByName(target.sourcesJarTaskName) as Jar?)?.let { sourcesJar ->
-                            artifact(sourcesJar)
-                        }
-                    }
-                    (this as MavenPublicationInternal).publishWithOriginalFileName()
-                    artifactId = variant.target.defaultArtifactId
-                }
-
-                variant.publicationDelegate = variantPublication
-                (target as AbstractKotlinTarget).publicationConfigureActions.all {
-                    it.execute(variantPublication)
-                }
-            }
-
             // Enforce the order of creating the publications, since the metadata publication is used in the other publications:
-            createTargetPublication(targets.getByName(METADATA_TARGET_NAME))
-            targets.matching { it.publishable && it.name != METADATA_TARGET_NAME }.all(::createTargetPublication)
+            (targets.getByName(METADATA_TARGET_NAME) as AbstractKotlinTarget).createMavenPublications(publishing.publications)
+            targets
+                .withType(AbstractKotlinTarget::class.java).matching { it.publishable && it.name != METADATA_TARGET_NAME }
+                .all {
+                    if (it is KotlinAndroidTarget)
+                        // Android targets have their variants created in afterEvaluate; TODO handle this better?
+                        project.whenEvaluated { it.createMavenPublications(publishing.publications) }
+                    else
+                        it.createMavenPublications(publishing.publications)
+                }
         }
 
         project.components.add(kotlinSoftwareComponent)
-        targets.all {
-            project.components.add(it.component)
-        }
     }
 
-    private val KotlinTarget.sourcesJarTaskName get() = disambiguateName("sourcesJar")
-
-    private fun configureSourceJars(project: Project) = with(project.kotlinExtension as KotlinMultiplatformExtension) {
-        targets.all { target ->
-            val mainCompilation = target.compilations.findByName(KotlinCompilation.MAIN_COMPILATION_NAME)
-            // If a target has no `main` compilation (e.g. Android), don't create the source JAR
-                ?: return@all
-
-            val sourcesJar = project.tasks.create(target.sourcesJarTaskName, Jar::class.java) { sourcesJar ->
-                sourcesJar.appendix = target.targetName.toLowerCase()
-                sourcesJar.classifier = "sources"
-            }
-
-            project.afterEvaluate { _ ->
-                val compiledSourceSets = mainCompilation.allKotlinSourceSets
-                compiledSourceSets.forEach { sourceSet ->
-                    sourcesJar.from(sourceSet.kotlin) { copySpec ->
-                        copySpec.into(sourceSet.name)
+    private fun AbstractKotlinTarget.createMavenPublications(publications: PublicationContainer) {
+        components
+            .filter { it.publishable }
+            .forEach { variant ->
+                val variantPublication = publications.create(variant.name, MavenPublication::class.java).apply {
+                    // do this in whenEvaluated since older Gradle versions seem to check the files in the variant eagerly:
+                    project.whenEvaluated {
+                        from(variant)
+                        variant.sourcesArtifacts.forEach { sourceArtifact ->
+                            artifact(sourceArtifact)
+                        }
                     }
+                    (this as MavenPublicationInternal).publishWithOriginalFileName()
+                    artifactId = variant.defaultArtifactId
+
+                    pom.withXml { xml -> project.rewritePomMppDependenciesToActualTargetModules(xml, variant) }
                 }
+
+                (variant as? KotlinTargetComponentWithPublication)?.publicationDelegate = variantPublication
+                publicationConfigureActions.all { it.execute(variantPublication) }
             }
-        }
     }
 
     private fun configureSourceSets(project: Project) = with(project.kotlinExtension as KotlinMultiplatformExtension) {
@@ -293,7 +280,27 @@ class KotlinMultiplatformPlugin(
     }
 }
 
-internal val KotlinTarget.defaultArtifactId get() = "${project.name}-${name.toLowerCase()}"
+internal fun sourcesJarTask(compilation: KotlinCompilation<*>, componentName: String?, artifactNameAppendix: String): Jar {
+    val project = compilation.target.project
+    val taskName = lowerCamelCaseName(componentName, "sourcesJar")
+
+    (project.tasks.findByName(taskName) as? Jar)?.let { return it }
+
+    val result = project.tasks.create(taskName, Jar::class.java) { sourcesJar ->
+        sourcesJar.appendix = artifactNameAppendix
+        sourcesJar.classifier = "sources"
+    }
+
+    project.whenEvaluated {
+        compilation.allKotlinSourceSets.forEach { sourceSet ->
+            result.from(sourceSet.kotlin) { copySpec ->
+                copySpec.into(sourceSet.name)
+            }
+        }
+    }
+
+    return result
+}
 
 internal fun compilationsBySourceSet(project: Project): Map<KotlinSourceSet, Set<KotlinCompilation<*>>> =
     HashMap<KotlinSourceSet, MutableSet<KotlinCompilation<*>>>().also { result ->
@@ -305,3 +312,62 @@ internal fun compilationsBySourceSet(project: Project): Map<KotlinSourceSet, Set
             }
         }
     }
+
+private fun Project.rewritePomMppDependenciesToActualTargetModules(
+    pomXml: XmlProvider,
+    component: KotlinTargetComponent
+) {
+    if (component !is SoftwareComponentInternal)
+        return
+
+    val dependenciesNodeList = pomXml.asNode().get("dependencies") as NodeList
+    val dependencyNodes = dependenciesNodeList.filterIsInstance<Node>().flatMap {
+        (it.get("dependency") as? NodeList).orEmpty()
+    }.filterIsInstance<Node>()
+
+    val dependencyByNode = mutableMapOf<Node, ModuleDependency>()
+
+    // Collect all the dependencies from the nodes:
+    val dependencies = dependencyNodes.map { dependencyNode ->
+        fun Node.getSingleChildValueOrNull(childName: String): String? =
+            ((get(childName) as NodeList?)?.singleOrNull() as Node?)?.text()
+
+        val groupId = dependencyNode.getSingleChildValueOrNull("groupId")
+        val artifactId = dependencyNode.getSingleChildValueOrNull("artifactId")
+        val version = dependencyNode.getSingleChildValueOrNull("version")
+        (project.dependencies.module("$groupId:$artifactId:$version") as ModuleDependency)
+            .also { dependencyByNode[dependencyNode] = it }
+    }.toSet()
+
+    // Get the dependencies mapping according to the component's UsageContexts:
+    val resultDependenciesForEachUsageContext =
+        component.usages.mapNotNull { usage ->
+            if (usage is KotlinUsageContext)
+                rewriteDependenciesToActualModuleDependencies(usage, dependencies)
+                    // We are only interested in dependencies that are mapped to some other dependencies:
+                    .filter { (from, to) -> Triple(from.group, from.name, from.version) != Triple(to.group, to.name, to.version) }
+            else null
+        }
+
+    // Rewrite the dependency nodes according to the mapping:
+    dependencyNodes.forEach { dependencyNode ->
+        val moduleDependency = dependencyByNode[dependencyNode]
+        val mapDependencyTo = resultDependenciesForEachUsageContext.find { moduleDependency in it }?.get(moduleDependency)
+
+        if (mapDependencyTo != null) {
+
+            fun Node.setChildNodeByName(name: String, value: String?) {
+                val childNode: Node? = (get(name) as NodeList?)?.firstOrNull() as Node?
+                if (value != null) {
+                    (childNode ?: appendNode(name)).setValue(value)
+                } else {
+                    childNode?.let { remove(it) }
+                }
+            }
+
+            dependencyNode.setChildNodeByName("groupId", mapDependencyTo.group)
+            dependencyNode.setChildNodeByName("artifactId", mapDependencyTo.name)
+            dependencyNode.setChildNodeByName("version", mapDependencyTo.version)
+        }
+    }
+}
