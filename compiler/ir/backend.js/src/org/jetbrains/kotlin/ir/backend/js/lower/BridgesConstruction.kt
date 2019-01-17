@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.bridges.FunctionHandle
+import org.jetbrains.kotlin.backend.common.bridges.findInterfaceImplementation
 import org.jetbrains.kotlin.backend.common.bridges.generateBridges
 import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.backend.common.ir.copyTypeParametersFrom
@@ -25,6 +26,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.isUnit
+import org.jetbrains.kotlin.ir.util.isInlined
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isReal
 import org.jetbrains.kotlin.ir.util.parentAsClass
@@ -58,11 +60,6 @@ class BridgesConstruction(val context: JsIrBackendContext) : ClassLoweringPass {
             .filterIsInstance<IrSimpleFunction>()
             .filter { !it.isStaticMethodOfClass }
             .toList()
-            .forEach { generateBridges(it, irClass) }
-
-        irClass.declarations
-            .filterIsInstance<IrProperty>()
-            .flatMap { listOfNotNull(it.getter, it.setter) }
             .forEach { generateBridges(it, irClass) }
     }
 
@@ -105,7 +102,7 @@ class BridgesConstruction(val context: JsIrBackendContext) : ClassLoweringPass {
         val irFunction = JsIrBuilder.buildFunction(
             bridge.name,
             bridge.returnType,
-            delegateTo.parent,
+            function.parent,
             bridge.visibility,
             bridge.modality, // TODO: should copy modality?
             bridge.isInline,
@@ -166,7 +163,7 @@ class BridgesConstruction(val context: JsIrBackendContext) : ClassLoweringPass {
 // Handle for common.bridges
 data class IrBasedFunctionHandle(val function: IrSimpleFunction) : FunctionHandle {
 
-    override val isDeclaration: Boolean = true
+    override val isDeclaration: Boolean = function.isReal || findInterfaceImplementation(function.descriptor) != null
 
     override val isAbstract: Boolean =
         function.modality == Modality.ABSTRACT
@@ -188,13 +185,17 @@ class FunctionAndSignature(val function: IrSimpleFunction) {
     private data class Signature(
         val name: Name,
         val extensionReceiverType: String?,
-        val valueParameters: List<String?>
+        val valueParameters: List<String?>,
+        val returnType: String?
     )
 
     private val signature = Signature(
         function.name,
         function.extensionReceiverParameter?.type?.asString(),
-        function.valueParameters.map { it.type.asString() }
+        function.valueParameters.map { it.type.asString() },
+        // Return type used in signature for inline classes only because
+        // they are binary incompatible with supertypes and require bridges.
+        function.returnType.run { if (isInlined()) asString() else null }
     )
 
     override fun equals(other: Any?): Boolean {

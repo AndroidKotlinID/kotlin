@@ -3,6 +3,7 @@ package org.jetbrains.kotlin.gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.tooling.GradleConnector
 import org.gradle.util.GradleVersion
+import org.gradle.util.VersionNumber
 import org.jetbrains.kotlin.gradle.model.ModelContainer
 import org.jetbrains.kotlin.gradle.model.ModelFetcherBuildAction
 import org.jetbrains.kotlin.gradle.util.*
@@ -171,7 +172,7 @@ abstract class BaseGradleIT {
         val incrementalJs: Boolean? = null,
         val androidHome: File? = null,
         val javaHome: File? = null,
-        val androidGradlePluginVersion: String? = null,
+        val androidGradlePluginVersion: AGPVersion? = null,
         val forceOutputToStdout: Boolean = false,
         val debug: Boolean = false,
         val freeCommandLineArgs: List<String> = emptyList(),
@@ -511,14 +512,10 @@ abstract class BaseGradleIT {
             assertSameFiles(sources, compiledJavaSources.projectRelativePaths(this.project), "Compiled Java files differ:\n  ")
 
     fun Project.resourcesDir(subproject: String? = null, sourceSet: String = "main"): String =
-        (subproject?.plus("/") ?: "") + "build/" +
-                (if (testGradleVersionBelow("4.0")) "classes/" else "resources/") +
-                sourceSet + "/"
+        (subproject?.plus("/") ?: "") + "build/resources/$sourceSet/"
 
     fun Project.classesDir(subproject: String? = null, sourceSet: String = "main", language: String = "kotlin"): String =
-        (subproject?.plus("/") ?: "") + "build/classes/" +
-                (if (testGradleVersionAtLeast("4.0")) "$language/" else "") +
-                sourceSet + "/"
+        (subproject?.plus("/") ?: "") + "build/classes/$language/$sourceSet/"
 
     fun Project.testGradleVersionAtLeast(version: String): Boolean =
         GradleVersion.version(chooseWrapperVersionOrFinishTest()) >= GradleVersion.version(version)

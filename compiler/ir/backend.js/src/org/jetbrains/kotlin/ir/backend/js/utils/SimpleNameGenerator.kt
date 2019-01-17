@@ -13,8 +13,10 @@ import org.jetbrains.kotlin.ir.expressions.IrLoop
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrFail
+import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.util.isDynamic
 import org.jetbrains.kotlin.ir.util.isEffectivelyExternal
+import org.jetbrains.kotlin.ir.util.isInlined
 import org.jetbrains.kotlin.js.backend.ast.JsName
 import org.jetbrains.kotlin.js.naming.isES5IdentifierPart
 import org.jetbrains.kotlin.js.naming.isES5IdentifierStart
@@ -200,6 +202,13 @@ class SimpleNameGenerator : NameGenerator {
                     }
                     declaration.valueParameters.ifNotEmpty {
                         joinTo(nameBuilder, "") { "_${it.type.asString()}" }
+                    }
+                    declaration.returnType.let {
+                        // Return type is only used in signature for inline class types because
+                        // they are binary incompatible with supertypes.
+                        if (it.isInlined()) {
+                            nameBuilder.append("_ret$${it.asString()}")
+                        }
                     }
                 }
 

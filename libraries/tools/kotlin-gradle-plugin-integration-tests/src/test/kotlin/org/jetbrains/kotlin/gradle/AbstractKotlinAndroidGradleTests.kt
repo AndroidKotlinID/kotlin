@@ -1,9 +1,9 @@
 package org.jetbrains.kotlin.gradle
 
 import org.gradle.api.logging.LogLevel
+import org.jetbrains.kotlin.gradle.util.AGPVersion
 import org.jetbrains.kotlin.gradle.util.getFileByName
 import org.jetbrains.kotlin.gradle.util.getFilesByNames
-import org.jetbrains.kotlin.gradle.util.isLegacyAndroidGradleVersion
 import org.jetbrains.kotlin.gradle.util.modify
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.junit.Test
@@ -11,14 +11,8 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
-class KotlinAndroidGradleIT : AbstractKotlinAndroidGradleTests(androidGradlePluginVersion = "2.3.0") {
-    override val defaultGradleVersion: GradleVersionRequired
-        get() = GradleVersionRequired.InRange("3.4", "4.10.2")
-}
-
 // TODO If we there is a way to fetch the latest Android plugin version, test against the latest version
-class KotlinAndroid32GradleIT : KotlinAndroid3GradleIT(androidGradlePluginVersion = "3.2.0") {
+class KotlinAndroid32GradleIT : KotlinAndroid3GradleIT(androidGradlePluginVersion = AGPVersion.v3_2_0) {
     override val defaultGradleVersion: GradleVersionRequired
         get() = GradleVersionRequired.AtLeast("4.6")
 
@@ -237,12 +231,12 @@ class KotlinAndroid32GradleIT : KotlinAndroid3GradleIT(androidGradlePluginVersio
     }
 }
 
-class KotlinAndroid30GradleIT : KotlinAndroid3GradleIT(androidGradlePluginVersion = "3.0.0") {
+class KotlinAndroid30GradleIT : KotlinAndroid3GradleIT(androidGradlePluginVersion = AGPVersion.v3_0_0) {
     override val defaultGradleVersion: GradleVersionRequired
-        get() = GradleVersionRequired.InRange("4.1", "4.10.2")
+        get() = GradleVersionRequired.Until("4.10.2")
 }
 
-abstract class KotlinAndroid3GradleIT(androidGradlePluginVersion: String) : AbstractKotlinAndroidGradleTests(androidGradlePluginVersion) {
+abstract class KotlinAndroid3GradleIT(androidGradlePluginVersion: AGPVersion) : AbstractKotlinAndroidGradleTests(androidGradlePluginVersion) {
     @Test
     fun testApplyWithFeaturePlugin() {
         val project = Project("AndroidProject")
@@ -271,7 +265,7 @@ abstract class KotlinAndroid3GradleIT(androidGradlePluginVersion: String) : Abst
     }
 }
 
-abstract class AbstractKotlinAndroidGradleTests(val androidGradlePluginVersion: String) : BaseGradleIT() {
+abstract class AbstractKotlinAndroidGradleTests(val androidGradlePluginVersion: AGPVersion) : BaseGradleIT() {
 
     override fun defaultBuildOptions() =
         super.defaultBuildOptions().copy(
@@ -329,17 +323,6 @@ abstract class AbstractKotlinAndroidGradleTests(val androidGradlePluginVersion: 
         // Execute 'assembleAndroidTest' first, without 'build' side effects
         project.build("assembleAndroidTest") {
             assertSuccessful()
-            if (project.testGradleVersionBelow("4.0")) {
-                val tasks = ArrayList<String>().apply {
-                    for (subProject in listOf("Android", "Lib")) {
-                        for (flavor in listOf("Flavor1", "Flavor2")) {
-                            add(":$subProject:copy${flavor}DebugKotlinClasses")
-                        }
-                    }
-                }
-                // with the new AGP we don't need copy classes tasks
-                assertTasksExecuted(tasks)
-            }
         }
     }
 
@@ -502,11 +485,6 @@ fun getSomething() = 10
 
     @Test
     fun testAndroidExtensionsManyVariants() {
-        if (isLegacyAndroidGradleVersion(androidGradlePluginVersion)) {
-            // Library dependencies are not supported in older versions of Android Gradle plugin (< 3.0)
-            return
-        }
-
         val project = Project("AndroidExtensionsManyVariants")
         val options = defaultBuildOptions().copy(incremental = false)
 
@@ -566,16 +544,14 @@ fun getSomething() = 10
     fun testMultiplatformAndroidCompile() = with(Project("multiplatformAndroidProject")) {
         setupWorkingDir()
 
-        if (!isLegacyAndroidGradleVersion(androidGradlePluginVersion)) {
-            // Check that the common module is not added to the deprecated configuration 'compile' (KT-23719):
-            gradleBuildScript("libAndroid").appendText(
-                """${'\n'}
+        // Check that the common module is not added to the deprecated configuration 'compile' (KT-23719):
+        gradleBuildScript("libAndroid").appendText(
+            """${'\n'}
                 configurations.compile.dependencies.all { aDependencyExists ->
                     throw GradleException("Check failed")
                 }
                 """.trimIndent()
-            )
-        }
+        )
 
         build("build") {
             assertSuccessful()
@@ -590,12 +566,10 @@ fun getSomething() = 10
                 ":libAndroid:compileReleaseUnitTestKotlin"
             )
 
-            val kotlinFolder = if (project.testGradleVersionAtLeast("4.0")) "kotlin" else ""
-
-            assertFileExists("lib/build/classes/$kotlinFolder/main/foo/PlatformClass.kotlin_metadata")
-            assertFileExists("lib/build/classes/$kotlinFolder/test/foo/PlatformTest.kotlin_metadata")
-            assertFileExists("libJvm/build/classes/$kotlinFolder/main/foo/PlatformClass.class")
-            assertFileExists("libJvm/build/classes/$kotlinFolder/test/foo/PlatformTest.class")
+            assertFileExists("lib/build/classes/kotlin/main/foo/PlatformClass.kotlin_metadata")
+            assertFileExists("lib/build/classes/kotlin/test/foo/PlatformTest.kotlin_metadata")
+            assertFileExists("libJvm/build/classes/kotlin/main/foo/PlatformClass.class")
+            assertFileExists("libJvm/build/classes/kotlin/test/foo/PlatformTest.class")
 
             assertFileExists("libAndroid/build/tmp/kotlin-classes/debug/foo/PlatformClass.class")
             assertFileExists("libAndroid/build/tmp/kotlin-classes/release/foo/PlatformClass.class")
