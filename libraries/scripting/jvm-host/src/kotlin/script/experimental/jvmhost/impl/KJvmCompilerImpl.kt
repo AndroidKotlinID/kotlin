@@ -51,6 +51,7 @@ import kotlin.script.experimental.jvm.JvmDependency
 import kotlin.script.experimental.jvm.impl.BridgeDependenciesResolver
 import kotlin.script.experimental.jvm.jdkHome
 import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvm.withUpdatedClasspath
 import kotlin.script.experimental.jvmhost.KJvmCompilerProxy
 import kotlin.script.experimental.util.getOrError
 
@@ -79,11 +80,8 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
 
             fun updateClasspath(classpath: List<File>) {
                 environment!!.updateClasspath(classpath.map(::JvmClasspathRoot))
-                if (classpath.isNotEmpty()) {
-                    updatedConfiguration = ScriptCompilationConfiguration(updatedConfiguration) {
-                        dependencies.append(JvmDependency(classpath))
-                    }
-                }
+
+                updatedConfiguration = updatedConfiguration.withUpdatedClasspath(classpath)
             }
 
             val disposable = Disposer.newDisposable()
@@ -109,7 +107,12 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
                         }
                     )
                 }
-                fun addRoot(moduleName: String, file: File) {
+
+                // TODO: implement logic similar to compiler's  -no-stdlib (and -no-reflect?)
+                val standardLibs = arrayListOf("kotlin.stdlib" to KotlinJars.stdlib)
+                KotlinJars.scriptRuntimeOrNull?.let { standardLibs.add("kotlin.script.runtime" to it) }
+
+                for ((moduleName, file) in standardLibs) {
                     if (isModularJava) {
                         add(CLIConfigurationKeys.CONTENT_ROOTS, JvmModulePathRoot(file))
                         add(JVMConfigurationKeys.ADDITIONAL_JAVA_MODULES, moduleName)
@@ -117,14 +120,14 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
                         add(CLIConfigurationKeys.CONTENT_ROOTS, JvmClasspathRoot(file))
                     }
                 }
-                // TODO: implement logic similar to compiler's  -no-stdlib (and -no-reflect?)
-                addRoot("kotlin.stdlib", KotlinJars.stdlib)
-                KotlinJars.scriptRuntimeOrNull?.let { addRoot("kotlin.script.runtime", it) }
+                updatedConfiguration = updatedConfiguration.withUpdatedClasspath(standardLibs.map { it.second })
 
                 put(CommonConfigurationKeys.MODULE_NAME, "kotlin-script") // TODO" take meaningful and valid name from somewhere
                 languageVersionSettings = LanguageVersionSettingsImpl(
                     LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE, mapOf(AnalysisFlags.skipMetadataVersionCheck to true)
                 )
+
+                put(JVMConfigurationKeys.JVM_TARGET, JvmTarget.JVM_1_8)
             }
             environment = KotlinCoreEnvironment.createForProduction(
                 disposable,
