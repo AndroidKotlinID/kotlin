@@ -11,7 +11,6 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.Services
 import org.jetbrains.kotlin.daemon.common.*
 import org.jetbrains.kotlin.gradle.logging.*
-import org.jetbrains.kotlin.gradle.tasks.clearLocalStateDirectories
 import org.jetbrains.kotlin.gradle.tasks.throwGradleExceptionIfError
 import org.jetbrains.kotlin.gradle.utils.stackTraceAsString
 import org.jetbrains.kotlin.incremental.ChangedFiles
@@ -49,7 +48,7 @@ internal class GradleKotlinCompilerWorkArguments(
     val incrementalCompilationEnvironment: IncrementalCompilationEnvironment?,
     val incrementalModuleInfo: IncrementalModuleInfo?,
     val buildFile: File?,
-    val localStateDirectories: List<File>,
+    val outputFiles: List<File>,
     val taskPath: String
 ) : Serializable {
     companion object {
@@ -77,7 +76,7 @@ internal class GradleKotlinCompilerWork @Inject constructor(
     private val incrementalCompilationEnvironment = config.incrementalCompilationEnvironment
     private val incrementalModuleInfo = config.incrementalModuleInfo
     private val buildFile = config.buildFile
-    private val localStateDirectories = config.localStateDirectories
+    private val outputFiles = config.outputFiles
     private val taskPath = config.taskPath
 
     private val log: KotlinLogger =
@@ -91,30 +90,17 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         get() = incrementalCompilationEnvironment != null
 
     override fun run() {
-        if (!isIncremental) {
-            clearLocalStateDirectories(log, localStateDirectories, "IC is disabled")
-        }
-
         val messageCollector = GradlePrintingMessageCollector(log)
         val exitCode = try {
             compileWithDaemonOrFallbackImpl(messageCollector)
-        } catch (e: Throwable) {
-            clearLocalStateDirectories(log, localStateDirectories, "exception when running compiler")
-            throw e
         } finally {
             if (buildFile != null && System.getProperty(DELETE_MODULE_FILE_PROPERTY) != "false") {
                 buildFile.delete()
             }
         }
 
-        if (incrementalCompilationEnvironment != null) {
-            if (incrementalCompilationEnvironment.disableMultiModuleIC) {
-                incrementalCompilationEnvironment.multiModuleICSettings.buildHistoryFile.delete()
-            }
-
-            if (exitCode != ExitCode.OK) {
-                clearLocalStateDirectories(log, localStateDirectories, "exit code: $exitCode")
-            }
+        if (incrementalCompilationEnvironment?.disableMultiModuleIC == true) {
+            incrementalCompilationEnvironment.multiModuleICSettings.buildHistoryFile.delete()
         }
 
         throwGradleExceptionIfError(exitCode)
@@ -148,6 +134,7 @@ internal class GradleKotlinCompilerWork @Inject constructor(
 
     private fun compileWithDaemon(messageCollector: MessageCollector): ExitCode? {
         val isDebugEnabled = log.isDebugEnabled || System.getProperty("kotlin.daemon.debug.log")?.toBoolean() ?: false
+        val enableAssertions = System.getProperty("kotlin.daemon.ea")?.toBoolean() ?: false
         val daemonMessageCollector =
             if (isDebugEnabled) messageCollector else MessageCollector.NONE
 
@@ -158,7 +145,8 @@ internal class GradleKotlinCompilerWork @Inject constructor(
                     sessionFlagFile,
                     compilerFullClasspath,
                     daemonMessageCollector,
-                    isDebugEnabled
+                    isDebugEnabled = isDebugEnabled,
+                    enableAssertions = enableAssertions
                 )
             } catch (e: Throwable) {
                 log.error("Caught an exception trying to connect to Kotlin Daemon:")
@@ -245,7 +233,7 @@ internal class GradleKotlinCompilerWork @Inject constructor(
             compilerMode = CompilerMode.INCREMENTAL_COMPILER,
             targetPlatform = targetPlatform,
             usePreciseJavaTracking = icEnv.usePreciseJavaTracking,
-            localStateDirs = localStateDirectories,
+            outputFiles = outputFiles,
             multiModuleICSettings = icEnv.multiModuleICSettings,
             modulesInfo = incrementalModuleInfo!!
         )
