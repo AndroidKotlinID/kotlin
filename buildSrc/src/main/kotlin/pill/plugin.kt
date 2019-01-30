@@ -151,7 +151,8 @@ class JpsCompatiblePlugin : Plugin<Project> {
         val files = render(jpsProject)
 
         removeExistingIdeaLibrariesAndModules()
-        removeJpsRunConfigurations()
+        removeJpsAndPillRunConfigurations()
+        removeAllArtifactConfigurations()
 
         copyRunConfigurations()
         setOptionsForDefaultJunitRunConfiguration(rootProject)
@@ -163,7 +164,8 @@ class JpsCompatiblePlugin : Plugin<Project> {
         initEnvironment(project)
 
         removeExistingIdeaLibrariesAndModules()
-        removeJpsRunConfigurations()
+        removeJpsAndPillRunConfigurations()
+        removeAllArtifactConfigurations()
     }
 
     private fun removeExistingIdeaLibrariesAndModules() {
@@ -171,10 +173,17 @@ class JpsCompatiblePlugin : Plugin<Project> {
         File(projectDir, ".idea/modules").deleteRecursively()
     }
 
-    private fun removeJpsRunConfigurations() {
+    private fun removeJpsAndPillRunConfigurations() {
         File(projectDir, ".idea/runConfigurations")
             .walk()
-            .filter { it.name.startsWith("JPS_") && it.extension.toLowerCase() == "xml" }
+            .filter { (it.name.startsWith("JPS_") || it.name.startsWith("PILL_")) && it.extension.toLowerCase() == "xml" }
+            .forEach { it.delete() }
+    }
+
+    private fun removeAllArtifactConfigurations() {
+        File(projectDir, ".idea/artifacts")
+            .walk()
+            .filter { it.extension.toLowerCase() == "xml" }
             .forEach { it.delete() }
     }
 
@@ -263,7 +272,7 @@ class JpsCompatiblePlugin : Plugin<Project> {
                 addOrReplaceOptionValue("idea.home.path", platformDirProjectRelative)
                 addOrReplaceOptionValue("ideaSdk.androidPlugin.path", platformDirProjectRelative + "/plugins/android/lib")
                 addOrReplaceOptionValue("robolectric.classpath", robolectricClasspath)
-                addOrReplaceOptionValue("use.pill", "true")
+                addOrReplaceOptionValue("use.jps", "true")
 
                 val isAndroidStudioBunch = project.findProperty("versions.androidStudioRelease") != null
                 addOrReplaceOptionValue("idea.platform.prefix", if (isAndroidStudioBunch) "AndroidStudio" else null)

@@ -9710,6 +9710,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/coercionToUnit"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
                 }
 
+                @TestMetadata("coercionToUnitForIfAsLastExpressionInLambda.kt")
+                public void testCoercionToUnitForIfAsLastExpressionInLambda() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionToUnitForIfAsLastExpressionInLambda.kt");
+                }
+
                 @TestMetadata("coercionWithExpectedType.kt")
                 public void testCoercionWithExpectedType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionWithExpectedType.kt");
@@ -9738,6 +9743,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("noCoercion.kt")
                 public void testNoCoercion() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/noCoercion.kt");
+                }
+
+                @TestMetadata("nonPropagationOfCoercionToUnitInsideNestedLambda.kt")
+                public void testNonPropagationOfCoercionToUnitInsideNestedLambda() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/nonPropagationOfCoercionToUnitInsideNestedLambda.kt");
                 }
             }
 
@@ -9942,6 +9952,54 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("nontrivialCallExpression.kt")
                 public void testNontrivialCallExpression() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nestedCalls/nontrivialCallExpression.kt");
+                }
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/tests/inference/nothingType")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class NothingType extends AbstractDiagnosticsTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInNothingType() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/nothingType"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+                }
+
+                @TestMetadata("complexDependancyOnVariableWithTrivialConstraint.kt")
+                public void testComplexDependancyOnVariableWithTrivialConstraint() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/complexDependancyOnVariableWithTrivialConstraint.kt");
+                }
+
+                @TestMetadata("generateConstraintWithInnerNothingType.kt")
+                public void testGenerateConstraintWithInnerNothingType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/generateConstraintWithInnerNothingType.kt");
+                }
+
+                @TestMetadata("implicitNothingConstraintFromReturn.kt")
+                public void testImplicitNothingConstraintFromReturn() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/implicitNothingConstraintFromReturn.kt");
+                }
+
+                @TestMetadata("kt24490.kt")
+                public void testKt24490() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/kt24490.kt");
+                }
+
+                @TestMetadata("lambdaNothingAndExpectedType.kt")
+                public void testLambdaNothingAndExpectedType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/lambdaNothingAndExpectedType.kt");
+                }
+
+                @TestMetadata("nestedLambdaInferenceWithIncorporationOfVariables.kt")
+                public void testNestedLambdaInferenceWithIncorporationOfVariables() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/nestedLambdaInferenceWithIncorporationOfVariables.kt");
+                }
+
+                @TestMetadata("nothingWithCallableReference.kt")
+                public void testNothingWithCallableReference() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/nothingWithCallableReference.kt");
                 }
             }
 

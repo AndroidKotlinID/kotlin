@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.types.isNothing
 import org.jetbrains.kotlin.ir.types.toKotlinType
 import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.isNullConst
@@ -240,6 +241,9 @@ class ExpressionCodegen(
     }
 
     override fun visitContainerExpression(expression: IrContainerExpression, data: BlockInfo): StackValue {
+        // Empty blocks with nothing type should not generate a value on the stack. They
+        // arise for if statements with missing branches such as: if (expr) else 42
+        if (expression.statements.size == 0 && expression.type.isNothing()) return none()
         val result = expression.statements.fold(none()) { _, exp ->
             //coerceNotToUnit(r.type, Type.VOID_TYPE)
             exp.accept(this, data)
@@ -422,7 +426,10 @@ class ExpressionCodegen(
     }
 
     override fun visitGetValue(expression: IrGetValue, data: BlockInfo): StackValue {
-        expression.markLineNumber(startOffset = true)
+        // Do not generate line number information for loads from compiler-generated
+        // temporary variables. They do not correspond to variable loads in user code.
+        if (expression.symbol.owner.origin != IrDeclarationOrigin.IR_TEMPORARY_VARIABLE)
+            expression.markLineNumber(startOffset = true)
         return generateLocal(expression.symbol, expression.asmType)
     }
 
