@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.checkers;
 
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Maps;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
@@ -411,6 +412,18 @@ public class CheckerTestUtil {
             @NotNull Collection<PositionalTextDiagnostic> uncheckedDiagnostics,
             boolean withNewInferenceDirective
     ) {
+        return addDiagnosticMarkersToText(psiFile, diagnostics, diagnosticToExpectedDiagnostic, getFileText, uncheckedDiagnostics, withNewInferenceDirective, false);
+    }
+
+    public static StringBuffer addDiagnosticMarkersToText(
+            @NotNull PsiFile psiFile,
+            @NotNull Collection<ActualDiagnostic> diagnostics,
+            @NotNull Map<AbstractTestDiagnostic, TextDiagnostic> diagnosticToExpectedDiagnostic,
+            @NotNull Function<PsiFile, String> getFileText,
+            @NotNull Collection<PositionalTextDiagnostic> uncheckedDiagnostics,
+            boolean withNewInferenceDirective,
+            boolean renderDiagnosticMessages
+    ) {
         String text = getFileText.fun(psiFile);
         StringBuffer result = new StringBuffer();
         diagnostics = CollectionsKt.filter(diagnostics, actualDiagnostic -> psiFile.equals(actualDiagnostic.getFile()));
@@ -432,7 +445,7 @@ public class CheckerTestUtil {
                 opened.pop();
             }
             while (currentDescriptor != null && i == currentDescriptor.start) {
-                openDiagnosticsString(result, currentDescriptor, diagnosticToExpectedDiagnostic, withNewInferenceDirective);
+                openDiagnosticsString(result, currentDescriptor, diagnosticToExpectedDiagnostic, withNewInferenceDirective, renderDiagnosticMessages);
                 if (currentDescriptor.getEnd() == i) {
                     closeDiagnosticString(result);
                 }
@@ -452,7 +465,7 @@ public class CheckerTestUtil {
         if (currentDescriptor != null) {
             assert currentDescriptor.start == text.length();
             assert currentDescriptor.end == text.length();
-            openDiagnosticsString(result, currentDescriptor, diagnosticToExpectedDiagnostic, withNewInferenceDirective);
+            openDiagnosticsString(result, currentDescriptor, diagnosticToExpectedDiagnostic, withNewInferenceDirective, renderDiagnosticMessages);
             opened.push(currentDescriptor);
         }
 
@@ -470,7 +483,8 @@ public class CheckerTestUtil {
             StringBuffer result,
             AbstractDiagnosticDescriptor currentDescriptor,
             Map<AbstractTestDiagnostic, TextDiagnostic> diagnosticToExpectedDiagnostic,
-            boolean withNewInferenceDirective
+            boolean withNewInferenceDirective,
+            boolean renderDiagnosticMessages
     ) {
         result.append("<!");
         if (currentDescriptor instanceof TextDiagnosticDescriptor) {
@@ -501,6 +515,14 @@ public class CheckerTestUtil {
                         result.append(":");
                     }
                     result.append(diagnostic.getName());
+                    if (renderDiagnosticMessages) {
+                        TextDiagnostic textDiagnostic = TextDiagnostic.asTextDiagnostic(diagnostic);
+                        if (textDiagnostic.getParameters() != null) {
+                            result.append("(")
+                                    .append(String.join(", ", textDiagnostic.getParameters()))
+                                    .append(")");
+                        }
+                    }
                 }
                 if (iterator.hasNext()) {
                     result.append(", ");
@@ -708,7 +730,7 @@ public class CheckerTestUtil {
         }
 
         public Map<AbstractTestDiagnostic, TextDiagnostic> getTextDiagnosticsMap() {
-            Map<AbstractTestDiagnostic, TextDiagnostic> diagnosticMap = new HashMap<>();
+            Map<AbstractTestDiagnostic, TextDiagnostic> diagnosticMap = Maps.newLinkedHashMap();
             for (AbstractTestDiagnostic diagnostic : diagnostics) {
                 diagnosticMap.put(diagnostic, TextDiagnostic.asTextDiagnostic(diagnostic));
             }

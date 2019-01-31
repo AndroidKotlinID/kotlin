@@ -8615,6 +8615,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaultArguments"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
         }
 
+        @TestMetadata("callDefaultFromInitializer.kt")
+        public void testCallDefaultFromInitializer() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/callDefaultFromInitializer.kt");
+        }
+
         @TestMetadata("implementedByFake.kt")
         public void testImplementedByFake() throws Exception {
             runTest("compiler/testData/codegen/box/defaultArguments/implementedByFake.kt");
@@ -15141,6 +15146,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("noOverrideWithJava.kt")
         public void testNoOverrideWithJava() throws Exception {
             runTest("compiler/testData/codegen/box/mangling/noOverrideWithJava.kt");
+        }
+
+        @TestMetadata("parentheses.kt")
+        public void testParentheses() throws Exception {
+            runTest("compiler/testData/codegen/box/mangling/parentheses.kt");
         }
 
         @TestMetadata("publicOverride.kt")

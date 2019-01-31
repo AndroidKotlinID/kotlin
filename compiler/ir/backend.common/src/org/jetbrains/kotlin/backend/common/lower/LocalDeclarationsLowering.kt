@@ -87,6 +87,15 @@ class LocalDeclarationsLowering(
                 is IrProperty -> LocalDeclarationsTransformer(memberDeclaration).lowerLocalDeclarations()
                 is IrField -> LocalDeclarationsTransformer(memberDeclaration).lowerLocalDeclarations()
                 is IrAnonymousInitializer -> LocalDeclarationsTransformer(memberDeclaration).lowerLocalDeclarations()
+                is IrEnumEntry -> {
+                    // The responsibility of pulling up classes for enum entries is on EnumClassLowering.
+                    // Moreover, EnumClassLowering needs information whether a enum entry has its own class or not.
+                    val correspondingClass = memberDeclaration.correspondingClass
+                    memberDeclaration.correspondingClass = null
+                    LocalDeclarationsTransformer(memberDeclaration).lowerLocalDeclarations().also {
+                        memberDeclaration.correspondingClass = correspondingClass
+                    }
+                }
                 // TODO: visit children as well
                 else -> null
             }
@@ -484,7 +493,7 @@ class LocalDeclarationsLowering(
             val oldDeclaration = localFunctionContext.declaration as IrSimpleFunction
 
             val memberOwner = memberDeclaration.parent
-            val newDescriptor = WrappedSimpleFunctionDescriptor(oldDeclaration.descriptor.annotations, oldDeclaration.descriptor.source)
+            val newDescriptor = WrappedSimpleFunctionDescriptor(oldDeclaration.descriptor)
             val newSymbol = IrSimpleFunctionSymbolImpl(newDescriptor)
             val newName = generateNameForLiftedDeclaration(oldDeclaration, memberOwner)
 
