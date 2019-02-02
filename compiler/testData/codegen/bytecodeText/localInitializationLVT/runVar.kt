@@ -1,5 +1,3 @@
-// IGNORE_BACKEND: JVM_IR
-
 fun test(): Char {
     var c: Char
     run {
@@ -9,4 +7,4 @@ fun test(): Char {
 }
 
 // 1 ASTORE 0
-// 1 LOCALVARIABLE c Lkotlin/jvm/internal/Ref\$CharRef; L1 L11 0
+// 1 LOCALVARIABLE c Lkotlin/jvm/internal/Ref\$CharRef; L1 L.* 0
