@@ -656,6 +656,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/addBraces/addBracesForElse.kt");
         }
 
+        @TestMetadata("addBracesForElseWithCommentInsideIf.kt")
+        public void testAddBracesForElseWithCommentInsideIf() throws Exception {
+            runTest("idea/testData/intentions/addBraces/addBracesForElseWithCommentInsideIf.kt");
+        }
+
+        @TestMetadata("addBracesForElseWithCommentInsideWhen.kt")
+        public void testAddBracesForElseWithCommentInsideWhen() throws Exception {
+            runTest("idea/testData/intentions/addBraces/addBracesForElseWithCommentInsideWhen.kt");
+        }
+
         @TestMetadata("addBracesForFor.kt")
         public void testAddBracesForFor() throws Exception {
             runTest("idea/testData/intentions/addBraces/addBracesForFor.kt");
@@ -8703,6 +8713,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 runTest("idea/testData/intentions/declarations/convertMemberToExtension/private.kt");
             }
 
+            @TestMetadata("privateInInternalClass.kt")
+            public void testPrivateInInternalClass() throws Exception {
+                runTest("idea/testData/intentions/declarations/convertMemberToExtension/privateInInternalClass.kt");
+            }
+
             @TestMetadata("protected.kt")
             public void testProtected() throws Exception {
                 runTest("idea/testData/intentions/declarations/convertMemberToExtension/protected.kt");
@@ -8711,6 +8726,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("public.kt")
             public void testPublic() throws Exception {
                 runTest("idea/testData/intentions/declarations/convertMemberToExtension/public.kt");
+            }
+
+            @TestMetadata("publicInInternalClass.kt")
+            public void testPublicInInternalClass() throws Exception {
+                runTest("idea/testData/intentions/declarations/convertMemberToExtension/publicInInternalClass.kt");
+            }
+
+            @TestMetadata("publicInPrivateClass.kt")
+            public void testPublicInPrivateClass() throws Exception {
+                runTest("idea/testData/intentions/declarations/convertMemberToExtension/publicInPrivateClass.kt");
             }
 
             @TestMetadata("secondaryConstructor.kt")

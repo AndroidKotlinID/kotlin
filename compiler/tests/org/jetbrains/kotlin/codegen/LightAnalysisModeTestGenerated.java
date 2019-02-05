@@ -3736,6 +3736,16 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/closures/kt11634_4.kt");
         }
 
+        @TestMetadata("kt19389.kt")
+        public void testKt19389() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/kt19389.kt");
+        }
+
+        @TestMetadata("kt19389_set.kt")
+        public void testKt19389_set() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/kt19389_set.kt");
+        }
+
         @TestMetadata("kt2151.kt")
         public void testKt2151() throws Exception {
             runTest("compiler/testData/codegen/box/closures/kt2151.kt");
@@ -9238,6 +9248,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("kt19690.kt")
             public void testKt19690() throws Exception {
                 runTest("compiler/testData/codegen/box/delegatedProperty/local/kt19690.kt");
+            }
+
+            @TestMetadata("kt23117.kt")
+            public void testKt23117() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/local/kt23117.kt");
             }
 
             @TestMetadata("localVal.kt")
@@ -24517,6 +24532,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("multipleEntries.kt")
         public void testMultipleEntries() throws Exception {
             runTest("compiler/testData/codegen/box/when/multipleEntries.kt");
+        }
+
+        @TestMetadata("noElseCoerceToUnit.kt")
+        public void testNoElseCoerceToUnit() throws Exception {
+            runTest("compiler/testData/codegen/box/when/noElseCoerceToUnit.kt");
         }
 
         @TestMetadata("noElseExhaustive.kt")
