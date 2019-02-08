@@ -9250,6 +9250,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/delegatedProperty/local/kt19690.kt");
             }
 
+            @TestMetadata("kt21085.kt")
+            public void testKt21085() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/local/kt21085.kt");
+            }
+
             @TestMetadata("kt23117.kt")
             public void testKt23117() throws Exception {
                 runTest("compiler/testData/codegen/box/delegatedProperty/local/kt23117.kt");
@@ -14274,11 +14279,6 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/jvm8/javaDefaults/invokeDefaultViaSuper.kt");
             }
 
-            @TestMetadata("invokeDefaultViaSuper_16.kt")
-            public void testInvokeDefaultViaSuper_16() throws Exception {
-                runTest("compiler/testData/codegen/box/jvm8/javaDefaults/invokeDefaultViaSuper_16.kt");
-            }
-
             @TestMetadata("longChainOfKotlinExtendsFromJavaWithDefault.kt")
             public void testLongChainOfKotlinExtendsFromJavaWithDefault() throws Exception {
                 runTest("compiler/testData/codegen/box/jvm8/javaDefaults/longChainOfKotlinExtendsFromJavaWithDefault.kt");
@@ -14336,6 +14336,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("classFieldReflection.kt")
         public void testClassFieldReflection() throws Exception {
             runTest("compiler/testData/codegen/box/jvmField/classFieldReflection.kt");
+        }
+
+        @TestMetadata("compoundAccess.kt")
+        public void testCompoundAccess() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmField/compoundAccess.kt");
         }
 
         @TestMetadata("constructorProperty.kt")
@@ -23407,6 +23412,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
 
             public void testAllFilesPresentInSuperConstructor() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/super/superConstructor"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM_IR, true);
+            }
+
+            @TestMetadata("kt13846.kt")
+            public void testKt13846() throws Exception {
+                runTest("compiler/testData/codegen/box/super/superConstructor/kt13846.kt");
             }
 
             @TestMetadata("kt17464_arrayOf.kt")

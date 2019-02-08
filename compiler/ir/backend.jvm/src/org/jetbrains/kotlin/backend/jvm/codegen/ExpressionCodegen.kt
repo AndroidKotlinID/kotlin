@@ -243,13 +243,12 @@ class ExpressionCodegen(
     }
 
     override fun visitContainerExpression(expression: IrContainerExpression, data: BlockInfo): StackValue {
-        // Empty blocks with nothing type should not generate a value on the stack. They
-        // arise for if statements with missing branches such as: if (expr) else 42
-        if (expression.statements.size == 0 && expression.type.isNothing()) return none()
         val result = expression.statements.fold(none()) { _, exp ->
             //coerceNotToUnit(r.type, Type.VOID_TYPE)
             exp.accept(this, data)
         }
+        // Blocks with nothing type do not generate a value on the stack.
+        if (expression.type.isNothing()) return none()
         return coerceNotToUnit(result.type, result.kotlinType, expression.type.toKotlinType())
     }
 
@@ -377,13 +376,12 @@ class ExpressionCodegen(
         if (returnType != null && KotlinBuiltIns.isNothing(returnType)) {
             mv.aconst(null)
             mv.athrow()
-        } else if (expression.descriptor !is ConstructorDescriptor) {
-            return returnType?.run { coerceNotToUnit(callable.returnType, returnType, this) } ?: onStack(callable.returnType, returnType)
-        } else {
+            return expression.onStack
+        } else if (expression.descriptor is ConstructorDescriptor) {
             return none()
         }
 
-        return expression.onStack
+        return coerceNotToUnit(callable.returnType, returnType, expression.type.toKotlinType())
     }
 
     override fun visitInstanceInitializerCall(expression: IrInstanceInitializerCall, data: BlockInfo): StackValue {

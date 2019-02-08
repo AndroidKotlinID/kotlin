@@ -20,7 +20,7 @@ fun smartcastOnReceiver(s: String?) {
             <!UNSAFE_CALL!>length<!>
         }
         else {
-            <!DEBUG_INFO_IMPLICIT_RECEIVER_SMARTCAST!>length<!>
+            <!UNSAFE_CALL!>length<!>
         }
     }
 }

@@ -988,8 +988,8 @@ class NewMultiplatformIT : BaseGradleIT() {
             // Check that bitcode is disabled for iOS simulator.
             build("linkReleaseFrameworkIosSim", "linkDebugFrameworkIosSim") {
                 assertSuccessful()
-                assertFileExists("build/bin/iosSim/releaseFramework/native-binary.framework")
-                assertFileExists("build/bin/iosSim/debugFramework/native-binary.framework")
+                assertFileExists("build/bin/iosSim/releaseFramework/native_binary.framework")
+                assertFileExists("build/bin/iosSim/debugFramework/native_binary.framework")
                 checkFrameworkCompilationCommandLine {
                     assertFalse(it.contains("-Xembed-bitcode"))
                     assertFalse(it.contains("-Xembed-bitcode-marker"))
@@ -1522,6 +1522,16 @@ class NewMultiplatformIT : BaseGradleIT() {
                 UnusedSourceSetsChecker.WARNING_PREFIX_MANY,
                 UnusedSourceSetsChecker.WARNING_INTRO
             )
+        }
+    }
+
+    @Test
+    fun testKt29725() {
+        with(Project("new-mpp-native-libraries", GradleVersionRequired.Exact("5.2"))) {
+            // Assert that a project with a native target can be configured with Gradle 5.2
+            build("tasks") {
+                assertSuccessful()
+            }
         }
     }
 }

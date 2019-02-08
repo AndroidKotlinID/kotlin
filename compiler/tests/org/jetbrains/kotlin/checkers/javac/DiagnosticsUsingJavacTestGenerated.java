@@ -2917,6 +2917,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             public void testSpreadVarargs() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/checkArguments/SpreadVarargs.kt");
             }
+
+            @TestMetadata("twoLambdasFunction.kt")
+            public void testTwoLambdasFunction() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/checkArguments/twoLambdasFunction.kt");
+            }
         }
 
         @TestMetadata("compiler/testData/diagnostics/tests/classLiteral")
@@ -9478,6 +9483,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt1293.kt")
             public void testKt1293() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt1293.kt");
+            }
+
+            @TestMetadata("kt28598.kt")
+            public void testKt28598() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt28598.kt");
             }
 
             @TestMetadata("kt3184.kt")
@@ -19769,6 +19779,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt1355.kt")
                 public void testKt1355() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/smartCasts/inference/kt1355.kt");
+                }
+
+                @TestMetadata("kt25432.kt")
+                public void testKt25432() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/smartCasts/inference/kt25432.kt");
                 }
 
                 @TestMetadata("kt2746.kt")

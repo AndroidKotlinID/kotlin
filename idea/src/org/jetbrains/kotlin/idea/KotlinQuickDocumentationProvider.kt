@@ -23,12 +23,16 @@ import com.intellij.lang.documentation.AbstractDocumentationProvider
 import com.intellij.lang.documentation.DocumentationMarkup.*
 import com.intellij.lang.java.JavaDocumentationProvider
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.kotlin.asJava.LightClassUtil
 import org.jetbrains.kotlin.asJava.elements.KtLightDeclaration
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.idea.DocumentationURLs.LATE_INITIALIZED_PROPERTIES_AND_VARIABLES_URL
+import org.jetbrains.kotlin.idea.DocumentationURLs.TAIL_RECURSIVE_FUNCTIONS_URL
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
@@ -44,6 +48,7 @@ import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocSection
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.*
 import org.jetbrains.kotlin.renderer.AnnotationArgumentsRenderingPolicy
@@ -59,6 +64,14 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import org.jetbrains.kotlin.utils.addToStdlib.constant
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
+
+private object DocumentationURLs {
+    const val LATE_INITIALIZED_PROPERTIES_AND_VARIABLES_URL =
+        "http://kotlinlang.org/docs/reference/properties.html#late-initialized-properties-and-variables"
+
+    const val TAIL_RECURSIVE_FUNCTIONS_URL =
+        "http://kotlinlang.org/docs/reference/functions.html#tail-recursive-functions"
+}
 
 class HtmlClassifierNamePolicy(val base: ClassifierNamePolicy) : ClassifierNamePolicy {
     override fun renderClassifier(classifier: ClassifierDescriptor, renderer: DescriptorRenderer): String {
@@ -130,6 +143,10 @@ class WrapValueParameterHandler(val base: DescriptorRenderer.ValueParametersHand
 
 
 class KotlinQuickDocumentationProvider : AbstractDocumentationProvider() {
+
+    override fun getCustomDocumentationElement(editor: Editor, fil: PsiFile, contextElement: PsiElement?): PsiElement? {
+        return if (contextElement.isModifier()) contextElement else null
+    }
 
     override fun getQuickNavigateInfo(element: PsiElement?, originalElement: PsiElement?): String? {
         return if (element == null) null else getText(element, originalElement, true)
@@ -272,6 +289,20 @@ class KotlinQuickDocumentationProvider : AbstractDocumentationProvider() {
             } else if (element is KtLightDeclaration<*, *>) {
                 val origin = element.kotlinOrigin ?: return null
                 return renderKotlinDeclaration(origin, quickNavigation)
+            } else if (element.isModifier()) {
+                when(element.text) {
+                    KtTokens.LATEINIT_KEYWORD.value -> {
+                        return "lateinit allows initializing a ${a(
+                            LATE_INITIALIZED_PROPERTIES_AND_VARIABLES_URL,
+                            "non-null property outside of a constructor"
+                        )}"
+                    }
+
+                    KtTokens.TAILREC_KEYWORD.value -> {
+                        return "tailrec marks a function as ${a(TAIL_RECURSIVE_FUNCTIONS_URL, "tail-recursive")} " +
+                                "(allowing the compiler to replace recursion with iteration)"
+                    }
+                }
             }
 
             if (quickNavigation) {
@@ -371,7 +402,6 @@ class KotlinQuickDocumentationProvider : AbstractDocumentationProvider() {
             }
         }
 
-
         private fun StringBuilder.renderDefinition(descriptor: DeclarationDescriptor, renderer: DescriptorRenderer) {
             if (!DescriptorUtils.isLocal(descriptor)) {
                 val containingDeclaration = descriptor.containingDeclaration
@@ -457,6 +487,10 @@ class KotlinQuickDocumentationProvider : AbstractDocumentationProvider() {
             wrap("<$tag>", "</$tag>", body)
         }
 
+        private fun a(url: String, text: String): String {
+            return """<a href="$url">$text</a>"""
+        }
+
         private fun mixKotlinToJava(
             declarationDescriptor: DeclarationDescriptor,
             element: PsiElement,
@@ -479,5 +513,10 @@ class KotlinQuickDocumentationProvider : AbstractDocumentationProvider() {
                 else -> null
             }
         }
+
+        private fun PsiElement?.isModifier() = this != null
+                                               && parent is KtModifierList
+                                               && KtTokens.MODIFIER_KEYWORDS_ARRAY.firstOrNull { it.value == text } != null
+
     }
 }
