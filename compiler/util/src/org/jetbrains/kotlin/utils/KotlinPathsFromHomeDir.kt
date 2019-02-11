@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 JetBrains s.r.o.
+ * Copyright 2010-2015 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package org.jetbrains.kotlin.script
+package org.jetbrains.kotlin.utils
 
-import org.jetbrains.kotlin.descriptors.ScriptDescriptor
-import kotlin.reflect.KClass
+import kotlin.collections.*
 
-class ScriptHelperImpl : ScriptHelper {
-    override fun getScriptParameters(kotlinScriptDefinition: KotlinScriptDefinition, scriptDefinition: ScriptDescriptor) =
-            kotlinScriptDefinition.getScriptParameters(scriptDefinition)
+import java.io.File
 
-    override fun getKotlinType(scriptDescriptor: ScriptDescriptor, kClass: KClass<out Any>) =
-            getKotlinTypeByKClass(scriptDescriptor, kClass)
+class KotlinPathsFromHomeDir(
+    override val homePath: File // kotlinc directory
+) : KotlinPathsFromBaseDirectory(File(homePath, "lib")) {
+
+    // TODO: extend when needed
+    val libsWithSources = setOf(KotlinPaths.Jar.StdLib, KotlinPaths.Jar.JsStdLib)
+
+    override fun sourcesJar(jar: KotlinPaths.Jar): File? = if (jar in libsWithSources) super.sourcesJar(jar) else null
 }
