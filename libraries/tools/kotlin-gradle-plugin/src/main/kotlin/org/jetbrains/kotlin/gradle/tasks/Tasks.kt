@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.gradle.internal.tasks.TaskWithLocalState
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.*
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.report.BuildReportMode
 import org.jetbrains.kotlin.gradle.utils.*
 import org.jetbrains.kotlin.incremental.ChangedFiles
 import org.jetbrains.kotlin.incremental.classpathAsList
@@ -131,6 +132,9 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
             field = value
             logger.kotlinDebug { "Set $this.incremental=$value" }
         }
+
+    @get:Internal
+    internal var buildReportMode: BuildReportMode? = null
 
     @get:Internal
     internal val buildHistoryFile: File
@@ -436,6 +440,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         val environment = GradleCompilerEnvironment(
             computedCompilerClasspath, messageCollector, outputItemCollector,
             outputFiles = allOutputFiles(),
+            buildReportMode = buildReportMode,
             incrementalCompilationEnvironment = icEnv
         )
         compilerRunner.runJvmCompilerAsync(
@@ -593,6 +598,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         val environment = GradleCompilerEnvironment(
             computedCompilerClasspath, messageCollector, outputItemCollector,
             outputFiles = allOutputFiles(),
+            buildReportMode = buildReportMode,
             incrementalCompilationEnvironment = icEnv
         )
         compilerRunner.runJsCompilerAsync(sourceRoots.kotlinSourceFiles, commonSourceSet.toList(), args, environment)

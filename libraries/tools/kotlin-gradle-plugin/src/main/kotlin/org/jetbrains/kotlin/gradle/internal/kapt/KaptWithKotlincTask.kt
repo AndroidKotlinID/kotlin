@@ -64,6 +64,7 @@ open class KaptWithKotlincTask : KaptTask(), CompilerArgumentAwareWithInput<K2JV
         val outputItemCollector = OutputItemsCollectorImpl()
         val environment = GradleCompilerEnvironment(
             compilerClasspath, messageCollector, outputItemCollector,
+            buildReportMode = kotlinCompileTask.buildReportMode,
             outputFiles = allOutputFiles()
         )
         if (environment.toolsJar == null && !isAtLeastJava9) {

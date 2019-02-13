@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.ir.backend.js.lower.inline.FunctionInlining
 import org.jetbrains.kotlin.ir.backend.js.lower.inline.RemoveInlineFunctionsWithReifiedTypeParametersLowering
 import org.jetbrains.kotlin.ir.backend.js.lower.inline.ReturnableBlockLowering
 import org.jetbrains.kotlin.ir.backend.js.lower.inline.replaceUnboundSymbols
-import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.IrModuleToJsTransformer
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
@@ -68,8 +67,10 @@ private fun makeCustomJsModulePhase(
     }
 )
 
-private val moveBodilessDeclarationsToSeparatePlacePhase = makeJsModulePhase(
-    ::MoveBodilessDeclarationsToSeparatePlace,
+private val moveBodilessDeclarationsToSeparatePlacePhase = makeCustomJsModulePhase(
+    { context, module ->
+        moveBodilessDeclarationsToSeparatePlace(context, module)
+    },
     name = "MoveBodilessDeclarationsToSeparatePlace",
     description = "Move `external` and `built-in` declarations into separate place to make the following lowerings do not care about them"
 )
@@ -347,12 +348,6 @@ private val callsLoweringPhase = makeJsModulePhase(
     description = "Handle intrinsics"
 )
 
-private val irToJsPhase = makeCustomJsModulePhase(
-    { context, module -> context.jsProgram = IrModuleToJsTransformer(context).let { module.accept(it, null) } },
-    name = "IrModuleToJsTransformer",
-    description = "Generate JsAst from IrTree"
-)
-
 val jsPhases = namedIrModulePhase(
     name = "IrModuleLowering",
     description = "IR module lowering",
@@ -396,6 +391,5 @@ val jsPhases = namedIrModulePhase(
             blockDecomposerLoweringPhase then
             primitiveCompanionLoweringPhase then
             constLoweringPhase then
-            callsLoweringPhase then
-            irToJsPhase
+            callsLoweringPhase
 )

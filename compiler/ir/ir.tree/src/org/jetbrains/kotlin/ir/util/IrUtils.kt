@@ -379,6 +379,11 @@ tailrec fun IrElement.getPackageFragment(): IrPackageFragment? {
     }
 }
 
+fun IrAnnotationContainer.getAnnotation(name: FqName) =
+    annotations.find {
+        it.symbol.owner.parentAsClass.descriptor.fqNameSafe == name
+    }
+
 fun IrAnnotationContainer.hasAnnotation(name: FqName) =
     annotations.any {
         it.symbol.owner.parentAsClass.descriptor.fqNameSafe == name
@@ -403,9 +408,17 @@ fun IrFunction.isFakeOverriddenFromAny(): Boolean {
 fun IrCall.isSuperToAny() = superQualifier?.let { this.symbol.owner.isFakeOverriddenFromAny() } ?: false
 
 fun IrDeclaration.isEffectivelyExternal(): Boolean {
+
+    fun IrFunction.effectiveParentDeclaration(): IrDeclaration? =
+        when (this) {
+            is IrSimpleFunction -> correspondingProperty ?: parent as? IrDeclaration
+            else -> parent as? IrDeclaration
+        }
+
     return when (this) {
-        is IrFunction -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
+        is IrFunction -> isExternal || (effectiveParentDeclaration()?.isEffectivelyExternal() ?: false)
         is IrField -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
+        is IrProperty -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
         is IrClass -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
         else -> false
     }

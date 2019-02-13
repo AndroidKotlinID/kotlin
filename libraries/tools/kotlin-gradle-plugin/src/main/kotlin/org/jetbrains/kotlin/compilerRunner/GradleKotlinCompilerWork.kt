@@ -11,6 +11,10 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.Services
 import org.jetbrains.kotlin.daemon.common.*
 import org.jetbrains.kotlin.gradle.logging.*
+import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskExecutionResults
+import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskLoggers
+import org.jetbrains.kotlin.gradle.report.BuildReportMode
+import org.jetbrains.kotlin.gradle.report.TaskExecutionResult
 import org.jetbrains.kotlin.gradle.tasks.throwGradleExceptionIfError
 import org.jetbrains.kotlin.gradle.utils.stackTraceAsString
 import org.jetbrains.kotlin.incremental.ChangedFiles
@@ -19,6 +23,7 @@ import org.slf4j.LoggerFactory
 import java.io.*
 import java.net.URLClassLoader
 import java.rmi.RemoteException
+import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -49,7 +54,8 @@ internal class GradleKotlinCompilerWorkArguments(
     val incrementalModuleInfo: IncrementalModuleInfo?,
     val buildFile: File?,
     val outputFiles: List<File>,
-    val taskPath: String
+    val taskPath: String,
+    val buildReportMode: BuildReportMode?
 ) : Serializable {
     companion object {
         const val serialVersionUID: Long = 0
@@ -87,6 +93,7 @@ internal class GradleKotlinCompilerWork @Inject constructor(
     private val buildFile = config.buildFile
     private val outputFiles = config.outputFiles
     private val taskPath = config.taskPath
+    private val buildReportMode = config.buildReportMode
 
     private val log: KotlinLogger =
         TaskLoggers.get(taskPath)?.let { GradleKotlinLogger(it).apply { debug("Using '$taskPath' logger") } }
@@ -225,7 +232,16 @@ internal class GradleKotlinCompilerWork @Inject constructor(
             requestedCompilationResults = emptyArray()
         )
         val servicesFacade = GradleCompilerServicesFacadeImpl(log, bufferingMessageCollector)
-        return daemon.compile(sessionId, compilerArgs, compilationOptions, servicesFacade, compilationResults = null)
+        return try {
+            daemon.compile(sessionId, compilerArgs, compilationOptions, servicesFacade, compilationResults = null)
+        } finally {
+            reportExecutionResultIfNeeded {
+                TaskExecutionResult(
+                    executionStrategy = DAEMON_EXECUTION_STRATEGY,
+                    icLogLines = nonIcBuildLog("incremental compilation is not enabled for '$taskPath'")
+                )
+            }
+        }
     }
 
     private fun incrementalCompilationWithDaemon(
@@ -237,6 +253,13 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         val icEnv = incrementalCompilationEnvironment ?: error("incrementalCompilationEnvironment is null!")
         val knownChangedFiles = icEnv.changedFiles as? ChangedFiles.Known
 
+        val requestedCompilationResults = EnumSet.of(CompilationResultCategory.IC_COMPILE_ITERATION)
+        when (buildReportMode) {
+            BuildReportMode.SIMPLE -> CompilationResultCategory.BUILD_REPORT_LINES
+            BuildReportMode.VERBOSE -> CompilationResultCategory.VERBOSE_BUILD_REPORT_LINES
+            null -> null
+        }?.let { requestedCompilationResults.add(it) }
+
         val compilationOptions = IncrementalCompilationOptions(
             areFileChangesKnown = knownChangedFiles != null,
             modifiedFiles = knownChangedFiles?.modified,
@@ -244,7 +267,7 @@ internal class GradleKotlinCompilerWork @Inject constructor(
             workingDir = icEnv.workingDir,
             reportCategories = reportCategories(isVerbose),
             reportSeverity = reportSeverity(isVerbose),
-            requestedCompilationResults = arrayOf(CompilationResultCategory.IC_COMPILE_ITERATION.code),
+            requestedCompilationResults = requestedCompilationResults.map { it.code }.toTypedArray(),
             compilerMode = CompilerMode.INCREMENTAL_COMPILER,
             targetPlatform = targetPlatform,
             usePreciseJavaTracking = icEnv.usePreciseJavaTracking,
@@ -256,11 +279,29 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         log.info("Options for KOTLIN DAEMON: $compilationOptions")
         val servicesFacade = GradleIncrementalCompilerServicesFacadeImpl(log, bufferingMessageCollector)
         val compilationResults = GradleCompilationResults(log, projectRootFile)
-        return daemon.compile(sessionId, compilerArgs, compilationOptions, servicesFacade, compilationResults)
+        val result = daemon.compile(sessionId, compilerArgs, compilationOptions, servicesFacade, compilationResults)
+
+        reportExecutionResultIfNeeded {
+            TaskExecutionResult(
+                executionStrategy = DAEMON_EXECUTION_STRATEGY,
+                icLogLines = compilationResults.icLogLines
+            )
+        }
+
+        return result
     }
 
     private fun compileOutOfProcess(): ExitCode =
-        runToolInSeparateProcess(compilerArgs, compilerClassName, compilerFullClasspath, log)
+        try {
+            runToolInSeparateProcess(compilerArgs, compilerClassName, compilerFullClasspath, log)
+        } finally {
+            reportExecutionResultIfNeeded {
+                TaskExecutionResult(
+                    executionStrategy = OUT_OF_PROCESS_EXECUTION_STRATEGY,
+                    icLogLines = nonIcBuildLog("$OUT_OF_PROCESS_EXECUTION_STRATEGY execution strategy does not support incremental compilation")
+                )
+            }
+        }
 
     private fun compileInProcess(messageCollector: MessageCollector): ExitCode {
         // in-process compiler should always be run in a different thread
@@ -275,6 +316,13 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         } finally {
             bufferingMessageCollector.flush(messageCollector)
             threadPool.shutdown()
+
+            reportExecutionResultIfNeeded {
+                TaskExecutionResult(
+                    executionStrategy = IN_PROCESS_EXECUTION_STRATEGY,
+                    icLogLines = nonIcBuildLog("$IN_PROCESS_EXECUTION_STRATEGY execution strategy does not support incremental compilation")
+                )
+            }
         }
     }
 
@@ -319,4 +367,14 @@ internal class GradleKotlinCompilerWork @Inject constructor(
         } else {
             ReportSeverity.DEBUG.code
         }
+
+    private inline fun reportExecutionResultIfNeeded(fn: () -> TaskExecutionResult) {
+        if (buildReportMode != null) {
+            val result = fn()
+            TaskExecutionResults[taskPath] = result
+        }
+    }
+
+    private fun nonIcBuildLog(reason: String): List<String> =
+        listOf("Performing non-incremental build: $reason")
 }

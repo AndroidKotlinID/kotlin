@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.IncrementalCompilation
 import org.jetbrains.kotlin.config.Services
@@ -79,8 +78,14 @@ fun makeIncrementally(
     }
 }
 
-object EmptyICReporter : ICReporter {
+object EmptyICReporter : ICReporterBase() {
+    override fun reportCompileIteration(incremental: Boolean, sourceFiles: Collection<File>, exitCode: ExitCode) {
+    }
+
     override fun report(message: () -> String) {
+    }
+
+    override fun reportVerbose(message: () -> String) {
     }
 }
 
@@ -146,7 +151,7 @@ class IncrementalJvmCompilerRunner(
         initDirtyFiles(dirtyFiles, changedFiles)
 
         val lastBuildInfo = BuildInfo.read(lastBuildInfoFile) ?: return CompilationMode.Rebuild { "No information on previous build" }
-        reporter.report { "Last Kotlin Build info -- $lastBuildInfo" }
+        reporter.reportVerbose { "Last Kotlin Build info -- $lastBuildInfo" }
 
         val classpathChanges = getClasspathChanges(args.classpathAsList, changedFiles, lastBuildInfo, modulesApiHistory, reporter)
 
@@ -351,14 +356,9 @@ class IncrementalJvmCompilerRunner(
         args.destination = null
         args.buildFile = moduleFile.absolutePath
 
-        try {
-            reporter.report { "compiling with args: ${ArgumentUtils.convertArgumentsToStringList(args)}" }
-            reporter.report { "compiling with classpath: ${classpath.toList().sorted().joinToString()}" }
-            val exitCode = compiler.exec(messageCollector, services, args)
-            reporter.reportCompileIteration(sourcesToCompile, exitCode)
-            return exitCode
-        }
-        finally {
+        return try {
+            compiler.exec(messageCollector, services, args)
+        } finally {
             args.destination = destination
             moduleFile.delete()
         }

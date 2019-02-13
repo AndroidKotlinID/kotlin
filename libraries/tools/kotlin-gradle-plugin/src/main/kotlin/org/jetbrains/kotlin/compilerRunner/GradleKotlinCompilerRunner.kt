@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.cli.common.arguments.K2MetadataCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.daemon.client.CompileServiceSession
 import org.jetbrains.kotlin.daemon.common.*
-import org.jetbrains.kotlin.gradle.logging.TaskLoggers
+import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskLoggers
 import org.jetbrains.kotlin.gradle.logging.kotlinDebug
 import org.jetbrains.kotlin.gradle.tasks.*
 import org.jetbrains.kotlin.gradle.utils.newTmpFile
@@ -141,7 +141,8 @@ internal open class GradleCompilerRunner(protected val task: Task) {
             incrementalModuleInfo = modulesInfo,
             buildFile = buildFile,
             outputFiles = environment.outputFiles.toList(),
-            taskPath = task.path
+            taskPath = task.path,
+            buildReportMode = environment.buildReportMode
         )
         TaskLoggers.put(task.path, task.logger)
         runCompilerAsync(workArgs)
