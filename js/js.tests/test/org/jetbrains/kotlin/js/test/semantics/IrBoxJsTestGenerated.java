@@ -3875,6 +3875,16 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/inline/extensionWithManyArguments.kt");
         }
 
+        @TestMetadata("fakeOverrideInlining.kt")
+        public void testFakeOverrideInlining() throws Exception {
+            runTest("js/js.translator/testData/box/inline/fakeOverrideInlining.kt");
+        }
+
+        @TestMetadata("fakeOverrideInliningCrossModule.kt")
+        public void testFakeOverrideInliningCrossModule() throws Exception {
+            runTest("js/js.translator/testData/box/inline/fakeOverrideInliningCrossModule.kt");
+        }
+
         @TestMetadata("faultyRedundantCallElimination.kt")
         public void testFaultyRedundantCallElimination() throws Exception {
             runTest("js/js.translator/testData/box/inline/faultyRedundantCallElimination.kt");
@@ -3995,6 +4005,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/inline/inlineSimpleAssignment.kt");
         }
 
+        @TestMetadata("inlinedObjectLiteralIsCheck.kt")
+        public void testInlinedObjectLiteralIsCheck() throws Exception {
+            runTest("js/js.translator/testData/box/inline/inlinedObjectLiteralIsCheck.kt");
+        }
+
         @TestMetadata("innerOuterThis.kt")
         public void testInnerOuterThis() throws Exception {
             runTest("js/js.translator/testData/box/inline/innerOuterThis.kt");
@@ -4048,6 +4063,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("lambdaReassignmentWithCapture.kt")
         public void testLambdaReassignmentWithCapture() throws Exception {
             runTest("js/js.translator/testData/box/inline/lambdaReassignmentWithCapture.kt");
+        }
+
+        @TestMetadata("localDeclarationsClash.kt")
+        public void testLocalDeclarationsClash() throws Exception {
+            runTest("js/js.translator/testData/box/inline/localDeclarationsClash.kt");
         }
 
         @TestMetadata("localInlineExtensionFunction.kt")
@@ -4108,6 +4128,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("params.kt")
         public void testParams() throws Exception {
             runTest("js/js.translator/testData/box/inline/params.kt");
+        }
+
+        @TestMetadata("privateProperty.kt")
+        public void testPrivateProperty() throws Exception {
+            runTest("js/js.translator/testData/box/inline/privateProperty.kt");
         }
 
         @TestMetadata("rootConstructor.kt")
@@ -5439,6 +5464,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/kotlin.test/ignore.kt");
         }
 
+        @TestMetadata("incremental.kt")
+        public void testIncremental() throws Exception {
+            runTest("js/js.translator/testData/box/kotlin.test/incremental.kt");
+        }
+
         @TestMetadata("inherited.kt")
         public void testInherited() throws Exception {
             runTest("js/js.translator/testData/box/kotlin.test/inherited.kt");
@@ -5548,6 +5578,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
 
         public void testAllFilesPresentInMain() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("js/js.translator/testData/box/main"), Pattern.compile("^([^_](.+))\\.kt$"), TargetBackend.JS_IR, true);
+        }
+
+        @TestMetadata("incremental.kt")
+        public void testIncremental() throws Exception {
+            runTest("js/js.translator/testData/box/main/incremental.kt");
         }
 
         @TestMetadata("noArgs.kt")
@@ -5918,6 +5953,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("constructorLocalVar.kt")
         public void testConstructorLocalVar() throws Exception {
             runTest("js/js.translator/testData/box/nameClashes/constructorLocalVar.kt");
+        }
+
+        @TestMetadata("constructorsCrossFile.kt")
+        public void testConstructorsCrossFile() throws Exception {
+            runTest("js/js.translator/testData/box/nameClashes/constructorsCrossFile.kt");
         }
 
         @TestMetadata("differenceInCapitalization.kt")
