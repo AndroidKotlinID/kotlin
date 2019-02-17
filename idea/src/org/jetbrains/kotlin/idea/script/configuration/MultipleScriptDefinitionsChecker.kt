@@ -1,9 +1,9 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.idea.script.configutation
+package org.jetbrains.kotlin.idea.script.configuration
 
 import com.intellij.ide.actions.ShowSettingsUtilImpl
 import com.intellij.openapi.fileEditor.FileEditor
@@ -21,7 +21,6 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionsManager
 import org.jetbrains.kotlin.idea.core.script.StandardIdeScriptDefinition
 import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
-import org.jetbrains.kotlin.idea.script.configuration.KotlinScriptingSettingsConfigurable
 import org.jetbrains.kotlin.parsing.KotlinParserDefinition
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.script.KotlinScriptDefinition
@@ -30,8 +29,7 @@ import org.jetbrains.kotlin.scripting.compiler.plugin.KotlinScriptDefinitionAdap
 
 class MultipleScriptDefinitionsChecker(private val project: Project) : EditorNotifications.Provider<EditorNotificationPanel>() {
 
-    override fun getKey(): Key<EditorNotificationPanel> =
-        KEY
+    override fun getKey(): Key<EditorNotificationPanel> = KEY
 
     override fun createNotificationPanel(file: VirtualFile, fileEditor: FileEditor): EditorNotificationPanel? {
         if (file.fileType != KotlinFileType.INSTANCE) return null
@@ -50,11 +48,20 @@ class MultipleScriptDefinitionsChecker(private val project: Project) : EditorNot
             }
             .toList()
         if (allApplicableDefinitions.size < 2) return null
+        if (areDefinitionsForGradleKts(allApplicableDefinitions)) return null
 
         return createNotification(
             ktFile,
             allApplicableDefinitions
         )
+    }
+
+    private fun areDefinitionsForGradleKts(allApplicableDefinitions: List<KotlinScriptDefinition>): Boolean {
+        if (allApplicableDefinitions.size == 2) {
+            return (allApplicableDefinitions[0] as? KotlinScriptDefinitionFromAnnotatedTemplate)?.scriptFilePattern?.pattern == "^(settings|.+\\.settings)\\.gradle\\.kts\$"
+                    && (allApplicableDefinitions[1] as? KotlinScriptDefinitionFromAnnotatedTemplate)?.scriptFilePattern?.pattern == ".*\\.gradle\\.kts"
+        }
+        return false
     }
 
     companion object {
