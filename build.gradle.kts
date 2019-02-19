@@ -38,7 +38,7 @@ buildscript {
 }
 
 plugins {
-    `build-scan` version "1.15"
+    `build-scan`
     idea
     id("jps-compatible")
     id("org.jetbrains.gradle.plugin.idea-ext")
@@ -338,10 +338,6 @@ allprojects {
         enabled = false
     }
 
-    task<Jar>("javadocJar") {
-        classifier = "javadoc"
-    }
-
     tasks.withType<Jar> {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
@@ -443,8 +439,6 @@ tasks {
 
     create("coreLibsTest") {
         (coreLibProjects + listOf(
-                ":kotlin-stdlib-jre7",
-                ":kotlin-stdlib-jre8",
                 ":kotlin-stdlib:samples",
                 ":kotlin-test:kotlin-test-js:kotlin-test-js-it",
                 ":kotlinx-metadata-jvm",

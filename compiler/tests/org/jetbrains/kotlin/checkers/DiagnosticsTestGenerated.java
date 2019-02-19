@@ -3109,6 +3109,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/classObjects/resolveFunctionInsideClassObject.kt");
             }
 
+            @TestMetadata("typeParametersInAnnonymousObject.kt")
+            public void testTypeParametersInAnnonymousObject() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/classObjects/typeParametersInAnnonymousObject.kt");
+            }
+
+            @TestMetadata("typeParametersInAnnonymousObject_after.kt")
+            public void testTypeParametersInAnnonymousObject_after() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/classObjects/typeParametersInAnnonymousObject_after.kt");
+            }
+
             @TestMetadata("typeParametersInObject.kt")
             public void testTypeParametersInObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/classObjects/typeParametersInObject.kt");
@@ -19882,6 +19892,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("kt2851.kt")
                 public void testKt2851() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/smartCasts/inference/kt2851.kt");
+                }
+
+                @TestMetadata("kt29767.kt")
+                public void testKt29767() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/smartCasts/inference/kt29767.kt");
                 }
 
                 @TestMetadata("kt4009.kt")
