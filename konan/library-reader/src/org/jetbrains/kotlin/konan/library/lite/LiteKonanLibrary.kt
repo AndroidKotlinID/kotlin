@@ -10,5 +10,6 @@ import java.nio.file.Path
 data class LiteKonanLibrary(
     val path: Path,
     val name: String,
-    val platform: String?
+    val platform: String?,
+    internal val compilerVersion: String
 )
