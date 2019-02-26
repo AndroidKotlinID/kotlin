@@ -199,8 +199,7 @@ include ":kotlin-build-common",
 def includeCidr = hasProperty("cidrPluginsEnabled") && cidrPluginsEnabled != 'false'
 if (includeCidr) {
     includeBuild "kotlin-ultimate/buildSrc"
-    include ":kotlin-ultimate:prepare-deps:platform-deps",
-            ":kotlin-ultimate:cidr-native",
+    include ":kotlin-ultimate:cidr-native",
             ":kotlin-ultimate:appcode-native",
             ":kotlin-ultimate:clion-native",
             ":kotlin-ultimate:prepare:cidr-plugin",
@@ -234,7 +233,6 @@ if (isJpsBuild) {
             ":kotlin-stdlib:samples",
             ":kotlin-stdlib:jvm-minimal-for-test",
             ":tools:binary-compatibility-validator",
-            ":tools:kotlin-stdlib-js-merger",
             ":tools:kotlin-stdlib-gen",
 
             ":include:kotlin-stdlib-common-sources"
@@ -248,7 +246,6 @@ if (isJpsBuild) {
     project(":kotlin-stdlib:jvm-minimal-for-test").projectDir = "$rootDir/libraries/stdlib/jvm-minimal-for-test" as File
 
     project(':tools:binary-compatibility-validator').projectDir = "$rootDir/libraries/tools/binary-compatibility-validator" as File
-    project(':tools:kotlin-stdlib-js-merger').projectDir = "$rootDir/libraries/tools/kotlin-stdlib-js-merger" as File
     project(':tools:kotlin-stdlib-gen').projectDir = "$rootDir/libraries/tools/kotlin-stdlib-gen" as File
 }
 

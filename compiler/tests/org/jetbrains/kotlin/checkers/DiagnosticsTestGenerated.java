@@ -1444,6 +1444,26 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/GetterAnnotations.kt");
                 }
 
+                @TestMetadata("kt23992.kt")
+                public void testKt23992() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/kt23992.kt");
+                }
+
+                @TestMetadata("kt23992_after.kt")
+                public void testKt23992_after() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/kt23992_after.kt");
+                }
+
+                @TestMetadata("kt26638.kt")
+                public void testKt26638() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/kt26638.kt");
+                }
+
+                @TestMetadata("kt26638_after.kt")
+                public void testKt26638_after() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/kt26638_after.kt");
+                }
+
                 @TestMetadata("ParamAnnotations.kt")
                 public void testParamAnnotations() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget/ParamAnnotations.kt");
@@ -15394,6 +15414,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("kotlinCollectionToJava.kt")
                 public void testKotlinCollectionToJava() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/kotlinCollectionToJava.kt");
+                }
+
+                @TestMetadata("kt27565.kt")
+                public void testKt27565() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/kt27565.kt");
                 }
 
                 @TestMetadata("list.kt")

@@ -16,12 +16,14 @@ import com.intellij.util.containers.Stack;
 import kotlin.Pair;
 import kotlin.Unit;
 import kotlin.collections.CollectionsKt;
+import kotlin.text.StringsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.backend.common.CodegenUtil;
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
 import org.jetbrains.kotlin.codegen.binding.CalculatedClosure;
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding;
+import org.jetbrains.kotlin.codegen.binding.MutableClosure;
 import org.jetbrains.kotlin.codegen.context.*;
 import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenForLambda;
 import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenUtilKt;
@@ -1412,11 +1414,11 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     private void addLeaveTaskToRemoveNamedFunctionFromFrameMap(
-            @NotNull KtNamedFunction statement,
+            @NotNull KtNamedFunction localFunction,
             Label blockEnd,
             @NotNull List<Function<StackValue, Void>> leaveTasks
     ) {
-        FunctionDescriptor functionDescriptor = (FunctionDescriptor) bindingContext.get(DECLARATION_TO_DESCRIPTOR, statement);
+        FunctionDescriptor functionDescriptor = (FunctionDescriptor) bindingContext.get(DECLARATION_TO_DESCRIPTOR, localFunction);
         assert functionDescriptor != null;
 
         Type type = asmTypeForAnonymousClass(bindingContext, functionDescriptor);
@@ -1427,8 +1429,17 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         leaveTasks.add(answer -> {
             int index = myFrameMap.leave(functionDescriptor);
 
-            assert !functionDescriptor.getName().isSpecial() : "Local variable should be generated only for function with name: " + statement.getText();
-            v.visitLocalVariable(functionDescriptor.getName().asString() + "$", type.getDescriptor(), null, scopeStart, blockEnd, index);
+            assert !functionDescriptor.getName().isSpecial()
+                    : "Local variable should be generated only for function with name: " + localFunction.getText();
+
+            String functionIndex = StringsKt.substringAfterLast(type.getInternalName(), '$', "");
+            assert !functionIndex.isEmpty();
+
+            String localVariableName = AsmUtil.LOCAL_FUNCTION_VARIABLE_PREFIX
+                    + VariableAsmNameManglingUtils.mangleNameIfNeeded(functionDescriptor.getName().asString())
+                    + "$" + functionIndex;
+
+            v.visitLocalVariable(localVariableName, type.getDescriptor(), null, scopeStart, blockEnd, index);
             return null;
         });
     }
@@ -1749,6 +1760,16 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         StackValue intrinsicResult = applyIntrinsic(descriptor, IntrinsicPropertyGetter.class, resolvedCall, receiver);
         if (intrinsicResult != null) return intrinsicResult;
 
+        return generateNonIntrinsicSimpleNameExpression(expression, receiver, descriptor, resolvedCall, isSyntheticField);
+    }
+
+    public StackValue generateNonIntrinsicSimpleNameExpression(
+            @NotNull KtSimpleNameExpression expression,
+            @NotNull StackValue receiver,
+            @NotNull DeclarationDescriptor descriptor,
+            @Nullable ResolvedCall<?> resolvedCall,
+            boolean isSyntheticField
+    ) {
         if (descriptor instanceof PropertyDescriptor) {
             PropertyDescriptor propertyDescriptor = (PropertyDescriptor) descriptor;
 
@@ -2122,6 +2143,14 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         }
         else {
             skipPropertyAccessors = forceField;
+
+            if (JvmCodegenUtil.isDebuggerContext(context)
+                && Visibilities.isPrivate(propertyDescriptor.getVisibility())
+                && bindingContext.get(BACKING_FIELD_REQUIRED, propertyDescriptor) == Boolean.TRUE
+            ) {
+                skipPropertyAccessors = true;
+            }
+
             ownerDescriptor = isBackingFieldMovedFromCompanion ? containingDeclaration : propertyDescriptor;
         }
 
@@ -2762,7 +2791,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     @NotNull
-    private StackValue generateExtensionReceiver(@NotNull CallableDescriptor descriptor) {
+    public StackValue generateExtensionReceiver(@NotNull CallableDescriptor descriptor) {
         ReceiverParameterDescriptor parameter = descriptor.getExtensionReceiverParameter();
         if (myFrameMap.getIndex(parameter) != -1) {
             KotlinType type = parameter.getReturnType();
@@ -2773,7 +2802,12 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             );
         }
 
-        return context.generateReceiver(descriptor, state, false);
+        StackValue result = context.generateReceiver(descriptor, state, false);
+        if (result == null) {
+            throw new NullPointerException("Extension receiver was null for callable " + descriptor);
+        }
+
+        return result;
     }
 
     @NotNull
@@ -2876,24 +2910,40 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             forceOuter = false;
 
+            CodegenContext enclosingContext;
+
             //for constructor super call we should access to outer instance through parameter in locals, in other cases through field for captured outer
             if (inStartConstructorContext) {
                 result = cur.getOuterExpression(result, false);
                 cur = getNotNullParentContextForMethod(cur);
+                enclosingContext = cur.getEnclosingClassContext();
                 inStartConstructorContext = false;
             }
             else {
                 cur = getNotNullParentContextForMethod(cur);
-                // for now the script codegen only passes this branch, since the method context for script constructor is defined using function context
-                if (cur instanceof ScriptContext && !(thisOrOuterClass instanceof ScriptDescriptor)) {
-                    return ((ScriptContext) cur).getOuterReceiverExpression(result, thisOrOuterClass);
+                enclosingContext = cur.getEnclosingClassContext();
+
+                if (!(thisOrOuterClass instanceof ScriptDescriptor)) {
+                    if (cur instanceof ScriptLikeContext) {
+                        /* for now the script codegen only passes this branch,
+                           since the method context for script constructor is defined using function context */
+
+                        return ((ScriptLikeContext) cur).getOuterReceiverExpression(result, thisOrOuterClass);
+                    } else if (enclosingContext instanceof ScriptLikeContext) {
+                        MutableClosure closure = cur.closure;
+                        if (closure != null) {
+                            StackValue captured = ((ScriptLikeContext) enclosingContext).captureVariable(closure, thisOrOuterClass);
+                            if (captured != null) {
+                                return captured;
+                            }
+                        }
+                    }
                 }
-                else {
-                    result = cur.getOuterExpression(result, false);
-                }
+
+                result = cur.getOuterExpression(result, false);
             }
 
-            cur = cur.getEnclosingClassContext();
+            cur = enclosingContext;
         }
 
         throw new UnsupportedOperationException();

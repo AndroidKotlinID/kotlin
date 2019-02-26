@@ -128,6 +128,7 @@ public class DefaultErrorMessages {
         MAP.put(WRONG_ANNOTATION_TARGET_WITH_USE_SITE_TARGET_ON_TYPE,
                 "Use of this annotation with target ''type'' and use site target ''@{0}'' is deprecated", TO_STRING);
         MAP.put(REPEATED_ANNOTATION, "This annotation is not repeatable");
+        MAP.put(REPEATED_ANNOTATION_WARNING, "This annotation is not repeatable");
         MAP.put(NON_SOURCE_ANNOTATION_ON_INLINED_LAMBDA_EXPRESSION, "The lambda expression here is an inlined argument so this annotation cannot be stored anywhere");
 
         MAP.put(INAPPLICABLE_TARGET_ON_PROPERTY, "''@{0}:'' annotations could be applied only to property declarations", TO_STRING);
@@ -881,6 +882,9 @@ public class DefaultErrorMessages {
 
         MAP.put(LOCAL_ANNOTATION_CLASS, "Local annotation classes are deprecated and will be unsupported in a future release");
         MAP.put(LOCAL_ANNOTATION_CLASS_ERROR, "Annotation class cannot be local");
+
+        MAP.put(ANNOTATION_ON_SUPERCLASS, "Annotations on superclass are meaningless");
+        MAP.put(ANNOTATION_ON_SUPERCLASS_WARNING, "Annotations on superclass are meaningless and deprecated");
 
         MAP.put(CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT, "Const 'val' are only allowed on top level or in objects");
         MAP.put(CONST_VAL_WITH_DELEGATE, "Const 'val' should not have a delegate");
