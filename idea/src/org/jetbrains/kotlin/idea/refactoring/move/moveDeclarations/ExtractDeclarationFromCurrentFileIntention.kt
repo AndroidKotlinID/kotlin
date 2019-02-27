@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.idea.refactoring.move.moveDeclarations
 
+import com.intellij.codeInsight.actions.OptimizeImportsProcessor
 import com.intellij.codeInsight.intention.LowPriorityAction
 import com.intellij.codeInsight.navigation.NavigationUtil
 import com.intellij.openapi.application.ApplicationManager
@@ -24,6 +25,8 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.util.CommonRefactoringUtil
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.core.moveCaret
@@ -39,9 +42,11 @@ import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
 
-class MoveDeclarationToSeparateFileIntention :
-    SelfTargetingRangeIntention<KtClassOrObject>(KtClassOrObject::class.java, "Move declaration to separate file"),
-    LowPriorityAction {
+private const val TIMEOUT_FOR_IMPORT_OPTIMIZING_MS: Long = 700L
+
+class ExtractDeclarationFromCurrentFileIntention :
+        SelfTargetingRangeIntention<KtClassOrObject>(KtClassOrObject::class.java, "Extract declaration from current file"),
+        LowPriorityAction {
     override fun applicabilityRange(element: KtClassOrObject): TextRange? {
         if (element.name == null) return null
         if (element.parent !is KtFile) return null
@@ -60,7 +65,7 @@ class MoveDeclarationToSeparateFileIntention :
         val startOffset = keyword?.startOffset ?: return null
         val endOffset = element.nameIdentifier?.endOffset ?: return null
 
-        text = "Move '${element.name}' to separate file"
+        text = "Extract '${element.name}' from current file"
 
         return TextRange(startOffset, endOffset)
     }
@@ -84,15 +89,17 @@ class MoveDeclarationToSeparateFileIntention :
             // If automatic move is not possible, fall back to full-fledged Move Declarations refactoring
             ApplicationManager.getApplication().invokeLater {
                 MoveKotlinTopLevelDeclarationsDialog(
-                    project,
-                    setOf(element),
-                    packageName.asString(),
-                    directory,
-                    targetFile as? KtFile,
-                    true,
-                    true,
-                    true,
-                    null
+                        project,
+                        setOf(element),
+                        packageName.asString(),
+                        directory,
+                        targetFile as? KtFile,
+                        true,
+                        true,
+                        true,
+                        MoveCallback {
+                            runBlocking { withTimeoutOrNull(TIMEOUT_FOR_IMPORT_OPTIMIZING_MS) { OptimizeImportsProcessor(project, file).run() } }
+                        }
                 ).show()
             }
             return
@@ -101,18 +108,19 @@ class MoveDeclarationToSeparateFileIntention :
             createKotlinFile(targetFileName, directory, packageName.asString())
         }
         val descriptor = MoveDeclarationsDescriptor(
-            project = project,
-            moveSource = MoveSource(element),
-            moveTarget = moveTarget,
-            delegate = MoveDeclarationsDelegate.TopLevel,
-            searchInCommentsAndStrings = false,
-            searchInNonCode = false,
-            moveCallback = MoveCallback {
-                val newFile = directory.findFile(targetFileName) as KtFile
-                val newDeclaration = newFile.declarations.first()
-                NavigationUtil.activateFileWithPsiElement(newFile)
-                FileEditorManager.getInstance(project).selectedTextEditor?.moveCaret(newDeclaration.startOffset + originalOffset)
-            }
+                project = project,
+                moveSource = MoveSource(element),
+                moveTarget = moveTarget,
+                delegate = MoveDeclarationsDelegate.TopLevel,
+                searchInCommentsAndStrings = false,
+                searchInNonCode = false,
+                moveCallback = MoveCallback {
+                    val newFile = directory.findFile(targetFileName) as KtFile
+                    val newDeclaration = newFile.declarations.first()
+                    NavigationUtil.activateFileWithPsiElement(newFile)
+                    FileEditorManager.getInstance(project).selectedTextEditor?.moveCaret(newDeclaration.startOffset + originalOffset)
+                    runBlocking { withTimeoutOrNull(TIMEOUT_FOR_IMPORT_OPTIMIZING_MS) { OptimizeImportsProcessor(project, file).run() } }
+                }
         )
 
         MoveKotlinDeclarationsProcessor(descriptor).run()

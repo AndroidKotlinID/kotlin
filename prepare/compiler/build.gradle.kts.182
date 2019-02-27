@@ -99,6 +99,8 @@ dependencies {
     fatJarContentsStripServices(intellijDep("jps-standalone")) { includeJars("jps-model") }
 }
 
+publish()
+
 noDefaultJar()
 
 val packCompiler by task<ShadowJar> {
@@ -164,5 +166,3 @@ sourcesJar {
 }
 
 javadocJar()
-
-publish()

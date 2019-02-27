@@ -1217,7 +1217,7 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.refactoring.move.moveDeclarations.MoveDeclarationToSeparateFileIntention</className>
+      <className>org.jetbrains.kotlin.idea.refactoring.move.moveDeclarations.ExtractDeclarationFromCurrentFileIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -2693,6 +2693,14 @@
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RemoveRedundantBackticksInspection"
                      displayName="Remove redundant backticks"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RemoveRedundantQualifierNameInspection"
+                     displayName="Remove redundant qualifier name"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
                      enabledByDefault="true"
