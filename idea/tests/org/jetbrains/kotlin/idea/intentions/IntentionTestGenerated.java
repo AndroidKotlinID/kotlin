@@ -6415,6 +6415,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/convertPropertyInitializerToGetter/notInLambda.kt");
         }
 
+        @TestMetadata("onPropertyName.kt")
+        public void testOnPropertyName() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyInitializerToGetter/onPropertyName.kt");
+        }
+
         @TestMetadata("propertyWithInitializerWithSetter.kt")
         public void testPropertyWithInitializerWithSetter() throws Exception {
             runTest("idea/testData/intentions/convertPropertyInitializerToGetter/propertyWithInitializerWithSetter.kt");
@@ -15174,6 +15179,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/replaceSingleLineLetIntention/functionCallOnSafeCall.kt");
         }
 
+        @TestMetadata("functionInVariableCall.kt")
+        public void testFunctionInVariableCall() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/functionInVariableCall.kt");
+        }
+
+        @TestMetadata("functionInVariableInvokeCall.kt")
+        public void testFunctionInVariableInvokeCall() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/functionInVariableInvokeCall.kt");
+        }
+
         @TestMetadata("in.kt")
         public void testIn() throws Exception {
             runTest("idea/testData/intentions/replaceSingleLineLetIntention/in.kt");
@@ -15192,6 +15207,31 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("inWithRangeMultipleParam.kt")
         public void testInWithRangeMultipleParam() throws Exception {
             runTest("idea/testData/intentions/replaceSingleLineLetIntention/inWithRangeMultipleParam.kt");
+        }
+
+        @TestMetadata("invokeCall.kt")
+        public void testInvokeCall() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/invokeCall.kt");
+        }
+
+        @TestMetadata("invokeCall2.kt")
+        public void testInvokeCall2() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/invokeCall2.kt");
+        }
+
+        @TestMetadata("invokeCall3.kt")
+        public void testInvokeCall3() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/invokeCall3.kt");
+        }
+
+        @TestMetadata("invokeCall4.kt")
+        public void testInvokeCall4() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/invokeCall4.kt");
+        }
+
+        @TestMetadata("invokeCall5.kt")
+        public void testInvokeCall5() throws Exception {
+            runTest("idea/testData/intentions/replaceSingleLineLetIntention/invokeCall5.kt");
         }
 
         @TestMetadata("lambdaWithBinaryExpression.kt")
@@ -16174,6 +16214,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("anonymousObject.kt")
         public void testAnonymousObject() throws Exception {
             runTest("idea/testData/intentions/specifyTypeExplicitly/anonymousObject.kt");
+        }
+
+        @TestMetadata("backticked.kt")
+        public void testBackticked() throws Exception {
+            runTest("idea/testData/intentions/specifyTypeExplicitly/backticked.kt");
         }
 
         @TestMetadata("badCaretPosition.kt")

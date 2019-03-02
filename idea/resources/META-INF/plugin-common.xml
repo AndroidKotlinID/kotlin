@@ -1754,6 +1754,15 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ReplaceCollectionCountWithSizeInspection"
+                     displayName="Collection count can be converted to size"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="false"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.DeprecatedCallableAddReplaceWithInspection"
                      displayName="@Deprecated annotation without 'replaceWith' argument"
                      groupPath="Kotlin"
@@ -3274,6 +3283,24 @@
                      displayName="Redundant 'requireNotNull' or 'checkNotNull' call"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.KotlinThrowableNotThrownInspection"
+                     displayName="Throwable not thrown"
+                     groupPath="Kotlin"
+                     groupName="Probable bugs"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.JavaMapForEachInspection"
+                     displayName="Java Map.forEach method call should be replaced with Kotlin's forEach"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
                      enabledByDefault="true"
                      level="WEAK WARNING"
                      language="kotlin"
