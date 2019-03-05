@@ -7,7 +7,9 @@ package org.jetbrains.kotlin.codegen.inline
 
 import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
-import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.ASSERTIONS_DISABLED_FIELD_NAME
+import org.jetbrains.kotlin.codegen.AsmUtil
+import org.jetbrains.kotlin.codegen.BaseExpressionCodegen
 import org.jetbrains.kotlin.codegen.SamWrapperCodegen.SAM_WRAPPER_SUFFIX
 import org.jetbrains.kotlin.codegen.`when`.WhenByEnumsMapping
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
@@ -20,25 +22,19 @@ import org.jetbrains.kotlin.codegen.intrinsics.classId
 import org.jetbrains.kotlin.codegen.optimization.common.intConstant
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
-import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
+import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.descriptors.FunctionDescriptor
+import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
 import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil
 import org.jetbrains.kotlin.load.java.JvmAbi
-import org.jetbrains.kotlin.load.kotlin.KotlinJvmBinaryPackageSourceElement
-import org.jetbrains.kotlin.load.kotlin.KotlinJvmBinarySourceElement
 import org.jetbrains.kotlin.load.kotlin.VirtualFileFinder
-import org.jetbrains.kotlin.load.kotlin.VirtualFileKotlinClass
-import org.jetbrains.kotlin.load.kotlin.incremental.components.IncrementalCache
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
-import org.jetbrains.kotlin.resolve.jvm.AsmTypes.ENUM_TYPE
-import org.jetbrains.kotlin.resolve.jvm.AsmTypes.JAVA_CLASS_TYPE
 import org.jetbrains.kotlin.resolve.jvm.JvmClassName
-import org.jetbrains.kotlin.resolve.source.PsiSourceElement
-import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedCallableMemberDescriptor
-import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.TypeProjectionImpl
 import org.jetbrains.kotlin.types.TypeSubstitutor
 import org.jetbrains.kotlin.util.OperatorNameConventions
@@ -530,96 +526,6 @@ fun isFakeLocalVariableForInline(name: String): Boolean {
 }
 
 internal fun isThis0(name: String): Boolean = AsmUtil.CAPTURED_THIS_FIELD == name
-
-internal fun isSpecialEnumMethod(functionDescriptor: FunctionDescriptor): Boolean {
-    val containingDeclaration = functionDescriptor.containingDeclaration as? PackageFragmentDescriptor ?: return false
-    if (containingDeclaration.fqName != KotlinBuiltIns.BUILT_INS_PACKAGE_FQ_NAME) {
-        return false
-    }
-    if (functionDescriptor.typeParameters.size != 1) {
-        return false
-    }
-    val name = functionDescriptor.name.asString()
-    val parameters = functionDescriptor.valueParameters
-    return "enumValues" == name && parameters.size == 0 ||
-            ("enumValueOf" == name && parameters.size == 1 &&
-                    KotlinBuiltIns.isString(parameters[0].type))
-}
-
-internal fun createSpecialEnumMethodBody(
-    name: String,
-    type: KotlinType,
-    typeMapper: KotlinTypeMapper
-): MethodNode {
-    val isValueOf = "enumValueOf" == name
-    val invokeType = typeMapper.mapType(type)
-    val desc = getSpecialEnumFunDescriptor(invokeType, isValueOf)
-    val node = MethodNode(Opcodes.API_VERSION, Opcodes.ACC_STATIC, "fake", desc, null, null)
-    ExpressionCodegen.putReifiedOperationMarkerIfTypeIsReifiedParameterWithoutPropagation(
-        type,
-        ReifiedTypeInliner.OperationKind.ENUM_REIFIED,
-        InstructionAdapter(node)
-    )
-    if (isValueOf) {
-        node.visitInsn(Opcodes.ACONST_NULL)
-        node.visitVarInsn(Opcodes.ALOAD, 0)
-
-        node.visitMethodInsn(
-            Opcodes.INVOKESTATIC, ENUM_TYPE.internalName, "valueOf",
-            Type.getMethodDescriptor(ENUM_TYPE, JAVA_CLASS_TYPE, AsmTypes.JAVA_STRING_TYPE), false
-        )
-    } else {
-        node.visitInsn(Opcodes.ICONST_0)
-        node.visitTypeInsn(Opcodes.ANEWARRAY, ENUM_TYPE.internalName)
-    }
-    node.visitInsn(Opcodes.ARETURN)
-    node.visitMaxs(if (isValueOf) 3 else 2, if (isValueOf) 1 else 0)
-    return node
-}
-
-internal fun getSpecialEnumFunDescriptor(type: Type, isValueOf: Boolean): String {
-    return if (isValueOf) Type.getMethodDescriptor(
-        type,
-        AsmTypes.JAVA_STRING_TYPE
-    ) else Type.getMethodDescriptor(AsmUtil.getArrayType(type))
-}
-
-
-val FunctionDescriptor.sourceFilePath: String
-    get() {
-        val source = source as PsiSourceElement
-        val containingFile = source.psi?.containingFile
-        return containingFile?.virtualFile?.canonicalPath!!
-    }
-
-fun FunctionDescriptor.getClassFilePath(typeMapper: KotlinTypeMapper, cache: IncrementalCache): String {
-    val container = containingDeclaration as? DeclarationDescriptorWithSource
-    val source = container?.source
-
-    return when (source) {
-        is KotlinJvmBinaryPackageSourceElement -> {
-            val directMember = JvmCodegenUtil.getDirectMember(this) as? DeserializedCallableMemberDescriptor
-                ?: throw AssertionError("Expected DeserializedCallableMemberDescriptor, got: $this")
-            val kotlinClass =
-                source.getContainingBinaryClass(directMember) ?: throw AssertionError("Descriptor $this is not found, in: $source")
-            if (kotlinClass !is VirtualFileKotlinClass) {
-                throw AssertionError("Expected VirtualFileKotlinClass, got $kotlinClass")
-            }
-            kotlinClass.file.canonicalPath!!
-        }
-        is KotlinJvmBinarySourceElement -> {
-            val directMember = JvmCodegenUtil.getDirectMember(this)
-            assert(directMember is DeserializedCallableMemberDescriptor) { "Expected DeserializedSimpleFunctionDescriptor, got: $this" }
-            val kotlinClass = source.binaryClass as VirtualFileKotlinClass
-            kotlinClass.file.canonicalPath!!
-        }
-        else -> {
-            val implementationOwnerType = typeMapper.mapImplementationOwner(this)
-            val className = implementationOwnerType.internalName
-            cache.getClassFilePath(className)
-        }
-    }
-}
 
 class InlineOnlySmapSkipper(codegen: BaseExpressionCodegen) {
 

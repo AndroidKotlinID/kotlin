@@ -59,6 +59,7 @@ import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.typeUtil.isInterface
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.uast.*
+import org.jetbrains.uast.kotlin.expressions.KotlinLocalFunctionUVariable
 import java.lang.ref.WeakReference
 import java.text.StringCharacterIterator
 
@@ -176,6 +177,9 @@ internal fun KotlinType.toPsiType(lightDeclaration: PsiModifierListOwner?, conte
     }
 
     (constructor.declarationDescriptor as? TypeParameterDescriptor)?.let { typeParameter ->
+        (typeParameter.containingDeclaration.toSource()?.getMaybeLightElement() as? PsiTypeParameterListOwner)
+            ?.typeParameterList?.typeParameters?.getOrNull(typeParameter.index)
+            ?.let { return PsiTypesUtil.getClassType(it) }
         return CommonSupertypes.commonSupertype(typeParameter.upperBounds).toPsiType(lightDeclaration, context, boxed)
     }
 
@@ -248,21 +252,19 @@ internal fun KtClassOrObject.toPsiType(): PsiType {
     return PsiTypesUtil.getClassType(lightClass)
 }
 
-internal fun PsiElement.getMaybeLightElement(context: UElement): PsiElement? {
+internal fun PsiElement.getMaybeLightElement(): PsiElement? {
     return when (this) {
-        is KtVariableDeclaration -> {
+        is KtDeclaration -> {
             val lightElement = toLightElements().firstOrNull()
             if (lightElement != null) return lightElement
 
-            val languagePlugin = context.getLanguagePlugin()
-            val uElement = languagePlugin.convertElementWithParent(this, null)
-            when (uElement) {
-                is UDeclaration -> uElement.psi
-                is UDeclarationsExpression -> uElement.declarations.firstOrNull()?.psi
+            when (val uElement = this.toUElement()) {
+                is UDeclaration -> uElement.javaPsi
+                is UDeclarationsExpression -> uElement.declarations.firstOrNull()?.javaPsi
+                is ULambdaExpression -> (uElement.uastParent as? KotlinLocalFunctionUVariable)?.javaPsi
                 else -> null
             }
         }
-        is KtDeclaration -> toLightElements().firstOrNull()
         is KtElement -> null
         else -> this
     }
@@ -277,7 +279,7 @@ internal fun KtElement.resolveCallToDeclaration(
         resolvedCall.resultingDescriptor
     }
 
-    return descriptor.toSource()?.getMaybeLightElement(context)
+    return descriptor.toSource()?.getMaybeLightElement()
 }
 
 internal fun KtExpression.unwrapBlockOrParenthesis(): KtExpression {
