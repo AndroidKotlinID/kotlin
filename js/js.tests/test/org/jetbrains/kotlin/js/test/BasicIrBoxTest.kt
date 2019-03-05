@@ -5,10 +5,7 @@
 
 package org.jetbrains.kotlin.js.test
 
-import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.util.text.StringUtil
-import org.jetbrains.kotlin.config.*
-import org.jetbrains.kotlin.ir.backend.js.ModuleType
+import org.jetbrains.kotlin.ir.backend.js.CompilationMode
 import org.jetbrains.kotlin.ir.backend.js.CompiledModule
 import org.jetbrains.kotlin.ir.backend.js.compile
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
@@ -19,7 +16,13 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.test.TargetBackend
 import java.io.File
 
-private var runtimeResults = mutableMapOf<JsIrTestRuntime, CompiledModule>()
+private val fullRuntimeKlibPath = "js/js.translator/testData/out/klibs/runtimeFull/"
+private val defaultRuntimeKlibPath = "js/js.translator/testData/out/klibs/runtimeDefault/"
+
+private val JS_IR_RUNTIME_MODULE_NAME = "JS_IR_RUNTIME"
+
+private val fullRuntimeKlib = CompiledModule(JS_IR_RUNTIME_MODULE_NAME, null, null, fullRuntimeKlibPath, emptyList(), true)
+private val defaultRuntimeKlib = CompiledModule(JS_IR_RUNTIME_MODULE_NAME, null, null, defaultRuntimeKlibPath, emptyList(), true)
 
 abstract class BasicIrBoxTest(
     pathToTestDir: String,
@@ -49,6 +52,9 @@ abstract class BasicIrBoxTest(
         super.doTest(filePath, expectedResult, mainCallParameters, coroutinesPackage)
     }
 
+    private val runtimes = mapOf(JsIrTestRuntime.DEFAULT to defaultRuntimeKlib,
+                                 JsIrTestRuntime.FULL to fullRuntimeKlib)
+
     override fun translateFiles(
         units: List<TranslationUnit>,
         outputFile: File,
@@ -69,40 +75,19 @@ abstract class BasicIrBoxTest(
             .filterNot { it.virtualFilePath.contains(BasicBoxTest.COMMON_FILES_DIR_PATH) }
 
 //        config.configuration.put(CommonConfigurationKeys.EXCLUDED_ELEMENTS_FROM_DUMPING, setOf("<JS_IR_RUNTIME>"))
-        config.configuration.put(
-            CommonConfigurationKeys.PHASES_TO_VALIDATE_AFTER,
-            setOf(
-                "RemoveInlineFunctionsWithReifiedTypeParametersLowering",
-                "InnerClassConstructorCallsLowering",
-                "InlineClassLowering", "ConstLowering"
-            )
-        )
+//        config.configuration.put(
+//            CommonConfigurationKeys.PHASES_TO_VALIDATE_AFTER,
+//            setOf(
+//                "RemoveInlineFunctionsWithReifiedTypeParametersLowering",
+//                "InnerClassConstructorCallsLowering",
+//                "InlineClassLowering", "ConstLowering"
+//            )
+//        )
 
-        val runtimeConfiguration = config.configuration.copy()
-
-        // TODO: is it right in general? Maybe sometimes we need to compile with newer versions or with additional language features.
-        runtimeConfiguration.languageVersionSettings = LanguageVersionSettingsImpl(
-            LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE,
-            specificFeatures = mapOf(
-                LanguageFeature.AllowContractsForCustomFunctions to LanguageFeature.State.ENABLED,
-                LanguageFeature.MultiPlatformProjects to LanguageFeature.State.ENABLED
-            ),
-            analysisFlags = mapOf(
-                AnalysisFlags.useExperimental to listOf("kotlin.contracts.ExperimentalContracts", "kotlin.Experimental"),
-                AnalysisFlags.allowResultReturnType to true
-            )
-        )
-
-        val runtimeFile = File(runtime.path)
-        val runtimeResult = runtimeResults.getOrPut(runtime) {
-            runtimeConfiguration.put(CommonConfigurationKeys.MODULE_NAME, "JS_IR_RUNTIME")
-            val result = compile(config.project, runtime.sources.map(::createPsiFile), runtimeConfiguration, moduleType = ModuleType.TEST_RUNTIME)
-            runtimeFile.write(result.generatedCode!!)
-            result
-        }
+        val runtimeKlib = runtimes[runtime]
 
         val dependencyNames = config.configuration[JSConfigurationKeys.LIBRARIES]!!.map { File(it).name }
-        val dependencies = listOf(runtimeResult) + dependencyNames.mapNotNull {
+        val dependencies = listOfNotNull(runtimeKlib) + dependencyNames.mapNotNull {
             compilationCache[it]
         }
 
@@ -111,24 +96,26 @@ abstract class BasicIrBoxTest(
 //        config.configuration.put(CommonConfigurationKeys.PHASES_TO_DUMP_STATE_AFTER, setOf("MultipleCatchesLowering"))
 //        config.configuration.put(CommonConfigurationKeys.PHASES_TO_VALIDATE, setOf("ALL"))
 
+        val actualOutputFile = outputFile.absolutePath.let {
+            if (!isMainModule) it.replace("_v5.js", "/") else it
+        }
+
         val result = compile(
             config.project,
             filesToCompile,
             config.configuration,
             listOf(FqName((testPackage?.let { "$it." } ?: "") + testFunction)),
+            if (isMainModule) CompilationMode.JS_AGAINST_KLIB else CompilationMode.KLIB,
             dependencies,
-            runtimeResult,
-            moduleType = if (isMainModule) ModuleType.MAIN else ModuleType.SECONDARY
+            actualOutputFile
         )
 
         compilationCache[outputFile.name.replace(".js", ".meta.js")] = result
 
         val generatedCode = result.generatedCode
         if (generatedCode != null) {
-            // Prefix to help node.js runner find runtime
-            val runtimePrefix = "// RUNTIME: [\"${runtimeFile.path}\"]\n"
             val wrappedCode = wrapWithModuleEmulationMarkers(generatedCode, moduleId = config.moduleId, moduleKind = config.moduleKind)
-            outputFile.write(runtimePrefix + wrappedCode)
+            outputFile.write(wrappedCode)
         }
     }
 
@@ -143,7 +130,8 @@ abstract class BasicIrBoxTest(
     ) {
         // TODO: should we do anything special for module systems?
         // TODO: return list of js from translateFiles and provide then to this function with other js files
-        nashornIrJsTestCheckers[runtime]!!.check(jsFiles, testModuleName, null, testFunction, expectedResult, withModuleSystem)
+
+        V8IrJsTestChecker.check(jsFiles, testModuleName, null, testFunction, expectedResult, withModuleSystem)
     }
 }
 

@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.lower.AbstractValueUsageTransformer
-import org.jetbrains.kotlin.backend.common.utils.isPrimitiveArray
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
 import org.jetbrains.kotlin.ir.backend.js.utils.realOverrideTarget
@@ -63,7 +62,7 @@ class AutoboxingTransformer(val context: JsIrBackendContext) : AbstractValueUsag
         }
 
         // // TODO: Default parameters are passed as nulls and they need not to be unboxed. Fix this
-        if (actualType.makeNotNull().isNothing())
+        if (actualType.makeNotNull(false).isNothing())
             return this
 
         val expectedType = type

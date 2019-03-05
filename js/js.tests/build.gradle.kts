@@ -15,6 +15,8 @@ node {
 val antLauncherJar by configurations.creating
 val testJsRuntime by configurations.creating
 
+val generateIrRuntimeKlib by generator("org.jetbrains.kotlin.generators.tests.GenerateIrRuntimeKt")
+
 dependencies {
     testRuntime(intellijDep())
 
@@ -40,6 +42,13 @@ dependencies {
     testRuntime(project(":kotlin-preloader")) // it's required for ant tests
     testRuntime(project(":compiler:backend-common"))
     testRuntime(commonDep("org.fusesource.jansi", "jansi"))
+
+    when {
+        OperatingSystem.current().isWindows() -> testCompile("com.eclipsesource.j2v8:j2v8_win32_x86:4.6.0")
+        OperatingSystem.current().isLinux() -> testCompile("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.8.0")
+        OperatingSystem.current().isMacOsX() -> testCompile("com.eclipsesource.j2v8:j2v8_macosx_x86_64:4.6.0")
+        else -> logger.error("unsupported platform - can not compile com.eclipsesource.j2v8 dependency")
+    }
     
     antLauncherJar(commonDep("org.apache.ant", "ant"))
     antLauncherJar(files(toolsJar()))
@@ -53,6 +62,7 @@ sourceSets {
 projectTest {
     dependsOn(":dist")
     dependsOn(testJsRuntime)
+    dependsOn(generateIrRuntimeKlib)
     jvmArgs("-da:jdk.nashorn.internal.runtime.RecompilableScriptFunctionData") // Disable assertion which fails due to a bug in nashorn (KT-23637)
     workingDir = rootDir
     if (findProperty("kotlin.compiler.js.ir.tests.skip")?.toString()?.toBoolean() == true) {
@@ -66,7 +76,7 @@ projectTest {
     val prefixForPpropertiesToForward = "fd."
     for ((key, value) in properties) {
         if (key.startsWith(prefixForPpropertiesToForward)) {
-            systemProperty(key.substring(prefixForPpropertiesToForward.length), value)
+            systemProperty(key.substring(prefixForPpropertiesToForward.length), value!!)
         }
     }
 }

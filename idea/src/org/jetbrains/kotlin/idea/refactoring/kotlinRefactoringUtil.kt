@@ -38,6 +38,7 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
+import com.intellij.psi.impl.file.PsiPackageBase
 import com.intellij.psi.impl.light.LightElement
 import com.intellij.psi.presentation.java.SymbolPresentationUtil
 import com.intellij.psi.util.PsiTreeUtil
@@ -379,14 +380,13 @@ fun <T> chooseContainerElement(
         editor,
         containers,
         object : PsiElementListCellRenderer<PsiElement>() {
-            private fun PsiElement.renderName(): String {
-                if (this is KtPropertyAccessor) {
-                    return property.renderName() + if (isGetter) ".get" else ".set"
+            private fun PsiElement.renderName(): String = when {
+                this is KtPropertyAccessor -> property.renderName() + if (isGetter) ".get" else ".set"
+                this is KtObjectDeclaration && isCompanion() -> {
+                    val name = getStrictParentOfType<KtClassOrObject>()?.renderName() ?: "<anonymous>"
+                    "Companion object of $name"
                 }
-                if (this is KtObjectDeclaration && this.isCompanion()) {
-                    return "Companion object of ${getStrictParentOfType<KtClassOrObject>()?.renderName() ?: "<anonymous>"}"
-                }
-                return (this as? PsiNamedElement)?.name ?: "<anonymous>"
+                else -> (this as? PsiNamedElement)?.name ?: "<anonymous>"
             }
 
             private fun PsiElement.renderDeclaration(): String? {
@@ -399,23 +399,27 @@ fun <T> chooseContainerElement(
                     else -> null
                 } ?: return null
                 val name = renderName()
-                val params = (descriptor as? FunctionDescriptor)?.valueParameters
-                    ?.map { DescriptorRenderer.Companion.SHORT_NAMES_IN_TYPES.renderType(it.type) }
-                    ?.joinToString(", ", "(", ")") ?: ""
+                val params = (descriptor as? FunctionDescriptor)?.valueParameters?.joinToString(
+                    ", ",
+                    "(",
+                    ")"
+                ) { DescriptorRenderer.SHORT_NAMES_IN_TYPES.renderType(it.type) } ?: ""
                 return "$name$params"
             }
 
-            private fun PsiElement.renderText(): String {
-                if (this is SeparateFileWrapper) return "Extract to separate file"
-                return StringUtil.shortenTextWithEllipsis(text!!.collapseSpaces(), 53, 0)
+            private fun PsiElement.renderText(): String = when (this) {
+                is SeparateFileWrapper -> "Extract to separate file"
+                is PsiPackageBase -> qualifiedName
+                else -> {
+                    val text = text ?: "<invalid text>"
+                    StringUtil.shortenTextWithEllipsis(text.collapseSpaces(), 53, 0)
+                }
             }
 
-            private fun PsiElement.getRepresentativeElement(): PsiElement {
-                return when (this) {
-                    is KtBlockExpression -> (parent as? KtDeclarationWithBody) ?: this
-                    is KtClassBody -> parent as KtClassOrObject
-                    else -> this
-                }
+            private fun PsiElement.getRepresentativeElement(): PsiElement = when (this) {
+                is KtBlockExpression -> (parent as? KtDeclarationWithBody) ?: this
+                is KtClassBody -> parent as KtClassOrObject
+                else -> this
             }
 
             override fun getElementText(element: PsiElement): String? {
@@ -457,19 +461,14 @@ fun <T> chooseContainerElementIfNecessary(
 
 fun PsiElement.isTrueJavaMethod(): Boolean = this is PsiMethod && this !is KtLightMethod
 
-fun PsiElement.canRefactor(): Boolean {
-    if (!this.isValid) return false
-
-    return when {
-        this is PsiPackage ->
-            directories.any { it.canRefactor() }
-        this is KtElement ||
-                this is PsiMember && language == JavaLanguage.INSTANCE ||
-                this is PsiDirectory ->
-            ProjectRootsUtil.isInProjectSource(this, includeScriptsOutsideSourceRoots = true)
-        else ->
-            false
-    }
+fun PsiElement.canRefactor(): Boolean = when {
+    !isValid -> false
+    this is PsiPackage -> directories.any { it.canRefactor() }
+    this is KtElement || this is PsiMember && language == JavaLanguage.INSTANCE || this is PsiDirectory -> ProjectRootsUtil.isInProjectSource(
+        this,
+        includeScriptsOutsideSourceRoots = true
+    )
+    else -> false
 }
 
 private fun copyModifierListItems(from: PsiModifierList, to: PsiModifierList, withPsiModifiers: Boolean = true) {
@@ -645,7 +644,7 @@ fun PsiElement.j2kText(): String? {
 
     val j2kConverter = JavaToKotlinConverter(
         project,
-        ConverterSettings.Companion.defaultSettings,
+        ConverterSettings.defaultSettings,
         IdeaJavaToKotlinServices
     )
     return j2kConverter.elementsToKotlin(listOf(this)).results.single()?.text ?: return null //TODO: insert imports
@@ -750,14 +749,12 @@ fun PsiNamedElement.isInterfaceClass(): Boolean = when (this) {
     else -> false
 }
 
-fun KtNamedDeclaration.isAbstract(): Boolean {
-    if (hasModifier(KtTokens.ABSTRACT_KEYWORD)) return true
-    if (containingClassOrObject?.isInterfaceClass() != true) return false
-    return when (this) {
-        is KtProperty -> initializer == null && delegate == null && accessors.isEmpty()
-        is KtNamedFunction -> !hasBody()
-        else -> false
-    }
+fun KtNamedDeclaration.isAbstract(): Boolean = when {
+    hasModifier(KtTokens.ABSTRACT_KEYWORD) -> true
+    containingClassOrObject?.isInterfaceClass() != true -> false
+    this is KtProperty -> initializer == null && delegate == null && accessors.isEmpty()
+    this is KtNamedFunction -> !hasBody()
+    else -> false
 }
 
 fun KtNamedDeclaration.isConstructorDeclaredProperty() = this is KtParameter && ownerFunction is KtPrimaryConstructor && hasValOrVar()

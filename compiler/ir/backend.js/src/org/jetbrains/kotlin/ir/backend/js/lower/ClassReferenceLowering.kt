@@ -30,37 +30,41 @@ class ClassReferenceLowering(val context: JsIrBackendContext) : FileLoweringPass
     private val primitiveClassProperties = context.primitiveClassProperties
 
     private fun primitiveClassProperty(name: String) =
-        primitiveClassProperties.single { it.name == Name.identifier(name) }
+        primitiveClassProperties.singleOrNull { it.name == Name.identifier(name) }?.getter
+            ?: primitiveClassesObject.owner.declarations.filterIsInstance<IrSimpleFunction>().single { it.name == Name.special("<get-$name>") }
 
-
-    private val finalPrimitiveClasses = mapOf(
-        IrType::isBoolean to "booleanClass",
-        IrType::isByte to "byteClass",
-        IrType::isShort to "shortClass",
-        IrType::isInt to "intClass",
-        IrType::isFloat to "floatClass",
-        IrType::isDouble to "doubleClass",
-        IrType::isArray to "arrayClass",
-        IrType::isString to "stringClass",
-        IrType::isThrowable to "throwableClass",
-        IrType::isBooleanArray to "booleanArrayClass",
-        IrType::isCharArray to "charArrayClass",
-        IrType::isByteArray to "byteArrayClass",
-        IrType::isShortArray to "shortArrayClass",
-        IrType::isIntArray to "intArrayClass",
-        IrType::isLongArray to "longArrayClass",
-        IrType::isFloatArray to "floatArrayClass",
-        IrType::isDoubleArray to "doubleArrayClass"
-    ).mapValues {
-        primitiveClassProperty(it.value).getter!!
+    private val finalPrimitiveClasses by lazy {
+        mapOf(
+            IrType::isBoolean to "booleanClass",
+            IrType::isByte to "byteClass",
+            IrType::isShort to "shortClass",
+            IrType::isInt to "intClass",
+            IrType::isFloat to "floatClass",
+            IrType::isDouble to "doubleClass",
+            IrType::isArray to "arrayClass",
+            IrType::isString to "stringClass",
+            IrType::isThrowable to "throwableClass",
+            IrType::isBooleanArray to "booleanArrayClass",
+            IrType::isCharArray to "charArrayClass",
+            IrType::isByteArray to "byteArrayClass",
+            IrType::isShortArray to "shortArrayClass",
+            IrType::isIntArray to "intArrayClass",
+            IrType::isLongArray to "longArrayClass",
+            IrType::isFloatArray to "floatArrayClass",
+            IrType::isDoubleArray to "doubleArrayClass"
+        ).mapValues {
+            primitiveClassProperty(it.value)
+        }
     }
 
-    private val openPrimitiveClasses = mapOf(
-        IrType::isAny to "anyClass",
-        IrType::isNumber to "numberClass",
-        IrType::isNothing to "nothingClass"
-    ).mapValues {
-        primitiveClassProperty(it.value).getter!!
+    private val openPrimitiveClasses by lazy {
+        mapOf(
+            IrType::isAny to "anyClass",
+            IrType::isNumber to "numberClass",
+            IrType::isNothing to "nothingClass"
+        ).mapValues {
+            primitiveClassProperty(it.value)
+        }
     }
 
     private fun callGetKClassFromExpression(returnType: IrType, typeArgument: IrType, argument: IrExpression): IrExpression {
@@ -75,7 +79,7 @@ class ClassReferenceLowering(val context: JsIrBackendContext) : FileLoweringPass
 
     private fun getPrimitiveClass(target: IrSimpleFunction, returnType: IrType) =
         JsIrBuilder.buildCall(target.symbol, returnType).apply {
-            dispatchReceiver = JsIrBuilder.buildGetObjectValue(primitiveClassesObject.defaultType, primitiveClassesObject.symbol)
+            dispatchReceiver = JsIrBuilder.buildGetObjectValue(primitiveClassesObject.owner.defaultType, primitiveClassesObject)
         }
 
     private fun getFinalPrimitiveKClass(returnType: IrType, typeArgument: IrType): IrCall? {
@@ -132,7 +136,7 @@ class ClassReferenceLowering(val context: JsIrBackendContext) : FileLoweringPass
             override fun visitClassReference(expression: IrClassReference) =
                 callGetKClass(
                     returnType = expression.type,
-                    typeArgument = expression.classType.makeNotNull()
+                    typeArgument = expression.classType.makeNotNull(false)
                 )
         })
     }
