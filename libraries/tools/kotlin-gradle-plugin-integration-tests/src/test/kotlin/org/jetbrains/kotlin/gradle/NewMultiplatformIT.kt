@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.junit.Assert
 import org.junit.Test
-import java.lang.StringBuilder
 import java.util.jar.JarFile
 import java.util.zip.ZipFile
 import kotlin.test.assertEquals
@@ -1272,8 +1271,6 @@ class NewMultiplatformIT : BaseGradleIT() {
                     "<version>42</version>"
                 )
                 if (withMetadata) {
-                    // Check that the external dependency that was resolved with metadata is written to the POM as the artifactId it
-                    // resolved to:
                     assertFileContains(
                         "repo/com/exampleapp/sample-app-jvm8/1.0/sample-app-jvm8-1.0.pom",
                         "<groupId>com.external.dependency</groupId>",
@@ -1287,7 +1284,39 @@ class NewMultiplatformIT : BaseGradleIT() {
                     assertTrue { "\"group\":\"com.example\",\"module\":\"sample-lib-multiplatform\"" in moduleMetadata }
                     assertTrue { "\"group\":\"com.external.dependency\",\"module\":\"external\"" in moduleMetadata }
                 }
-                assertFileExists("repo/foo/bar/42/bar-42.jar")
+            }
+
+            // Check that a user can disable rewriting of MPP dependencies in the POMs:
+            build("publish", "-Pkotlin.mpp.keepMppDependenciesIntactInPoms=true") {
+                assertSuccessful()
+                assertFileContains(
+                    "repo/com/exampleapp/sample-app-nodejs/1.0/sample-app-nodejs-1.0.pom",
+                    "<groupId>com.example</groupId>",
+                    if (withMetadata)
+                        "<artifactId>sample-lib-multiplatform</artifactId>"
+                    else
+                        "<artifactId>sample-lib</artifactId>"
+                    ,
+                    "<version>1.0</version>"
+                )
+                assertFileContains(
+                    "repo/com/exampleapp/sample-app-jvm8/1.0/sample-app-jvm8-1.0.pom",
+                    "<groupId>com.example</groupId>",
+                    if (withMetadata)
+                        "<artifactId>sample-lib-multiplatform</artifactId>"
+                    else
+                        "<artifactId>sample-lib</artifactId>"
+                    ,
+                    "<version>1.0</version>"
+                )
+                if (withMetadata) {
+                    assertFileContains(
+                        "repo/com/exampleapp/sample-app-jvm8/1.0/sample-app-jvm8-1.0.pom",
+                        "<groupId>com.external.dependency</groupId>",
+                        "<artifactId>external</artifactId>",
+                        "<version>1.2.3</version>"
+                    )
+                }
             }
         }
     }
@@ -1586,5 +1615,82 @@ class NewMultiplatformIT : BaseGradleIT() {
             val useLibJsPlatformUtilKt = projectDir.getFileByName("useLibJsPlatformUtil.kt")
             assertCompiledKotlinSources(project.relativize(libJsPlatformUtilKt, useLibJsPlatformUtilKt))
         }
+    }
+
+    @Test
+    fun testPomRewritingInSinglePlatformProject() = with(Project("kt-27059-pom-rewriting", GradleVersionRequired.AtLeast("4.10.2"))) {
+        setupWorkingDir()
+        gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+
+        val groupDir = "build/repo/com/example/"
+
+        build(":mpp-lib:publish") {
+            assertSuccessful()
+            assertFileExists(groupDir + "mpp-lib")
+            assertFileExists(groupDir + "mpp-lib-myjvm")
+        }
+
+        fun doTestPomRewriting(mppProjectDependency: Boolean, legacyPublishing: Boolean, keepPomIntact: Boolean? = null) {
+
+            val params = mutableListOf("clean", ":jvm-app:publish", ":js-app:publish").apply {
+                if (mppProjectDependency)
+                    add("-PmppProjectDependency=true")
+                if (legacyPublishing)
+                    add("-PlegacyPublishing=true")
+                if (keepPomIntact == true)
+                    add("-Pkotlin.mpp.keepMppDependenciesIntactInPoms=true")
+            }.toTypedArray()
+
+            build(*params) {
+                assertSuccessful()
+                if (legacyPublishing) {
+                    assertTasksExecuted(":jvm-app:uploadArchives")
+                    assertTasksExecuted(":js-app:uploadArchives")
+                } else {
+                    assertTasksExecuted(":jvm-app:publishMainPublicationToMavenRepository")
+                    assertTasksExecuted(":js-app:publishMainPublicationToMavenRepository")
+                }
+
+                val jvmModuleDir = groupDir + "jvm-app/1.0/"
+                val jsModuleDir = groupDir + "js-app/1.0/"
+                val jvmPom = fileInWorkingDir(jvmModuleDir + "jvm-app-1.0.pom").readText().replace("\\s+".toRegex(), "")
+                val jsPom = fileInWorkingDir(jsModuleDir + "js-app-1.0.pom").readText().replace("\\s+".toRegex(), "")
+
+                if (keepPomIntact != true) {
+                    assertTrue("The JVM POM should contain the dependency on 'mpp-lib' rewritten as 'mpp-lib-myjvm'") {
+                        jvmPom.contains(
+                            "<groupId>com.example</groupId><artifactId>mpp-lib-myjvm</artifactId><version>1.0</version><scope>compile</scope>"
+                        )
+                    }
+                    assertTrue("The JS POM should contain the dependency on 'mpp-lib' rewritten as 'mpp-lib-js'") {
+                        jsPom.contains(
+                            "<groupId>com.example</groupId><artifactId>mpp-lib-js</artifactId><version>1.0</version><scope>compile</scope>"
+                        )
+                    }
+                } else {
+                    assertTrue("The JVM POM should contain the original dependency on 'mpp-lib'") {
+                        jvmPom.contains(
+                            "<groupId>com.example</groupId><artifactId>mpp-lib</artifactId><version>1.0</version><scope>compile</scope>"
+                        )
+                    }
+                    assertTrue("The JS POM should contain the original dependency on 'mpp-lib'") {
+                        jsPom.contains(
+                            "<groupId>com.example</groupId><artifactId>mpp-lib</artifactId><version>1.0</version><scope>compile</scope>"
+                        )
+                    }
+                }
+            }
+        }
+
+        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = false)
+        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = true)
+        doTestPomRewriting(mppProjectDependency = true, legacyPublishing = false)
+
+        // This case doesn't work and never did; TODO investigate KT-29975
+        // doTestPomRewriting(mppProjectDependency = true, legacyPublishing = true)
+
+        // Also check that the flag for keeping POMs intact works:
+        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = false, keepPomIntact = true)
+        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = true, keepPomIntact = true)
     }
 }

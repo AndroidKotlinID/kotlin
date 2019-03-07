@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.idea.core.script
 
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -69,7 +70,25 @@ class ScriptDependenciesUpdater(
 
         updateDependencies(file, scriptDef)
 
+        makeRootsChangeIfNeeded()
+
         return cache[file] ?: ScriptDependencies.Empty
+    }
+
+    fun updateDependenciesIfNeeded(files: List<VirtualFile>): Boolean {
+        val definitionsManager = ScriptDefinitionsManager.getInstance(project)
+        if (definitionsManager.isReady() && areDependenciesCached(files)) {
+            return false
+        }
+
+        for (file in files) {
+            val scriptDef = file.findScriptDefinition(project) ?: continue
+            updateDependencies(file, scriptDef)
+        }
+
+        makeRootsChangeIfNeeded()
+
+        return true
     }
 
     private fun updateDependencies(file: VirtualFile, scriptDef: KotlinScriptDefinition) {
@@ -78,6 +97,12 @@ class ScriptDependenciesUpdater(
             else -> syncLoader
         }
         loader.updateDependencies(file, scriptDef)
+    }
+
+    private fun makeRootsChangeIfNeeded() {
+        if (fileAttributeLoader.notifyRootsChanged()) return
+        if (syncLoader.notifyRootsChanged()) return
+        if (asyncLoader.notifyRootsChanged()) return
     }
 
     private fun listenForChangesInScripts() {
@@ -139,6 +164,24 @@ class ScriptDependenciesUpdater(
                 )
             }
         }, project.messageBus.connect())
+    }
+
+    private fun areDependenciesCached(file: VirtualFile): Boolean {
+        return cache[file] != null
+    }
+
+    private fun areDependenciesCached(files: List<VirtualFile>): Boolean {
+        return files.all { areDependenciesCached(it) }
+    }
+
+    companion object {
+        @JvmStatic
+        fun getInstance(project: Project): ScriptDependenciesUpdater =
+            ServiceManager.getService(project, ScriptDependenciesUpdater::class.java)
+
+        fun areDependenciesCached(file: KtFile): Boolean {
+            return getInstance(file.project).areDependenciesCached(file.virtualFile)
+        }
     }
 }
 

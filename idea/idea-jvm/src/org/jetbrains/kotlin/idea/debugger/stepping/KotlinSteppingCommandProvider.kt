@@ -93,7 +93,7 @@ class KotlinSteppingCommandProvider : JvmSteppingCommandProvider() {
         }
 
         val file = sourcePosition.elementAt.containingFile
-        val location = suspendContext.debugProcess.invokeInManagerThread { suspendContext.frameProxy?.location() } ?: return null
+        val location = suspendContext.debugProcess.invokeInManagerThread { suspendContext.frameProxy?.safeLocation() } ?: return null
         if (isInSuspendMethod(location) && !isOnSuspendReturnOrReenter(location) && !isLastLineLocationInMethod(location)) {
             return DebugProcessImplHelper.createStepOverCommandWithCustomFilter(
                 suspendContext, ignoreBreakpoints, KotlinSuspendCallStepOverFilter(sourcePosition.line, file, ignoreBreakpoints)
@@ -339,7 +339,11 @@ fun getStepOverAction(
 
     val project = sourceFile.project
 
-    val methodLocations = location.method().allLineLocations()
+    val methodLocations = location.method().safeAllLineLocations()
+    if (methodLocations.isEmpty()) {
+        return Action.STEP_OVER()
+    }
+
     val locationsLineAndFile = methodLocations.keysToMap { ktLocationInfo(it, isDexDebug, project, true) }
 
     fun Location.ktLineNumber(): Int = (locationsLineAndFile[this] ?: ktLocationInfo(this, isDexDebug, project, true)).first
