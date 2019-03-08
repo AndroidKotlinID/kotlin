@@ -194,16 +194,25 @@ open class KotlinNativeTargetConfigurator(
 
                 val interopOutput = project.files(outputFileProvider).builtBy(this)
                 with(compilation) {
+                    // Register the interop library as a dependency of the compilation to make IDE happy.
                     project.dependencies.add(compileDependencyConfigurationName, interopOutput)
                     if (isMainCompilation) {
-                        target.compilations.findByName(TEST_COMPILATION_NAME)?.let {
-                            project.dependencies.add(it.compileDependencyConfigurationName, interopOutput)
+                        // Register the interop library as an outgoing klib to allow depending on projects with cinterops.
+                        project.dependencies.add(target.apiElementsConfigurationName, interopOutput)
+                        // Add the interop library in publication.
+                        createCInteropKlibArtifact(interop, this@apply)
+                        // We cannot add the interop library in an compilation output because in this case
+                        // IDE doesn't see this library in module dependencies. So we have to manually add
+                        // main interop libraries in dependencies of the default test compilation.
+                        target.compilations.findByName(TEST_COMPILATION_NAME)?.let { testCompilation ->
+                            project.dependencies.add(testCompilation.compileDependencyConfigurationName, interopOutput)
+                            testCompilation.cinterops.all {
+                                it.dependencyFiles += interopOutput
+                            }
                         }
                     }
-                    project.dependencies.add(target.apiElementsConfigurationName, interopOutput)
                 }
             }
-            createCInteropKlibArtifact(interop, interopTask)
         }
     }
     // endregion.
@@ -289,14 +298,14 @@ open class KotlinNativeTargetConfigurator(
                 val binaries = target.binaries
                 val konanTarget = compilation.target.konanTarget
                 val name = compilation.name
-                val buildTypes = compilation.buildTypes
-                val availableOutputKinds = compilation.outputKinds.filter { it.availableFor(konanTarget) }
+                val buildTypes = compilation.buildTypesNoWarn
+                val availableOutputKinds = compilation.outputKindsNoWarn.filter { it.availableFor(konanTarget) }
 
                 val configure: NativeBinary.() -> Unit = {
                     this.compilation = compilation
-                    linkerOpts.addAll(compilation.linkerOpts)
+                    linkerOpts.addAll(compilation.linkerOptsNoWarn)
                     if (this is Executable) {
-                        entryPoint = compilation.entryPoint
+                        entryPoint = compilation.entryPointNoWarn
                     }
                     compilation.binaries[outputKind to buildType] = this
                 }
@@ -313,7 +322,7 @@ open class KotlinNativeTargetConfigurator(
             // Allow setting linker options for the default test executable using the
             // corresponding properties of the test compilation.
             target.binaries.getDefaultTestExecutable().apply {
-                linkerOpts.addAll(target.compilations.getByName(TEST_COMPILATION_NAME).linkerOpts)
+                linkerOpts.addAll(target.compilations.getByName(TEST_COMPILATION_NAME).linkerOptsNoWarn)
             }
         }
     }

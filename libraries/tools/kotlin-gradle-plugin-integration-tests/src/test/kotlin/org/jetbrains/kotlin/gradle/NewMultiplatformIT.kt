@@ -990,12 +990,13 @@ class NewMultiplatformIT : BaseGradleIT() {
                 }
             }
 
-            // Check manual disabling bitcode embedding and custom command line args.
+            // Check manual disabling bitcode embedding, custom command line args and building a static framework.
             build("linkCustomReleaseFrameworkIos") {
                 assertSuccessful()
                 checkFrameworkCompilationCommandLine {
                     assertTrue(it.contains("-linker-options -L."))
                     assertTrue(it.contains("-Xtime"))
+                    assertTrue(it.contains("-Xstatic-framework"))
                     assertFalse(it.contains("-Xembed-bitcode-marker"))
                     assertFalse(it.contains("-Xembed-bitcode"))
                 }
@@ -1124,6 +1125,7 @@ class NewMultiplatformIT : BaseGradleIT() {
                 assertTasksExecuted(":publishedLibrary:cinteropStdio${host.capitalize()}")
                 assertTrue(output.contains("Published test"), "No test output found")
                 assertFileExists("publishedLibrary/build/classes/kotlin/$host/main/publishedLibrary-cinterop-stdio.klib")
+                assertFileExists("publishedLibrary/build/classes/kotlin/$host/test/test-cinterop-stdio.klib")
                 assertFileExists("repo/org/example/publishedLibrary-$host/1.0/publishedLibrary-$host-1.0-cinterop-stdio.klib")
             }
 
