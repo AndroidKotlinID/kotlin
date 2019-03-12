@@ -336,8 +336,11 @@ class UnsignedTypeGenerator(val type: UnsignedType, out: PrintWriter) : BuiltIns
                 else -> "$className(this.to$thisSigned())"
             })
         }
-        out.println()
 
+        if (type == UnsignedType.UBYTE || type == UnsignedType.USHORT)
+            return // conversion from UByte/UShort to Float/Double is not allowed
+
+        out.println()
         for (otherType in PrimitiveType.floatingPoint) {
             val otherName = otherType.capitalized
 
@@ -454,8 +457,7 @@ class UnsignedArrayGenerator(val type: UnsignedType, out: PrintWriter) : BuiltIn
     }
 
     override fun containsAll(elements: Collection<$elementType>): Boolean {
-        if ((elements as Collection<Any?>).any { it as? $elementType == null }) return false
-        return elements.all { storage.contains(it.to$storageElementType()) }
+        return (elements as Collection<*>).all { it is $elementType && storage.contains(it.to$storageElementType()) }
     }
 
     override fun isEmpty(): Boolean = this.storage.size == 0"""

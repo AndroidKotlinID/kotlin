@@ -26,9 +26,7 @@ import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiDocumentManager
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
-import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.core.ShortenReferences
@@ -99,6 +97,7 @@ class SpecifyTypeExplicitlyIntention : SelfTargetingRangeIntention<KtCallableDec
             val callable = declaration.resolveToDescriptorIfAny() as? CallableDescriptor ?: return null
             if (publicAPIOnly && !callable.visibility.isPublicAPI) return null
             val type = callable.returnType ?: return null
+            if (type.isDynamic()) return null
             if (reportPlatformArguments) {
                 if (!type.isFlexibleRecursive()) return null
             } else {
@@ -130,17 +129,8 @@ class SpecifyTypeExplicitlyIntention : SelfTargetingRangeIntention<KtCallableDec
             val bindingContext = resolutionFacade.analyze(contextElement, BodyResolveMode.PARTIAL)
             val scope = contextElement.getResolutionScope(bindingContext, resolutionFacade)
 
-            var checkTypeParameters = true
-            val descriptor = exprType.constructor.declarationDescriptor
-            if (descriptor != null && descriptor is TypeParameterDescriptor) {
-                val owner = descriptor.containingDeclaration
-                if (owner is FunctionDescriptor && owner.typeParameters.contains(descriptor)) {
-                    checkTypeParameters = false
-                }
-            }
-
             fun KotlinType.toResolvableApproximations(): List<KotlinType> =
-                with(getResolvableApproximations(scope, checkTypeParameters).toList()) {
+                with(getResolvableApproximations(scope, checkTypeParameters = false).toList()) {
                     when {
                         exprType.isNullabilityFlexible() -> flatMap {
                             listOf(TypeUtils.makeNotNullable(it), TypeUtils.makeNullable(it))
@@ -184,7 +174,8 @@ class SpecifyTypeExplicitlyIntention : SelfTargetingRangeIntention<KtCallableDec
         private class TypeChooseValueExpression(
             items: List<KotlinType>, defaultItem: KotlinType
         ) : ChooseValueExpression<KotlinType>(items, defaultItem) {
-            override fun getLookupString(element: KotlinType) = IdeDescriptorRenderers.SOURCE_CODE_SHORT_NAMES_NO_ANNOTATIONS.renderType(element)
+            override fun getLookupString(element: KotlinType) =
+                IdeDescriptorRenderers.SOURCE_CODE_SHORT_NAMES_NO_ANNOTATIONS.renderType(element)
 
             override fun getResult(element: KotlinType): String {
                 val renderType = IdeDescriptorRenderers.SOURCE_CODE.renderType(element)
