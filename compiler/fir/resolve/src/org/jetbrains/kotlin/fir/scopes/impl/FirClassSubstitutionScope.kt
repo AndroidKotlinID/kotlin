@@ -21,13 +21,12 @@ import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.name.Name
 
 class FirClassSubstitutionScope(
-    session: FirSession,
-    private val unsubstituted: FirScope,
-    private val substitution: Map<ConeTypeParameterSymbol, ConeKotlinType>,
-    lookupInFir: Boolean
-) : FirAbstractProviderBasedScope(session, lookupInFir) {
+    private val session: FirSession,
+    private val useSiteScope: FirScope,
+    private val substitution: Map<ConeTypeParameterSymbol, ConeKotlinType>
+) : FirScope {
 
-    val fakeOverrides = mutableMapOf<ConeCallableSymbol, ConeCallableSymbol>()
+    private val fakeOverrides = mutableMapOf<ConeCallableSymbol, ConeCallableSymbol>()
 
     private fun wrapProjection(old: ConeKotlinTypeProjection, newType: ConeKotlinType): ConeKotlinTypeProjection {
         return when (old) {
@@ -40,7 +39,7 @@ class FirClassSubstitutionScope(
     }
 
     private fun ConeKotlinType.substitute(): ConeKotlinType? {
-        if (this is ConeTypeParameterType) return substitution[this]
+        if (this is ConeTypeParameterType) return substitution[lookupTag]
 
         val newArguments by lazy { arrayOfNulls<ConeKotlinTypeProjection>(typeArguments.size) }
         var initialized = false
@@ -71,7 +70,6 @@ class FirClassSubstitutionScope(
                 is ConeAbbreviatedTypeImpl -> ConeAbbreviatedTypeImpl(
                     abbreviationLookupTag,
                     newArguments as Array<ConeKotlinTypeProjection>,
-                    directExpansion.substitute() as? ConeClassLikeType ?: directExpansion,
                     nullability.isNullable
                 )
                 is ConeFunctionType -> TODO("Substitute function type properly")
@@ -84,7 +82,7 @@ class FirClassSubstitutionScope(
 
 
     override fun processFunctionsByName(name: Name, processor: (ConeFunctionSymbol) -> ProcessorAction): ProcessorAction {
-        unsubstituted.processFunctionsByName(name) process@{ original ->
+        useSiteScope.processFunctionsByName(name) process@{ original ->
 
             val function = fakeOverrides.getOrPut(original) { createFakeOverride(original, name) }
             processor(function as ConeFunctionSymbol)
@@ -95,7 +93,7 @@ class FirClassSubstitutionScope(
     }
 
     override fun processPropertiesByName(name: Name, processor: (ConePropertySymbol) -> ProcessorAction): ProcessorAction {
-        return unsubstituted.processPropertiesByName(name, processor)
+        return useSiteScope.processPropertiesByName(name, processor)
     }
 
     private fun createFakeOverride(
@@ -118,7 +116,7 @@ class FirClassSubstitutionScope(
             // TODO: consider using here some light-weight functions instead of pseudo-real FirMemberFunctionImpl
             // As second alternative, we can invent some light-weight kind of FirRegularClass
             FirMemberFunctionImpl(
-                session,
+                this@FirClassSubstitutionScope.session,
                 psi,
                 symbol,
                 name,
@@ -129,7 +127,7 @@ class FirClassSubstitutionScope(
                 valueParameters += member.valueParameters.zip(newParameterTypes) { valueParameter, newType ->
                     with(valueParameter) {
                         FirValueParameterImpl(
-                            session, psi,
+                            this@FirClassSubstitutionScope.session, psi,
                             name, this.returnTypeRef.withReplacedConeType(newType),
                             defaultValue, isCrossinline, isNoinline, isVararg
                         )

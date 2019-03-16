@@ -1,3 +1,8 @@
+/*
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
+ */
+
 package org.jetbrains.kotlin.backend.common.phaser
 
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
@@ -6,7 +11,11 @@ import org.jetbrains.kotlin.config.CompilerConfigurationKey
 
 class PhaseConfig(private val compoundPhase: CompilerPhase<*, *, *>, config: CompilerConfiguration) {
 
-    val phases = compoundPhase.getNamedSubphases().map { (_, phase) -> phase }.associate { it.name to it }
+    val phases = compoundPhase.getNamedSubphases().fold(mutableMapOf<String, AnyNamedPhase>()) { acc, (_, phase) ->
+        check(phase.name !in acc) { "Duplicate phase name '${phase.name}'"}
+        acc[phase.name] = phase
+        acc
+    }
     private val enabledMut = computeEnabled(config).toMutableSet()
 
     val enabled: Set<AnyNamedPhase> get() = enabledMut

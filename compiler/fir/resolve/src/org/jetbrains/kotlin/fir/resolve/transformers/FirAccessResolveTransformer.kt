@@ -7,25 +7,17 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 
 import org.jetbrains.kotlin.fir.FirNamedReference
 import org.jetbrains.kotlin.fir.FirResolvedCallableReference
-import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirResolvedCallableReferenceImpl
-import org.jetbrains.kotlin.fir.resolve.toSymbol
-import org.jetbrains.kotlin.fir.scopes.FirScope
+import org.jetbrains.kotlin.fir.resolve.buildUseSiteScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction.NEXT
-import org.jetbrains.kotlin.fir.scopes.impl.*
+import org.jetbrains.kotlin.fir.scopes.impl.FirTopLevelDeclaredMemberScope
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
-import org.jetbrains.kotlin.fir.symbols.ConeTypeParameterSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
-import org.jetbrains.kotlin.fir.types.ConeClassErrorType
-import org.jetbrains.kotlin.fir.types.ConeClassLikeType
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
-import org.jetbrains.kotlin.fir.types.ConeTypedProjection
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 
@@ -38,41 +30,9 @@ class FirAccessResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(rev
         }
     }
 
-    private fun ConeClassLikeType.buildSubstitutionScope(
-        useSiteSession: FirSession,
-        unsubstituted: FirScope,
-        regularClass: FirRegularClass
-    ): FirClassSubstitutionScope? {
-        if (this.typeArguments.isEmpty()) return null
-
-        @Suppress("UNCHECKED_CAST")
-        val substitution = regularClass.typeParameters.zip(this.typeArguments) { typeParameter, typeArgument ->
-            typeParameter.symbol to (typeArgument as? ConeTypedProjection)?.type
-        }.filter { (_, type) -> type != null }.toMap() as Map<ConeTypeParameterSymbol, ConeKotlinType>
-
-        return FirClassSubstitutionScope(useSiteSession, unsubstituted, substitution, true)
-    }
-
-    private fun FirRegularClass.buildUseSiteScope(useSiteSession: FirSession = session): FirClassUseSiteScope {
-        val superTypeScope = FirCompositeScope(mutableListOf())
-        val declaredScope = FirClassDeclaredMemberScope(this, useSiteSession)
-        lookupSuperTypes(this, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
-            .mapNotNullTo(superTypeScope.scopes) { useSiteSuperType ->
-                if (useSiteSuperType is ConeClassErrorType) return@mapNotNullTo null
-                val symbol = useSiteSuperType.lookupTag.toSymbol(useSiteSession)
-                if (symbol is FirClassSymbol) {
-                    val scope = symbol.fir.buildUseSiteScope(useSiteSession)
-                    useSiteSuperType.buildSubstitutionScope(useSiteSession, scope, symbol.fir) ?: scope
-                } else {
-                    null
-                }
-            }
-        return FirClassUseSiteScope(useSiteSession, superTypeScope, declaredScope, true)
-    }
-
     override fun transformRegularClass(regularClass: FirRegularClass, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
-            towerScope.scopes += regularClass.buildUseSiteScope()
+            towerScope.scopes += regularClass.buildUseSiteScope(regularClass.session)
             super.transformRegularClass(regularClass, data)
         }
     }

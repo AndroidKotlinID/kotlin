@@ -64,6 +64,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformDeclaration(errorDeclaration, data)
     }
 
+    open fun transformField(field: FirField, data: D): CompositeTransformResult<FirDeclaration> {
+        return transformDeclaration(field, data)
+    }
+
     open fun transformNamedDeclaration(namedDeclaration: FirNamedDeclaration, data: D): CompositeTransformResult<FirDeclaration> {
         return transformDeclaration(namedDeclaration, data)
     }
@@ -250,6 +254,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun transformReturnExpression(returnExpression: FirReturnExpression, data: D): CompositeTransformResult<FirStatement> {
         return transformJump(returnExpression, data)
+    }
+
+    open fun transformNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression, data: D): CompositeTransformResult<FirStatement> {
+        return transformExpression(namedArgumentExpression, data)
     }
 
     open fun transformThrowExpression(throwExpression: FirThrowExpression, data: D): CompositeTransformResult<FirStatement> {
@@ -496,6 +504,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformExpression(expression, data)
     }
 
+    final override fun visitField(field: FirField, data: D): CompositeTransformResult<FirElement> {
+        return transformField(field, data)
+    }
+
     final override fun visitFile(file: FirFile, data: D): CompositeTransformResult<FirElement> {
         return transformFile(file, data)
     }
@@ -554,6 +566,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitModifiableQualifiedAccess(modifiableQualifiedAccess: FirModifiableQualifiedAccess, data: D): CompositeTransformResult<FirElement> {
         return transformModifiableQualifiedAccess(modifiableQualifiedAccess, data)
+    }
+
+    final override fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression, data: D): CompositeTransformResult<FirElement> {
+        return transformNamedArgumentExpression(namedArgumentExpression, data)
     }
 
     final override fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration, data: D): CompositeTransformResult<FirElement> {

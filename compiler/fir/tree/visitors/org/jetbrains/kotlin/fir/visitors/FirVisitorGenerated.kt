@@ -64,6 +64,10 @@ abstract class FirVisitor<out R, in D> {
         return visitDeclaration(errorDeclaration, data)
     }
 
+    open fun visitField(field: FirField, data: D): R {
+        return visitDeclaration(field, data)
+    }
+
     open fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration, data: D): R {
         return visitDeclaration(namedDeclaration, data)
     }
@@ -250,6 +254,10 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitReturnExpression(returnExpression: FirReturnExpression, data: D): R {
         return visitJump(returnExpression, data)
+    }
+
+    open fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression, data: D): R {
+        return visitExpression(namedArgumentExpression, data)
     }
 
     open fun visitThrowExpression(throwExpression: FirThrowExpression, data: D): R {

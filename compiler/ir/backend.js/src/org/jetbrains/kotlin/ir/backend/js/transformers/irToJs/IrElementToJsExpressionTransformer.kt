@@ -8,12 +8,12 @@ package org.jetbrains.kotlin.ir.backend.js.transformers.irToJs
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
 import org.jetbrains.kotlin.ir.backend.js.utils.Namer
+import org.jetbrains.kotlin.ir.backend.js.utils.getJsName
 import org.jetbrains.kotlin.ir.backend.js.utils.realOverrideTarget
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.types.IrDynamicType
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.js.backend.ast.*
 import org.jetbrains.kotlin.util.OperatorNameConventions
@@ -137,7 +137,8 @@ class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsEx
         val arguments = translateCallArguments(expression, context)
 
         // Transform external property accessor call
-        if (function is IrSimpleFunction) {
+        // @JsName-annotated external property accessors are translated as function calls
+        if (function is IrSimpleFunction && function.getJsName() == null) {
             val property = function.correspondingProperty
             if (property != null && property.isEffectivelyExternal()) {
                 val nameRef = JsNameRef(context.getNameForDeclaration(property), jsDispatchReceiver)
@@ -338,8 +339,6 @@ class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsEx
         val receiverType = simpleFunction.dispatchReceiverParameter?.type ?: return false
 
         if (simpleFunction.isSuspend) return false
-
-        if (receiverType is IrDynamicType) return call.origin == IrStatementOrigin.INVOKE
 
         return simpleFunction.name == OperatorNameConventions.INVOKE && receiverType.isFunctionTypeOrSubtype()
     }

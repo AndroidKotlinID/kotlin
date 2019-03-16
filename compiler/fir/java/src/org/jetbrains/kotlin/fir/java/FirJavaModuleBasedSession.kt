@@ -11,9 +11,7 @@ import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.impl.FirCompositeSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.impl.FirDependenciesSymbolProviderImpl
-import org.jetbrains.kotlin.fir.resolve.impl.FirLibrarySymbolProviderImpl
+import org.jetbrains.kotlin.fir.resolve.impl.*
 
 class FirJavaModuleBasedSession(
     moduleInfo: ModuleInfo,
@@ -21,7 +19,6 @@ class FirJavaModuleBasedSession(
     scope: GlobalSearchScope,
     dependenciesProvider: FirSymbolProvider? = null
 ) : FirModuleBasedSession(moduleInfo) {
-
     init {
         sessionProvider.sessionCache[moduleInfo] = this
         registerComponent(

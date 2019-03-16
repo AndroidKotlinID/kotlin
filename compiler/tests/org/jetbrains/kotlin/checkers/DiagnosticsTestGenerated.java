@@ -4160,6 +4160,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/controlStructures/kt1075.kt");
             }
 
+            @TestMetadata("kt30406.kt")
+            public void testKt30406() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/controlStructures/kt30406.kt");
+            }
+
             @TestMetadata("kt4310.kt")
             public void testKt4310() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/controlStructures/kt4310.kt");
@@ -9543,6 +9548,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("kt28654.kt")
             public void testKt28654() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt28654.kt");
+            }
+
+            @TestMetadata("kt30405.kt")
+            public void testKt30405() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt30405.kt");
             }
 
             @TestMetadata("kt3184.kt")
@@ -22138,6 +22148,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("functionTypeAsUpperBound.kt")
             public void testFunctionTypeAsUpperBound() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/functionTypeAsUpperBound.kt");
+            }
+
+            @TestMetadata("implicitNothingAsTypeParameter.kt")
+            public void testImplicitNothingAsTypeParameter() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingAsTypeParameter.kt");
+            }
+
+            @TestMetadata("implicitNothingAsTypeParameterNI.kt")
+            public void testImplicitNothingAsTypeParameterNI() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingAsTypeParameterNI.kt");
             }
 
             @TestMetadata("misplacedConstraints.kt")

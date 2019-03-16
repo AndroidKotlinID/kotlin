@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.ConePropertySymbol
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeContext
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
@@ -30,17 +31,12 @@ import org.jetbrains.kotlin.utils.addToStdlib.cast
 class FirClassUseSiteScope(
     session: FirSession,
     private val superTypesScope: FirScope,
-    private val declaredMemberScope: FirClassDeclaredMemberScope,
-    lookupInFir: Boolean
-) : FirAbstractProviderBasedScope(session, lookupInFir) {
+    private val declaredMemberScope: FirScope
+) : FirAbstractProviderBasedScope(session, lookupInFir = true) {
     //base symbol as key
     val overrides = mutableMapOf<ConeCallableSymbol, ConeCallableSymbol?>()
 
-
-    val context = object : ConeTypeContext {
-        override val session: FirSession
-            get() = session
-    }
+    val context: ConeTypeContext = session.typeContext
 
     private fun isEqualTypes(a: ConeKotlinType, b: ConeKotlinType) = AbstractStrictEqualityTypeChecker.strictEqualTypes(context, a, b)
 
@@ -76,7 +72,7 @@ class FirClassUseSiteScope(
         val self = (this as AbstractFirBasedSymbol<*>).fir as FirCallableMember
         val overriding = seen.firstOrNull {
             val member = (it as AbstractFirBasedSymbol<*>).fir as FirCallableMember
-            member.isOverride && self.modality != Modality.FINAL
+            self.modality != Modality.FINAL
                     && sameReceivers(member.receiverTypeRef, self.receiverTypeRef)
                     && similarFunctionsOrBothProperties(member, self)
         } // TODO: two or more overrides for one fun?

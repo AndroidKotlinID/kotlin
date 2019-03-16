@@ -11,12 +11,9 @@ import org.jetbrains.kotlin.backend.common.ir.Symbols
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmDeclarationFactory
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmSharedVariablesManager
-import org.jetbrains.kotlin.builtins.ReflectionTypes
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.descriptors.NotFoundClasses
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFile
@@ -28,8 +25,6 @@ import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
-import org.jetbrains.kotlin.resolve.scopes.MemberScope
-import org.jetbrains.kotlin.storage.LockBasedStorageManager
 
 class JvmBackendContext(
     val state: GenerationState,
@@ -39,10 +34,7 @@ class JvmBackendContext(
 ) : CommonBackendContext {
     override val builtIns = state.module.builtIns
     override val declarationFactory: JvmDeclarationFactory = JvmDeclarationFactory(state)
-    override val sharedVariablesManager = JvmSharedVariablesManager(builtIns, irBuiltIns)
-
-    // TODO: inject a correct StorageManager instance, or store NotFoundClasses inside ModuleDescriptor
-    internal val reflectionTypes = ReflectionTypes(state.module, NotFoundClasses(LockBasedStorageManager.NO_LOCKS, state.module))
+    override val sharedVariablesManager = JvmSharedVariablesManager(state.module, builtIns, irBuiltIns)
 
     override val ir = JvmIr(irModuleFragment, symbolTable)
 
@@ -57,35 +49,18 @@ class JvmBackendContext(
         }
     }
 
-    private fun find(memberScope: MemberScope, className: String): ClassDescriptor {
-        return find(memberScope, Name.identifier(className))
+    private fun getJvmInternalClass(name: String): ClassDescriptor {
+        return getClass(FqName("kotlin.jvm.internal").child(Name.identifier(name)))
     }
 
-    private fun find(memberScope: MemberScope, name: Name): ClassDescriptor {
-        return memberScope.getContributedClassifier(name, NoLookupLocation.FROM_BACKEND) as ClassDescriptor
-    }
-
-    override fun getInternalClass(name: String): ClassDescriptor {
-        return find(state.module.getPackage(FqName("kotlin.jvm.internal")).memberScope, name)
-    }
-
-    override fun getClass(fqName: FqName): ClassDescriptor {
-        return find(state.module.getPackage(fqName.parent()).memberScope, fqName.shortName())
+    private fun getClass(fqName: FqName): ClassDescriptor {
+        return state.module.getPackage(fqName.parent()).memberScope.getContributedClassifier(
+            fqName.shortName(), NoLookupLocation.FROM_BACKEND
+        ) as ClassDescriptor? ?: error("Class is not found: $fqName")
     }
 
     fun getIrClass(fqName: FqName): IrClassSymbol {
         return ir.symbols.externalSymbolTable.referenceClass(getClass(fqName))
-    }
-
-    override fun getInternalFunctions(name: String): List<FunctionDescriptor> {
-        return when (name) {
-            "ThrowUninitializedPropertyAccessException" ->
-                getInternalClass("Intrinsics").staticScope.getContributedFunctions(
-                    Name.identifier("throwUninitializedPropertyAccessException"),
-                    NoLookupLocation.FROM_BACKEND
-                ).toList()
-            else -> TODO(name)
-        }
     }
 
     override fun log(message: () -> String) {
@@ -107,55 +82,47 @@ class JvmBackendContext(
         override val symbols = JvmSymbols()
 
         inner class JvmSymbols : Symbols<JvmBackendContext>(this@JvmBackendContext, symbolTable.lazyWrapper) {
+            override val ThrowNullPointerException: IrSimpleFunctionSymbol
+                get() = error("Unused in JVM IR")
 
-            override val areEqual
-                get () = symbolTable.referenceSimpleFunction(context.getInternalFunctions("areEqual").single())
+            override val ThrowNoWhenBranchMatchedException: IrSimpleFunctionSymbol
+                get() = error("Unused in JVM IR")
 
-            override val ThrowNullPointerException
-                get () = symbolTable.referenceSimpleFunction(
-                    context.getInternalFunctions("ThrowNullPointerException").single()
-                )
+            override val ThrowTypeCastException: IrSimpleFunctionSymbol
+                get() = error("Unused in JVM IR")
 
-            override val ThrowNoWhenBranchMatchedException
-                get () = symbolTable.referenceSimpleFunction(
-                    context.getInternalFunctions("ThrowNoWhenBranchMatchedException").single()
-                )
-
-            override val ThrowTypeCastException
-                get () = symbolTable.referenceSimpleFunction(
-                    context.getInternalFunctions("ThrowTypeCastException").single()
-                )
-
-            override val ThrowUninitializedPropertyAccessException =
+            override val ThrowUninitializedPropertyAccessException: IrSimpleFunctionSymbol =
                 symbolTable.referenceSimpleFunction(
-                    context.getInternalFunctions("ThrowUninitializedPropertyAccessException").single()
+                    getJvmInternalClass("Intrinsics").staticScope.getContributedFunctions(
+                        Name.identifier("throwUninitializedPropertyAccessException"),
+                        NoLookupLocation.FROM_BACKEND
+                    ).single()
                 )
 
-            override val stringBuilder
-                get() = symbolTable.referenceClass(
-                    context.getClass(FqName("java.lang.StringBuilder"))
-                )
+            override val stringBuilder: IrClassSymbol
+                get() = symbolTable.referenceClass(context.getClass(FqName("java.lang.StringBuilder")))
+
+            override val defaultConstructorMarker: IrClassSymbol =
+                symbolTable.referenceClass(context.getJvmInternalClass("DefaultConstructorMarker"))
 
             override val copyRangeTo: Map<ClassDescriptor, IrSimpleFunctionSymbol>
-                get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                get() = error("Unused in JVM IR")
+
             override val coroutineImpl: IrClassSymbol
-                get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                get() = TODO("not implemented")
+
             override val coroutineSuspendedGetter: IrSimpleFunctionSymbol
-                get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                get() = TODO("not implemented")
 
-            override val lateinitIsInitializedPropertyGetter = symbolTable.referenceSimpleFunction(
-                state.module.getPackage(FqName("kotlin")).memberScope.getContributedVariables(
-                    Name.identifier("isInitialized"), NoLookupLocation.FROM_BACKEND
-                ).single {
-                    it.extensionReceiverParameter != null && !it.isExternal
-                }.getter!!
-            )
+            val lambdaClass: IrClassSymbol =
+                symbolTable.referenceClass(context.getJvmInternalClass("Lambda"))
 
-            val lambdaClass = calc { symbolTable.referenceClass(context.getInternalClass("Lambda")) }
+            val functionReference: IrClassSymbol =
+                symbolTable.referenceClass(context.getJvmInternalClass("FunctionReference"))
 
-            fun getKFunction(parameterCount: Int) = symbolTable.referenceClass(reflectionTypes.getKFunction(parameterCount))
+            fun getFunction(parameterCount: Int): IrClassSymbol =
+                symbolTable.referenceClass(context.builtIns.getFunction(parameterCount))
         }
-
 
         override fun shouldGenerateHandlerParameterForDefaultBodyFun() = true
     }

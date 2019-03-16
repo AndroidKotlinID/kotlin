@@ -17,9 +17,12 @@ import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.defaultConstructor.AbstractDefaultArgumentsReflectionTest
 import org.jetbrains.kotlin.codegen.flags.AbstractWriteFlagsTest
 import org.jetbrains.kotlin.codegen.ir.*
+import org.jetbrains.kotlin.fir.AbstractFirDiagnosticsSmokeTest
 import org.jetbrains.kotlin.fir.AbstractFirResolveTestCase
 import org.jetbrains.kotlin.fir.AbstractFirResolveTestCaseWithStdlib
 import org.jetbrains.kotlin.fir.builder.AbstractRawFirBuilderTestCase
+import org.jetbrains.kotlin.fir.java.AbstractFirTypeEnhancementTest
+import org.jetbrains.kotlin.fir.java.AbstractOwnFirTypeEnhancementTest
 import org.jetbrains.kotlin.generators.tests.generator.testGroup
 import org.jetbrains.kotlin.generators.util.KT_OR_KTS_WITHOUT_DOTS_IN_NAME
 import org.jetbrains.kotlin.generators.util.KT_WITHOUT_DOTS_IN_NAME
@@ -394,6 +397,26 @@ fun main(args: Array<String>) {
 
         testClass<AbstractFirResolveTestCaseWithStdlib> {
             model("resolve/stdlib", pattern = KT_WITHOUT_DOTS_IN_NAME)
+        }
+    }
+
+    testGroup("compiler/fir/resolve/tests", "compiler/testData") {
+        testClass<AbstractFirTypeEnhancementTest> {
+            model("loadJava/compiledJava", extension = "java")
+        }
+    }
+
+    testGroup("compiler/fir/resolve/tests", "compiler/fir/resolve/testData") {
+        testClass<AbstractOwnFirTypeEnhancementTest> {
+            model("enhancement", extension = "java")
+        }
+    }
+
+
+    testGroup("compiler/fir/resolve/tests", "compiler/testData") {
+
+        testClass<AbstractFirDiagnosticsSmokeTest> {
+            model("diagnostics/tests")
         }
     }
 }

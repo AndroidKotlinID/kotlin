@@ -64,6 +64,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitDeclaration(errorDeclaration, null)
     }
 
+    open fun visitField(field: FirField) {
+        visitDeclaration(field, null)
+    }
+
     open fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration) {
         visitDeclaration(namedDeclaration, null)
     }
@@ -250,6 +254,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitReturnExpression(returnExpression: FirReturnExpression) {
         visitJump(returnExpression, null)
+    }
+
+    open fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression) {
+        visitExpression(namedArgumentExpression, null)
     }
 
     open fun visitThrowExpression(throwExpression: FirThrowExpression) {
@@ -496,6 +504,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitExpression(expression)
     }
 
+    final override fun visitField(field: FirField, data: Nothing?) {
+        visitField(field)
+    }
+
     final override fun visitFile(file: FirFile, data: Nothing?) {
         visitFile(file)
     }
@@ -554,6 +566,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitModifiableQualifiedAccess(modifiableQualifiedAccess: FirModifiableQualifiedAccess, data: Nothing?) {
         visitModifiableQualifiedAccess(modifiableQualifiedAccess)
+    }
+
+    final override fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression, data: Nothing?) {
+        visitNamedArgumentExpression(namedArgumentExpression)
     }
 
     final override fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration, data: Nothing?) {

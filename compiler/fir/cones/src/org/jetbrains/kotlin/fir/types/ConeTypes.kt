@@ -65,6 +65,10 @@ sealed class ConeKotlinType : ConeKotlinTypeProjection(), ConeTypedProjection, K
     abstract val nullability: ConeNullability
 }
 
+val ConeKotlinType.isNullable: Boolean get() = nullability != ConeNullability.NOT_NULL
+
+val ConeKotlinType.isMarkedNullable: Boolean get() = nullability == ConeNullability.NULLABLE
+
 class ConeKotlinErrorType(val reason: String) : ConeKotlinType() {
     override val typeArguments: Array<out ConeKotlinTypeProjection>
         get() = EMPTY_ARRAY
@@ -104,8 +108,6 @@ abstract class ConeClassType : ConeClassLikeType()
 
 abstract class ConeAbbreviatedType : ConeClassLikeType() {
     abstract val abbreviationLookupTag: ConeClassLikeLookupTag
-
-    abstract val directExpansion: ConeClassLikeType
 }
 
 abstract class ConeTypeParameterType : ConeLookupTagBasedType() {

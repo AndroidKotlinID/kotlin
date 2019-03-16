@@ -90,13 +90,13 @@ private fun associateDependenciesWithActualModuleDependencies(
                 // TODO handle Android configuration names in a general way once we drop AGP < 3.0.0
                 val variantName = compilation.name
                 when (usageContext.usage.name) {
-                    Usage.JAVA_API -> variantName + "CompileClasspath"
+                    Usage.JAVA_API, "java-api-jars" -> variantName + "CompileClasspath"
                     Usage.JAVA_RUNTIME_JARS -> variantName + "RuntimeClasspath"
                     else -> error("Unexpected Usage for usage context: ${usageContext.usage}")
                 }
             }
             else -> when (usageContext.usage.name) {
-                Usage.JAVA_API -> compilation.compileDependencyConfigurationName
+                Usage.JAVA_API, "java-api-jars" -> compilation.compileDependencyConfigurationName
                 Usage.JAVA_RUNTIME_JARS -> (compilation as KotlinCompilationToRunnableFiles).runtimeDependencyConfigurationName
                 else -> error("Unexpected Usage for usage context: ${usageContext.usage}")
             }
@@ -124,8 +124,8 @@ private fun associateDependenciesWithActualModuleDependencies(
 
                     val resolvedToConfiguration = resolved.configuration
                     val dependencyTargetComponent: KotlinTargetComponent = run {
-                        dependencyProjectKotlinExtension.targets.forEach { target ->
-                            target.components.forEach { component ->
+                        dependencyProjectKotlinExtension.targets.withType(AbstractKotlinTarget::class.java).forEach { target ->
+                            target.kotlinComponents.forEach { component ->
                                 if (component.findUsageContext(resolvedToConfiguration) != null)
                                     return@run component
                             }
