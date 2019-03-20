@@ -26,7 +26,7 @@ open class KotlinAndroidTarget(
     override val platformType: KotlinPlatformType
         get() = KotlinPlatformType.androidJvm
 
-    private val compilationFactory = KotlinJvmAndroidCompilationFactory(project, this)
+    internal val compilationFactory = KotlinJvmAndroidCompilationFactory(project, this)
 
     override val compilations: NamedDomainObjectContainer<out KotlinJvmAndroidCompilation> =
         project.container(compilationFactory.itemClass, compilationFactory)
@@ -90,7 +90,6 @@ open class KotlinAndroidTarget(
         checkPublishLibraryVariantsExist()
 
         KotlinAndroidPlugin.androidTargetHandler(project.getKotlinPluginVersion()!!, this).doCreateComponents()
-            .also { project.components.addAll(it) }
     }
 
     // Capture the type parameter T for `AbstractAndroidProjectHandler`

@@ -891,4 +891,76 @@ class KotlinGradleIT : BaseGradleIT() {
             assertNotContains(MULTIPLE_KOTLIN_PLUGINS_SPECIFIC_PROJECTS_WARNING)
         }
     }
+
+    @Test
+    fun testNewModelInOldJvmPlugin() = with(Project("new-model-in-old-plugin", GradleVersionRequired.AtLeast("4.10.2"))) {
+        setupWorkingDir()
+        gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+
+        build("publish", "check", "runBenchmark") {
+            assertSuccessful()
+            assertTasksExecuted(":compileKotlin", ":compileTestKotlin", ":compileBenchmarkKotlin", ":test", ":runBenchmark")
+
+            // Find the benchmark output:
+            assertContains("f ran at the speed of light")
+
+            val moduleDir = "build/repo/com/example/new-model/1.0/"
+
+            val publishedJar = fileInWorkingDir(moduleDir + "new-model-1.0.jar")
+            ZipFile(publishedJar).use { zip ->
+                val entries = zip.entries().asSequence().map { it.name }
+                assertTrue { "com/example/A.class" in entries }
+            }
+
+            val publishedPom = fileInWorkingDir(moduleDir + "new-model-1.0.pom")
+            val kotlinVersion = defaultBuildOptions().kotlinVersion
+            val pomText = publishedPom.readText().replace(Regex("\\s+"), "")
+            assertTrue { "kotlin-gradle-plugin-api</artifactId><version>$kotlinVersion</version><scope>compile</scope>" in pomText }
+            assertTrue { "kotlin-stdlib-jdk8</artifactId><version>$kotlinVersion</version><scope>runtime</scope>" in pomText }
+
+            assertFileExists(moduleDir + "new-model-1.0-sources.jar")
+        }
+    }
+
+    @Test
+    fun testUserDefinedAttributesInSinglePlatformProject() =
+        with(Project("multiprojectWithDependency", GradleVersionRequired.AtLeast("4.7"))) {
+            setupWorkingDir()
+            gradleBuildScript("projA").appendText(
+                "\n" + """
+                def targetAttribute = Attribute.of("com.example.target", String)
+                def compilationAttribute = Attribute.of("com.example.compilation", String)
+                kotlin.target.attributes.attribute(targetAttribute, "foo")
+                kotlin.target.compilations["main"].attributes.attribute(compilationAttribute, "foo")
+                """.trimIndent()
+            )
+            gradleBuildScript("projB").appendText(
+                "\n" + """
+                def targetAttribute = Attribute.of("com.example.target", String)
+                def compilationAttribute = Attribute.of("com.example.compilation", String)
+                kotlin.target.attributes.attribute(targetAttribute, "foo")
+                kotlin.target.compilations["main"].attributes.attribute(compilationAttribute, "foo")
+                """.trimIndent()
+            )
+            build(":projB:compileKotlin") {
+                assertSuccessful()
+            }
+            // Break dependency resolution by providing incompatible custom attributes in the target:
+            gradleBuildScript("projB").appendText("\nkotlin.target.attributes.attribute(targetAttribute, \"bar\")")
+            build(":projB:compileKotlin") {
+                assertFailed()
+                assertContains("Required com.example.target 'bar'")
+            }
+            // And using the compilation attributes (fix the target attributes first):
+            gradleBuildScript("projB").appendText(
+                "\n" + """
+                kotlin.target.attributes.attribute(targetAttribute, "foo")
+                kotlin.target.compilations["main"].attributes.attribute(compilationAttribute, "bar")
+                """.trimIndent()
+            )
+            build(":projB:compileKotlin") {
+                assertFailed()
+                assertContains("Required com.example.compilation 'bar'")
+            }
+        }
 }

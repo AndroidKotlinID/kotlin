@@ -14,10 +14,16 @@ import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
+import kotlin.math.max
 import kotlin.reflect.KClass
 import kotlin.system.measureNanoTime
 
-fun doFirResolveTestBench(firFiles: List<FirFile>, transformers: List<FirTransformer<Nothing?>>, gc: Boolean = true) {
+fun doFirResolveTestBench(
+    firFiles: List<FirFile>,
+    transformers: List<FirTransformer<Nothing?>>,
+    gc: Boolean = true,
+    withProgress: Boolean = false
+) {
 
     if (gc) {
         System.gc()
@@ -32,8 +38,10 @@ fun doFirResolveTestBench(firFiles: List<FirFile>, transformers: List<FirTransfo
 
 
     try {
-        for (transformer in transformers) {
-            for (firFile in firFiles) {
+        for ((stage, transformer) in transformers.withIndex()) {
+            println("Starting stage #$stage. $transformer")
+            val firFileSequence = if (withProgress) firFiles.progress("   ~ ") else firFiles.asSequence()
+            for (firFile in firFileSequence) {
                 val time = measureNanoTime {
                     try {
                         transformer.transformFile(firFile, null)
@@ -115,5 +123,16 @@ fun doFirResolveTestBench(firFiles: List<FirFile>, transformers: List<FirTransfo
             val counter = counterPerTransformer[transformer]!!
             println("${transformer.simpleName}, TIME: ${time * 1e-6} ms, TIME PER FILE: ${(time / counter) * 1e-6} ms, FILES: $counter")
         }
+    }
+}
+
+fun <T> Collection<T>.progress(label: String, step: Double = 0.1): Sequence<T> {
+    val intStep = max(1, (this.size * step).toInt())
+    var progress = 0
+    return asSequence().onEach {
+        if (progress % intStep == 0) {
+            println("$label: ${progress * 100 / size}% ($progress/${this.size})")
+        }
+        progress++
     }
 }

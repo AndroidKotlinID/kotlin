@@ -123,12 +123,12 @@ fun <T : Any> mapType(
                 descriptorTypeWriter?.writeArrayType()
 
                 arrayElementType =
-                        mapType(
-                            memberType, factory,
-                            mode.toGenericArgumentMode(memberProjection.projectionKind),
-                            typeMappingConfiguration, descriptorTypeWriter, writeGenericType,
-                            isIrBackend
-                        )
+                    mapType(
+                        memberType, factory,
+                        mode.toGenericArgumentMode(memberProjection.projectionKind),
+                        typeMappingConfiguration, descriptorTypeWriter, writeGenericType,
+                        isIrBackend
+                    )
 
                 descriptorTypeWriter?.writeArrayEnd()
             }
@@ -280,7 +280,7 @@ internal fun computeExpandedTypeInner(kotlinType: KotlinType, visitedClassifiers
                 }
 
         classifier is ClassDescriptor && classifier.isInline -> {
-            val inlineClassBoxType = kotlinType
+            // kotlinType is the boxed inline class type
 
             val underlyingType = kotlinType.substitutedUnderlyingType() ?: return null
             val expandedUnderlyingType = computeExpandedTypeInner(underlyingType, visitedClassifiers) ?: return null
@@ -290,10 +290,10 @@ internal fun computeExpandedTypeInner(kotlinType: KotlinType, visitedClassifiers
                 // Here inline class type is nullable. Apply nullability to the expandedUnderlyingType.
 
                 // Nullable types become inline class boxes
-                expandedUnderlyingType.isNullable() -> inlineClassBoxType
+                expandedUnderlyingType.isNullable() -> kotlinType
 
                 // Primitives become inline class boxes
-                KotlinBuiltIns.isPrimitiveType(expandedUnderlyingType) -> inlineClassBoxType
+                KotlinBuiltIns.isPrimitiveType(expandedUnderlyingType) -> kotlinType
 
                 // Non-null reference types become nullable reference types
                 else -> expandedUnderlyingType.makeNullable()
@@ -365,11 +365,11 @@ open class JvmDescriptorTypeWriter<T : Any>(private val jvmTypeFactory: JvmTypeF
     protected fun writeJvmTypeAsIs(type: T) {
         if (jvmCurrentType == null) {
             jvmCurrentType =
-                    if (jvmCurrentTypeArrayLevel > 0) {
-                        jvmTypeFactory.createFromString("[".repeat(jvmCurrentTypeArrayLevel) + jvmTypeFactory.toString(type))
-                    } else {
-                        type
-                    }
+                if (jvmCurrentTypeArrayLevel > 0) {
+                    jvmTypeFactory.createFromString("[".repeat(jvmCurrentTypeArrayLevel) + jvmTypeFactory.toString(type))
+                } else {
+                    type
+                }
         }
     }
 
