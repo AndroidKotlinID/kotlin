@@ -65,6 +65,7 @@ rootProject.apply {
 val isTeamcityBuild = project.hasProperty("teamcity") || System.getenv("TEAMCITY_VERSION") != null
 val intellijUltimateEnabled by extra(project.getBooleanProperty("intellijUltimateEnabled") ?: isTeamcityBuild)
 val intellijSeparateSdks by extra(project.getBooleanProperty("intellijSeparateSdks") ?: false)
+val verifyDependencyOutput by extra( getBooleanProperty("kotlin.build.dependency.output.verification") ?: isTeamcityBuild)
 
 extra["intellijReleaseType"] = if (extra["versions.intellijSdk"]?.toString()?.endsWith("SNAPSHOT") == true)
     "snapshots"
@@ -73,7 +74,7 @@ else
 
 extra["versions.androidDxSources"] = "5.0.0_r2"
 
-extra["customDepsOrg"] = "kotlin.build.custom.deps"
+extra["customDepsOrg"] = "kotlin.build"
 
 repositories {
     if (cacheRedirectorEnabled) {
@@ -109,4 +110,4 @@ samWithReceiver {
 fun Project.`samWithReceiver`(configure: org.jetbrains.kotlin.samWithReceiver.gradle.SamWithReceiverExtension.() -> Unit): Unit =
         extensions.configure("samWithReceiver", configure)
 
-tasks["build"].dependsOn(":prepare-deps:android-dx:build", ":prepare-deps:intellij-sdk:build")
+tasks["build"].dependsOn(":prepare-deps:build")

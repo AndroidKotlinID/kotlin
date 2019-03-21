@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.base.kapt3.KaptFlag
 import org.jetbrains.kotlin.codegen.coroutines.CONTINUATION_PARAMETER_NAME
 import org.jetbrains.kotlin.codegen.needsExperimentalCoroutinesWrapper
 import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
@@ -49,11 +50,13 @@ import org.jetbrains.kotlin.load.java.sources.JavaSourceElement
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.DefaultValueArgument
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedValueArgument
 import org.jetbrains.kotlin.resolve.constants.*
+import org.jetbrains.kotlin.resolve.constants.evaluate.ConstantExpressionEvaluator
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameOrNull
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassOrAny
@@ -635,15 +638,45 @@ class ClassFileToSourceStubConverter(val kaptContext: KaptContextForStubGenerati
                 ifNonError = { signatureParser.parseFieldSignature(field.signature, treeMaker.Type(type)) }
             )
 
-        val value = field.value
-
-        val initializer = explicitInitializer
-            ?: convertValueOfPrimitiveTypeOrString(value)
-            ?: if (isFinal(field.access)) convertLiteralExpression(getDefaultValue(type)) else null
-
         lineMappings.registerField(containingClass, field)
 
+        val initializer = explicitInitializer
+            ?: convertPropertyInitializer(field)
+            ?: if (isFinal(field.access)) convertLiteralExpression(getDefaultValue(type)) else null
+
         return treeMaker.VarDef(modifiers, treeMaker.name(name), typeExpression, initializer).keepKdocComments(field)
+    }
+
+    private fun convertPropertyInitializer(field: FieldNode): JCExpression? {
+        val value = field.value
+
+        val origin = kaptContext.origins[field]
+        val initializer = when (val element = origin?.element) {
+            is KtProperty -> element.initializer
+            is KtParameter -> element.defaultValue
+            else -> null
+        }
+
+        if (value != null) {
+            if (initializer != null) {
+                return convertConstantValueArguments(value, listOf(initializer))
+            }
+
+            return convertValueOfPrimitiveTypeOrString(value)
+        }
+
+        val propertyType = (origin?.descriptor as? PropertyDescriptor)?.returnType
+        if (initializer != null && propertyType != null) {
+            val moduleDescriptor = kaptContext.generationState.module
+            val evaluator = ConstantExpressionEvaluator(moduleDescriptor, LanguageVersionSettingsImpl.DEFAULT, kaptContext.project)
+            val trace = DelegatingBindingTrace(kaptContext.bindingContext, "Kapt")
+            val const = evaluator.evaluateExpression(initializer, trace, propertyType)
+            if (const != null && !const.isError && const.canBeUsedInAnnotations && !const.usesNonConstValAsConstant) {
+                return convertConstantValueArguments(const.getValue(propertyType), listOf(initializer))
+            }
+        }
+
+        return null
     }
 
     private fun convertMethod(
@@ -818,7 +851,15 @@ class ClassFileToSourceStubConverter(val kaptContext: KaptContextForStubGenerati
                     else -> null
                 }
             },
-            ifNonError = { genericSignature.returnType }
+            ifNonError = ifNonError@ {
+                if (descriptor is PropertyDescriptor) {
+                    val containingClass = descriptor.containingDeclaration
+                    if (containingClass is ClassDescriptor && containingClass.kind == ClassKind.ANNOTATION_CLASS) {
+                        return@ifNonError jcReturnType
+                    }
+                }
+                genericSignature.returnType
+            }
         )
 
         return Pair(genericSignature, returnType)
@@ -979,12 +1020,12 @@ class ClassFileToSourceStubConverter(val kaptContext: KaptContextForStubGenerati
 
     private fun convertAnnotationArgumentWithName(constantValue: Any?, value: ResolvedValueArgument?, name: String): JCExpression? {
         if (!isValidIdentifier(name)) return null
-        val expr = convertAnnotationArgument(constantValue, value) ?: return null
+        val args = value?.arguments?.mapNotNull { it.getArgumentExpression() } ?: emptyList()
+        val expr = convertConstantValueArguments(constantValue, args) ?: return null
         return treeMaker.Assign(treeMaker.SimpleName(name), expr)
     }
 
-    private fun convertAnnotationArgument(constantValue: Any?, value: ResolvedValueArgument?): JCExpression? {
-        val args = value?.arguments?.mapNotNull { it.getArgumentExpression() } ?: emptyList()
+    private fun convertConstantValueArguments(constantValue: Any?, args: List<KtExpression>): JCExpression? {
         val singleArg = args.singleOrNull()
 
         if (constantValue.isOfPrimitiveType()) {

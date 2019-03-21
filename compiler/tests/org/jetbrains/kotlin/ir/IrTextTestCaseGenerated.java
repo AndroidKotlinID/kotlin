@@ -887,6 +887,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/genericPropertyCall.kt");
         }
 
+        @TestMetadata("genericPropertyRef.kt")
+        public void testGenericPropertyRef() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/genericPropertyRef.kt");
+        }
+
         @TestMetadata("identity.kt")
         public void testIdentity() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/identity.kt");
@@ -1055,6 +1060,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("primitivesImplicitConversions.kt")
         public void testPrimitivesImplicitConversions() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/primitivesImplicitConversions.kt");
+        }
+
+        @TestMetadata("propertyReferences.kt")
+        public void testPropertyReferences() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/propertyReferences.kt");
         }
 
         @TestMetadata("references.kt")

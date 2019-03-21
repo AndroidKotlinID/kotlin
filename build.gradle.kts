@@ -302,12 +302,12 @@ allprojects {
     val mirrorRepo: String? = findProperty("maven.repository.mirror")?.toString()
 
     repositories {
-        intellijSdkRepo(project)
-        androidDxJarRepo(project)
+        kotlinBuildLocalRepo(project)
         mirrorRepo?.let(::maven)
         bootstrapKotlinRepo?.let(::maven)
         jcenter()
         maven(protobufRepo)
+        maven(intellijRepo)
     }
 
     configureJvmProject(javaHome!!, jvmTarget!!)
@@ -540,7 +540,7 @@ tasks {
                   ":idea:idea-gradle-native:test",
                   ":idea:idea-maven:test",
                   ":j2k:test",
-                  ":eval4j:test")
+                  ":idea:eval4j:test")
     }
 
     create("idea-plugin-tests") {

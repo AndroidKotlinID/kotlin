@@ -3145,7 +3145,12 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             @NotNull VariableDescriptor target,
             @Nullable StackValue receiverValue
     ) {
-        ClassDescriptor classDescriptor = CodegenBinding.anonymousClassForCallable(bindingContext, variableDescriptor);
+        ClassDescriptor classDescriptor = bindingContext.get(CLASS_FOR_CALLABLE, variableDescriptor);
+        if (classDescriptor == null) {
+            throw new IllegalStateException(
+                    "Property reference class was not found: " + variableDescriptor +
+                    "\nTried to generate: " + element.getText());
+        }
 
         ClassBuilder classBuilder = state.getFactory().newVisitor(
                 JvmDeclarationOriginKt.OtherOrigin(element),
@@ -4855,6 +4860,10 @@ The "returned" value of try expression with no finally is either the last expres
         return StackValue.operation(resultType, resultKotlinType, v -> {
             KtProperty subjectVariable = expression.getSubjectVariable();
             KtExpression subjectExpression = expression.getSubjectExpression();
+
+            if (subjectVariable == null && subjectExpression == null) {
+                v.nop();
+            }
 
             SwitchCodegen switchCodegen = switchCodegenProvider.buildAppropriateSwitchCodegenIfPossible(
                     expression, isStatement, CodegenUtil.isExhaustive(bindingContext, expression, isStatement)

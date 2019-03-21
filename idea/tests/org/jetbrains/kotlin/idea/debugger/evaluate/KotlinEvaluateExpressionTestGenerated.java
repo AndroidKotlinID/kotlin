@@ -271,6 +271,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt28087.kt");
         }
 
+        @TestMetadata("kt29179.kt")
+        public void testKt29179() throws Exception {
+            runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt29179.kt");
+        }
+
         @TestMetadata("kt5554OnlyIntsShouldBeCoerced.kt")
         public void testKt5554OnlyIntsShouldBeCoerced() throws Exception {
             runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/kt5554OnlyIntsShouldBeCoerced.kt");
@@ -660,6 +665,11 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
                 runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/delegatedPropertyInClass.kt");
             }
 
+            @TestMetadata("delegatedPropertyInClassKotlinVariables.kt")
+            public void testDelegatedPropertyInClassKotlinVariables() throws Exception {
+                runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/delegatedPropertyInClassKotlinVariables.kt");
+            }
+
             @TestMetadata("delegatedPropertyInClassWithToString.kt")
             public void testDelegatedPropertyInClassWithToString() throws Exception {
                 runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/delegatedPropertyInClassWithToString.kt");
@@ -788,6 +798,26 @@ public class KotlinEvaluateExpressionTestGenerated extends AbstractKotlinEvaluat
             @TestMetadata("hideSyntheticThis.kt")
             public void testHideSyntheticThis() throws Exception {
                 runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/hideSyntheticThis.kt");
+            }
+
+            @TestMetadata("lambdaFun1.kt")
+            public void testLambdaFun1() throws Exception {
+                runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/lambdaFun1.kt");
+            }
+
+            @TestMetadata("lambdaFun2.kt")
+            public void testLambdaFun2() throws Exception {
+                runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/lambdaFun2.kt");
+            }
+
+            @TestMetadata("lambdaFun3.kt")
+            public void testLambdaFun3() throws Exception {
+                runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/lambdaFun3.kt");
+            }
+
+            @TestMetadata("lambdaFun4.kt")
+            public void testLambdaFun4() throws Exception {
+                runTest("idea/testData/debugger/tinyApp/src/evaluate/singleBreakpoint/frame/lambdaFun4.kt");
             }
 
             @TestMetadata("lambdaParameterMangling.kt")

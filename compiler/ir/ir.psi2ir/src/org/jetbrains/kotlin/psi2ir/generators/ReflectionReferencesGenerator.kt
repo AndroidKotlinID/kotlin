@@ -48,7 +48,7 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
         } else {
             val typeConstructorDeclaration = lhs.type.constructor.declarationDescriptor
             val typeClass = typeConstructorDeclaration
-                    ?: throw AssertionError("Unexpected type constructor for ${lhs.type}: $typeConstructorDeclaration")
+                ?: throw AssertionError("Unexpected type constructor for ${lhs.type}: $typeConstructorDeclaration")
             IrClassReferenceImpl(
                 ktClassLiteral.startOffsetSkippingComments, ktClassLiteral.endOffset, resultType,
                 context.symbolTable.referenceClassifier(typeClass), lhs.type.toIrType()
@@ -136,22 +136,30 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
         origin: IrStatementOrigin?,
         mutable: Boolean
     ): IrPropertyReference {
-        val getterDescriptor = propertyDescriptor.getter
-        val setterDescriptor = if (mutable) propertyDescriptor.setter else null
-
-        val fieldSymbol = if (getterDescriptor == null) context.symbolTable.referenceField(propertyDescriptor) else null
-        val getterSymbol = getterDescriptor?.let { context.symbolTable.referenceSimpleFunction(it.original) }
-        val setterSymbol = setterDescriptor?.let { context.symbolTable.referenceSimpleFunction(it.original) }
+        val originalProperty = propertyDescriptor.original
+        val originalGetter = originalProperty.getter?.original
+        val originalSetter = if (mutable) originalProperty.setter?.original else null
 
         return IrPropertyReferenceImpl(
             startOffset, endOffset, type.toIrType(),
-            propertyDescriptor, propertyDescriptor.typeParametersCount,
-            fieldSymbol, getterSymbol, setterSymbol,
+            context.symbolTable.referenceProperty(originalProperty),
+            propertyDescriptor.typeParametersCount,
+            getFieldForPropertyReference(originalProperty),
+            originalGetter?.let { context.symbolTable.referenceSimpleFunction(it) },
+            originalSetter?.let { context.symbolTable.referenceSimpleFunction(it) },
             origin
         ).apply {
-            putTypeArguments(typeArguments) { it.toIrType()}
+            putTypeArguments(typeArguments) { it.toIrType() }
         }
     }
+
+    private fun getFieldForPropertyReference(originalProperty: PropertyDescriptor) =
+        // NB this is a hack, we really don't know if an arbitrary property has a backing field or not
+        when {
+            originalProperty.isDelegated -> null
+            originalProperty.getter != null -> null
+            else -> context.symbolTable.referenceField(originalProperty)
+        }
 
     private fun generateFunctionReference(
         startOffset: Int,

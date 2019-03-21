@@ -194,6 +194,11 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/javaKeywordsInPackageNames.kt");
     }
 
+    @TestMetadata("javadoc.kt")
+    public void testJavadoc() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/javadoc.kt");
+    }
+
     @TestMetadata("jvmOverloads.kt")
     public void testJvmOverloads() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/jvmOverloads.kt");
@@ -354,6 +359,11 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/nonExistentClassWIthoutCorrection.kt");
     }
 
+    @TestMetadata("outProjection.kt")
+    public void testOutProjection() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/outProjection.kt");
+    }
+
     @TestMetadata("primitiveTypes.kt")
     public void testPrimitiveTypes() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/primitiveTypes.kt");
@@ -402,5 +412,10 @@ public class ClassFileToSourceStubConverterTestGenerated extends AbstractClassFi
     @TestMetadata("topLevel.kt")
     public void testTopLevel() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/topLevel.kt");
+    }
+
+    @TestMetadata("unsafePropertyInitializers.kt")
+    public void testUnsafePropertyInitializers() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/unsafePropertyInitializers.kt");
     }
 }

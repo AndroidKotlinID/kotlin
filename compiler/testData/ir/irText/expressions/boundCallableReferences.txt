@@ -65,4 +65,3 @@ FILE fqName:<root> fileName:/boundCallableReferences.kt
       BLOCK_BODY
         RETURN type=kotlin.Nothing from='<get-test3>(): KFunction0<Unit>'
           GET_FIELD 'test3: KFunction0<Unit>' type=kotlin.reflect.KFunction0<kotlin.Unit> origin=null
-
