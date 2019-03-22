@@ -332,7 +332,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     is KtDelegatedSuperTypeEntry -> {
                         val type = superTypeListEntry.typeReference.toFirOrErrorType()
                         container.superTypeRefs += FirDelegatedTypeRefImpl(
-                            type,
+                            session, type,
                             { superTypeListEntry.delegateExpression }.toFirExpression("Should have delegate")
                         )
                     }
@@ -411,10 +411,27 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             return firFile
         }
 
-        private fun KtClassOrObject.toDelegatedSelfType(): FirTypeRef =
-            FirUserTypeRefImpl(session, this, isMarkedNullable = false).apply {
+        private fun KtClassOrObject.toDelegatedSelfType(firClass: FirRegularClass): FirTypeRef {
+            return FirResolvedTypeRefImpl(
+                session,
+                this,
+                ConeClassTypeImpl(
+                    firClass.symbol.toLookupTag(),
+                    firClass.typeParameters.map { ConeTypeParameterTypeImpl(it.symbol, false) }.toTypedArray(),
+                    false
+                ),
+                isMarkedNullable = false,
+                annotations = emptyList()
+            )
+        }
+
+        @Deprecated("TODO, proper type")
+        private fun KtObjectDeclaration.toDelegatedSelfType(): FirTypeRef {
+            return FirUserTypeRefImpl(session, this, isMarkedNullable = false).apply {
                 qualifier.add(FirQualifierPartImpl(nameAsSafeName))
             }
+        }
+
 
         override fun visitEnumEntry(enumEntry: KtEnumEntry, data: Unit): FirElement {
             return withChildClassName(enumEntry.nameAsSafeName) {
@@ -425,7 +442,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     enumEntry.nameAsSafeName
                 )
                 enumEntry.extractAnnotationsTo(firEnumEntry)
-                val delegatedSelfType = enumEntry.toDelegatedSelfType()
+                val delegatedSelfType = enumEntry.toDelegatedSelfType(firEnumEntry)
                 val delegatedSuperType = enumEntry.extractSuperTypeListEntriesTo(firEnumEntry, delegatedSelfType)
                 for (declaration in enumEntry.declarations) {
                     firEnumEntry.declarations += declaration.toFirDeclaration(
@@ -445,9 +462,12 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
         val currentClassId get() = ClassId(packageFqName, className, false)
 
-        fun callableIdForName(name: Name) =
-            if (className == FqName.ROOT) CallableId(packageFqName, name)
-            else CallableId(packageFqName, className, name)
+        fun callableIdForName(name: Name, local: Boolean = false) =
+            when {
+                local -> CallableId(name)
+                className == FqName.ROOT -> CallableId(packageFqName, name)
+                else -> CallableId(packageFqName, className, name)
+            }
 
         fun callableIdForClassConstructor() =
             if (className == FqName.ROOT) CallableId(packageFqName, Name.special("<anonymous-init>"))
@@ -485,7 +505,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 )
                 classOrObject.extractAnnotationsTo(firClass)
                 classOrObject.extractTypeParametersTo(firClass)
-                val delegatedSelfType = classOrObject.toDelegatedSelfType()
+                val delegatedSelfType = classOrObject.toDelegatedSelfType(firClass)
                 val delegatedSuperType = classOrObject.extractSuperTypeListEntriesTo(firClass, delegatedSelfType)
                 classOrObject.primaryConstructor?.valueParameters?.forEach {
                     if (it.hasValOrVar()) {
@@ -561,10 +581,11 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             val firFunction = if (function.name == null) {
                 FirAnonymousFunctionImpl(session, function, returnType, receiverType)
             } else {
+
                 FirMemberFunctionImpl(
                     session,
                     function,
-                    FirFunctionSymbol(callableIdForName(function.nameAsSafeName)),
+                    FirFunctionSymbol(callableIdForName(function.nameAsSafeName, function.isLocal)),
                     function.nameAsSafeName,
                     function.visibility,
                     function.modality,
@@ -610,7 +631,11 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                             defaultValue = null, isCrossinline = false, isNoinline = false, isVararg = false
                         )
                         destructuringBlock = generateDestructuringBlock(
-                            this@RawFirBuilder.session, multiDeclaration, multiParameter, { extractAnnotationsTo(it) }
+                            this@RawFirBuilder.session,
+                            multiDeclaration,
+                            multiParameter,
+                            tmpVariable = false,
+                            extractAnnotationsTo = { extractAnnotationsTo(it) }
                         ) { toFirOrImplicitType() }
                         multiParameter
                     } else {
@@ -700,7 +725,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     propertyType,
                     isVar,
                     initializer,
-                    property.delegate?.expression?.toFirExpression("Incorrect delegate expression")
+                    delegate = property.delegate?.expression?.toFirExpression("Incorrect delegate expression")
                 )
             } else {
                 FirMemberPropertyImpl(
@@ -1098,7 +1123,11 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                         )
                         if (multiDeclaration != null) {
                             val destructuringBlock = generateDestructuringBlock(
-                                this@RawFirBuilder.session, multiDeclaration, firLoopParameter, { extractAnnotationsTo(it) }
+                                this@RawFirBuilder.session,
+                                multiDeclaration,
+                                firLoopParameter,
+                                tmpVariable = true,
+                                extractAnnotationsTo =  { extractAnnotationsTo(it) }
                             ) { toFirOrImplicitType() }
                             if (destructuringBlock is FirBlock) {
                                 for ((index, statement) in destructuringBlock.statements.withIndex()) {
@@ -1344,7 +1373,13 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 session, multiDeclaration, "destruct",
                 multiDeclaration.initializer.toFirExpression("Destructuring declaration without initializer")
             )
-            return generateDestructuringBlock(session, multiDeclaration, baseVariable, { extractAnnotationsTo(it) }) {
+            return generateDestructuringBlock(
+                session,
+                multiDeclaration,
+                baseVariable,
+                tmpVariable = true,
+                extractAnnotationsTo = { extractAnnotationsTo(it) }
+            ) {
                 toFirOrImplicitType()
             }
         }

@@ -14,10 +14,10 @@ dependencies {
     compileOnly(project(":compiler:cli"))
     compile(project(":kotlin-scripting-common"))
     compile(project(":kotlin-scripting-jvm"))
+    compile(project(":kotlin-scripting-impl"))
     compile(kotlinStdlib())
     compileOnly(project(":kotlin-reflect-api"))
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
-    compileOnly(intellijDep()) { includeJars("asm-all", rootProject = rootProject) }
 
     testCompile(project(":compiler:frontend"))
     testCompile(project(":compiler:frontend.script"))
@@ -50,8 +50,6 @@ sourcesJar()
 javadocJar()
 
 dist()
-
-ideaPlugin()
 
 projectTest {
     workingDir = rootDir

@@ -110,7 +110,6 @@ open class DeepCopyIrTreeWithSymbols(
             symbolRenamer.getFileName(declaration.symbol)
         ).apply {
             transformAnnotations(declaration)
-            fileAnnotations.addAll(declaration.fileAnnotations)
             declaration.transformDeclarationsTo(this)
         }
 
@@ -139,15 +138,6 @@ open class DeepCopyIrTreeWithSymbols(
             }
             thisReceiver = declaration.thisReceiver?.transform()
             declaration.transformDeclarationsTo(this)
-        }
-
-    override fun visitTypeAlias(declaration: IrTypeAlias): IrTypeAlias =
-        IrTypeAliasImpl(
-            declaration.startOffset, declaration.endOffset,
-            mapDeclarationOrigin(declaration.origin),
-            declaration.descriptor
-        ).apply {
-            transformAnnotations(declaration)
         }
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrSimpleFunction =

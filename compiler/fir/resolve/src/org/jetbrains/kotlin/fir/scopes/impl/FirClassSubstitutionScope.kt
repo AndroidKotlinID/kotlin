@@ -6,14 +6,19 @@
 package org.jetbrains.kotlin.fir.scopes.impl
 
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.FirConstructor
+import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirMemberFunctionImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
+import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculatorWithJump
+import org.jetbrains.kotlin.fir.resolve.transformers.firUnsafe
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeAbbreviatedTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
@@ -75,6 +80,7 @@ class FirClassSubstitutionScope(
                 is ConeFunctionType -> TODO("Substitute function type properly")
                 is ConeClassLikeType -> error("Unknown class-like type to substitute: $this, ${this::class}")
                 is ConeFlexibleType -> error("Trying to substitute arguments for flexible type")
+                is ConeCapturedType -> error("Not supported")
             }
         }
         return null
@@ -92,19 +98,25 @@ class FirClassSubstitutionScope(
         return super.processFunctionsByName(name, processor)
     }
 
-    override fun processPropertiesByName(name: Name, processor: (ConePropertySymbol) -> ProcessorAction): ProcessorAction {
+    override fun processPropertiesByName(name: Name, processor: (ConeVariableSymbol) -> ProcessorAction): ProcessorAction {
         return useSiteScope.processPropertiesByName(name, processor)
     }
+
+    private val typeCalculator by lazy { ReturnTypeCalculatorWithJump(session) }
 
     private fun createFakeOverride(
         original: ConeFunctionSymbol,
         name: Name
     ): FirFunctionSymbol {
-        val member = (original as FirBasedSymbol<*>).fir as? FirNamedFunction ?: error("Can't fake override for $original")
+
+        val member = original.firUnsafe<FirFunction>()
+        if (member is FirConstructor) return original as FirFunctionSymbol // TODO: substitution for constructors
+        member as FirNamedFunction
+
         val receiverType = member.receiverTypeRef?.coneTypeUnsafe()
         val newReceiverType = receiverType?.substitute()
 
-        val returnType = member.returnTypeRef.coneTypeUnsafe()
+        val returnType = typeCalculator.tryCalculateReturnType(member).type
         val newReturnType = returnType.substitute()
 
         val newParameterTypes = member.valueParameters.map {
@@ -120,16 +132,17 @@ class FirClassSubstitutionScope(
                 psi,
                 symbol,
                 name,
-                member.receiverTypeRef?.withReplacedConeType(newReceiverType),
-                member.returnTypeRef.withReplacedConeType(newReturnType)
+                member.receiverTypeRef?.withReplacedConeType(this@FirClassSubstitutionScope.session, newReceiverType),
+                member.returnTypeRef.withReplacedConeType(this@FirClassSubstitutionScope.session, newReturnType)
             ).apply {
                 status = member.status as FirDeclarationStatusImpl
                 valueParameters += member.valueParameters.zip(newParameterTypes) { valueParameter, newType ->
                     with(valueParameter) {
                         FirValueParameterImpl(
                             this@FirClassSubstitutionScope.session, psi,
-                            name, this.returnTypeRef.withReplacedConeType(newType),
-                            defaultValue, isCrossinline, isNoinline, isVararg
+                            name, this.returnTypeRef.withReplacedConeType(this@FirClassSubstitutionScope.session, newType),
+                            defaultValue, isCrossinline, isNoinline, isVararg,
+                            FirVariableSymbol(valueParameter.symbol.callableId)
                         )
                     }
                 }
@@ -140,7 +153,7 @@ class FirClassSubstitutionScope(
 }
 
 
-fun FirTypeRef.withReplacedConeType(newType: ConeKotlinType?): FirResolvedTypeRef {
+fun FirTypeRef.withReplacedConeType(session: FirSession, newType: ConeKotlinType?): FirResolvedTypeRef {
     require(this is FirResolvedTypeRef)
     if (newType == null) return this
 

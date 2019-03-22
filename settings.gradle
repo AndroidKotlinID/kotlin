@@ -122,6 +122,7 @@ include ":kotlin-build-common",
         ":kotlin-test:kotlin-test-testng",
         ":kotlin-test:kotlin-test-js",
         ":kotlin-test:kotlin-test-js:kotlin-test-js-it",
+        ":kotlin-test-nodejs-runner",
         ":kotlinx-metadata",
         ":kotlinx-metadata-jvm",
         ":prepare:build.version",
@@ -169,6 +170,7 @@ include ":kotlin-build-common",
         ":kotlin-scripting-jvm-host",
         ":kotlin-scripting-jvm-host-embeddable",
         ":kotlin-scripting-intellij",
+        ":kotlin-scripting-impl",
         ":kotlin-scripting-compiler",
         ":kotlin-scripting-idea",
         ":kotlin-scripting-compiler-embeddable",
@@ -262,6 +264,7 @@ project(':kotlin-test:kotlin-test-junit5').projectDir = "$rootDir/libraries/kotl
 project(':kotlin-test:kotlin-test-testng').projectDir = "$rootDir/libraries/kotlin.test/testng" as File
 project(':kotlin-test:kotlin-test-js').projectDir = "$rootDir/libraries/kotlin.test/js" as File
 project(':kotlin-test:kotlin-test-js:kotlin-test-js-it').projectDir = "$rootDir/libraries/kotlin.test/js/it" as File
+project(':kotlin-test-nodejs-runner').projectDir = "$rootDir/libraries/tools/kotlin-test-nodejs-runner" as File
 project(':kotlin-reflect').projectDir = "$rootDir/libraries/reflect" as File
 project(':kotlin-reflect-api').projectDir = "$rootDir/libraries/reflect/api" as File
 project(':kotlinx-metadata').projectDir = "$rootDir/libraries/kotlinx-metadata" as File
@@ -328,6 +331,7 @@ project(':kotlin-scripting-jvm').projectDir = "$rootDir/libraries/scripting/jvm"
 project(':kotlin-scripting-jvm-host').projectDir = "$rootDir/libraries/scripting/jvm-host" as File
 project(':kotlin-scripting-jvm-host-embeddable').projectDir = "$rootDir/libraries/scripting/jvm-host-embeddable" as File
 project(':kotlin-scripting-intellij').projectDir = "$rootDir/libraries/scripting/intellij" as File
+project(':kotlin-scripting-impl').projectDir = "$rootDir/plugins/scripting/scripting-impl" as File
 project(':kotlin-scripting-compiler').projectDir = "$rootDir/plugins/scripting/scripting-compiler" as File
 project(':kotlin-scripting-compiler-embeddable').projectDir = "$rootDir/plugins/scripting/scripting-compiler-embeddable" as File
 project(':kotlin-scripting-idea').projectDir = "$rootDir/plugins/scripting/scripting-idea" as File

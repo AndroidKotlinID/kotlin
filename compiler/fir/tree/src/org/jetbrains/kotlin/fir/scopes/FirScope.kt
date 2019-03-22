@@ -6,12 +6,17 @@
 package org.jetbrains.kotlin.fir.scopes
 
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction.NEXT
+import org.jetbrains.kotlin.fir.scopes.ProcessorAction.STOP
 import org.jetbrains.kotlin.fir.symbols.ConeClassifierSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeFunctionSymbol
-import org.jetbrains.kotlin.fir.symbols.ConePropertySymbol
+import org.jetbrains.kotlin.fir.symbols.ConeVariableSymbol
 import org.jetbrains.kotlin.name.Name
 
 interface FirScope {
+    @Deprecated(
+        "obsolete",
+        replaceWith = ReplaceWith("processClassifiersByNameWithAction(name, position) { if (processor()) ProcessorAction.NEXT else ProcessorAction.STOP }.next()")
+    )
     fun processClassifiersByName(
         name: Name,
         position: FirPosition,
@@ -25,8 +30,20 @@ interface FirScope {
 
     fun processPropertiesByName(
         name: Name,
-        processor: (ConePropertySymbol) -> ProcessorAction
+        processor: (ConeVariableSymbol) -> ProcessorAction
     ): ProcessorAction = NEXT
+}
+
+
+inline fun FirScope.processClassifiersByNameWithAction(
+    name: Name,
+    position: FirPosition,
+    crossinline processor: (ConeClassifierSymbol) -> ProcessorAction
+): ProcessorAction {
+    val result = processClassifiersByName(name, position) {
+        processor(it).next()
+    }
+    return if (result) NEXT else STOP
 }
 
 enum class FirPosition(val allowTypeParameters: Boolean = true) {

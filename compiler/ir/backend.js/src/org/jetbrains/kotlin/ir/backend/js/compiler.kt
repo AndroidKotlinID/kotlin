@@ -7,8 +7,8 @@ package org.jetbrains.kotlin.ir.backend.js
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.backend.common.LoggingContext
+import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.common.phaser.invokeToplevel
-import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.builtins.functions.functionInterfacePackageFragmentProvider
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
@@ -19,6 +19,8 @@ import org.jetbrains.kotlin.descriptors.impl.CompositePackageFragmentProvider
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.backend.common.serialization.DescriptorTable
+import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.ir.backend.js.lower.inline.replaceUnboundSymbols
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsDeclarationTable
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsIrLinker
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsIrModuleSerializer
@@ -63,8 +65,9 @@ enum class CompilationMode {
     JS
 }
 
-private val moduleHeaderFileName = "module.kji"
-private val declarationsDirName = "ir/"
+internal val JS_KLIBRARY_CAPABILITY = ModuleDescriptor.Capability<File>("JS KLIBRARY")
+internal val moduleHeaderFileName = "module.kji"
+internal val declarationsDirName = "ir/"
 private val logggg = object : LoggingContext {
     override var inVerbosePhase: Boolean
         get() = TODO("not implemented")
@@ -82,6 +85,7 @@ fun compile(
     project: Project,
     files: List<KtFile>,
     configuration: CompilerConfiguration,
+    phaseConfig: PhaseConfig,
     compileMode: CompilationMode,
     immediateDependencies: List<KlibModuleRef>,
     allDependencies: List<KlibModuleRef>,
@@ -138,11 +142,11 @@ fun compile(
     val psi2IrContext = psi2IrTranslator.createGeneratorContext(moduleDescriptor, analysisResult.bindingContext, symbolTable)
     val irBuiltIns = psi2IrContext.irBuiltIns
 
-    var deserializer = JsIrLinker(moduleDescriptor, logggg, irBuiltIns, symbolTable)
+    val deserializer = JsIrLinker(moduleDescriptor, logggg, irBuiltIns, symbolTable)
 
     val deserializedModuleFragments = sortedImmediateDependencies.map {
         val moduleFile = File(it.klibPath, moduleHeaderFileName)
-        deserializer.deserializeIrModuleHeader(depsDescriptors.getModuleDescriptor(it), moduleFile.readBytes(), File(it.klibPath), DeserializationStrategy.ONLY_REFERENCED)
+        deserializer.deserializeIrModuleHeader(depsDescriptors.getModuleDescriptor(it))!!
     }
 
     val moduleFragment = psi2IrTranslator.generateModuleFragment(psi2IrContext, files, deserializer)
@@ -167,7 +171,7 @@ fun compile(
         return TranslationResult.CompiledKlib
     }
 
-    val context = JsIrBackendContext(moduleDescriptor, irBuiltIns, symbolTable, moduleFragment, configuration)
+    val context = JsIrBackendContext(moduleDescriptor, irBuiltIns, symbolTable, moduleFragment, configuration, phaseConfig)
 
     deserializedModuleFragments.forEach {
         ExternalDependenciesGenerator(
@@ -218,7 +222,8 @@ private fun loadKlibMetadata(
 ): ModuleDescriptorImpl {
     assert(isBuiltIn == (builtinsModule === null))
     val builtIns = builtinsModule?.builtIns ?: object : KotlinBuiltIns(storageManager) {}
-    val md = ModuleDescriptorImpl(Name.special("<${moduleId.moduleName}>"), storageManager, builtIns)
+    val md = ModuleDescriptorImpl(Name.special("<${moduleId.moduleName}>"), storageManager, builtIns,
+        capabilities = mapOf(JS_KLIBRARY_CAPABILITY to File(moduleId.klibPath)))
     if (isBuiltIn) builtIns.builtInsModule = md
     val currentModuleFragmentProvider = createJsKlibMetadataPackageFragmentProvider(
         storageManager, md, parts.header, parts.body, metadataVersion,

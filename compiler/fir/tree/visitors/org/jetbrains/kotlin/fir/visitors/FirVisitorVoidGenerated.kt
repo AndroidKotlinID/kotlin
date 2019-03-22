@@ -24,8 +24,12 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(declaration, null)
     }
 
-    open fun visitCallableMember(callableMember: FirCallableMember) {
-        visitDeclaration(callableMember, null)
+    open fun visitCallableDeclaration(callableDeclaration: FirCallableDeclaration) {
+        visitDeclaration(callableDeclaration, null)
+    }
+
+    open fun visitCallableMemberDeclaration(callableMemberDeclaration: FirCallableMemberDeclaration) {
+        visitDeclaration(callableMemberDeclaration, null)
     }
 
     open fun visitDeclarationWithBody(declarationWithBody: FirDeclarationWithBody) {
@@ -336,10 +340,6 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitTypeRef(delegatedTypeRef, null)
     }
 
-    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef) {
-        visitTypeRef(errorTypeRef, null)
-    }
-
     open fun visitImplicitTypeRef(implicitTypeRef: FirImplicitTypeRef) {
         visitTypeRef(implicitTypeRef, null)
     }
@@ -358,6 +358,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef) {
         visitTypeRefWithNullability(resolvedTypeRef, null)
+    }
+
+    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef) {
+        visitResolvedTypeRef(errorTypeRef, null)
     }
 
     open fun visitResolvedFunctionTypeRef(resolvedFunctionTypeRef: FirResolvedFunctionTypeRef) {
@@ -416,8 +420,12 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitCall(call)
     }
 
-    final override fun visitCallableMember(callableMember: FirCallableMember, data: Nothing?) {
-        visitCallableMember(callableMember)
+    final override fun visitCallableDeclaration(callableDeclaration: FirCallableDeclaration, data: Nothing?) {
+        visitCallableDeclaration(callableDeclaration)
+    }
+
+    final override fun visitCallableMemberDeclaration(callableMemberDeclaration: FirCallableMemberDeclaration, data: Nothing?) {
+        visitCallableMemberDeclaration(callableMemberDeclaration)
     }
 
     final override fun visitCallableReferenceAccess(callableReferenceAccess: FirCallableReferenceAccess, data: Nothing?) {

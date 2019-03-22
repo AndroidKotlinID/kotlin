@@ -24,8 +24,12 @@ abstract class FirVisitor<out R, in D> {
         return visitElement(declaration, data)
     }
 
-    open fun visitCallableMember(callableMember: FirCallableMember, data: D): R {
-        return visitDeclaration(callableMember, data)
+    open fun visitCallableDeclaration(callableDeclaration: FirCallableDeclaration, data: D): R {
+        return visitDeclaration(callableDeclaration, data)
+    }
+
+    open fun visitCallableMemberDeclaration(callableMemberDeclaration: FirCallableMemberDeclaration, data: D): R {
+        return visitDeclaration(callableMemberDeclaration, data)
     }
 
     open fun visitDeclarationWithBody(declarationWithBody: FirDeclarationWithBody, data: D): R {
@@ -336,10 +340,6 @@ abstract class FirVisitor<out R, in D> {
         return visitTypeRef(delegatedTypeRef, data)
     }
 
-    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef, data: D): R {
-        return visitTypeRef(errorTypeRef, data)
-    }
-
     open fun visitImplicitTypeRef(implicitTypeRef: FirImplicitTypeRef, data: D): R {
         return visitTypeRef(implicitTypeRef, data)
     }
@@ -358,6 +358,10 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: D): R {
         return visitTypeRefWithNullability(resolvedTypeRef, data)
+    }
+
+    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef, data: D): R {
+        return visitResolvedTypeRef(errorTypeRef, data)
     }
 
     open fun visitResolvedFunctionTypeRef(resolvedFunctionTypeRef: FirResolvedFunctionTypeRef, data: D): R {

@@ -13,14 +13,17 @@ import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
 import org.jetbrains.kotlin.fir.scopes.FirPosition
 import org.jetbrains.kotlin.fir.scopes.addImportingScopes
 import org.jetbrains.kotlin.fir.scopes.impl.*
+import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
 import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinTypeRef
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
+import org.jetbrains.kotlin.fir.visitors.compose
 
 open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(reversedScopePriority = true) {
     private lateinit var session: FirSession
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
-        session = file.session
+        session = file.fileSession
         return withScopeCleanup {
             towerScope.addImportingScopes(file, session)
             super.transformFile(file, data)
@@ -36,7 +39,7 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
         }
 
         return withScopeCleanup {
-            val session = regularClass.session
+            val session = session
             val firProvider = FirProvider.getInstance(session)
             val classId = regularClass.symbol.classId
             lookupSuperTypes(regularClass, lookupInterfaces = false, deep = true, useSiteSession = session)
@@ -74,6 +77,11 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
             namedFunction.addTypeParametersScope()
             super.transformNamedFunction(namedFunction, data)
         }
+    }
+
+    override fun transformImplicitTypeRef(implicitTypeRef: FirImplicitTypeRef, data: Nothing?): CompositeTransformResult<FirTypeRef> {
+        if (implicitTypeRef is FirImplicitBuiltinTypeRef) return super.transformImplicitTypeRef(implicitTypeRef, data)
+        return implicitTypeRef.compose()
     }
 
     override fun transformTypeRef(typeRef: FirTypeRef, data: Nothing?): CompositeTransformResult<FirTypeRef> {

@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.cli.jvm
 
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.Disposable
+import org.jetbrains.kotlin.backend.jvm.jvmPhases
 import org.jetbrains.kotlin.cli.common.*
 import org.jetbrains.kotlin.cli.common.ExitCode.*
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
@@ -61,6 +62,8 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
         paths: KotlinPaths?
     ): ExitCode {
         val messageCollector = configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
+
+        configuration.put(CLIConfigurationKeys.PHASE_CONFIG, createPhaseConfig(jvmPhases, arguments, messageCollector))
 
         if (!configuration.configureJdkHome(arguments)) return COMPILATION_ERROR
 
@@ -203,10 +206,10 @@ class K2JVMCompiler : CLICompiler<K2JVMCompilerArguments>() {
                 val libPath = PathUtil.kotlinPathsForCompiler.libPath.takeIf { it.exists() && it.isDirectory } ?: File(".")
                 with(PathUtil) {
                     val jars = arrayOf(
-                        KOTLIN_SCRIPTING_COMPILER_PLUGIN_JAR, KOTLIN_SCRIPTING_COMMON_JAR,
-                        KOTLIN_SCRIPTING_JVM_JAR
+                        KOTLIN_SCRIPTING_COMPILER_PLUGIN_JAR, KOTLIN_SCRIPTING_IMPL_JAR,
+                        KOTLIN_SCRIPTING_COMMON_JAR, KOTLIN_SCRIPTING_JVM_JAR
                     ).mapNotNull { File(libPath, it).takeIf { it.exists() }?.canonicalPath }
-                    if (jars.size == 3) {
+                    if (jars.size == 4) {
                         pluginClasspaths = jars + pluginClasspaths
                     }
                 }

@@ -7,10 +7,8 @@
 package org.jetbrains.kotlin.gradle.plugin.mpp
 
 import org.gradle.api.Project
-import org.jetbrains.kotlin.gradle.plugin.Kotlin2JsSourceSetProcessor
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetProcessor
-import org.jetbrains.kotlin.gradle.tasks.KotlinTasksProvider
+import org.jetbrains.kotlin.gradle.targets.js.KotlinJsTargetConfigurator
 
 open class KotlinJsTargetPreset(
     project: Project,
@@ -19,6 +17,8 @@ open class KotlinJsTargetPreset(
     project,
     kotlinPluginVersion
 ) {
+    override fun createKotlinTargetConfigurator() = KotlinJsTargetConfigurator(kotlinPluginVersion)
+
     override fun getName(): String = PRESET_NAME
 
     override fun createCompilationFactory(forTarget: KotlinOnlyTarget<KotlinJsCompilation>) =
@@ -26,11 +26,6 @@ open class KotlinJsTargetPreset(
 
     override val platformType: KotlinPlatformType
         get() = KotlinPlatformType.js
-
-    override fun buildCompilationProcessor(compilation: KotlinJsCompilation): KotlinSourceSetProcessor<*> {
-        val tasksProvider = KotlinTasksProvider(compilation.target.targetName)
-        return Kotlin2JsSourceSetProcessor(project, tasksProvider, compilation, kotlinPluginVersion)
-    }
 
     companion object {
         const val PRESET_NAME = "js"

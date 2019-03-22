@@ -15,6 +15,10 @@ import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 
 class FirProviderImpl(val session: FirSession) : FirProvider {
+    override fun getFirCallableContainerFile(callableId: CallableId): FirFile? {
+        return callableContainerMap[callableId]
+    }
+
     override fun getClassLikeSymbolByFqName(classId: ClassId): ConeClassLikeSymbol? {
         return (getFirClassifierByFqName(classId) as? FirSymbolOwner<*>)?.symbol as? ConeClassLikeSymbol
     }
@@ -56,20 +60,22 @@ class FirProviderImpl(val session: FirSession) : FirProvider {
                 classifierContainerFileMap[classId] = file
             }
 
-            override fun visitCallableMember(callableMember: FirCallableMember) {
-                val callableId = when (containerFqName) {
-                    FqName.ROOT -> CallableId(packageName, callableMember.name)
-                    else -> CallableId(packageName, containerFqName, callableMember.name)
-                }
-                callableMap.merge(callableId, listOf(callableMember)) { a, b -> a + b }
+            override fun visitCallableMemberDeclaration(callableMemberDeclaration: FirCallableMemberDeclaration) {
+                val callableId = (callableMemberDeclaration.symbol as ConeCallableSymbol).callableId
+                callableMap.merge(callableId, listOf(callableMemberDeclaration)) { a, b -> a + b }
+                callableContainerMap[callableId] = file
+            }
+
+            override fun visitConstructor(constructor: FirConstructor) {
+                visitCallableMemberDeclaration(constructor)
             }
 
             override fun visitNamedFunction(namedFunction: FirNamedFunction) {
-                visitCallableMember(namedFunction)
+                visitCallableMemberDeclaration(namedFunction)
             }
 
             override fun visitProperty(property: FirProperty) {
-                visitCallableMember(property)
+                visitCallableMemberDeclaration(property)
             }
         })
     }
@@ -78,6 +84,7 @@ class FirProviderImpl(val session: FirSession) : FirProvider {
     private val classifierMap = mutableMapOf<ClassId, FirClassLikeDeclaration>()
     private val classifierContainerFileMap = mutableMapOf<ClassId, FirFile>()
     private val callableMap = mutableMapOf<CallableId, List<FirNamedDeclaration>>()
+    private val callableContainerMap = mutableMapOf<CallableId, FirFile>()
 
     override fun getFirFilesByPackage(fqName: FqName): List<FirFile> {
         return fileMap[fqName].orEmpty()

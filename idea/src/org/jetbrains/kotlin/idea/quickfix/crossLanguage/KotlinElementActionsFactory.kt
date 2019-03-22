@@ -192,54 +192,6 @@ class KotlinElementActionsFactory : JvmElementActionsFactory() {
                         .toTypedArray()
             }
 
-    private fun PsiType.collectTypeParameters(): List<PsiTypeParameter> {
-        val results = ArrayList<PsiTypeParameter>()
-        accept(
-                object : PsiTypeVisitor<Unit>() {
-                    override fun visitArrayType(arrayType: PsiArrayType) {
-                        arrayType.componentType.accept(this)
-                    }
-
-                    override fun visitClassType(classType: PsiClassType) {
-                        (classType.resolve() as? PsiTypeParameter)?.let { results += it }
-                        classType.parameters.forEach { it.accept(this) }
-                    }
-
-                    override fun visitWildcardType(wildcardType: PsiWildcardType) {
-                        wildcardType.bound?.accept(this)
-                    }
-                }
-        )
-        return results
-    }
-
-    private fun PsiType.resolveToKotlinType(resolutionFacade: ResolutionFacade): KotlinType? {
-        val typeParameters = collectTypeParameters()
-        val components = resolutionFacade.getFrontendService(JavaResolverComponents::class.java)
-        val rootContext = LazyJavaResolverContext(components, TypeParameterResolver.EMPTY) { null }
-        val dummyPackageDescriptor = MutablePackageFragmentDescriptor(resolutionFacade.moduleDescriptor, FqName("dummy"))
-        val dummyClassDescriptor = ClassDescriptorImpl(
-                dummyPackageDescriptor,
-                Name.identifier("Dummy"),
-                Modality.FINAL,
-                ClassKind.CLASS,
-                emptyList(),
-                SourceElement.NO_SOURCE,
-                false,
-                LockBasedStorageManager.NO_LOCKS
-        )
-        val typeParameterResolver = object : TypeParameterResolver {
-            override fun resolveTypeParameter(javaTypeParameter: JavaTypeParameter): TypeParameterDescriptor? {
-                val psiTypeParameter = (javaTypeParameter as JavaTypeParameterImpl).psi
-                val index = typeParameters.indexOf(psiTypeParameter)
-                if (index < 0) return null
-                return LazyJavaTypeParameterDescriptor(rootContext.child(this), javaTypeParameter, index, dummyClassDescriptor)
-            }
-        }
-        val typeResolver = JavaTypeResolver(rootContext, typeParameterResolver)
-        val attributes = JavaTypeAttributes(TypeUsage.COMMON)
-        return typeResolver.transformJavaType(JavaTypeImpl.create(this), attributes).approximateFlexibleTypes(preferNotNull = true)
-    }
 
     private fun ExpectedTypes.toKotlinTypeInfo(resolutionFacade: ResolutionFacade): TypeInfo {
         val candidateTypes = flatMapTo(LinkedHashSet<KotlinType>()) {
@@ -485,67 +437,117 @@ class KotlinElementActionsFactory : JvmElementActionsFactory() {
 
         override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
             val target = pointer.element ?: return
-            val annotationClass = JavaPsiFacade.getInstance(project).findClass(request.qualifiedName, target.resolveScope)
-
-            val kotlinAnnotation = annotationClass?.language == KotlinLanguage.INSTANCE
-
-            val annotationUseSiteTargetPrefix = run prefixEvaluation@{
-                if (annotationTarget == null) return@prefixEvaluation ""
-
-                val moduleDescriptor = (target as? KtDeclaration)?.resolveToDescriptorIfAny()?.module ?: return@prefixEvaluation ""
-                val annotationClassDescriptor = moduleDescriptor.resolveClassByFqName(
-                    FqName(request.qualifiedName), NoLookupLocation.FROM_IDE
-                ) ?: return@prefixEvaluation ""
-
-                val applicableTargetSet =
-                    AnnotationChecker.applicableTargetSet(annotationClassDescriptor) ?: KotlinTarget.DEFAULT_TARGET_SET
-
-                if (KotlinTarget.PROPERTY !in applicableTargetSet) return@prefixEvaluation ""
-
-                "${annotationTarget.renderName}:"
-            }
-
-            val entry = target.addAnnotationEntry(
-                KtPsiFactory(target)
-                    .createAnnotationEntry(
-                        "@$annotationUseSiteTargetPrefix${request.qualifiedName}${
-                        request.attributes.mapIndexed { i, p ->
-                            if (!kotlinAnnotation && i == 0 && p.name == "value")
-                                renderAttributeValue(p.value).toString()
-                            else
-                                "${p.name} = ${renderAttributeValue(p.value)}"
-                        }.joinToString(", ", "(", ")")
-                        }"
-                    )
-            )
-
+            val entry = addAnnotationEntry(target, request, annotationTarget)
             ShortenReferences.DEFAULT.process(entry)
         }
-
-        private fun renderAttributeValue(annotationAttributeRequest: AnnotationAttributeValueRequest) =
-            when (annotationAttributeRequest) {
-                is AnnotationAttributeValueRequest.PrimitiveValue -> annotationAttributeRequest.value
-                is AnnotationAttributeValueRequest.StringValue -> "\"" + annotationAttributeRequest.value + "\""
-            }
 
     }
 
     override fun createChangeParametersActions(target: JvmMethod, request: ChangeParametersRequest): List<IntentionAction> {
         val ktNamedFunction = (target as? KtLightElement<*, *>)?.kotlinOrigin as? KtNamedFunction ?: return emptyList()
-
-        val helper = JvmPsiConversionHelper.getInstance(target.project)
-
-        val params = request.expectedParameters.map { ep ->
-            val name = ep.semanticNames.singleOrNull() ?: return emptyList()
-            val expectedType = ep.expectedTypes.singleOrNull() ?: return emptyList()
-
-            val kotlinType =
-                helper.convertType(expectedType.theType).resolveToKotlinType(ktNamedFunction.getResolutionFacade()) ?: return emptyList()
-            Name.identifier(name) to kotlinType
-        }
-        return listOf(ChangeMethodParameters(ktNamedFunction, params, { request.isValid }))
+        return listOfNotNull(ChangeMethodParameters.create(ktNamedFunction, request))
     }
 }
+
+internal fun addAnnotationEntry(
+    target: KtModifierListOwner,
+    request: AnnotationRequest,
+    annotationTarget: AnnotationUseSiteTarget?
+): KtAnnotationEntry {
+    val annotationClass = JavaPsiFacade.getInstance(target.project).findClass(request.qualifiedName, target.resolveScope)
+
+    val kotlinAnnotation = annotationClass?.language == KotlinLanguage.INSTANCE
+
+    val annotationUseSiteTargetPrefix = run prefixEvaluation@{
+        if (annotationTarget == null) return@prefixEvaluation ""
+
+        val moduleDescriptor = (target as? KtDeclaration)?.resolveToDescriptorIfAny()?.module ?: return@prefixEvaluation ""
+        val annotationClassDescriptor = moduleDescriptor.resolveClassByFqName(
+            FqName(request.qualifiedName), NoLookupLocation.FROM_IDE
+        ) ?: return@prefixEvaluation ""
+
+        val applicableTargetSet =
+            AnnotationChecker.applicableTargetSet(annotationClassDescriptor) ?: KotlinTarget.DEFAULT_TARGET_SET
+
+        if (KotlinTarget.PROPERTY !in applicableTargetSet) return@prefixEvaluation ""
+
+        "${annotationTarget.renderName}:"
+    }
+
+    // could be generated via descriptor when KT-30478 is fixed
+    val entry = target.addAnnotationEntry(
+        KtPsiFactory(target)
+            .createAnnotationEntry(
+                "@$annotationUseSiteTargetPrefix${request.qualifiedName}${
+                request.attributes.takeIf { it.isNotEmpty() }?.mapIndexed { i, p ->
+                    if (!kotlinAnnotation && i == 0 && p.name == "value")
+                        renderAttributeValue(p.value).toString()
+                    else
+                        "${p.name} = ${renderAttributeValue(p.value)}"
+                }?.joinToString(", ", "(", ")") ?: ""
+                }"
+            )
+    )
+    return entry
+}
+
+private fun renderAttributeValue(annotationAttributeRequest: AnnotationAttributeValueRequest) =
+    when (annotationAttributeRequest) {
+        is AnnotationAttributeValueRequest.PrimitiveValue -> annotationAttributeRequest.value
+        is AnnotationAttributeValueRequest.StringValue -> "\"" + annotationAttributeRequest.value + "\""
+    }
+
+
+private fun PsiType.collectTypeParameters(): List<PsiTypeParameter> {
+    val results = ArrayList<PsiTypeParameter>()
+    accept(
+        object : PsiTypeVisitor<Unit>() {
+            override fun visitArrayType(arrayType: PsiArrayType) {
+                arrayType.componentType.accept(this)
+            }
+
+            override fun visitClassType(classType: PsiClassType) {
+                (classType.resolve() as? PsiTypeParameter)?.let { results += it }
+                classType.parameters.forEach { it.accept(this) }
+            }
+
+            override fun visitWildcardType(wildcardType: PsiWildcardType) {
+                wildcardType.bound?.accept(this)
+            }
+        }
+    )
+    return results
+}
+
+
+internal fun PsiType.resolveToKotlinType(resolutionFacade: ResolutionFacade): KotlinType? {
+    val typeParameters = collectTypeParameters()
+    val components = resolutionFacade.getFrontendService(JavaResolverComponents::class.java)
+    val rootContext = LazyJavaResolverContext(components, TypeParameterResolver.EMPTY) { null }
+    val dummyPackageDescriptor = MutablePackageFragmentDescriptor(resolutionFacade.moduleDescriptor, FqName("dummy"))
+    val dummyClassDescriptor = ClassDescriptorImpl(
+        dummyPackageDescriptor,
+        Name.identifier("Dummy"),
+        Modality.FINAL,
+        ClassKind.CLASS,
+        emptyList(),
+        SourceElement.NO_SOURCE,
+        false,
+        LockBasedStorageManager.NO_LOCKS
+    )
+    val typeParameterResolver = object : TypeParameterResolver {
+        override fun resolveTypeParameter(javaTypeParameter: JavaTypeParameter): TypeParameterDescriptor? {
+            val psiTypeParameter = (javaTypeParameter as JavaTypeParameterImpl).psi
+            val index = typeParameters.indexOf(psiTypeParameter)
+            if (index < 0) return null
+            return LazyJavaTypeParameterDescriptor(rootContext.child(this), javaTypeParameter, index, dummyClassDescriptor)
+        }
+    }
+    val typeResolver = JavaTypeResolver(rootContext, typeParameterResolver)
+    val attributes = JavaTypeAttributes(TypeUsage.COMMON)
+    return typeResolver.transformJavaType(JavaTypeImpl.create(this), attributes).approximateFlexibleTypes(preferNotNull = true)
+}
+
 
 private fun JvmPsiConversionHelper.asPsiType(param: Pair<SuggestedNameInfo, List<ExpectedType>>): PsiType? =
     param.second.firstOrNull()?.theType?.let { convertType(it) }

@@ -142,6 +142,97 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         }
     }
 
+    @TestMetadata("compiler/fir/resolve/testData/resolve/expresssions")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Expresssions extends AbstractFirResolveTestCase {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        @TestMetadata("access.kt")
+        public void testAccess() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/access.kt");
+        }
+
+        public void testAllFilesPresentInExpresssions() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/expresssions"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("constructor.kt")
+        public void testConstructor() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/constructor.kt");
+        }
+
+        @TestMetadata("dispatchReceiver.kt")
+        public void testDispatchReceiver() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/dispatchReceiver.kt");
+        }
+
+        @TestMetadata("localImplicitBodies.kt")
+        public void testLocalImplicitBodies() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localImplicitBodies.kt");
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/simple.kt");
+        }
+
+        @TestMetadata("this.kt")
+        public void testThis() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/this.kt");
+        }
+
+        @TestMetadata("when.kt")
+        public void testWhen() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/when.kt");
+        }
+
+        @TestMetadata("compiler/fir/resolve/testData/resolve/expresssions/invoke")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Invoke extends AbstractFirResolveTestCase {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInInvoke() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/expresssions/invoke"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true);
+            }
+
+            @TestMetadata("explicitReceiver.kt")
+            public void testExplicitReceiver() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/explicitReceiver.kt");
+            }
+
+            @TestMetadata("explicitReceiver2.kt")
+            public void testExplicitReceiver2() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/explicitReceiver2.kt");
+            }
+
+            @TestMetadata("extension.kt")
+            public void testExtension() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/extension.kt");
+            }
+
+            @TestMetadata("farInvokeExtension.kt")
+            public void testFarInvokeExtension() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/farInvokeExtension.kt");
+            }
+
+            @TestMetadata("implicitTypeOrder.kt")
+            public void testImplicitTypeOrder() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/implicitTypeOrder.kt");
+            }
+
+            @TestMetadata("threeReceivers.kt")
+            public void testThreeReceivers() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/threeReceivers.kt");
+            }
+        }
+    }
+
     @TestMetadata("compiler/fir/resolve/testData/resolve/fromBuilder")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)

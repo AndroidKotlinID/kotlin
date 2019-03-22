@@ -7,8 +7,12 @@ package org.jetbrains.kotlin.gradle.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.*
+import org.gradle.api.tasks.wrapper.Wrapper
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.CocoapodsExtension
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.KotlinCocoapodsPlugin
+import org.jetbrains.kotlin.gradle.plugin.cocoapods.KotlinCocoapodsPlugin.Companion.GENERATE_WRAPPER_PROPERTY
+import org.jetbrains.kotlin.gradle.plugin.cocoapods.KotlinCocoapodsPlugin.Companion.KOTLIN_TARGET_FOR_DEVICE
+import org.jetbrains.kotlin.gradle.plugin.cocoapods.KotlinCocoapodsPlugin.Companion.SYNC_TASK_NAME
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.cocoapodsBuildDirs
 import java.io.File
@@ -28,7 +32,6 @@ open class PodspecTask : DefaultTask() {
     lateinit var settings: CocoapodsExtension
 
     // TODO: Handle Framework name customization - rename the framework during sync process.
-    // TODO: Support fat arm32/arm64 frameworks.
     @TaskAction
     fun generate() {
         val frameworkDir = project.cocoapodsBuildDirs.framework.relativeTo(outputFile.parentFile).path
@@ -36,6 +39,21 @@ open class PodspecTask : DefaultTask() {
             val versionSuffix = if (pod.version != null) ", '${pod.version}'" else ""
             "|    spec.dependency '${pod.name}'$versionSuffix"
         }.joinToString(separator = "\n")
+
+        val gradleWrapper = (project.rootProject.tasks.getByName("wrapper") as? Wrapper)?.scriptFile
+        require(gradleWrapper != null && gradleWrapper.exists()) {
+            """
+            The Gradle wrapper is required to run the build from Xcode.
+
+            Please run the same command with `-P$GENERATE_WRAPPER_PROPERTY=true` or run the `:wrapper` task to generate the wrapper manually.
+
+            See details about the wrapper at https://docs.gradle.org/current/userguide/gradle_wrapper.html
+            """.trimIndent()
+        }
+
+        val gradleCommand = "\$REPO_ROOT/${gradleWrapper!!.toRelativeString(project.projectDir)}"
+        val syncTask = "${project.path}:$SYNC_TASK_NAME"
+
 
         outputFile.writeText("""
             |Pod::Spec.new do |spec|
@@ -56,7 +74,7 @@ open class PodspecTask : DefaultTask() {
             |
             |    spec.pod_target_xcconfig = {
             |        'KOTLIN_TARGET[sdk=iphonesimulator*]' => 'ios_x64',
-            |        'KOTLIN_TARGET[sdk=iphoneos*]' => 'ios_arm64',
+            |        'KOTLIN_TARGET[sdk=iphoneos*]' => '$KOTLIN_TARGET_FOR_DEVICE',
             |        'KOTLIN_TARGET[sdk=macosx*]' => 'macos_x64'
             |    }
             |
@@ -67,8 +85,8 @@ open class PodspecTask : DefaultTask() {
             |            :shell_path => '/bin/sh',
             |            :script => <<-SCRIPT
             |                set -ev
-            |                REPO_ROOT=`realpath "${'$'}PODS_TARGET_SRCROOT"`
-            |                ${'$'}REPO_ROOT/gradlew -p "${'$'}REPO_ROOT" syncFramework \
+            |                REPO_ROOT="${'$'}PODS_TARGET_SRCROOT"
+            |                "$gradleCommand" -p "${'$'}REPO_ROOT" $syncTask \
             |                    -P${KotlinCocoapodsPlugin.TARGET_PROPERTY}=${'$'}KOTLIN_TARGET \
             |                    -P${KotlinCocoapodsPlugin.CONFIGURATION_PROPERTY}=${'$'}CONFIGURATION \
             |                    -P${KotlinCocoapodsPlugin.CFLAGS_PROPERTY}="${'$'}OTHER_CFLAGS" \
