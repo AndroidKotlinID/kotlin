@@ -38,10 +38,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
-import org.jetbrains.kotlin.ir.util.DumpIrTreeVisitor
-import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.parentAsClass
-import org.jetbrains.kotlin.ir.util.patchDeclarationParents
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -113,6 +110,15 @@ val IrSimpleFunction.isOverridableOrOverrides: Boolean get() = isOverridable || 
 
 val IrClass.isFinalClass: Boolean
     get() = modality == Modality.FINAL && kind != ClassKind.ENUM_CLASS
+
+// For an annotation, get the annotation class.
+fun IrCall.getAnnotationClass(): IrClass {
+    val callable = symbol.owner
+    assert(callable is IrConstructor) { "Constructor call expected, got ${ir2string(this)}" }
+    val annotationClass =  callable.parentAsClass
+    assert(annotationClass.isAnnotationClass) { "Annotation class expected, got ${ir2string(annotationClass)}" }
+    return annotationClass
+}
 
 val IrTypeParametersContainer.classIfConstructor get() = if (this is IrConstructor) parentAsClass else this
 
@@ -341,13 +347,3 @@ fun isElseBranch(branch: IrBranch) = branch is IrElseBranch || ((branch.conditio
 fun IrSimpleFunction.isMethodOfAny() =
     ((valueParameters.size == 0 && name.asString().let { it == "hashCode" || it == "toString" }) ||
             (valueParameters.size == 1 && name.asString() == "equals" && valueParameters[0].type.isNullableAny()))
-
-val IrClass.fqName: FqName?
-    get() {
-        val parentFqName = when (val parent = parent) {
-            is IrPackageFragment -> parent.fqName
-            is IrClass -> parent.fqName
-            else -> return null
-        }
-        return parentFqName?.child(name)
-    }
