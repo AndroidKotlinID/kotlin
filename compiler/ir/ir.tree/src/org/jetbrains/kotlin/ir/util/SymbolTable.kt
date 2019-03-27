@@ -207,7 +207,10 @@ open class SymbolTable : ReferenceSymbolTable {
     private val scopedTypeParameterSymbolTable = ScopedSymbolTable<TypeParameterDescriptor, IrTypeParameter, IrTypeParameterSymbol>()
     private val valueParameterSymbolTable = ScopedSymbolTable<ParameterDescriptor, IrValueParameter, IrValueParameterSymbol>()
     private val variableSymbolTable = ScopedSymbolTable<VariableDescriptor, IrVariable, IrVariableSymbol>()
-    private val scopedSymbolTables = listOf(valueParameterSymbolTable, variableSymbolTable, scopedTypeParameterSymbolTable)
+    private val localDelegatedPropertySymbolTable =
+        ScopedSymbolTable<VariableDescriptorWithAccessors, IrLocalDelegatedProperty, IrLocalDelegatedPropertySymbol>()
+    private val scopedSymbolTables =
+        listOf(valueParameterSymbolTable, variableSymbolTable, scopedTypeParameterSymbolTable, localDelegatedPropertySymbolTable)
 
     fun referenceExternalPackageFragment(descriptor: PackageFragmentDescriptor) =
         externalPackageFragmentTable.referenced(descriptor) { IrExternalPackageFragmentSymbolImpl(descriptor) }
@@ -219,7 +222,6 @@ open class SymbolTable : ReferenceSymbolTable {
             { IrExternalPackageFragmentImpl(it) }
         )
     }
-
 
     fun declareAnonymousInitializer(
         startOffset: Int,
@@ -467,6 +469,24 @@ open class SymbolTable : ReferenceSymbolTable {
 
     val unboundVariables: Set<IrVariableSymbol> get() = variableSymbolTable.unboundSymbols
 
+    fun declareLocalDelegatedProperty(
+        startOffset: Int,
+        endOffset: Int,
+        origin: IrDeclarationOrigin,
+        descriptor: VariableDescriptorWithAccessors,
+        type: IrType
+    ): IrLocalDelegatedProperty =
+        localDelegatedPropertySymbolTable.declareLocal(
+            descriptor,
+            { IrLocalDelegatedPropertySymbolImpl(descriptor) },
+            { IrLocalDelegatedPropertyImpl(startOffset, endOffset, origin, it, type) }
+        )
+
+    fun referenceLocalDelegatedProperty(descriptor: VariableDescriptorWithAccessors) =
+        localDelegatedPropertySymbolTable.referenced(descriptor) {
+            throw AssertionError("Undefined local delegated property referenced: $descriptor")
+        }
+
     override fun enterScope(owner: DeclarationDescriptor) {
         scopedSymbolTables.forEach { it.enterScope(owner) }
     }
@@ -484,62 +504,6 @@ open class SymbolTable : ReferenceSymbolTable {
             else ->
                 throw IllegalArgumentException("Unexpected value descriptor: $value")
         }
-
-    fun loadModule(module: IrModuleFragment) {
-        module.acceptVoid(object: IrElementVisitorVoid {
-            override fun visitElement(element: IrElement) {
-                element.acceptChildrenVoid(this)
-            }
-
-            override fun visitClass(declaration: IrClass) {
-                // TODO should we check there are no conflicts?
-                classSymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitClass(declaration)
-            }
-
-            override fun visitConstructor(declaration: IrConstructor) {
-                constructorSymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitConstructor(declaration)
-            }
-
-            override fun visitEnumEntry(declaration: IrEnumEntry) {
-                enumEntrySymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitEnumEntry(declaration)
-            }
-
-            override fun visitExternalPackageFragment(declaration: IrExternalPackageFragment) {
-                externalPackageFragmentTable.descriptorToSymbol[declaration.symbol.descriptor] = declaration.symbol
-                super.visitExternalPackageFragment(declaration)
-            }
-
-            override fun visitField(declaration: IrField) {
-                fieldSymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitField(declaration)
-            }
-
-            override fun visitSimpleFunction(declaration: IrSimpleFunction) {
-                simpleFunctionSymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitSimpleFunction(declaration)
-            }
-
-            override fun visitTypeParameter(declaration: IrTypeParameter) {
-                // What about scoped type parameters?
-                globalTypeParameterSymbolTable.descriptorToSymbol[declaration.descriptor] = declaration.symbol
-                super.visitTypeParameter(declaration)
-            }
-
-            override fun visitCall(expression: IrCall) {
-                expression.symbol.let {
-                    when (it) {
-                        is IrSimpleFunctionSymbol -> simpleFunctionSymbolTable.descriptorToSymbol[it.descriptor] = it
-                        is IrConstructorSymbol -> constructorSymbolTable.descriptorToSymbol[it.descriptor] = it
-                    }
-                }
-
-                super.visitCall(expression)
-            }
-        })
-    }
 }
 
 inline fun <T, D: DeclarationDescriptor> SymbolTable.withScope(owner: D, block: SymbolTable.(D) -> T): T {

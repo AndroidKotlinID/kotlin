@@ -1,4 +1,5 @@
 // !DIAGNOSTICS: -UNUSED_PARAMETER -UNCHECKED_CAST
+// !WITH_NEW_INFERENCE
 // SKIP_TXT
 // Issue: KT-20849
 
@@ -39,5 +40,5 @@ class Context<T>
 fun <T> Any.decodeIn(typeFrom: Context<in T>): T = something()
 
 fun <T> Any?.decodeOut(typeFrom: Context<out T>): T {
-    return this?.<!IMPLICIT_NOTHING_AS_TYPE_PARAMETER!>decodeIn<!>(typeFrom) ?: <!UNRESOLVED_REFERENCE!>error<!>("")
+    return this?.<!IMPLICIT_NOTHING_AS_TYPE_PARAMETER, NI;IMPLICIT_NOTHING_AS_TYPE_PARAMETER!>decodeIn<!>(typeFrom) ?: <!UNRESOLVED_REFERENCE!>error<!>("")
 }

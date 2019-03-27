@@ -211,7 +211,7 @@ fun case_16() {
 }
 
 // TESTCASE NUMBER: 17
-val case_17 = <!DEBUG_INFO_EXPRESSION_TYPE("{Comparable<{Boolean & Byte & Int & Long & Short}> & java.io.Serializable}")!>if (nullableIntProperty === <!DEBUG_INFO_CONSTANT!>implicitNullableNothingProperty<!>) 0 else {
+val case_17 = <!DEBUG_INFO_EXPRESSION_TYPE("{Comparable<{Boolean & Int}> & java.io.Serializable}")!>if (nullableIntProperty === <!DEBUG_INFO_CONSTANT!>implicitNullableNothingProperty<!>) 0 else {
     <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int & kotlin.Int?")!>nullableIntProperty<!>
     <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int & kotlin.Int?"), DEBUG_INFO_SMARTCAST!>nullableIntProperty<!>.equals(nullableIntProperty)
 }<!>
@@ -636,7 +636,7 @@ fun case_51() {
 }
 
 // TESTCASE NUMBER: 52
-val case_52 = <!DEBUG_INFO_EXPRESSION_TYPE("{Comparable<{Boolean & Byte & Int & Long & Short}> & java.io.Serializable}")!>if (nullableIntProperty !== <!DEBUG_INFO_CONSTANT!>nullableNothingProperty<!> && <!DEBUG_INFO_CONSTANT!>nullableNothingProperty<!> != nullableIntProperty) 0 else {
+val case_52 = <!DEBUG_INFO_EXPRESSION_TYPE("{Comparable<{Boolean & Int}> & java.io.Serializable}")!>if (nullableIntProperty !== <!DEBUG_INFO_CONSTANT!>nullableNothingProperty<!> && <!DEBUG_INFO_CONSTANT!>nullableNothingProperty<!> != nullableIntProperty) 0 else {
     <!DEBUG_INFO_CONSTANT, DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int? & kotlin.Nothing?")!>nullableIntProperty<!>
     <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int? & kotlin.Nothing?")!>nullableIntProperty<!>.equals(<!DEBUG_INFO_CONSTANT!>nullableIntProperty<!>)
 }<!>

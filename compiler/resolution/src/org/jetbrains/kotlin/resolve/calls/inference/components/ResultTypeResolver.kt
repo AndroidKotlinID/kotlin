@@ -18,13 +18,13 @@ package org.jetbrains.kotlin.resolve.calls.inference.components
 
 import org.jetbrains.kotlin.resolve.calls.NewCommonSuperTypeCalculator
 import org.jetbrains.kotlin.resolve.calls.inference.components.TypeVariableDirectionCalculator.ResolveDirection
+import org.jetbrains.kotlin.resolve.calls.inference.model.Constraint
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintKind
 import org.jetbrains.kotlin.resolve.calls.inference.model.VariableWithConstraints
 import org.jetbrains.kotlin.resolve.calls.inference.model.checkConstraint
-import org.jetbrains.kotlin.resolve.constants.IntegerValueTypeConstructor
+import org.jetbrains.kotlin.resolve.constants.IntegerLiteralTypeConstructor
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.checker.intersectTypes
-import org.jetbrains.kotlin.types.typeUtil.isPrimitiveNumberType
 
 class ResultTypeResolver(
     val typeApproximator: TypeApproximator,
@@ -44,7 +44,7 @@ class ResultTypeResolver(
     }
 
     fun findResultTypeOrNull(c: Context, variableWithConstraints: VariableWithConstraints, direction: ResolveDirection): UnwrappedType? {
-        findResultIfThereIsEqualsConstraint(c, variableWithConstraints, allowedFixToNotProperType = false)?.let { return it }
+        findResultIfThereIsEqualsConstraint(c, variableWithConstraints)?.let { return it }
 
         val subType = findSubType(c, variableWithConstraints)
         val superType = findSuperType(c, variableWithConstraints)
@@ -88,7 +88,6 @@ class ResultTypeResolver(
         val lowerConstraints = variableWithConstraints.constraints.filter { it.kind == ConstraintKind.LOWER && c.isProperType(it.type) }
         if (lowerConstraints.isNotEmpty()) {
             val commonSuperType = NewCommonSuperTypeCalculator.commonSuperType(lowerConstraints.map { it.type })
-            val adjustedCommonSuperType = adjustCommonSupertypeWithKnowledgeOfNumberTypes(commonSuperType)
             /**
              *
              * fun <T> Array<out T>.intersect(other: Iterable<T>) {
@@ -108,44 +107,12 @@ class ResultTypeResolver(
              */
 
             return typeApproximator.approximateToSuperType(
-                adjustedCommonSuperType,
-                TypeApproximatorConfiguration.CapturedTypesApproximation
-            )
-                    ?: adjustedCommonSuperType
+                commonSuperType,
+                TypeApproximatorConfiguration.CapturedAndIntegerLiteralsTypesApproximation
+            ) ?: commonSuperType
         }
 
         return null
-    }
-
-    private fun adjustCommonSupertypeWithKnowledgeOfNumberTypes(commonSuperType: UnwrappedType): UnwrappedType {
-        val constructor = commonSuperType.constructor
-
-        return when (constructor) {
-            is IntegerValueTypeConstructor,
-            is IntersectionTypeConstructor -> {
-                val newSupertypes = arrayListOf<UnwrappedType>()
-                val numberSupertypes = arrayListOf<KotlinType>()
-                for (supertype in constructor.supertypes.map { it.unwrap() }) {
-                    if (supertype.isPrimitiveNumberType())
-                        numberSupertypes.add(supertype)
-                    else
-                        newSupertypes.add(supertype)
-                }
-
-
-                val representativeNumberType = TypeUtils.getDefaultPrimitiveNumberType(numberSupertypes)
-                if (representativeNumberType != null) {
-                    newSupertypes.add(representativeNumberType.unwrap())
-                } else {
-                    newSupertypes.addAll(numberSupertypes.map { it.unwrap() })
-                }
-
-                intersectTypes(newSupertypes).makeNullableAsSpecified(commonSuperType.isMarkedNullable)
-            }
-
-            else ->
-                commonSuperType
-        }
     }
 
     private fun findSuperType(c: Context, variableWithConstraints: VariableWithConstraints): UnwrappedType? {
@@ -153,29 +120,27 @@ class ResultTypeResolver(
         if (upperConstraints.isNotEmpty()) {
             val upperType = intersectTypes(upperConstraints.map { it.type })
 
-            return typeApproximator.approximateToSubType(upperType, TypeApproximatorConfiguration.CapturedTypesApproximation) ?: upperType
+            return typeApproximator.approximateToSubType(upperType, TypeApproximatorConfiguration.CapturedAndIntegerLiteralsTypesApproximation) ?: upperType
         }
         return null
     }
 
-    fun findResultIfThereIsEqualsConstraint(
-        c: Context,
-        variableWithConstraints: VariableWithConstraints,
-        allowedFixToNotProperType: Boolean = false
-    ): UnwrappedType? {
-        val properEqualsConstraint = variableWithConstraints.constraints.filter {
+    fun findResultIfThereIsEqualsConstraint(c: Context, variableWithConstraints: VariableWithConstraints): UnwrappedType? {
+        val properEqualityConstraints = variableWithConstraints.constraints.filter {
             it.kind == ConstraintKind.EQUALITY && c.isProperType(it.type)
         }
 
-        if (properEqualsConstraint.isNotEmpty()) {
-            return properEqualsConstraint.map { it.type }.singleBestRepresentative()?.unwrap()
-                    ?: properEqualsConstraint.first().type // seems like constraint system has contradiction
-        }
-        if (!allowedFixToNotProperType) return null
+        return representativeFromEqualityConstraints(properEqualityConstraints)
+    }
 
-        val notProperEqualsConstraint = variableWithConstraints.constraints.filter { it.kind == ConstraintKind.EQUALITY }
+    // Discriminate integer literal types as they are less specific than separate integer types (Int, Short...)
+    private fun representativeFromEqualityConstraints(constraints: List<Constraint>): UnwrappedType? {
+        if (constraints.isEmpty()) return null
 
-        // may be we should just firstOrNull
-        return notProperEqualsConstraint.singleOrNull()?.type
+        val constraintTypes = constraints.map { it.type }
+        val nonLiteralTypes = constraintTypes.filter { it.constructor !is IntegerLiteralTypeConstructor }
+        return nonLiteralTypes.singleBestRepresentative()?.unwrap()
+            ?: constraintTypes.singleBestRepresentative()?.unwrap()
+            ?: constraintTypes.first() // seems like constraint system has contradiction
     }
 }

@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.backend.jvm.lower
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -16,6 +15,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.resolve.constants.evaluate.evaluateBinary
@@ -35,17 +35,6 @@ internal val foldConstantLoweringPhase = makeIrFilePhase(
  * TODO: constant fields (e.g. Double.NaN)
  */
 class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTransformerVoid(), FileLoweringPass {
-
-    /**
-     * ID of an unary operator / method.
-     *
-     * An unary operator / method can be identified by its operand type (in full qualified name) and its name.
-     */
-    private data class UnaryOp(
-        val operandType: String,
-        val operatorName: String
-    )
-
     /**
      * ID of an binary operator / method.
      *
@@ -70,13 +59,7 @@ class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTr
         private val BOOLEAN = PrimitiveType<Boolean>("Boolean")
         private val STRING = PrimitiveType<String>("String")
 
-        private val UNARY_OP_TO_EVALUATOR = HashMap<UnaryOp, Function1<Any?, Any>>()
         private val BINARY_OP_TO_EVALUATOR = HashMap<BinaryOp, Function2<Any?, Any?, Any>>()
-
-        @Suppress("UNCHECKED_CAST")
-        private fun <T> registerBuiltinUnaryOp(operandType: PrimitiveType<T>, operatorName: String, f: (T) -> Any) {
-            UNARY_OP_TO_EVALUATOR[UnaryOp(operandType.name, operatorName)] = f as Function1<Any?, Any>
-        }
 
         @Suppress("UNCHECKED_CAST")
         private fun <T> registerBuiltinBinaryOp(operandType: PrimitiveType<T>, operatorName: String, f: (T, T) -> Any) {
@@ -85,8 +68,6 @@ class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTr
 
         init {
             // IrBuiltins
-            registerBuiltinUnaryOp(BOOLEAN, IrBuiltIns.OperatorNames.NOT) { !it }
-
             registerBuiltinBinaryOp(DOUBLE, IrBuiltIns.OperatorNames.LESS) { a, b -> a < b }
             registerBuiltinBinaryOp(DOUBLE, IrBuiltIns.OperatorNames.LESS_OR_EQUAL) { a, b -> a <= b }
             registerBuiltinBinaryOp(DOUBLE, IrBuiltIns.OperatorNames.GREATER) { a, b -> a > b }
@@ -138,16 +119,6 @@ class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTr
         return buildIrConstant(call, evaluated)
     }
 
-    private fun tryFoldingBuiltinUnaryOps(call: IrCall): IrExpression {
-        if (call.symbol.owner.origin != IrDeclarationOrigin.IR_BUILTINS_STUB)
-            return call
-
-        val operand = call.getValueArgument(0) as? IrConst<*> ?: return call
-        val evaluator = UNARY_OP_TO_EVALUATOR[UnaryOp(operand.kind.toString(), call.symbol.owner.name.toString())] ?: return call
-
-        return buildIrConstant(call, evaluator(operand.value!!))
-    }
-
     private fun tryFoldingBinaryOps(call: IrCall): IrExpression {
         val lhs = call.dispatchReceiver as? IrConst<*> ?: return call
         val rhs = call.getValueArgument(0) as? IrConst<*> ?: return call
@@ -175,7 +146,7 @@ class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTr
 
     private fun tryFoldingBuiltinBinaryOps(call: IrCall): IrExpression {
         // Make sure that this is a IrBuiltIn
-        if (call.symbol.owner.origin != IrDeclarationOrigin.IR_BUILTINS_STUB)
+        if (call.symbol.owner.fqNameWhenAvailable?.parent() != IrBuiltIns.KOTLIN_INTERNAL_IR_FQN)
             return call
 
         val lhs = call.getValueArgument(0) as? IrConst<*> ?: return call
@@ -201,7 +172,6 @@ class FoldConstantLowering(private val context: JvmBackendContext) : IrElementTr
                     expression.extensionReceiver != null -> expression
                     expression.dispatchReceiver != null && expression.valueArgumentsCount == 0 -> tryFoldingUnaryOps(expression)
                     expression.dispatchReceiver != null && expression.valueArgumentsCount == 1 -> tryFoldingBinaryOps(expression)
-                    expression.dispatchReceiver == null && expression.valueArgumentsCount == 1 -> tryFoldingBuiltinUnaryOps(expression)
                     expression.dispatchReceiver == null && expression.valueArgumentsCount == 2 -> tryFoldingBuiltinBinaryOps(expression)
                     else -> expression
                 }

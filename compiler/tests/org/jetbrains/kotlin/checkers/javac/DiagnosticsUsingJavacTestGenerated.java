@@ -8033,6 +8033,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/generics/doNotCaptureSupertype.kt");
             }
 
+            @TestMetadata("finalUpperBoundWithOverride.kt")
+            public void testFinalUpperBoundWithOverride() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/generics/finalUpperBoundWithOverride.kt");
+            }
+
+            @TestMetadata("finalUpperBoundWithoutOverride.kt")
+            public void testFinalUpperBoundWithoutOverride() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/generics/finalUpperBoundWithoutOverride.kt");
+            }
+
             @TestMetadata("genericsInType.kt")
             public void testGenericsInType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/generics/genericsInType.kt");
@@ -14110,6 +14120,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("intValuesOutOfRange.kt")
             public void testIntValuesOutOfRange() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/numbers/intValuesOutOfRange.kt");
+            }
+
+            @TestMetadata("numberAsUnionAndIntersection.kt")
+            public void testNumberAsUnionAndIntersection() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/numbers/numberAsUnionAndIntersection.kt");
             }
 
             @TestMetadata("numbersInSimpleConstraints.kt")

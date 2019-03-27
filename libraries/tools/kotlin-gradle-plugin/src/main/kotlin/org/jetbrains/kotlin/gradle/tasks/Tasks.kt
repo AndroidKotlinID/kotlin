@@ -405,6 +405,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
 
         if (defaultsOnly) return
 
+        args.allowNoSourceFiles = true
         args.classpathAsList = compileClasspath.toList()
         args.destinationAsFile = destinationDir
         parentKotlinOptionsImpl?.updateArguments(args)
@@ -439,7 +440,8 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
             computedCompilerClasspath, messageCollector, outputItemCollector,
             outputFiles = allOutputFiles(),
             buildReportMode = buildReportMode,
-            incrementalCompilationEnvironment = icEnv
+            incrementalCompilationEnvironment = icEnv,
+            kotlinScriptExtensions = sourceFilesExtensions.toTypedArray()
         )
         compilerRunner.runJvmCompilerAsync(
             sourceRoots.kotlinSourceFiles,
