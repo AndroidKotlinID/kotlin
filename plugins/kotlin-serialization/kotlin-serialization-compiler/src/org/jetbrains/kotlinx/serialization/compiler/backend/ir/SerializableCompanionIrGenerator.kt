@@ -39,16 +39,26 @@ class SerializableCompanionIrGenerator(
 
     override fun generateSerializerGetter(methodDescriptor: FunctionDescriptor) =
         irClass.contributeFunction(methodDescriptor, fromStubs = true) { getter ->
-            val serializer = serializableDescriptor.classSerializer?.toClassDescriptor!!
-            val expr = if (serializer.kind == ClassKind.OBJECT) {
-                irGetObject(serializer)
-            } else {
-                val desc = requireNotNull(
-                    KSerializerDescriptorResolver.findSerializerConstructorForTypeArgumentsSerializers(serializer)
-                ) { "Generated serializer does not have constructor with required number of arguments" }
-                val ctor = compilerContext.externalSymbols.referenceConstructor(desc)
-                val args: List<IrExpression> = getter.valueParameters.map { irGet(it) }
-                irInvoke(null, ctor, *args.toTypedArray())
+            val serializer = serializableDescriptor.classSerializer!!
+            val expr = when {
+                serializer.kind == ClassKind.OBJECT -> irGetObject(serializer)
+                serializer.isSerializerWhichRequiersKClass() -> {
+                    val serializableType = serializableDescriptor.defaultType
+                    irInvoke(
+                        null,
+                        compilerContext.externalSymbols.referenceConstructor(serializer.unsubstitutedPrimaryConstructor!!),
+                        listOf(serializableType.toIrType()),
+                        listOf(classReference(serializableType))
+                    )
+                }
+                else -> {
+                    val desc = requireNotNull(
+                        KSerializerDescriptorResolver.findSerializerConstructorForTypeArgumentsSerializers(serializer)
+                    ) { "Generated serializer does not have constructor with required number of arguments" }
+                    val ctor = compilerContext.externalSymbols.referenceConstructor(desc)
+                    val args: List<IrExpression> = getter.valueParameters.map { irGet(it) }
+                    irInvoke(null, ctor, *args.toTypedArray())
+                }
             }
             +irReturn(expr)
         }

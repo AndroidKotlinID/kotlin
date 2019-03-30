@@ -1,7 +1,10 @@
 import java.io.File
 import org.gradle.api.tasks.bundling.Jar
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompile
+
+tasks.withType<Test> {
+    maxParallelForks = Math.max(Runtime.getRuntime().availableProcessors() / 2, 1)
+}
 
 plugins {
     kotlin("jvm")
@@ -66,8 +69,7 @@ dependencies {
     antLauncherJar(commonDep("org.apache.ant", "ant"))
     antLauncherJar(files(toolsJar()))
 
-    // For JPS build
-    if (System.getProperty("idea.active") != null) {
+    if (project.kotlinBuildProperties.isInJpsBuildIdeaSync) {
         testRuntimeOnly(files("${rootProject.projectDir}/dist/kotlinc/lib/kotlin-reflect.jar"))
     }
 }

@@ -44,6 +44,9 @@ val IrType.classifierOrFail: IrClassifierSymbol
 val IrType.classifierOrNull: IrClassifierSymbol?
     get() = safeAs<IrSimpleType>()?.classifier
 
+val IrType.classOrNull: IrClassSymbol?
+    get() = classifierOrNull as? IrClassSymbol
+
 fun IrType.makeNotNull() =
     if (this is IrSimpleType && this.hasQuestionMark) {
         IrSimpleTypeImpl(
@@ -82,7 +85,7 @@ fun IrType.toKotlinType(): KotlinType {
 }
 
 fun IrType.getClass(): IrClass? =
-    (this.classifierOrNull as? IrClassSymbol)?.owner
+    classOrNull?.owner
 
 fun IrClassSymbol.createType(hasQuestionMark: Boolean, arguments: List<IrTypeArgument>): IrSimpleType =
     IrSimpleTypeImpl(
@@ -105,11 +108,6 @@ private fun makeKotlinType(
         }
     }
     return classifier.descriptor.defaultType.replace(newArguments = kotlinTypeArguments).makeNullableAsSpecified(hasQuestionMark)
-}
-
-fun ClassifierDescriptor.toIrType(hasQuestionMark: Boolean = false, symbolTable: SymbolTable? = null): IrType {
-    val symbol = getSymbol(symbolTable)
-    return IrSimpleTypeImpl(defaultType, symbol, hasQuestionMark, listOf(), listOf())
 }
 
 val IrTypeParameter.defaultType: IrType

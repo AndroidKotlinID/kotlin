@@ -60,20 +60,18 @@ class CoroutineTransformerMethodVisitor(
     private val isForNamedFunction: Boolean,
     private val shouldPreserveClassInitialization: Boolean,
     private val languageVersionSettings: LanguageVersionSettings,
-    private val sourceFile: String,
     // These two are needed to report diagnostics about suspension points inside critical section
     private val element: KtElement,
     private val diagnostics: DiagnosticSink,
     // It's only matters for named functions, may differ from '!isStatic(access)' in case of DefaultImpls
     private val needDispatchReceiver: Boolean = false,
     // May differ from containingClassInternalName in case of DefaultImpls
-    private val internalNameForDispatchReceiver: String? = null,
-    // For crossinline lambdas we do not generate DebugMetadata annotation, otherwise it will be generated twice
-    private val isCrossinlineLambda: Boolean = false
+    private val internalNameForDispatchReceiver: String? = null
 ) : TransformationMethodVisitor(delegate, access, name, desc, signature, exceptions) {
 
     private val classBuilderForCoroutineState: ClassBuilder by lazy(obtainClassBuilderForCoroutineState)
-    private val lineNumber = element?.let { CodegenUtil.getLineNumberForElement(it, false) } ?: 0
+    private val lineNumber = CodegenUtil.getLineNumberForElement(element, false) ?: 0
+    private val sourceFile = element.containingKtFile.name
 
     private var continuationIndex = if (isForNamedFunction) -1 else 0
     private var dataIndex = if (isForNamedFunction) -1 else 1
@@ -193,7 +191,7 @@ class CoroutineTransformerMethodVisitor(
 
         fixLvtForParameters(methodNode, startLabel, endLabel)
 
-        if (languageVersionSettings.isReleaseCoroutines() && !isCrossinlineLambda) {
+        if (languageVersionSettings.isReleaseCoroutines()) {
             writeDebugMetadata(methodNode, suspensionPointLineNumbers, spilledToVariableMapping)
         }
     }

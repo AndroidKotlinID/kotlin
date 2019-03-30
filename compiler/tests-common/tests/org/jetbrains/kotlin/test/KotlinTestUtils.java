@@ -413,9 +413,7 @@ public class KotlinTestUtils {
 
     @NotNull
     public static File tmpDirForTest(@NotNull String testClassName, @NotNull String testName) throws IOException {
-        File answer = normalizeFile(FileUtil.createTempDirectory(testClassName, testName));
-        deleteOnShutdown(answer);
-        return answer;
+        return normalizeFile(FileUtil.createTempDirectory(testClassName, testName, false));
     }
 
     @NotNull
@@ -425,10 +423,12 @@ public class KotlinTestUtils {
 
     @NotNull
     public static File tmpDir(String name) throws IOException {
-        // We should use this form. otherwise directory will be deleted on each test.
-        File answer = normalizeFile(FileUtil.createTempDirectory(new File(System.getProperty("java.io.tmpdir")), name, ""));
-        deleteOnShutdown(answer);
-        return answer;
+        return normalizeFile(FileUtil.createTempDirectory(name, "", false));
+    }
+
+    @NotNull
+    public static File tmpDirForReusableLibrary(String name) throws IOException {
+        return normalizeFile(FileUtil.createTempDirectory(new File(System.getProperty("java.io.tmpdir")), name, "", true));
     }
 
     private static File normalizeFile(File file) throws IOException {
