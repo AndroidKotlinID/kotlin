@@ -82,6 +82,10 @@ dependencies {
     testCompileOnly(project(":kotlin-annotation-processing-gradle"))
 }
 
+if (kotlinBuildProperties.isInJpsBuildIdeaSync) {
+    configurations.compile.get().exclude("com.android.tools.external.com-intellij", "intellij-core")
+}
+
 runtimeJar(rewriteDepsToShadedCompiler(jar)) {
     dependsOn(jarContents)
 
@@ -176,5 +180,10 @@ pluginBundle {
         name = "kotlinScriptingPlugin",
         id = "org.jetbrains.kotlin.plugin.scripting",
         display = "Gradle plugin for kotlin scripting"
+    )
+    create(
+        name = "kotlinNativeCocoapodsPlugin",
+        id = "org.jetbrains.kotlin.native.cocoapods",
+        display = "Kotlin Native plugin for CocoaPods integration"
     )
 }
