@@ -12693,6 +12693,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/inlineClasses/contextsAndAccessors/kt27513.kt");
             }
 
+            @TestMetadata("kt30780.kt")
+            public void testKt30780() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/contextsAndAccessors/kt30780.kt");
+            }
+
             @TestMetadata("lambdaInInlineClassFun.kt")
             public void testLambdaInInlineClassFun() throws Exception {
                 runTest("compiler/testData/codegen/box/inlineClasses/contextsAndAccessors/lambdaInInlineClassFun.kt");
@@ -18583,6 +18588,49 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/ranges/evaluationOrder")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class EvaluationOrder extends AbstractBlackBoxCodegenTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInEvaluationOrder() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/evaluationOrder"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("forInDownToEvaluationOrder.kt")
+            public void testForInDownToEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInDownToEvaluationOrder.kt");
+            }
+
+            @TestMetadata("forInRangeLiteralEvaluationOrder.kt")
+            public void testForInRangeLiteralEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInRangeLiteralEvaluationOrder.kt");
+            }
+
+            @TestMetadata("forInReversedDownToEvaluationOrder.kt")
+            public void testForInReversedDownToEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInReversedDownToEvaluationOrder.kt");
+            }
+
+            @TestMetadata("forInReversedRangeLiteralEvaluationOrder.kt")
+            public void testForInReversedRangeLiteralEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInReversedRangeLiteralEvaluationOrder.kt");
+            }
+
+            @TestMetadata("forInReversedUntilEvaluationOrder.kt")
+            public void testForInReversedUntilEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInReversedUntilEvaluationOrder.kt");
+            }
+
+            @TestMetadata("forInUntilEvaluationOrder.kt")
+            public void testForInUntilEvaluationOrder() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/evaluationOrder/forInUntilEvaluationOrder.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/ranges/expression")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -18957,34 +19005,6 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("forInReversedUntilWithNonConstBounds.kt")
             public void testForInReversedUntilWithNonConstBounds() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/forInReversed/forInReversedUntilWithNonConstBounds.kt");
-            }
-
-            @TestMetadata("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder")
-            @TestDataPath("$PROJECT_ROOT")
-            @RunWith(JUnit3RunnerWithInners.class)
-            public static class EvaluationOrder extends AbstractBlackBoxCodegenTest {
-                private void runTest(String testDataFilePath) throws Exception {
-                    KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
-                }
-
-                public void testAllFilesPresentInEvaluationOrder() throws Exception {
-                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
-                }
-
-                @TestMetadata("forInReversedDownToEvaluationOrder.kt")
-                public void testForInReversedDownToEvaluationOrder() throws Exception {
-                    runTest("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedDownToEvaluationOrder.kt");
-                }
-
-                @TestMetadata("forInReversedRangeLiteralEvaluationOrder.kt")
-                public void testForInReversedRangeLiteralEvaluationOrder() throws Exception {
-                    runTest("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedRangeLiteralEvaluationOrder.kt");
-                }
-
-                @TestMetadata("forInReversedUntilEvaluationOrder.kt")
-                public void testForInReversedUntilEvaluationOrder() throws Exception {
-                    runTest("compiler/testData/codegen/box/ranges/forInReversed/evaluationOrder/forInReversedUntilEvaluationOrder.kt");
-                }
             }
         }
 

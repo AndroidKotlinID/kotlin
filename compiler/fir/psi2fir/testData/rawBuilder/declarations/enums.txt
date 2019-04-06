@@ -1,6 +1,6 @@
 FILE: enums.kt
     public? final? enum class Order : kotlin/Enum {
-        public? constructor(): super<kotlin/Enum>()
+        private constructor(): super<kotlin/Enum>()
 
         public? final enum entry FIRST : kotlin/Any {
             public? constructor(): super<kotlin/Any>()
@@ -21,10 +21,10 @@ FILE: enums.kt
     public? final? enum class Planet : kotlin/Enum {
         public? constructor(m: Double, r: Double): super<kotlin/Enum>()
 
-        public? final? val m: Double
+        public? final? val m: Double = R|<local>/m|
             public? get(): Double
 
-        internal final? val r: Double
+        internal final? val r: Double = R|<local>/r|
             internal get(): Double
 
         public? final enum entry MERCURY : Planet {
@@ -54,13 +54,13 @@ FILE: enums.kt
 
         }
 
-        public? final? val g: Double = div#(times#(G#, m#), times#(r#, r#))
+        public? final? val g: Double = G#.times#(m#).div#(r#.times#(r#))
             public? get(): Double
 
         public? abstract fun sayHello(): kotlin/Unit
 
         public? final? companion object Companion : kotlin/Any {
-            public? constructor(): super<kotlin/Any>()
+            private constructor(): super<kotlin/Any>()
 
             public? final? const val G: <implicit> = Double(6.67E-11)
                 public? get(): <implicit>

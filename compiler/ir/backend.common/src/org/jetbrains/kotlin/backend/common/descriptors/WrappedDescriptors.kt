@@ -463,7 +463,7 @@ open class WrappedClassConstructorDescriptor(
         kind: CallableMemberDescriptor.Kind,
         copyOverrides: Boolean
     ): ClassConstructorDescriptor {
-        TODO("not implemented")
+        throw UnsupportedOperationException()
     }
 
     override fun getModality() = Modality.FINAL
@@ -761,7 +761,7 @@ open class WrappedPropertyDescriptor(
     override fun getValueParameters(): MutableList<ValueParameterDescriptor> = mutableListOf()
 
     override fun getCompileTimeInitializer(): ConstantValue<*>? {
-        TODO("not implemented")
+        return null
     }
 
     override fun isSetterProjectedOut(): Boolean {

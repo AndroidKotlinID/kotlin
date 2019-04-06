@@ -159,7 +159,7 @@ extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.3-dev-9171"
+    extra["versions.kotlin-native"] = "1.3-dev-9301"
 }
 
 val isTeamcityBuild = project.hasProperty("teamcity") || System.getenv("TEAMCITY_VERSION") != null
@@ -195,7 +195,8 @@ extra["compilerModules"] = arrayOf(
                 ":compiler:fir:cones",
                 ":compiler:fir:resolve",
                 ":compiler:fir:tree",
-                ":compiler:fir:psi2fir"
+                ":compiler:fir:psi2fir",
+                ":compiler:fir:fir2ir"
             )
         } else {
             emptyArray()
@@ -212,6 +213,8 @@ extra["compilerModules"] = arrayOf(
         ":compiler:ir.backend.common",
         ":compiler:backend.jvm",
         ":compiler:backend.js",
+        ":compiler:ir.serialization.common",
+        ":compiler:ir.serialization.js",
         ":compiler:backend-common",
         ":compiler:backend",
         ":compiler:plugin-api",
@@ -483,6 +486,7 @@ tasks {
     create("firCompilerTest") {
         dependsOn(":compiler:fir:psi2fir:test")
         dependsOn(":compiler:fir:resolve:test")
+        dependsOn(":compiler:fir:fir2ir:test")
     }
 
     create("scriptingTest") {

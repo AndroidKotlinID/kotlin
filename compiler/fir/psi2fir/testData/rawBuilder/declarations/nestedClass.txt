@@ -2,7 +2,7 @@ FILE: nestedClass.kt
     public? abstract class Base : kotlin/Any {
         public? constructor(s: String): super<kotlin/Any>()
 
-        public? final? val s: String
+        public? final? val s: String = R|<local>/s|
             public? get(): String
 
     }
@@ -15,7 +15,7 @@ FILE: nestedClass.kt
         }
 
         public? final? object Obj : Base {
-            public? constructor(): super<Base>(String())
+            private constructor(): super<Base>(String())
 
         }
 
