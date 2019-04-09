@@ -4935,6 +4935,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/convertCollectionConstructorToFunction/replaceArrayListCall.kt");
         }
 
+        @TestMetadata("replaceArrayListCallQualified.kt")
+        public void testReplaceArrayListCallQualified() throws Exception {
+            runTest("idea/testData/intentions/convertCollectionConstructorToFunction/replaceArrayListCallQualified.kt");
+        }
+
         @TestMetadata("replaceArrayListCallWithType.kt")
         public void testReplaceArrayListCallWithType() throws Exception {
             runTest("idea/testData/intentions/convertCollectionConstructorToFunction/replaceArrayListCallWithType.kt");
@@ -10141,6 +10146,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("function.kt")
         public void testFunction() throws Exception {
             runTest("idea/testData/intentions/introduceImportAlias/function.kt");
+        }
+
+        @TestMetadata("inImport.kt")
+        public void testInImport() throws Exception {
+            runTest("idea/testData/intentions/introduceImportAlias/inImport.kt");
         }
 
         @TestMetadata("middleImport.kt")

@@ -28,7 +28,9 @@ import org.jetbrains.kotlin.backend.common.lower.irIfThen
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
+import org.jetbrains.kotlin.backend.jvm.codegen.isInlineFunctionCall
 import org.jetbrains.kotlin.backend.jvm.codegen.isInlineIrExpression
+import org.jetbrains.kotlin.backend.jvm.codegen.isInlineParameter
 import org.jetbrains.kotlin.codegen.PropertyReferenceCodegen
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -57,6 +59,12 @@ import org.jetbrains.org.objectweb.asm.Type
 //Hack implementation to support CR java types in lower
 class CrIrType(val type: Type) : IrType {
     override val annotations = emptyList()
+
+    override fun equals(other: Any?): Boolean =
+        other is CrIrType && type == other.type
+
+    override fun hashCode(): Int =
+        type.hashCode()
 }
 
 internal val callableReferencePhase = makeIrFilePhase(
@@ -77,7 +85,7 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
 
             override fun visitCall(expression: IrCall): IrExpression {
                 val callee = expression.symbol.owner
-                if (callee.isInlineFunction(context)) {
+                if (callee.isInlineFunctionCall(context)) {
                     //TODO: more wise filtering
                     callee.valueParameters.forEach { valueParameter ->
                         if (valueParameter.isInlineParameter()) {
@@ -583,22 +591,6 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
 }
 
 // TODO: Move to IrUtils
-
-private fun IrFunction.isInlineFunction(context: JvmBackendContext) =
-    (!context.state.isInlineDisabled || typeParameters.any { it.isReified }) &&
-            (isInline || isArrayConstructorWithLambda())
-
-private fun IrFunction.isArrayConstructorWithLambda() =
-    valueParameters.size == 2 &&
-            this is IrConstructor &&
-            parentAsClass.let {
-                it.getPackageFragment()?.fqName?.asString() == "kotlin" &&
-                        it.name.asString().endsWith("Array")
-            }
-
-private fun IrValueParameter.isInlineParameter() =
-    !isNoinline && !type.isNullable() && type.isFunctionOrKFunction()
-
 private fun IrType.substitute(substitutionMap: Map<IrTypeParameter, IrType>): IrType {
     if (this !is IrSimpleType) return this
 
