@@ -1,9 +1,9 @@
 public final annotation class A : R|kotlin/Annotation| {
-    public constructor()
+    public constructor(): R|test/A|
 
 }
 
-<T> public abstract interface Foo : R|java/io/Serializable| {
-    <E, F> public abstract fun bar(): R|kotlin/Unit|
+public abstract interface Foo<T> : R|java/io/Serializable| {
+    public abstract fun <E, F> bar(): R|kotlin/Unit|
 
 }

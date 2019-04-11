@@ -34,9 +34,19 @@ public class NullabilityAnalysisTestGenerated extends AbstractNullabilityAnalysi
         runTest("nj2k/testData/nullabilityAnalysis/compareWithNull.kt");
     }
 
+    @TestMetadata("forcedNullability.kt")
+    public void testForcedNullability() throws Exception {
+        runTest("nj2k/testData/nullabilityAnalysis/forcedNullability.kt");
+    }
+
     @TestMetadata("functionTypeParameterNullability.kt")
     public void testFunctionTypeParameterNullability() throws Exception {
         runTest("nj2k/testData/nullabilityAnalysis/functionTypeParameterNullability.kt");
+    }
+
+    @TestMetadata("loops.kt")
+    public void testLoops() throws Exception {
+        runTest("nj2k/testData/nullabilityAnalysis/loops.kt");
     }
 
     @TestMetadata("nullAsAssignment.kt")
@@ -52,6 +62,11 @@ public class NullabilityAnalysisTestGenerated extends AbstractNullabilityAnalysi
     @TestMetadata("smartCast.kt")
     public void testSmartCast() throws Exception {
         runTest("nj2k/testData/nullabilityAnalysis/smartCast.kt");
+    }
+
+    @TestMetadata("spreadExpression.kt")
+    public void testSpreadExpression() throws Exception {
+        runTest("nj2k/testData/nullabilityAnalysis/spreadExpression.kt");
     }
 
     @TestMetadata("superMethod.kt")

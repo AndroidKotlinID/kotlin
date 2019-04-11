@@ -121,7 +121,6 @@ private fun String.toMaybeVersionedJarRegex(): Regex {
     return Regex(if (hasJarExtension) escaped else "$escaped(-\\d.*)?\\.jar") // TODO: consider more precise version part of the regex
 }
 
-
 fun Project.firstFromJavaHomeThatExists(vararg paths: String, jdkHome: File = File(this.property("JDK_18") as String)): File? =
     paths.map { File(jdkHome, it) }.firstOrNull { it.exists() }.also {
         if (it == null)
@@ -135,22 +134,5 @@ val compilerManifestClassPath
     get() = "annotations-13.0.jar kotlin-stdlib.jar kotlin-reflect.jar kotlin-script-runtime.jar trove4j.jar"
 
 object EmbeddedComponents {
-    val CONFIGURATION_NAME = "embeddedComponents"
-}
-
-fun AbstractCopyTask.fromEmbeddedComponents() {
-    val embeddedComponents = project.configurations.getByName(EmbeddedComponents.CONFIGURATION_NAME)
-    if (this is ShadowJar) {
-        from(embeddedComponents)
-    } else {
-        dependsOn(embeddedComponents)
-        from {
-            embeddedComponents.map { file ->
-                if (file.isDirectory)
-                    project.files(file)
-                else
-                    project.zipTree(file)
-            }
-        }
-    }
+    val CONFIGURATION_NAME = "embedded"
 }

@@ -5,9 +5,13 @@
 
 package org.jetbrains.kotlin.nj2k.nullabilityAnalysis
 
+import com.intellij.openapi.editor.RangeMarker
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiComment
+import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import org.jetbrains.kotlin.psi.psiUtil.elementsInRange
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 internal class ContextCreator(private val getNullability: (KtTypeElement) -> Nullability) {
@@ -113,6 +117,10 @@ internal data class AnalysisContext(
     val declarationToTypeVariable: Map<KtCallableDeclaration, TypeVariable>
 )
 
-data class AnalysisScope(val elements: List<KtElement>) : Iterable<KtElement> by elements {
+data class AnalysisScope(val elements: List<PsiElement>) : Iterable<PsiElement> by elements {
     constructor(vararg elements: KtElement) : this(elements.toList())
+    constructor(file: KtFile, rangeMarker: RangeMarker?) :
+            this(rangeMarker?.let { marker ->
+                file.elementsInRange(TextRange(marker.startOffset, marker.endOffset))
+            } ?: listOf(file))
 }

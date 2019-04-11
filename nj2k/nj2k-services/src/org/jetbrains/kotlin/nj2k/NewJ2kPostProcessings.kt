@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.nj2k
 import com.intellij.codeInspection.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
@@ -22,8 +23,11 @@ import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.idea.analysis.analyzeInContext
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
+import org.jetbrains.kotlin.idea.core.implicitModality
+import org.jetbrains.kotlin.idea.core.implicitVisibility
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.core.setVisibility
+import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import org.jetbrains.kotlin.idea.inspections.*
 import org.jetbrains.kotlin.idea.inspections.branchedTransformations.IfThenToSafeAccessInspection
 import org.jetbrains.kotlin.idea.inspections.conventionNameCalls.ReplaceGetOrSetInspection
@@ -40,13 +44,13 @@ import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.idea.references.readWriteAccess
 import org.jetbrains.kotlin.idea.util.getResolutionScope
 import org.jetbrains.kotlin.j2k.ConverterSettings
+import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.nj2k.postProcessing.*
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.*
 import org.jetbrains.kotlin.resolve.BindingContext
-import org.jetbrains.kotlin.resolve.calls.callUtil.getCalleeExpressionIfAny
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
 import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
@@ -57,6 +61,8 @@ import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.kotlin.utils.mapToIndex
 import java.util.*
+import kotlin.reflect.KClass
+import kotlin.reflect.full.isSubclassOf
 
 interface NewJ2kPostProcessing {
     fun createAction(element: PsiElement, diagnostics: Diagnostics, settings: ConverterSettings?): (() -> Unit)? =
@@ -76,6 +82,29 @@ data class RepeatableProcessingGroup(val processings: List<NewJ2kPostProcessing>
 
 data class OneTimeProcessingGroup(val processings: List<Processing>) : Processing {
     constructor(vararg processings: Processing) : this(processings.toList())
+}
+
+private abstract class CheckableProcessing<E : PsiElement>(private val classTag: KClass<E>) : NewJ2kPostProcessing {
+    protected open fun check(element: E): Boolean =
+        check(element, null)
+
+    protected open fun check(element: E, settings: ConverterSettings?): Boolean =
+        check(element)
+
+    protected abstract fun action(element: E)
+
+    override fun createAction(element: PsiElement, diagnostics: Diagnostics, settings: ConverterSettings?): (() -> Unit)? {
+        if (!element::class.isSubclassOf(classTag)) return null
+        @Suppress("UNCHECKED_CAST")
+        if (!check(element as E, settings)) return null
+        return {
+            if (element.isValid && check(element, settings)) {
+                action(element)
+            }
+        }
+    }
+
+    override val writeActionNeeded: Boolean = true
 }
 
 object NewJ2KPostProcessingRegistrar {
@@ -101,8 +130,9 @@ object NewJ2KPostProcessingRegistrar {
         SingleOneTimeProcessing(registerGeneralInspectionBasedProcessing(RedundantSetterInspection())),
         SingleOneTimeProcessing(ConvertDataClass()),
         RepeatableProcessingGroup(
-            registerGeneralInspectionBasedProcessing(RedundantModalityModifierInspection()),
-            registerGeneralInspectionBasedProcessing(RedundantVisibilityModifierInspection()),
+            RemoveRedundantVisibilityModifierProcessing(),
+            RemoveRedundantModalityModifierProcessing(),
+            RemoveRedundantConstructorKeywordProcessing(),
             registerDiagnosticBasedProcessing(Errors.REDUNDANT_OPEN_IN_INTERFACE) { element: KtDeclaration, diagnostic ->
                 element.removeModifier(KtTokens.OPEN_KEYWORD)
             },
@@ -308,7 +338,8 @@ object NewJ2KPostProcessingRegistrar {
                 if (context.diagnostics.forElement(element).any { it.factory == Errors.UNNECESSARY_NOT_NULL_ASSERTION }) {
                     exclExclExpr.replace(baseExpression)
                 }
-            }
+            },
+            RemoveForExpressionLoopParameterTypeProcessing()
         )
     )
 
@@ -790,6 +821,17 @@ object NewJ2KPostProcessingRegistrar {
         override val writeActionNeeded: Boolean = true
     }
 
+    private class RemoveForExpressionLoopParameterTypeProcessing : CheckableProcessing<KtForExpression>(KtForExpression::class) {
+        override fun check(element: KtForExpression, settings: ConverterSettings?): Boolean =
+            element.loopParameter?.typeReference?.typeElement != null
+                    && settings?.specifyLocalVariableTypeByDefault != true
+
+        override fun action(element: KtForExpression) {
+            element.loopParameter?.typeReference = null
+        }
+
+    }
+
     private class RemoveRedundantExpressionQualifierProcessing : NewJ2kPostProcessing {
         private fun check(qualifiedExpression: KtQualifiedExpression): Boolean {
             val qualifier = (qualifiedExpression.receiverExpression as? KtNameReferenceExpression)
@@ -831,6 +873,64 @@ object NewJ2KPostProcessingRegistrar {
         }
 
         override val writeActionNeeded: Boolean = true
+    }
+
+    private class RemoveRedundantConstructorKeywordProcessing : CheckableProcessing<KtPrimaryConstructor>(KtPrimaryConstructor::class) {
+        override fun check(element: KtPrimaryConstructor): Boolean =
+            element.containingClassOrObject is KtClass
+                    && element.getConstructorKeyword() != null
+                    && element.annotationEntries.isEmpty()
+                    && element.visibilityModifier() == null
+
+
+        override fun action(element: KtPrimaryConstructor) {
+            element.removeRedundantConstructorKeywordAndSpace()
+        }
+    }
+
+    private class RemoveRedundantModalityModifierProcessing : CheckableProcessing<KtDeclaration>(KtDeclaration::class) {
+        override fun check(element: KtDeclaration): Boolean {
+            val modalityModifier = element.modalityModifier() ?: return false
+            val modalityModifierType = modalityModifier.node.elementType
+            val implicitModality = element.implicitModality()
+
+            return modalityModifierType == implicitModality
+        }
+
+        override fun action(element: KtDeclaration) {
+            element.removeModifierSmart(element.modalityModifierType()!!)
+        }
+    }
+
+    //hack until KT-30804 is fixed
+    private fun KtModifierListOwner.removeModifierSmart(modifierToken: KtModifierKeywordToken) {
+        val modifier = modifierList?.getModifier(modifierToken)
+        val comment = modifier?.getPrevSiblingIgnoringWhitespace() as? PsiComment
+        comment?.also {
+            it.parent.addAfter(KtPsiFactory(this).createNewLine(), it)
+        }
+        val newElement = copy() as KtModifierListOwner
+        newElement.removeModifier(modifierToken)
+        replace(newElement)
+        containingFile.commitAndUnblockDocument()
+    }
+
+    private class RemoveRedundantVisibilityModifierProcessing : CheckableProcessing<KtDeclaration>(KtDeclaration::class) {
+        override fun check(element: KtDeclaration): Boolean {
+            val visibilityModifier = element.visibilityModifier() ?: return false
+            val implicitVisibility = element.implicitVisibility()
+            return when {
+                visibilityModifier.node.elementType == implicitVisibility ->
+                    true
+                element.hasModifier(KtTokens.INTERNAL_KEYWORD) && element.containingClassOrObject?.isLocal == true ->
+                    true
+                else -> false
+            }
+        }
+
+        override fun action(element: KtDeclaration) {
+            element.removeModifierSmart(element.visibilityModifierType()!!)
+        }
     }
 
 }
