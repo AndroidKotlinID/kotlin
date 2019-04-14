@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.gradle.util.modify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -38,27 +39,15 @@ class KaptIncrementalWithIsolatingApt : KaptIncrementalIT() {
     fun testIncrementalChanges() {
         val project = getProject()
 
-        var aptTimestamp = 0L
-
         project.build("clean", "build") {
             assertSuccessful()
-
-            val classpathHistory =
-                fileInWorkingDir("build/kotlin/kaptGenerateStubsKotlin/classpath-fq-history").listFiles().asList().single()
-            val stubsTimestamp = classpathHistory.name.toLong()
-
-            aptTimestamp = fileInWorkingDir("build/tmp/kapt3/incApCache/main/last-build-ts.bin").readText().toLong()
-            assertTrue(stubsTimestamp < aptTimestamp)
         }
 
         project.projectFile("useB.kt").modify { current -> "$current\nfun otherFunction() {}" }
         project.build("build") {
             assertSuccessful()
 
-            val newAptTimestamp = fileInWorkingDir("build/tmp/kapt3/incApCache/main/last-build-ts.bin").readText().toLong()
-            assertTrue(aptTimestamp < newAptTimestamp)
-
-            assertEquals(setOf(fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/UseBKt.java").absolutePath), getProcessedSources(output))
+            assertEquals(setOf(fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/UseBKt.java").canonicalPath), getProcessedSources(output))
         }
 
         project.projectFile("B.kt").modify { current ->
@@ -69,8 +58,8 @@ class KaptIncrementalWithIsolatingApt : KaptIncrementalIT() {
             assertSuccessful()
             assertEquals(
                 setOf(
-                    fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/B.java").absolutePath,
-                    fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/UseBKt.java").absolutePath
+                    fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/B.java").canonicalPath,
+                    fileInWorkingDir("build/tmp/kapt3/stubs/main/bar/UseBKt.java").canonicalPath
                 ),
                 getProcessedSources(output)
             )
@@ -82,13 +71,22 @@ private const val patternApt = "Processing java sources with annotation processo
 fun getProcessedSources(output: String): Set<String> {
     val logging = output.lines().single { it.contains(patternApt) }
     val indexOf = logging.indexOf(patternApt) + patternApt.length
-    return logging.drop(indexOf).split(",").map { it.trim() }.toSet()
+    return logging.drop(indexOf).split(",").map { it.trim() }.filter { !it.isEmpty() }.toSet()
 }
 
-fun BaseGradleIT.Project.setupIncrementalAptProject(procType: String) {
+fun BaseGradleIT.Project.setupIncrementalAptProject(procType: String, buildFile: File = projectDir.resolve("build.gradle")) {
     setupWorkingDir()
-    val buildFile = projectDir.resolve("build.gradle")
     val content = buildFile.readText()
+    val processorPath = generateProcessor(procType)
+
+    val updatedContent = content.replace(
+        Regex("^\\s*kapt\\s\"org\\.jetbrain.*$", RegexOption.MULTILINE),
+        "    kapt files(\"${processorPath.invariantSeparatorsPath}\")"
+    )
+    buildFile.writeText(updatedContent)
+}
+
+fun BaseGradleIT.Project.generateProcessor(procType: String): File {
     val processorPath = projectDir.resolve("incrementalProcessor.jar")
 
     ZipOutputStream(processorPath.outputStream()).use {
@@ -104,10 +102,5 @@ fun BaseGradleIT.Project.setupIncrementalAptProject(procType: String) {
         it.write(IncrementalProcessor::class.java.name.toByteArray())
         it.closeEntry()
     }
-
-    val updatedContent = content.replace(
-        Regex("^\\s*kapt\\s\"org\\.jetbrain.*$", RegexOption.MULTILINE),
-        "    kapt files(\"${processorPath.invariantSeparatorsPath}\")"
-    )
-    buildFile.writeText(updatedContent)
+    return processorPath
 }

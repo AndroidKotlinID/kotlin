@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.*
+import org.jetbrains.kotlin.ir.types.IrDynamicType
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.types.impl.IrDynamicTypeImpl
@@ -54,9 +55,12 @@ class JsIrBackendContext(
 
     override var inVerbosePhase: Boolean = false
 
+    lateinit var externalPackageFragment: IrPackageFragment
+    lateinit var bodilessBuiltInsPackageFragment: IrPackageFragment
+
     val externalNestedClasses = mutableListOf<IrClass>()
     val packageLevelJsModules = mutableListOf<IrFile>()
-    val declarationLevelJsModules = mutableListOf<IrDeclaration>()
+    val declarationLevelJsModules = mutableListOf<IrDeclarationWithName>()
 
     val internalPackageFragmentDescriptor = EmptyPackageFragmentDescriptor(builtIns.builtInsModule, FqName("kotlin.js.internal"))
     val implicitDeclarationFile by lazy {
@@ -86,7 +90,7 @@ class JsIrBackendContext(
 
     val hasTests get() = testContainerField != null
 
-    val testContainer
+    val testContainer: IrSimpleFunction
         get() = testContainerField ?: JsIrBuilder.buildFunction("test fun", irBuiltIns.unitType, implicitDeclarationFile).apply {
             body = JsIrBuilder.buildBlockBody(emptyList())
             testContainerField = this
@@ -116,7 +120,7 @@ class JsIrBackendContext(
         private val COROUTINE_PACKAGE_FQNAME = COROUTINE_PACKAGE_FQNAME_13
         private val COROUTINE_INTRINSICS_PACKAGE_FQNAME = COROUTINE_PACKAGE_FQNAME.child(INTRINSICS_PACKAGE_NAME)
 
-        // TODO: due to name clash those weird suffix is required, remove it once `NameGenerator` is implemented
+        // TODO: due to name clash those weird suffix is required, remove it once `MemberNameGenerator` is implemented
         private val COROUTINE_SUSPEND_OR_RETURN_JS_NAME = "suspendCoroutineUninterceptedOrReturnJS"
         private val GET_COROUTINE_CONTEXT_NAME = "getCoroutineContext"
 
@@ -135,12 +139,9 @@ class JsIrBackendContext(
 
     val intrinsics = JsIntrinsics(irBuiltIns, this)
 
+    override val internalPackageFqn = JS_PACKAGE_FQNAME
+
     private val operatorMap = referenceOperators()
-
-    // TODO: get rid of this
-
-    fun functionN(n: Int) = symbolTable.lazyWrapper.referenceClass(builtIns.getFunction(n))
-    fun suspendFunctionN(n: Int) = symbolTable.lazyWrapper.referenceClass(builtIns.getSuspendFunction(n))
 
     private fun primitivesWithImplicitCompanionObject(): List<Name> {
         val numbers = PrimitiveType.NUMBER_TYPES
@@ -150,7 +151,7 @@ class JsIrBackendContext(
         return numbers + listOf(Name.identifier("String"))
     }
 
-    val dynamicType = IrDynamicTypeImpl(null, emptyList(), Variance.INVARIANT)
+    val dynamicType: IrDynamicType = IrDynamicTypeImpl(null, emptyList(), Variance.INVARIANT)
 
     fun getOperatorByName(name: Name, type: IrSimpleType) = operatorMap[name]?.get(type.classifier)
 
@@ -184,6 +185,8 @@ class JsIrBackendContext(
                         NoLookupLocation.FROM_BACKEND
                     ).filterNot { it.isExpect }.single().getter!!
                 )
+
+            override val getContinuation = symbolTable.referenceSimpleFunction(getJsInternalFunction("getContinuation"))
         }
 
         override fun shouldGenerateHandlerParameterForDefaultBodyFun() = true
@@ -212,10 +215,10 @@ class JsIrBackendContext(
 
     val coroutineSuspendOrReturn = symbolTable.referenceSimpleFunction(getJsInternalFunction(COROUTINE_SUSPEND_OR_RETURN_JS_NAME))
     val coroutineSuspendGetter = ir.symbols.coroutineSuspendedGetter
-    val coroutineGetContext: IrFunctionSymbol
+    val coroutineGetContext: IrSimpleFunctionSymbol
         get() {
             val contextGetter =
-                continuationClass.owner.declarations.filterIsInstance<IrFunction>().atMostOne { it.name == CONTINUATION_CONTEXT_GETTER_NAME }
+                continuationClass.owner.declarations.filterIsInstance<IrSimpleFunction>().atMostOne { it.name == CONTINUATION_CONTEXT_GETTER_NAME }
                     ?: continuationClass.owner.declarations.filterIsInstance<IrProperty>().atMostOne { it.name == CONTINUATION_CONTEXT_PROPERTY_NAME }?.getter!!
             return contextGetter.symbol
         }

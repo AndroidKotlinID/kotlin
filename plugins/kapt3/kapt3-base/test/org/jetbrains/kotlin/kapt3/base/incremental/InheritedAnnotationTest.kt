@@ -30,7 +30,7 @@ class TestInheritedAnnotation {
         @BeforeClass
         fun setUp() {
             val classpathHistory = tmp.newFolder()
-            cache = JavaClassCacheManager(tmp.newFolder(), classpathHistory)
+            cache = JavaClassCacheManager(tmp.newFolder())
             generatedSources = tmp.newFolder()
             cache.close()
             classpathHistory.resolve("0").createNewFile()
@@ -44,7 +44,7 @@ class TestInheritedAnnotation {
                 srcFiles,
                 listOf(processor),
                 generatedSources
-            ) { trees -> MentionedTypesTaskListener(cache.javaCache, trees) }
+            ) { elementUtils, trees -> MentionedTypesTaskListener(cache.javaCache, elementUtils, trees) }
             cache.updateCache(listOf(processor))
         }
     }
@@ -62,6 +62,5 @@ class TestInheritedAnnotation {
                 "test.BaseClass"
             ), shouldInheritAnnotation.getMentionedTypes()
         )
-        assertEquals(emptyMap<String, String>(), shouldInheritAnnotation.getDefinedConstants())
     }
 }

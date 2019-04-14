@@ -721,6 +721,21 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/addBraces/addBracesForSingleLineIfWithCommentBeneath3.kt");
         }
 
+        @TestMetadata("addBracesForSingleStatementElseWithCommentBeneath.kt")
+        public void testAddBracesForSingleStatementElseWithCommentBeneath() throws Exception {
+            runTest("idea/testData/intentions/addBraces/addBracesForSingleStatementElseWithCommentBeneath.kt");
+        }
+
+        @TestMetadata("addBracesForSingleStatementIfWithCommentBeneath.kt")
+        public void testAddBracesForSingleStatementIfWithCommentBeneath() throws Exception {
+            runTest("idea/testData/intentions/addBraces/addBracesForSingleStatementIfWithCommentBeneath.kt");
+        }
+
+        @TestMetadata("addBracesForSingleStatementIfWithCommentBeneath2.kt")
+        public void testAddBracesForSingleStatementIfWithCommentBeneath2() throws Exception {
+            runTest("idea/testData/intentions/addBraces/addBracesForSingleStatementIfWithCommentBeneath2.kt");
+        }
+
         @TestMetadata("addBracesForWhile.kt")
         public void testAddBracesForWhile() throws Exception {
             runTest("idea/testData/intentions/addBraces/addBracesForWhile.kt");
@@ -2042,6 +2057,21 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("localVar.kt")
             public void testLocalVar() throws Exception {
                 runTest("idea/testData/intentions/branched/doubleBangToIfThen/localVar.kt");
+            }
+
+            @TestMetadata("replaceParentExpression.kt")
+            public void testReplaceParentExpression() throws Exception {
+                runTest("idea/testData/intentions/branched/doubleBangToIfThen/replaceParentExpression.kt");
+            }
+
+            @TestMetadata("replaceParentExpression2.kt")
+            public void testReplaceParentExpression2() throws Exception {
+                runTest("idea/testData/intentions/branched/doubleBangToIfThen/replaceParentExpression2.kt");
+            }
+
+            @TestMetadata("replaceParentExpression3.kt")
+            public void testReplaceParentExpression3() throws Exception {
+                runTest("idea/testData/intentions/branched/doubleBangToIfThen/replaceParentExpression3.kt");
             }
 
             @TestMetadata("simpleNameExpressionInParens.kt")
@@ -11105,6 +11135,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/lambdaToAnonymousFunction/incorrectOffset.kt");
         }
 
+        @TestMetadata("javaMethod.kt")
+        public void testJavaMethod() throws Exception {
+            runTest("idea/testData/intentions/lambdaToAnonymousFunction/javaMethod.kt");
+        }
+
         @TestMetadata("namedArgument.kt")
         public void testNamedArgument() throws Exception {
             runTest("idea/testData/intentions/lambdaToAnonymousFunction/namedArgument.kt");
@@ -12625,6 +12660,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("inapplicable2.kt")
         public void testInapplicable2() throws Exception {
             runTest("idea/testData/intentions/moveLambdaInsideParentheses/inapplicable2.kt");
+        }
+
+        @TestMetadata("javaMethod.kt")
+        public void testJavaMethod() throws Exception {
+            runTest("idea/testData/intentions/moveLambdaInsideParentheses/javaMethod.kt");
         }
 
         @TestMetadata("moveLabeledLambda1.kt")

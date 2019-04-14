@@ -2374,6 +2374,15 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ReplaceWithEnumMapInspection"
+                     displayName="Replace with EnumMap"
+                     groupPath="Kotlin"
+                     groupName="Other problems"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"
+    />
+
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.DataClassPrivateConstructorInspection"
                      displayName="Private data class constructor is exposed via the 'copy' method"
                      groupPath="Kotlin"
@@ -3306,6 +3315,15 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ReplaceRangeStartEndInclusiveWithFirstLastInspection"
+                     displayName="Replace Range 'start' or 'endInclusive' with 'first' or 'last'"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantRequireNotNullCallInspection"
                      displayName="Redundant 'requireNotNull' or 'checkNotNull' call"
                      groupPath="Kotlin"
@@ -3378,6 +3396,15 @@
                      language="kotlin"
     />
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ReplaceJavaStaticMethodWithTopLevelFunctionInspection"
+                     displayName="Replace Java static method with Kotlin top-level function"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+    />
+    
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 
     <fileType.fileViewProviderFactory filetype="KJSM" implementationClass="com.intellij.psi.ClassFileViewProviderFactory"/>
