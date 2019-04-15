@@ -1,3 +1,5 @@
+import java.util.regex.Pattern.quote
+
 description = "Kotlin IDEA plugin"
 
 plugins {
@@ -67,7 +69,6 @@ val projectsToShadow by extra(listOf(
         ":compiler:serialization",
         ":compiler:util",
         ":core:util.runtime",
-        ":allopen-ide-plugin",
         ":plugins:lint",
         ":plugins:uast-kotlin",
         ":plugins:uast-kotlin-idea",
@@ -80,24 +81,25 @@ val projectsToShadow by extra(listOf(
         ":kotlin-scripting-idea",
         ":kotlinx-serialization-compiler-plugin",
         ":kotlinx-serialization-ide-plugin",
-        ":noarg-ide-plugin",
-        ":sam-with-receiver-ide-plugin",
         ":idea:idea-android",
         ":idea:idea-android-output-parser",
         ":idea:idea-jvm",
         ":idea:idea-git",
         ":idea:idea-jps-common",
-        ":idea:kotlin-gradle-tooling",
         ":plugins:android-extensions-compiler",
-        ":plugins:android-extensions-ide",
-        ":plugins:kapt3-idea",
         *if (Ide.IJ())
             arrayOf(":idea:idea-maven")
         else
             emptyArray<String>()
 ))
 
-val libraries by configurations.creating
+// Gradle tooling model jars are loaded into Gradle during import and should present in plugin as separate jar
+val gradleToolingModel by configurations.creating
+
+val libraries by configurations.creating {
+    extendsFrom(gradleToolingModel)
+}
+
 val jpsPlugin by configurations.creating
 
 configurations.all {
@@ -124,13 +126,19 @@ dependencies {
     libraries(project(":kotlin-reflect"))
     libraries(project(":kotlin-compiler-client-embeddable"))
     libraries(project(":kotlin-daemon-client"))
-    libraries(project(":kotlin-sam-with-receiver-compiler-plugin"))
     libraries(project(":kotlin-script-runtime"))
     libraries(project(":kotlin-script-util"))
     libraries(project(":kotlin-scripting-common"))
     libraries(project(":kotlin-scripting-impl"))
     libraries(project(":kotlin-scripting-intellij"))
     libraries(project(":kotlin-scripting-jvm"))
+
+    gradleToolingModel(project(":idea:kotlin-gradle-tooling")) { isTransitive = false }
+    gradleToolingModel(project(":sam-with-receiver-ide-plugin")) { isTransitive = false }
+    gradleToolingModel(project(":plugins:kapt3-idea")) { isTransitive = false }
+    gradleToolingModel(project(":plugins:android-extensions-ide")) { isTransitive = false }
+    gradleToolingModel(project(":noarg-ide-plugin")) { isTransitive = false }
+    gradleToolingModel(project(":allopen-ide-plugin")) { isTransitive = false }
 
     jpsPlugin(project(":kotlin-jps-plugin"))
 }
@@ -140,12 +148,19 @@ val jar = runtimeJar {
     archiveName = "kotlin-plugin.jar"
 }
 
-ideaPlugin {
-    duplicatesStrategy = DuplicatesStrategy.FAIL // Investigation is required if we have multiple jars with same name
+val ideaPluginDir: File by rootProject.extra
+tasks.register<Sync>("ideaPlugin") {
     dependsOn(":dist")
+
+    into(File(ideaPluginDir, "lib"))
+
+    duplicatesStrategy = DuplicatesStrategy.FAIL // Investigation is required if we have multiple jars with same name
+
     from(jar)
     from(libraries)
     from(jpsPlugin) {
         into("jps")
     }
+
+    rename(quote("-$version"), "")
 }
