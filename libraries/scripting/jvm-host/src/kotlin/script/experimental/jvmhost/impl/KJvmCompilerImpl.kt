@@ -62,6 +62,7 @@ import kotlin.script.experimental.host.getMergedScriptText
 import kotlin.script.experimental.host.getScriptingClass
 import kotlin.script.experimental.jvm.JvmDependency
 import kotlin.script.experimental.jvm.impl.BridgeDependenciesResolver
+import kotlin.script.experimental.jvm.impl.KJvmCompiledScript
 import kotlin.script.experimental.jvm.jdkHome
 import kotlin.script.experimental.jvm.jvm
 import kotlin.script.experimental.jvm.util.KotlinJars
@@ -368,7 +369,8 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
                                 containingKtFile.virtualFile?.path,
                                 getScriptConfiguration(sourceFile),
                                 it.fqName.asString(),
-                                makeOtherScripts(it)
+                                makeOtherScripts(it),
+                                null
                             )
                         }
                     } ?: emptyList()
@@ -377,12 +379,13 @@ class KJvmCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvm
                 return otherScripts
             }
 
+            val module = makeCompiledModule(generationState)
             return KJvmCompiledScript(
                 script.locationId,
                 getScriptConfiguration(ktScript.containingKtFile),
                 ktScript.fqName.asString(),
                 makeOtherScripts(ktScript),
-                KJvmCompiledModule(generationState)
+                module
             )
         }
 
@@ -567,3 +570,8 @@ internal class ScriptLightVirtualFile(name: String, private val _path: String?, 
     override fun getPath(): String = _path ?: super.getPath()
     override fun getCanonicalPath(): String? = path
 }
+
+private fun makeCompiledModule(generationState: GenerationState) = KJvmCompiledModuleInMemory(
+    generationState.factory.asList()
+        .associateTo(sortedMapOf<String, ByteArray>()) { it.relativePath to it.asByteArray() }
+)

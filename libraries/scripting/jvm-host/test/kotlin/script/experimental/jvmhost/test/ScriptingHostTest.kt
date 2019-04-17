@@ -10,17 +10,21 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 import java.io.*
+import java.net.URLClassLoader
 import java.nio.file.Files
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
+import java.util.jar.JarFile
 import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.BasicScriptingHost
 import kotlin.script.experimental.host.FileScriptSource
 import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvm.BasicJvmScriptEvaluator
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvmhost.*
 import kotlin.script.experimental.jvmhost.impl.CompiledScriptClassLoader
-import kotlin.script.experimental.jvmhost.impl.KJvmCompiledScript
+import kotlin.script.experimental.jvm.impl.KJvmCompiledScript
 import kotlin.script.templates.standard.SimpleScriptTemplate
 
 class ScriptingHostTest : TestCase() {
@@ -36,6 +40,95 @@ class ScriptingHostTest : TestCase() {
             evalScript("println(\"$greeting\")").throwOnFailure()
         }
         Assert.assertEquals(greeting, output)
+        // another API
+        val output2 = captureOut {
+            BasicJvmScriptingHost().evalWithTemplate<SimpleScriptTemplate>("println(\"$greeting\")".toScriptSource()).throwOnFailure()
+        }
+        Assert.assertEquals(greeting, output2)
+    }
+
+    @Test
+    fun testSaveToClasses() {
+        val greeting = "Hello from script classes!"
+        val outDir = Files.createTempDirectory("saveToClassesOut").toFile()
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate>()
+        val host = BasicJvmScriptingHost(evaluator = BasicJvmScriptClassFilesGenerator(outDir))
+        host.eval("println(\"$greeting\")".toScriptSource(name = "SavedScript.kts"), compilationConfiguration, null).throwOnFailure()
+        val classloader = URLClassLoader(arrayOf(outDir.toURI().toURL()), ScriptingHostTest::class.java.classLoader)
+        val scriptClass = classloader.loadClass("SavedScript")
+        val output = captureOut {
+            scriptClass.newInstance()
+        }
+        Assert.assertEquals(greeting, output)
+    }
+
+    @Test
+    fun testSaveToJar() {
+        val greeting = "Hello from script jar!"
+        val outJar = Files.createTempFile("saveToJar", ".jar").toFile()
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate>()
+        val host = BasicJvmScriptingHost(evaluator = BasicJvmScriptJarGenerator(outJar))
+        host.eval("println(\"$greeting\")".toScriptSource(name = "SavedScript.kts"), compilationConfiguration, null).throwOnFailure()
+        val classloader = URLClassLoader(arrayOf(outJar.toURI().toURL()), ScriptingHostTest::class.java.classLoader)
+        val scriptClass = classloader.loadClass("SavedScript")
+        val output = captureOut {
+            scriptClass.newInstance()
+        }
+        Assert.assertEquals(greeting, output)
+    }
+
+    @Test
+    fun testSaveToRunnableJar() {
+        val greeting = "Hello from script jar!"
+        val outJar = Files.createTempFile("saveToRunnableJar", ".jar").toFile()
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate>()
+        val compiler = JvmScriptCompiler(defaultJvmScriptingHostConfiguration)
+        val scriptName = "SavedRunnableScript"
+        val compiledScript = runBlocking {
+            compiler("println(\"$greeting\")".toScriptSource(name = "$scriptName.kts"), compilationConfiguration).throwOnFailure()
+                .resultOrNull()!!
+        }
+        val saver = BasicJvmScriptJarGenerator(outJar)
+        runBlocking {
+            saver(compiledScript, ScriptEvaluationConfiguration.Default).throwOnFailure()
+        }
+
+        val classpathFromJar = run {
+            val manifest = JarFile(outJar).manifest
+            manifest.mainAttributes.getValue("Class-Path").split(" ") // TODO: quoted paths
+                .map { File(it).toURI().toURL() }
+        } + outJar.toURI().toURL()
+
+        fun checkInvokeMain(baseClassLoader: ClassLoader?) {
+            val classloader = URLClassLoader(classpathFromJar.toTypedArray(), baseClassLoader)
+            val scriptClass = classloader.loadClass(scriptName)
+            val mainMethod = scriptClass.methods.find { it.name == "main" }
+            Assert.assertNotNull(mainMethod)
+            val output = captureOutAndErr {
+                mainMethod!!.invoke(null, emptyArray<String>())
+            }.toList().filterNot(String::isEmpty).joinToString("\n")
+            Assert.assertEquals(greeting, output)
+        }
+
+        checkInvokeMain(null) // isolated
+        checkInvokeMain(Thread.currentThread().contextClassLoader)
+
+        val javaExecutable = File(File(System.getProperty("java.home"), "bin"), "java")
+        val args = listOf(javaExecutable.absolutePath, "-jar", outJar.path)
+        val processBuilder = ProcessBuilder(args)
+        processBuilder.redirectErrorStream(true)
+        val outputFromProcess = run {
+            val process = processBuilder.start()
+            process.waitFor(10, TimeUnit.SECONDS)
+            val out = process.inputStream.reader().readText()
+            if (process.isAlive) {
+                process.destroyForcibly()
+                "Error: timeout, killing script process\n$out"
+            } else {
+                out
+            }
+        }.trim()
+        Assert.assertEquals(greeting, outputFromProcess)
     }
 
     @Test
@@ -245,7 +338,7 @@ class ScriptingHostTest : TestCase() {
             runBlocking {
                 compiler(script.toScriptSource(), scriptCompilationConfiguration).onSuccess {
                     compiledScript = it
-                    evaluator(it, null)
+                    evaluator(it)
                 }.throwOnFailure()
             }
         }.lines()
@@ -257,15 +350,18 @@ class ScriptingHostTest : TestCase() {
         Assert.assertNotNull(cachedScript)
         Assert.assertEquals(1, cache.retrievedScripts)
 
-        val compiledScriptClass = runBlocking { compiledScript!!.getClass(null).resultOrNull() }
-        val cachedScriptClass = runBlocking { cachedScript!!.getClass(null).resultOrNull() }
+        val compiledScriptClassRes = runBlocking { compiledScript!!.getClass(null) }
+        val cachedScriptClassRes = runBlocking { cachedScript!!.getClass(null) }
+
+        val compiledScriptClass = compiledScriptClassRes.resultOrNull()
+        val cachedScriptClass = cachedScriptClassRes.resultOrNull()
 
         Assert.assertEquals(compiledScriptClass!!.qualifiedName, cachedScriptClass!!.qualifiedName)
         Assert.assertEquals(compiledScriptClass!!.supertypes, cachedScriptClass!!.supertypes)
 
         val output2 = captureOut {
             runBlocking {
-                evaluator(cachedScript!!, null).throwOnFailure()
+                evaluator(cachedScript!!).throwOnFailure()
             }
         }.lines()
         Assert.assertEquals(output, output2)
@@ -308,7 +404,7 @@ class ScriptingHostTest : TestCase() {
     }
 }
 
-fun ResultWithDiagnostics<*>.throwOnFailure(): ResultWithDiagnostics<*> = apply {
+fun <T> ResultWithDiagnostics<T>.throwOnFailure(): ResultWithDiagnostics<T> = apply {
     if (this is ResultWithDiagnostics.Failure) {
         val firstExceptionFromReports = reports.find { it.exception != null }?.exception
         throw Exception(
@@ -380,10 +476,8 @@ private fun ScriptCompilationConfiguration.Builder.makeSimpleConfigurationWithTe
 
 private fun File.readCompiledScript(scriptCompilationConfiguration: ScriptCompilationConfiguration): CompiledScript<*> {
     return inputStream().use { fs ->
-        ObjectInputStream(fs).use { os ->
-            (os.readObject() as KJvmCompiledScript<*>).apply {
-                setCompilationConfiguration(scriptCompilationConfiguration)
-            }
+        ObjectInputStream(fs).use {
+            it.readObject() as KJvmCompiledScript<*>
         }
     }
 }
@@ -432,15 +526,23 @@ private class FileBasedScriptCache(val baseDir: File) : ScriptingCacheWithCounte
         get() = _retrievedScripts
 }
 
-private fun captureOut(body: () -> Unit): String {
+private fun captureOut(body: () -> Unit): String = captureOutAndErr(body).first
+
+private fun captureOutAndErr(body: () -> Unit): Pair<String, String> {
     val outStream = ByteArrayOutputStream()
+    val errStream = ByteArrayOutputStream()
     val prevOut = System.out
+    val prevErr = System.err
     System.setOut(PrintStream(outStream))
+    System.setErr(PrintStream(errStream))
     try {
         body()
     } finally {
         System.out.flush()
+        System.err.flush()
         System.setOut(prevOut)
+        System.setErr(prevErr)
     }
-    return outStream.toString().trim()
+    return outStream.toString().trim() to errStream.toString().trim()
 }
+
