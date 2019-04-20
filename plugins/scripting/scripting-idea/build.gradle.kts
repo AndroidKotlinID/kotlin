@@ -7,7 +7,8 @@ plugins {
 }
 
 dependencies {
-    compile(project(":kotlin-scripting-impl"))
+    compileOnly(project(":kotlin-scripting-compiler"))
+    compile(project(":kotlin-scripting-compiler-impl"))
     compile(project(":kotlin-scripting-intellij"))
     compileOnly(project(":idea:idea-gradle"))
     compileOnly(project(":idea:idea-core"))
@@ -20,3 +21,4 @@ sourceSets {
 }
 
 runtimeJar()
+

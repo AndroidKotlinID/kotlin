@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.intrinsics.JavaClassProperty
 import org.jetbrains.kotlin.backend.jvm.intrinsics.Not
 import org.jetbrains.kotlin.backend.jvm.lower.CrIrType
+import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.*
@@ -220,7 +221,8 @@ class ExpressionCodegen(
         if (expression.isTransparentScope)
             return super.visitBlock(expression, data)
         val info = data.create()
-        return super.visitBlock(expression, info).apply {
+        // Force materialization to avoid reading from out-of-scope variables.
+        return super.visitBlock(expression, info).materialized.apply {
             writeLocalVariablesInTable(info)
         }
     }
@@ -420,6 +422,14 @@ class ExpressionCodegen(
     }
 
     override fun visitFieldAccess(expression: IrFieldAccessExpression, data: BlockInfo): PromisedValue {
+        expression.symbol.owner.constantValue()?.let {
+            // Handling const reads before codegen is important for constant folding.
+            assert(expression is IrSetField) { "read of const val ${expression.symbol.owner.name} not inlined by ConstLowering" }
+            // This can only be the field's initializer; JVM implementations are required
+            // to generate those for ConstantValue-marked fields automatically, so this is redundant.
+            return voidValue.coerce(expression.asmType)
+        }
+
         val realDescriptor = DescriptorUtils.unwrapFakeOverride(expression.descriptor)
         val fieldType = typeMapper.mapType(realDescriptor.original.type)
         val ownerType = typeMapper.mapImplementationOwner(expression.descriptor).internalName
@@ -446,10 +456,12 @@ class ExpressionCodegen(
     override fun visitSetField(expression: IrSetField, data: BlockInfo): PromisedValue {
         val expressionValue = expression.value
         // Do not add redundant field initializers that initialize to default values.
+        val inPrimaryConstructor = irFunction is IrConstructor && irFunction.isPrimary
+        val inClassInit = irFunction.origin == JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER
         // "expression.origin == null" means that the field is initialized when it is declared,
         // i.e., not in an initializer block or constructor body.
-        val skip = irFunction is IrConstructor && irFunction.isPrimary &&
-                expression.origin == null && expressionValue is IrConst<*> &&
+        val isFieldInitializer = expression.origin == null
+        val skip = (inPrimaryConstructor || inClassInit) && isFieldInitializer && expressionValue is IrConst<*> &&
                 isDefaultValueForType(expression.symbol.owner.type.asmType, expressionValue.value)
         return if (skip) voidValue.coerce(expression.asmType) else super.visitSetField(expression, data)
     }

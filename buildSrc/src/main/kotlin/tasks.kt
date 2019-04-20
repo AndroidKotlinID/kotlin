@@ -28,7 +28,7 @@ import org.gradle.kotlin.dsl.task
 import java.lang.Character.isLowerCase
 import java.lang.Character.isUpperCase
 
-fun Project.projectTest(taskName: String = "test", body: Test.() -> Unit = {}): Test = getOrCreateTask(taskName) {
+fun Project.projectTest(taskName: String = "test", parallel: Boolean = false, body: Test.() -> Unit = {}): Test = getOrCreateTask(taskName) {
     doFirst {
         val commandLineIncludePatterns = (filter as? DefaultTestFilter)?.commandLineIncludePatterns ?: emptySet()
         val patterns = filter.includePatterns + commandLineIncludePatterns
@@ -98,8 +98,15 @@ fun Project.projectTest(taskName: String = "test", body: Test.() -> Unit = {}): 
     environment("PROJECT_BUILD_DIR", buildDir)
     systemProperty("jps.kotlin.home", rootProject.extra["distKotlinHomeDir"]!!)
     systemProperty("kotlin.ni", if (rootProject.hasProperty("newInferenceTests")) "true" else "false")
-    System.getProperty("teamcity.build.tempDir")?.let {
+
+    //Temporary workaround for "not enough space" on Teamcity agents: should be fixed soon on Teamcity side
+    val teamcity = rootProject.findProperty("teamcity") as? Map<*, *>
+    (teamcity?.get("teamcity.build.tempDir") as? String)?.let {
         systemProperty("java.io.tmpdir", it)
+    }
+
+    if (parallel) {
+        maxParallelForks = Math.max(Runtime.getRuntime().availableProcessors() / 2, 1)
     }
     body()
 }

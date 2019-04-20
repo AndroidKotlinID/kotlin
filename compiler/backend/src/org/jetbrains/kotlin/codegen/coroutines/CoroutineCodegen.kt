@@ -6,11 +6,15 @@
 package org.jetbrains.kotlin.codegen.coroutines
 
 import com.intellij.util.ArrayUtil
+import org.jetbrains.kotlin.builtins.isSuspendFunctionTypeOrSubtype
 import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.binding.CalculatedClosure
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding.CAPTURES_CROSSINLINE_LAMBDA
+import org.jetbrains.kotlin.codegen.binding.CodegenBinding.CLOSURE
 import org.jetbrains.kotlin.codegen.context.ClosureContext
 import org.jetbrains.kotlin.codegen.context.MethodContext
+import org.jetbrains.kotlin.codegen.inline.coroutines.SurroundSuspendLambdaCallsWithSuspendMarkersMethodVisitor
 import org.jetbrains.kotlin.codegen.serialization.JvmSerializationBindings.METHOD_FOR_FUNCTION
 import org.jetbrains.kotlin.codegen.serialization.JvmSerializerExtension
 import org.jetbrains.kotlin.config.LanguageFeature
@@ -23,6 +27,7 @@ import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.load.kotlin.header.KotlinClassHeader
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
@@ -462,10 +467,8 @@ class CoroutineCodegenForLambda private constructor(
             object : FunctionGenerationStrategy.FunctionDefault(state, element as KtDeclarationWithBody) {
 
                 override fun wrapMethodVisitor(mv: MethodVisitor, access: Int, name: String, desc: String): MethodVisitor {
-                    val addEndLabelMethodVisitor = AddEndLabelMethodVisitor(mv, access, name, desc, endLabel)
-                    if (forInline) return super.wrapMethodVisitor(addEndLabelMethodVisitor, access, name, desc)
-                    return CoroutineTransformerMethodVisitor(
-                        addEndLabelMethodVisitor, access, name, desc, null, null,
+                    val stateMachineBuilder = CoroutineTransformerMethodVisitor(
+                        mv, access, name, desc, null, null,
                         obtainClassBuilderForCoroutineState = { v },
                         element = element,
                         diagnostics = state.diagnostics,
@@ -474,6 +477,17 @@ class CoroutineCodegenForLambda private constructor(
                         isForNamedFunction = false,
                         languageVersionSettings = languageVersionSettings
                     )
+                    return if (forInline) AddEndLabelMethodVisitor(
+                        MethodNodeCopyingMethodVisitor(
+                            SurroundSuspendLambdaCallsWithSuspendMarkersMethodVisitor(
+                                stateMachineBuilder, access, name, desc, v.thisName,
+                                isCapturedSuspendLambda = { isCapturedSuspendLambda(closure, it.name, state.bindingContext) }
+                            ), access, name, desc,
+                            newMethod = { origin, newAccess, newName, newDesc ->
+                                functionCodegen.newMethod(origin, newAccess, newName, newDesc, null, null)
+                            }
+                        ), access, name, desc, endLabel
+                    ) else AddEndLabelMethodVisitor(stateMachineBuilder, access, name, desc, endLabel)
                 }
 
                 override fun doGenerateBody(codegen: ExpressionCodegen, signature: JvmMethodSignature) {
@@ -516,13 +530,28 @@ class CoroutineCodegenForLambda private constructor(
     }
 }
 
+fun isCapturedSuspendLambda(closure: CalculatedClosure, name: String, bindingContext: BindingContext): Boolean {
+    for ((param, value) in closure.captureVariables) {
+        if (param !is ValueParameterDescriptor) continue
+        if (value.fieldName != name) continue
+        return param.type.isSuspendFunctionTypeOrSubtype
+    }
+    val classDescriptor = closure.capturedOuterClassDescriptor ?: return false
+    return isCapturedSuspendLambda(classDescriptor, name, bindingContext)
+}
+
+fun isCapturedSuspendLambda(classDescriptor: ClassDescriptor, name: String, bindingContext: BindingContext): Boolean {
+    val closure = bindingContext[CLOSURE, classDescriptor] ?: return false
+    return isCapturedSuspendLambda(closure, name, bindingContext)
+}
+
 private class AddEndLabelMethodVisitor(
     delegate: MethodVisitor,
     access: Int,
     name: String,
     desc: String,
     private val endLabel: Label
-): TransformationMethodVisitor(delegate, access, name, desc, null, null) {
+) : TransformationMethodVisitor(delegate, access, name, desc, null, null) {
     override fun performTransformations(methodNode: MethodNode) {
         methodNode.instructions.add(
             withInstructionAdapter {

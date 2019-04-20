@@ -206,11 +206,12 @@ class ResolvedAtomCompleter(
             val valueType = receiver.value.type.unwrap()
             val newValueType = resultSubstitutor.substituteKeepAnnotations(valueType)
 
-            val newReceiverValue = receiver.value.replaceType(newValueType)
-
-            functionDescriptor.setExtensionReceiverParameter(
-                ReceiverParameterDescriptorImpl(receiver.containingDeclaration, newReceiverValue, receiver.annotations)
-            )
+            if (valueType !== newValueType) {
+                val newReceiverValue = receiver.value.replaceType(newValueType)
+                functionDescriptor.setExtensionReceiverParameter(
+                    ReceiverParameterDescriptorImpl(receiver.containingDeclaration, newReceiverValue, receiver.annotations)
+                )
+            }
         }
     }
 

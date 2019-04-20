@@ -46,7 +46,6 @@ val projectsToShadow by extra(listOf(
         ":compiler:frontend",
         ":compiler:frontend.common",
         ":compiler:frontend.java",
-        ":compiler:frontend.script",
         ":idea:ide-common",
         ":idea",
         ":idea:idea-native",
@@ -129,7 +128,7 @@ dependencies {
     libraries(project(":kotlin-script-runtime"))
     libraries(project(":kotlin-script-util"))
     libraries(project(":kotlin-scripting-common"))
-    libraries(project(":kotlin-scripting-impl"))
+    libraries(project(":kotlin-scripting-compiler-impl"))
     libraries(project(":kotlin-scripting-intellij"))
     libraries(project(":kotlin-scripting-jvm"))
 

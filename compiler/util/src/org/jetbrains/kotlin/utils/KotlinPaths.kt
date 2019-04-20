@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.utils
 
 import java.io.File
+import java.lang.IllegalStateException
 
 interface KotlinPaths {
     val homePath: File
@@ -93,7 +94,7 @@ interface KotlinPaths {
         Trove4j(PathUtil.TROVE4J_NAME),
         Compiler(PathUtil.KOTLIN_COMPILER_NAME),
         ScriptingPlugin(PathUtil.KOTLIN_SCRIPTING_COMPILER_PLUGIN_NAME),
-        ScriptingImpl(PathUtil.KOTLIN_SCRIPTING_IMPL_NAME),
+        ScriptingImpl(PathUtil.KOTLIN_SCRIPTING_COMPILER_IMPL_NAME),
         ScriptingLib(PathUtil.KOTLIN_SCRIPTING_COMMON_NAME),
         ScriptingJvmLib(PathUtil.KOTLIN_SCRIPTING_JVM_NAME),
         CoroutinesCore(PathUtil.KOTLINX_COROUTINES_CORE_NAME),
@@ -120,7 +121,12 @@ interface KotlinPaths {
     fun classPath(vararg jars: Jar): List<File> = classPath(jars.asSequence())
 }
 
-abstract class KotlinPathsFromBaseDirectory(val basePath: File) : KotlinPaths {
+open class KotlinPathsFromBaseDirectory(val basePath: File) : KotlinPaths {
+
+    override val homePath: File
+        get() {
+            throw IllegalStateException("No home path defined")
+        }
 
     override val libPath: File
         get() = basePath

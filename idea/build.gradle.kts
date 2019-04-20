@@ -1,7 +1,3 @@
-tasks.withType<Test> {
-    maxParallelForks = Math.max(Runtime.getRuntime().availableProcessors() / 2, 1)
-}
-
 plugins {
     kotlin("jvm")
     id("jps-compatible")
@@ -24,7 +20,6 @@ dependencies {
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.common"))
     compile(project(":compiler:frontend.java"))
-    compile(project(":compiler:frontend.script"))
     compile(project(":compiler:ir.backend.common")) // TODO: fix import (workaround for jps build)
     compile(project(":js:js.frontend"))
     compile(project(":js:js.serializer"))
@@ -94,7 +89,7 @@ dependencies {
     testRuntime(project(":kotlin-noarg-compiler-plugin"))
     testRuntime(project(":plugins:annotation-based-compiler-plugins-ide-support")) { isTransitive = false }
     testRuntime(project(":kotlin-scripting-idea")) { isTransitive = false }
-    testRuntime(project(":kotlin-scripting-impl"))
+    testRuntime(project(":kotlin-scripting-compiler-impl"))
     testRuntime(project(":sam-with-receiver-ide-plugin")) { isTransitive = false }
     testRuntime(project(":kotlinx-serialization-compiler-plugin"))
     testRuntime(project(":kotlinx-serialization-ide-plugin")) { isTransitive = false }
@@ -177,7 +172,7 @@ val performanceTest by run {
     }
 }
 
-projectTest {
+projectTest(parallel = true) {
     dependsOn(":dist")
     workingDir = rootDir
 }

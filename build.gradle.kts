@@ -1,7 +1,6 @@
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.plugins.ide.idea.model.IdeaModel
-import org.gradle.api.file.FileCollection
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import proguard.gradle.ProGuardTask
@@ -10,6 +9,7 @@ import org.gradle.kotlin.dsl.*
 buildscript {
     extra["defaultSnapshotVersion"] = "1.3-SNAPSHOT"
 
+    // when updating please also update JPS artifacts configuration: https://jetbrains.quip.com/zzGUAYSJ6gv3/JPS-Build-update-bootstrap
     kotlinBootstrapFrom(BootstrapOption.TeamCity("1.3.40-dev-431", onlySuccessBootstrap = false))
 
     repositories.withRedirector(project) {
@@ -147,8 +147,8 @@ extra["versions.junit"] = "4.12"
 extra["versions.javaslang"] = "2.0.6"
 extra["versions.ant"] = "1.8.2"
 extra["versions.android"] = "2.3.1"
-extra["versions.kotlinx-coroutines-core"] = "1.0.1"
-extra["versions.kotlinx-coroutines-jdk8"] = "1.0.1"
+extra["versions.kotlinx-coroutines-core"] = "1.1.1"
+extra["versions.kotlinx-coroutines-jdk8"] = "1.1.1"
 extra["versions.json"] = "20160807"
 extra["versions.native-platform"] = "0.14"
 extra["versions.ant-launcher"] = "1.8.0"
@@ -204,7 +204,6 @@ extra["compilerModules"] = arrayOf(
         ":compiler:frontend",
         ":compiler:frontend.common",
         ":compiler:frontend.java",
-        ":compiler:frontend.script",
         ":compiler:cli-common",
         ":compiler:daemon-common",
         ":compiler:daemon",

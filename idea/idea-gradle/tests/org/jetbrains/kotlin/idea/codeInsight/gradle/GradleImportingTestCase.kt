@@ -144,8 +144,6 @@ abstract class GradleImportingTestCase : ExternalSystemImportingTestCase() {
         return if (name.methodName == null) super.getName() else FileUtil.sanitizeFileName(name.methodName)
     }
 
-    override fun getTestsTempDir(): String = "gradleImportTests"
-
     override fun getExternalSystemConfigFileName(): String = "build.gradle"
 
     protected fun importProjectUsingSingeModulePerGradleProject() {
@@ -280,7 +278,7 @@ abstract class GradleImportingTestCase : ExternalSystemImportingTestCase() {
         @JvmStatic
         @Parameterized.Parameters(name = "{index}: with Gradle-{0}")
         fun data(): Collection<Array<Any>> {
-            return Arrays.asList(*AbstractModelBuilderTest.SUPPORTED_GRADLE_VERSIONS)
+            return listOf(*AbstractModelBuilderTest.SUPPORTED_GRADLE_VERSIONS)
         }
 
         fun wrapperJar(): File {
