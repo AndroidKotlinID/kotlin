@@ -51,12 +51,14 @@ internal inline fun sequentialPipe(crossinline configure: PipelineConversionBuil
 
 internal inline fun batchPipe(crossinline configure: PipelineConversionBuilder<BatchBaseConversion>.() -> Unit): BatchPipelineConversion {
     return BatchPipelineConversion(
-        PipelineConversionBuilder().apply(configure).conversions
+        PipelineConversionBuilder<BatchBaseConversion>().apply(configure).conversions
     )
 }
-internal inline fun batchRepeat(batchBaseConversion: BatchBaseConversion): BatchRepeatConversion {
+
+internal fun batchRepeat(batchBaseConversion: BatchBaseConversion): BatchRepeatConversion {
     return BatchRepeatConversion(batchBaseConversion)
 }
-internal inline fun sequentialRepeat(sequentialBaseConversion: SequentialBaseConversion): SequentialRepeatConversion {
+
+internal fun sequentialRepeat(sequentialBaseConversion: SequentialBaseConversion): SequentialRepeatConversion {
     return SequentialRepeatConversion(sequentialBaseConversion)
 }

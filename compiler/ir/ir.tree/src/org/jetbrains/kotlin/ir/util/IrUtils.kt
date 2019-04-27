@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrSimpleType
@@ -62,7 +63,7 @@ fun IrMemberAccessExpression.getArguments(): List<Pair<ParameterDescriptor, IrEx
  */
 fun IrFunctionAccessExpression.getArgumentsWithSymbols(): List<Pair<IrValueParameterSymbol, IrExpression>> {
     val res = mutableListOf<Pair<IrValueParameterSymbol, IrExpression>>()
-    val irFunction = symbol.owner as IrFunction
+    val irFunction = symbol.owner
 
     dispatchReceiver?.let {
         res += (irFunction.dispatchReceiverParameter!!.symbol to it)
@@ -299,7 +300,7 @@ tailrec fun IrElement.getPackageFragment(): IrPackageFragment? {
     }
 }
 
-fun IrAnnotationContainer.getAnnotation(name: FqName) =
+fun IrAnnotationContainer.getAnnotation(name: FqName): IrConstructorCall? =
     annotations.find {
         it.symbol.owner.parentAsClass.descriptor.fqNameSafe == name
     }
@@ -347,6 +348,7 @@ fun IrDeclaration.isEffectivelyExternal(): Boolean {
 inline fun <reified T : IrDeclaration> IrDeclarationContainer.findDeclaration(predicate: (T) -> Boolean): T? =
     declarations.find { it is T && predicate(it) } as? T
 
+@Suppress("UNCHECKED_CAST")
 inline fun <reified T : IrDeclaration> IrDeclarationContainer.filterDeclarations(predicate: (T) -> Boolean): List<T> =
     declarations.filter { it is T && predicate(it) } as List<T>
 
@@ -394,6 +396,41 @@ fun ReferenceSymbolTable.referenceFunction(callable: CallableDescriptor): IrFunc
  * [dispatchReceiverAsFirstArgument]: optionally convert call with dispatch receiver to static call
  * [firstArgumentAsDispatchReceiver]: optionally convert static call to call with dispatch receiver
  */
+
+fun irConstructorCall(
+    call: IrMemberAccessExpression,
+    newFunction: IrConstructor,
+    dispatchReceiverAsFirstArgument: Boolean = false,
+    firstArgumentAsDispatchReceiver: Boolean = false
+): IrConstructorCall =
+    irConstructorCall(call, newFunction.symbol, dispatchReceiverAsFirstArgument, firstArgumentAsDispatchReceiver)
+
+fun irConstructorCall(
+    call: IrMemberAccessExpression,
+    newSymbol: IrConstructorSymbol,
+    dispatchReceiverAsFirstArgument: Boolean = false,
+    firstArgumentAsDispatchReceiver: Boolean = false
+): IrConstructorCall =
+    call.run {
+        IrConstructorCallImpl(
+            startOffset,
+            endOffset,
+            type,
+            newSymbol,
+            newSymbol.descriptor,
+            typeArgumentsCount,
+            0,
+            call.valueArgumentsCount,
+            origin
+        ).apply {
+            copyTypeAndValueArgumentsFrom(
+                call,
+                dispatchReceiverAsFirstArgument,
+                firstArgumentAsDispatchReceiver
+            )
+        }
+    }
+
 fun irCall(
     call: IrMemberAccessExpression,
     newFunction: IrFunction,
@@ -426,7 +463,7 @@ fun irCall(
         }
     }
 
-private fun IrCall.copyTypeAndValueArgumentsFrom(
+private fun IrMemberAccessExpression.copyTypeAndValueArgumentsFrom(
     call: IrMemberAccessExpression,
     dispatchReceiverAsFirstArgument: Boolean = false,
     firstArgumentAsDispatchReceiver: Boolean = false

@@ -8128,6 +8128,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/generics/kt1575-Function.kt");
             }
 
+            @TestMetadata("kt30590.kt")
+            public void testKt30590() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/generics/kt30590.kt");
+            }
+
             @TestMetadata("kt5508.kt")
             public void testKt5508() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/generics/kt5508.kt");
@@ -9802,6 +9807,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/expectedTypeMismatchWithInVariance.kt");
                 }
 
+                @TestMetadata("kt25302.kt")
+                public void testKt25302() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/kt25302.kt");
+                }
+
                 @TestMetadata("kt2570.kt")
                 public void testKt2570() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/kt2570.kt");
@@ -9840,6 +9850,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("starProjectionRegression.kt")
                 public void testStarProjectionRegression() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/starProjectionRegression.kt");
+                }
+
+                @TestMetadata("topLevelCapturingInsideReturnType.kt")
+                public void testTopLevelCapturingInsideReturnType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/topLevelCapturingInsideReturnType.kt");
                 }
             }
 
@@ -10522,6 +10537,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("FunctionPlaceholder.kt")
                 public void testFunctionPlaceholder() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/reportingImprovements/FunctionPlaceholder.kt");
+                }
+
+                @TestMetadata("inferTypeFromUnresolvedArgument.kt")
+                public void testInferTypeFromUnresolvedArgument() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/reportingImprovements/inferTypeFromUnresolvedArgument.kt");
                 }
 
                 @TestMetadata("NoAmbiguityForDifferentFunctionTypes.kt")

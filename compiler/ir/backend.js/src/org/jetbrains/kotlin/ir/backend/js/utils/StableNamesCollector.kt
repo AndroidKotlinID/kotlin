@@ -83,7 +83,7 @@ class StableNamesCollector : IrElementVisitorVoid {
     }
 }
 
-private val RESERVED_IDENTIFIERS = setOf(
+val RESERVED_IDENTIFIERS = setOf(
     // keywords
     "await", "break", "case", "catch", "continue", "debugger", "default", "delete", "do", "else", "finally", "for", "function", "if",
     "in", "instanceof", "new", "return", "switch", "throw", "try", "typeof", "var", "void", "while", "with",
@@ -105,7 +105,7 @@ private val RESERVED_IDENTIFIERS = setOf(
 
     "Error", "Object", "Number",
 
-    "Math", "String", "Boolean", "Date", "Array", "RegExp", "JSON",
+    "Math", "String", "Boolean", "Date", "Array", "RegExp", "JSON", "Map",
 
     // global identifiers usually declared in know environments (node.js, browser, require.js, WebWorkers, etc)
     "require", "define", "module", "window", "self"

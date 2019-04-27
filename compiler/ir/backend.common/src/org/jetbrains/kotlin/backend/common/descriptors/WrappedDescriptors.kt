@@ -48,8 +48,8 @@ abstract class WrappedDeclarationDescriptor<T : IrDeclaration>(annotations: Anno
         Annotations.create(ownerAnnotations.map { it.toAnnotationDescriptor() })
     }
 
-    private fun IrCall.toAnnotationDescriptor(): AnnotationDescriptor {
-        assert(symbol.owner is IrConstructor && symbol.owner.parentAsClass.isAnnotationClass) {
+    private fun IrConstructorCall.toAnnotationDescriptor(): AnnotationDescriptor {
+        assert(symbol.owner.parentAsClass.isAnnotationClass) {
             "Expected call to constructor of annotation class but was: ${this.dump()}"
         }
         return AnnotationDescriptorImpl(
@@ -88,7 +88,7 @@ abstract class WrappedDeclarationDescriptor<T : IrDeclaration>(annotations: Anno
 
             this is IrClassReference -> KClassValue(classType.classifierOrFail.descriptor.classId!!, /*TODO*/0)
 
-            this is IrCall -> AnnotationValue(this.toAnnotationDescriptor())
+            this is IrConstructorCall -> AnnotationValue(this.toAnnotationDescriptor())
 
             else -> error("$this is not expected: ${this.dump()}")
         }
@@ -261,7 +261,7 @@ open class WrappedTypeParameterDescriptor(
 
             override val supertypeLoopChecker = SupertypeLoopChecker.EMPTY
 
-            override fun getParameters() = emptyList()
+            override fun getParameters(): List<TypeParameterDescriptor> = emptyList()
 
             override fun isFinal() = false
 
@@ -687,7 +687,7 @@ open class WrappedEnumEntryDescriptor(
         TODO("not implemented")
     }
 
-    override fun getDeclaredTypeParameters() = emptyList()
+    override fun getDeclaredTypeParameters(): List<TypeParameterDescriptor> = emptyList()
 
     override fun getSealedSubclasses(): Collection<ClassDescriptor> {
         TODO("not implemented")
@@ -773,7 +773,7 @@ open class WrappedPropertyDescriptor(
         owner.setter?.descriptor as? PropertyAccessorDescriptor
     ).toMutableList()
 
-    override fun getTypeParameters() = emptyList()
+    override fun getTypeParameters(): List<TypeParameterDescriptor> = emptyList()
 
     override fun getVisibility() = owner.visibility
 
@@ -877,7 +877,7 @@ open class WrappedFieldDescriptor(
 
     override fun getAccessors(): MutableList<PropertyAccessorDescriptor> = mutableListOf()
 
-    override fun getTypeParameters() = emptyList()
+    override fun getTypeParameters(): List<TypeParameterDescriptor> = emptyList()
 
     override fun getVisibility() = owner.visibility
 

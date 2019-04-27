@@ -10,7 +10,7 @@ buildscript {
     extra["defaultSnapshotVersion"] = "1.3-SNAPSHOT"
 
     // when updating please also update JPS artifacts configuration: https://jetbrains.quip.com/zzGUAYSJ6gv3/JPS-Build-update-bootstrap
-    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.3.40-dev-431", onlySuccessBootstrap = false))
+    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.3.40-dev-2251", onlySuccessBootstrap = false))
 
     repositories.withRedirector(project) {
         bootstrapKotlinRepo?.let(::maven)
@@ -157,9 +157,10 @@ extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
+extra["versions.kotlin-native-shared"] = "1.0-dev-40"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.3-dev-9457"
+    extra["versions.kotlin-native"] = "1.3-dev-9780"
 }
 
 val isTeamcityBuild = project.hasProperty("teamcity") || System.getenv("TEAMCITY_VERSION") != null
@@ -241,6 +242,7 @@ val coreLibProjects = listOf(
         ":kotlin-stdlib",
         ":kotlin-stdlib-common",
         ":kotlin-stdlib-js",
+        ":kotlin-stdlib-js-ir",
         ":kotlin-stdlib-jdk7",
         ":kotlin-stdlib-jdk8",
         ":kotlin-test:kotlin-test-common",
@@ -317,6 +319,7 @@ allprojects {
         maven(protobufRepo)
         maven(intellijRepo)
         maven(bootstrapKotlinRepo!!.replace("artifacts/content/maven/", "artifacts/content/internal/repo"))
+        maven(kotlinNativeRepo)
     }
 
     configureJvmProject(javaHome!!, jvmTarget!!)

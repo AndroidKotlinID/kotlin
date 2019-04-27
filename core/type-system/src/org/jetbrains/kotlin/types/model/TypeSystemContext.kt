@@ -118,6 +118,7 @@ interface TypeSystemInferenceExtensionContext : TypeSystemContext, TypeSystemBui
 
 
     fun CapturedTypeMarker.typeConstructorProjection(): TypeArgumentMarker
+    fun CapturedTypeMarker.captureStatus(): CaptureStatus
 
     fun KotlinTypeMarker.isNullableType(): Boolean
 
@@ -144,6 +145,7 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     fun KotlinTypeMarker.asFlexibleType(): FlexibleTypeMarker?
 
     fun KotlinTypeMarker.isError(): Boolean
+    fun KotlinTypeMarker.isUninferredParameter(): Boolean
 
     fun FlexibleTypeMarker.asDynamicType(): DynamicTypeMarker?
 

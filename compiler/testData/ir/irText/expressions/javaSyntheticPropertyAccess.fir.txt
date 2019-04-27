@@ -1,6 +1,6 @@
 FILE fqName:<root> fileName:/javaSyntheticPropertyAccess.kt
-  FUN name:test visibility:public modality:FINAL <> (j:<root>.J) returnType:kotlin.Unit
-    VALUE_PARAMETER name:j index:0 type:<root>.J
+  FUN name:test visibility:public modality:FINAL <> (j:<root>.J) returnType:kotlin.Unit 
+    VALUE_PARAMETER name:j index:0 type:<root>.J 
     BLOCK_BODY
       ERROR_CALL 'Unresolved reference: <Ambiguity: foo, [/J.foo, /J.foo]>#' type=IrErrorType
       ERROR_CALL 'Unresolved reference: <Ambiguity: foo, [/J.foo, /J.foo]>#' type=IrErrorType

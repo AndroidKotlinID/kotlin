@@ -49,6 +49,11 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
         return this.isError
     }
 
+    override fun KotlinTypeMarker.isUninferredParameter(): Boolean {
+        require(this is KotlinType, this::errorMessage)
+        return ErrorUtils.isUninferredParameter(this)
+    }
+
     override fun SimpleTypeMarker.isStubType(): Boolean {
         require(this is SimpleType, this::errorMessage)
         return this is StubType
@@ -370,6 +375,11 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
         return this.constructor.projection
     }
 
+    override fun CapturedTypeMarker.captureStatus(): CaptureStatus {
+        require(this is NewCapturedType, this::errorMessage)
+        return this.captureStatus
+    }
+
     override fun KotlinTypeMarker.isNullableType(): Boolean {
         require(this is KotlinType, this::errorMessage)
         return TypeUtils.isNullableType(this)
@@ -404,6 +414,7 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
 
     override fun SimpleTypeMarker.replaceArguments(newArguments: List<TypeArgumentMarker>): SimpleTypeMarker {
         require(this is SimpleType, this::errorMessage)
+        @Suppress("UNCHECKED_CAST")
         return this.replace(newArguments as List<TypeProjection>)
     }
 

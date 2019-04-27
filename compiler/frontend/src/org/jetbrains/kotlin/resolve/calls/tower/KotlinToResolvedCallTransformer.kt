@@ -108,7 +108,7 @@ class KotlinToResolvedCallTransformer(
 
                 val resultSubstitutor = baseResolvedCall.constraintSystem.buildResultingSubstitutor()
                 if (context.inferenceSession.writeOnlyStubs()) {
-                    val stub = createStubResolvedCallAndWriteItToTrace(
+                    val stub = createStubResolvedCallAndWriteItToTrace<CallableDescriptor>(
                         candidate,
                         context.trace,
                         baseResolvedCall.diagnostics,
@@ -117,6 +117,7 @@ class KotlinToResolvedCallTransformer(
 
                     forwardCallToInferenceSession(baseResolvedCall, context, stub, tracingStrategy)
 
+                    @Suppress("UNCHECKED_CAST")
                     return stub as ResolvedCall<D>
                 }
 
@@ -131,7 +132,8 @@ class KotlinToResolvedCallTransformer(
                     }
                 }
 
-                val resolvedCall = ktPrimitiveCompleter.completeResolvedCall(candidate, baseResolvedCall.diagnostics) as ResolvedCall<D>
+                @Suppress("UNCHECKED_CAST") val resolvedCall =
+                    ktPrimitiveCompleter.completeResolvedCall(candidate, baseResolvedCall.diagnostics) as ResolvedCall<D>
                 forwardCallToInferenceSession(baseResolvedCall, context, resolvedCall, tracingStrategy)
 
                 resolvedCall
@@ -421,13 +423,21 @@ class KotlinToResolvedCallTransformer(
     ) {
         val trackingTrace = TrackingBindingTrace(trace)
         val newContext = context.replaceBindingTrace(trackingTrace)
-        val diagnosticReporter =
-            DiagnosticReporterByTrackingStrategy(constantExpressionEvaluator, newContext, completedCallAtom.atom.psiKotlinCall, context.dataFlowValueFactory)
 
         val diagnosticHolder = KotlinDiagnosticsHolder.SimpleHolder()
         additionalDiagnosticReporter.reportAdditionalDiagnostics(completedCallAtom, resultingDescriptor, diagnosticHolder, diagnostics)
 
-        for (diagnostic in diagnostics + diagnosticHolder.getDiagnostics()) {
+        val allDiagnostics = diagnostics + diagnosticHolder.getDiagnostics()
+
+        val diagnosticReporter = DiagnosticReporterByTrackingStrategy(
+            constantExpressionEvaluator,
+            newContext,
+            completedCallAtom.atom.psiKotlinCall,
+            context.dataFlowValueFactory,
+            allDiagnostics
+        )
+
+        for (diagnostic in allDiagnostics) {
             trackingTrace.reported = false
             diagnostic.report(diagnosticReporter)
 
@@ -580,6 +590,7 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
     override val argumentMappingByOriginal: Map<ValueParameterDescriptor, ResolvedCallArgument>
         get() = resolvedCallAtom.argumentMappingByOriginal
 
+    @Suppress("UNCHECKED_CAST")
     override fun getCandidateDescriptor(): D = resolvedCallAtom.candidateDescriptor as D
     override fun getResultingDescriptor(): D = resultingDescriptor
     override fun getExtensionReceiver(): ReceiverValue? = extensionReceiver
@@ -639,6 +650,7 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
             }
         }
 
+        @Suppress("UNCHECKED_CAST")
         resultingDescriptor = run {
             val candidateDescriptor = resolvedCallAtom.candidateDescriptor
             val containsCapturedTypes = resolvedCallAtom.candidateDescriptor.returnType?.contains { it is NewCapturedType } ?: false
@@ -751,4 +763,11 @@ fun ResolvedCall<*>.isNewNotCompleted(): Boolean {
         return !isCompleted
     }
     return false
+}
+
+fun NewResolvedCallImpl<*>.hasInferredReturnType(): Boolean {
+    if (isNewNotCompleted()) return false
+
+    val returnType = this.resultingDescriptor.returnType ?: return false
+    return !returnType.contains { ErrorUtils.isUninferredParameter(it) }
 }

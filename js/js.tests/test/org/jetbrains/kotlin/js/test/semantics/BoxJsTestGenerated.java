@@ -1403,6 +1403,29 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         }
     }
 
+    @TestMetadata("js/js.translator/testData/box/export")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Export extends AbstractBoxJsTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInExport() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("js/js.translator/testData/box/export"), Pattern.compile("^([^_](.+))\\.kt$"), TargetBackend.JS, true);
+        }
+
+        @TestMetadata("nonIndetifierModuleName.kt")
+        public void testNonIndetifierModuleName() throws Exception {
+            runTest("js/js.translator/testData/box/export/nonIndetifierModuleName.kt");
+        }
+
+        @TestMetadata("reservedModuleName.kt")
+        public void testReservedModuleName() throws Exception {
+            runTest("js/js.translator/testData/box/export/reservedModuleName.kt");
+        }
+    }
+
     @TestMetadata("js/js.translator/testData/box/expression")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -5220,6 +5243,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("js/js.translator/testData/box/main"), Pattern.compile("^([^_](.+))\\.kt$"), TargetBackend.JS, true);
         }
 
+        @TestMetadata("differentMains.kt")
+        public void testDifferentMains() throws Exception {
+            runTest("js/js.translator/testData/box/main/differentMains.kt");
+        }
+
         @TestMetadata("incremental.kt")
         public void testIncremental() throws Exception {
             runTest("js/js.translator/testData/box/main/incremental.kt");
@@ -5248,6 +5276,11 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("suspendMainThrows.kt")
         public void testSuspendMainThrows() throws Exception {
             runTest("js/js.translator/testData/box/main/suspendMainThrows.kt");
+        }
+
+        @TestMetadata("twoMains.kt")
+        public void testTwoMains() throws Exception {
+            runTest("js/js.translator/testData/box/main/twoMains.kt");
         }
     }
 

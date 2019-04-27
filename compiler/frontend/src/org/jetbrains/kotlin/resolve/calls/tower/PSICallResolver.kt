@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.resolve.calls.components.CallableReferenceResolver
 import org.jetbrains.kotlin.resolve.calls.components.InferenceSession
 import org.jetbrains.kotlin.resolve.calls.components.PostponedArgumentsAnalyzer
 import org.jetbrains.kotlin.resolve.calls.context.BasicCallResolutionContext
-import org.jetbrains.kotlin.resolve.calls.context.CheckArgumentTypesMode
 import org.jetbrains.kotlin.resolve.calls.context.ContextDependency
 import org.jetbrains.kotlin.resolve.calls.inference.buildResultingSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.KotlinConstraintSystemCompleter
@@ -190,9 +189,12 @@ class PSICallResolver(
         tracingStrategy: TracingStrategy
     ): OverloadResolutionResults<D> {
         if (result is AllCandidatesResolutionResult) {
-            val resolvedCalls = result.allCandidates.map {
-                val resultingSubstitutor = it.getSystem().asReadOnlyStorage().buildResultingSubstitutor()
-                kotlinToResolvedCallTransformer.transformToResolvedCall<D>(it.resolvedCall, null, resultingSubstitutor, result.diagnostics)
+            val resolvedCalls = result.allCandidates.map { (candidate, diagnostics) ->
+                val resultingSubstitutor = candidate.getSystem().asReadOnlyStorage().buildResultingSubstitutor()
+
+                kotlinToResolvedCallTransformer.transformToResolvedCall<D>(
+                    candidate.resolvedCall, null, resultingSubstitutor, diagnostics
+                )
             }
 
             return AllCandidates(resolvedCalls)
@@ -551,8 +553,7 @@ class PSICallResolver(
 
         require(oldCall is CallTransformer.CallForImplicitInvoke) { "Call should be CallForImplicitInvoke, but it is: $oldCall" }
 
-        val dispatchReceiver = oldCall.dispatchReceiver!! // dispatch receiver from CallForImplicitInvoke is always not null
-        return resolveReceiver(context, dispatchReceiver, isSafeCall = false, isForImplicitInvoke = true)
+        return resolveReceiver(context, oldCall.dispatchReceiver, isSafeCall = false, isForImplicitInvoke = true)
     }
 
     private fun resolveReceiver(

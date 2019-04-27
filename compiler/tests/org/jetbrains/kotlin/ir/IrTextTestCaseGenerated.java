@@ -802,6 +802,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/complexAugmentedAssignment.kt");
         }
 
+        @TestMetadata("constructorWithOwnTypeParametersCall.kt")
+        public void testConstructorWithOwnTypeParametersCall() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/constructorWithOwnTypeParametersCall.kt");
+        }
+
         @TestMetadata("contructorCall.kt")
         public void testContructorCall() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/contructorCall.kt");
@@ -885,6 +890,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("funImportedFromObject.kt")
         public void testFunImportedFromObject() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/funImportedFromObject.kt");
+        }
+
+        @TestMetadata("genericConstructorCallWithTypeArguments.kt")
+        public void testGenericConstructorCallWithTypeArguments() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/genericConstructorCallWithTypeArguments.kt");
         }
 
         @TestMetadata("genericPropertyCall.kt")

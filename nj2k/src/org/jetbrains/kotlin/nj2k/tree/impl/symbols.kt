@@ -178,6 +178,7 @@ class JKMultiverseMethodSymbol(override val target: PsiMethod, private val symbo
 class JKMultiverseFunctionSymbol(override val target: KtFunction, private val symbolProvider: JKSymbolProvider) : JKMethodSymbol {
     override val receiverType: JKType?
         get() = target.receiverTypeReference?.toJK(symbolProvider)
+    @Suppress("UNCHECKED_CAST")
     override val parameterTypes: List<JKType>?
         get() = target.valueParameters.map { parameter ->
             val type = parameter.typeReference?.toJK(symbolProvider)
@@ -307,7 +308,7 @@ fun JKSymbol.deepestFqName(): String? {
         when (this) {
             is PsiMethod -> (findDeepestSuperMethods().firstOrNull() ?: this).getKotlinFqName()?.asString()
             is KtNamedFunction -> findDeepestSuperMethodsNoWrapping(this).firstOrNull()?.getKotlinFqName()?.asString()
-            is JKMethod -> psi()?.deepestFqNameForTarget()
+            is JKMethod -> psi<PsiElement>()?.deepestFqNameForTarget()
             else -> null
         }
     return target.deepestFqNameForTarget() ?: fqName

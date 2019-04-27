@@ -32,7 +32,8 @@ class DiagnosticReporterByTrackingStrategy(
     val constantExpressionEvaluator: ConstantExpressionEvaluator,
     val context: BasicCallResolutionContext,
     val psiKotlinCall: PSIKotlinCall,
-    val dataFlowValueFactory: DataFlowValueFactory
+    val dataFlowValueFactory: DataFlowValueFactory,
+    val allDiagnostics: List<KotlinCallDiagnostic>
 ) : DiagnosticReporter {
     private val trace = context.trace as TrackingBindingTrace
     private val tracingStrategy: TracingStrategy get() = psiKotlinCall.tracingStrategy
@@ -228,17 +229,38 @@ class DiagnosticReporterByTrackingStrategy(
                     trace.report(UPPER_BOUND_VIOLATED.on(typeArgumentReference, constraintError.upperKotlinType, constraintError.lowerKotlinType))
                 }
             }
+
             CapturedTypeFromSubtyping::class.java -> {
                 val capturedError = diagnostic as CapturedTypeFromSubtyping
-                (capturedError.position as? ArgumentConstraintPosition)?.let {
+                val position = capturedError.position
+                val argumentPosition =
+                    position.safeAs<ArgumentConstraintPosition>()
+                        ?: position.safeAs<IncorporationConstraintPosition>()?.from.safeAs<ArgumentConstraintPosition>()
+
+                argumentPosition?.let {
                     val expression = it.argument.psiExpression ?: return
-                    trace.report(
+                    trace.reportDiagnosticOnce(
                         NEW_INFERENCE_ERROR.on(
                             expression,
                             "Capture type from subtyping ${capturedError.constraintType} for variable ${capturedError.typeVariable}"
                         )
                     )
                 }
+            }
+
+            NotEnoughInformationForTypeParameter::class.java -> {
+                if (allDiagnostics.any {it is ConstrainingTypeIsError || it is NewConstraintError || it is WrongCountOfTypeArguments})
+                    return
+
+                val error = diagnostic as NotEnoughInformationForTypeParameter
+                val call = error.resolvedAtom.atom?.safeAs<PSIKotlinCall>()?.psiCall ?: call
+                val expression = call.calleeExpression ?: return
+                val typeVariableName = when (val typeVariable = error.typeVariable) {
+                    is TypeVariableFromCallableDescriptor -> typeVariable.originalTypeParameter.name.asString()
+                    is TypeVariableForLambdaReturnType -> "return type of lambda"
+                    else -> error("Unsupported type variable: $typeVariable")
+                }
+                trace.reportDiagnosticOnce(NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER.on(expression, typeVariableName))
             }
         }
     }
