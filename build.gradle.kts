@@ -35,8 +35,6 @@ buildscript {
             classpath("org.jetbrains.kotlin.ultimate:buildSrc:1.0")
         }
     }
-
-    project(":prepare:idea-plugin").evaluationDependsOn(":prepare")
 }
 
 plugins {
@@ -157,7 +155,7 @@ extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
-extra["versions.kotlin-native-shared"] = "1.0-dev-40"
+extra["versions.kotlin-native-shared"] = "1.0-dev-50"
 
 if (!project.hasProperty("versions.kotlin-native")) {
     extra["versions.kotlin-native"] = "1.3-dev-9780"
@@ -191,17 +189,6 @@ extra["compilerModules"] = arrayOf(
         ":compiler:resolution",
         ":compiler:serialization",
         ":compiler:psi",
-        *if (project.findProperty("fir.enabled") == "true") {
-            arrayOf(
-                ":compiler:fir:cones",
-                ":compiler:fir:resolve",
-                ":compiler:fir:tree",
-                ":compiler:fir:psi2fir",
-                ":compiler:fir:fir2ir"
-            )
-        } else {
-            emptyArray()
-        },
         ":compiler:frontend",
         ":compiler:frontend.common",
         ":compiler:frontend.java",
@@ -235,7 +222,12 @@ extra["compilerModules"] = arrayOf(
         ":core:descriptors.jvm",
         ":core:deserialization",
         ":core:util.runtime",
-        ":core:type-system"
+        ":core:type-system",
+        ":compiler:fir:cones",
+        ":compiler:fir:resolve",
+        ":compiler:fir:tree",
+        ":compiler:fir:psi2fir",
+        ":compiler:fir:fir2ir"
 )
 
 val coreLibProjects = listOf(
@@ -428,8 +420,7 @@ val copyCompilerToIdeaPlugin by task<Copy> {
 
 val ideaPlugin by task<Task> {
     dependsOn(copyCompilerToIdeaPlugin)
-    val childIdeaPluginTasks = getTasksByName("ideaPlugin", true) - this@task
-    dependsOn(childIdeaPluginTasks)
+    dependsOn(":prepare:idea-plugin:ideaPlugin")
 }
 
 tasks {

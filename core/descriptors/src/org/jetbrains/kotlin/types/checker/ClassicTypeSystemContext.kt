@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.types.model.CaptureStatus
 import org.jetbrains.kotlin.types.typeUtil.asTypeProjection
 import org.jetbrains.kotlin.types.typeUtil.contains
 import kotlin.math.max
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
     override fun TypeConstructorMarker.isDenotable(): Boolean {
@@ -442,7 +444,9 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
     }
 
     override fun TypeSubstitutorMarker.safeSubstitute(type: KotlinTypeMarker): KotlinTypeMarker {
-        errorSupportedOnlyInTypeInference()
+        require(type is UnwrappedType, type::errorMessage)
+        require(this is TypeSubstitutor, this::errorMessage)
+        return safeSubstitute(type, Variance.INVARIANT)
     }
 
     override fun TypeVariableMarker.defaultType(): SimpleTypeMarker {
@@ -463,7 +467,28 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
         require(this is IntegerLiteralTypeConstructor, this::errorMessage)
         return this.getApproximatedType().unwrap()
     }
+
+    override fun SimpleTypeMarker.isPrimitiveType(): Boolean {
+        require(this is KotlinType, this::errorMessage)
+        return KotlinBuiltIns.isPrimitiveType(this)
+    }
+
+    override fun captureFromExpression(type: KotlinTypeMarker): KotlinTypeMarker? {
+        return captureFromExpressionInternal(type as UnwrappedType)
+    }
+
+    override fun createErrorTypeWithCustomConstructor(debugName: String, constructor: TypeConstructorMarker): KotlinTypeMarker {
+        require(constructor is TypeConstructor, constructor::errorMessage)
+        return ErrorUtils.createErrorTypeWithCustomConstructor(debugName, constructor)
+    }
+
+    override fun TypeConstructorMarker.isCapturedTypeConstructor(): Boolean {
+        return this is NewCapturedTypeConstructor
+    }
+
 }
+
+private fun captureFromExpressionInternal(type: UnwrappedType) = captureFromExpression(type)
 
 private fun hasNoInferInternal(type: UnwrappedType): Boolean {
     return type.hasNoInferAnnotation()
@@ -518,5 +543,20 @@ fun Variance.convertVariance(): TypeVariance {
         Variance.INVARIANT -> TypeVariance.INV
         Variance.IN_VARIANCE -> TypeVariance.IN
         Variance.OUT_VARIANCE -> TypeVariance.OUT
+    }
+}
+
+
+@Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
+@UseExperimental(ExperimentalContracts::class)
+fun requireOrDescribe(condition: Boolean, value: Any?) {
+    contract {
+        returns() implies condition
+    }
+    require(condition) {
+        val typeInfo = if (value != null) {
+            ", type = '${value::class}'"
+        } else ""
+        "Unexpected: value = '$value'$typeInfo"
     }
 }

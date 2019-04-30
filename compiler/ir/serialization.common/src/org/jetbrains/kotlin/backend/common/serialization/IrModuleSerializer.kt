@@ -120,6 +120,8 @@ open class IrModuleSerializer(
                 KotlinIr.IrSymbolKind.STANDALONE_FIELD_SYMBOL
             else
                 KotlinIr.IrSymbolKind.FIELD_SYMBOL
+        is IrPropertySymbol ->
+            KotlinIr.IrSymbolKind.PROPERTY_SYMBOL
         else ->
             TODO("Unexpected symbol kind: $symbol")
     }
@@ -314,11 +316,10 @@ open class IrModuleSerializer(
     }
 
     private fun serializeBlock(block: IrBlock): KotlinIr.IrBlock {
-        val isLambdaOrigin =
-            block.origin == IrStatementOrigin.LAMBDA ||
-                    block.origin == IrStatementOrigin.ANONYMOUS_FUNCTION
         val proto = KotlinIr.IrBlock.newBuilder()
-            .setIsLambdaOrigin(isLambdaOrigin)
+
+        block.origin?.let { proto.setOrigin(serializeIrStatementOrigin(it)) }
+
         block.statements.forEach {
             proto.addStatement(serializeStatement(it))
         }
@@ -327,6 +328,8 @@ open class IrModuleSerializer(
 
     private fun serializeComposite(composite: IrComposite): KotlinIr.IrComposite {
         val proto = KotlinIr.IrComposite.newBuilder()
+
+        composite.origin?.let { proto.setOrigin(serializeIrStatementOrigin(it)) }
         composite.statements.forEach {
             proto.addStatement(serializeStatement(it))
         }
@@ -388,14 +391,15 @@ open class IrModuleSerializer(
 
     private fun serializeCall(call: IrCall): KotlinIr.IrCall {
         val proto = KotlinIr.IrCall.newBuilder()
-
         proto.kind = irCallToPrimitiveKind(call)
         proto.symbol = serializeIrSymbol(call.symbol)
+        call.origin?.let { proto.origin = serializeIrStatementOrigin(it) }
 
         call.superQualifierSymbol?.let {
             proto.`super` = serializeIrSymbol(it)
         }
         proto.memberAccess = serializeMemberAccessCommon(call)
+
         return proto.build()
     }
 
@@ -410,7 +414,8 @@ open class IrModuleSerializer(
         val proto = KotlinIr.IrFunctionReference.newBuilder()
             .setSymbol(serializeIrSymbol(callable.symbol))
             .setMemberAccess(serializeMemberAccessCommon(callable))
-        callable.origin?.let { proto.origin = serializeIrStatementOrigin(it) }
+
+        callable.origin?.let { proto.setOrigin(serializeIrStatementOrigin(it)) }
         return proto.build()
     }
 
@@ -422,6 +427,7 @@ open class IrModuleSerializer(
             .setGetter(serializeIrSymbol(callable.getter))
             .setSymbol(serializeIrSymbol(callable.symbol))
 
+        callable.origin?.let { proto.setOrigin(serializeIrStatementOrigin(it)) }
         callable.setter?.let { proto.setSetter(serializeIrSymbol(it)) }
 
         return proto.build()
@@ -430,12 +436,12 @@ open class IrModuleSerializer(
     private fun serializePropertyReference(callable: IrPropertyReference): KotlinIr.IrPropertyReference {
         val proto = KotlinIr.IrPropertyReference.newBuilder()
             .setMemberAccess(serializeMemberAccessCommon(callable))
+            .setSymbol(serializeIrSymbol(callable.symbol))
+        callable.origin?.let { proto.origin = serializeIrStatementOrigin(it) }
         callable.field?.let { proto.field = serializeIrSymbol(it) }
         callable.getter?.let { proto.getter = serializeIrSymbol(it) }
         callable.setter?.let { proto.setter = serializeIrSymbol(it) }
-        callable.origin?.let { proto.origin = serializeIrStatementOrigin(it) }
-        val property = callable.getter!!.owner.correspondingProperty!!
-        descriptorReferenceSerializer.serializeDescriptorReference(property)?.let { proto.setDescriptorReference(it) }
+
         return proto.build()
     }
 
@@ -470,12 +476,10 @@ open class IrModuleSerializer(
         return proto.build()
     }
 
-    private fun serializeDoWhile(expression: IrDoWhileLoop): KotlinIr.IrDoWhile {
-        val proto = KotlinIr.IrDoWhile.newBuilder()
+    private fun serializeDoWhile(expression: IrDoWhileLoop): KotlinIr.IrDoWhile  =
+        KotlinIr.IrDoWhile.newBuilder()
             .setLoop(serializeLoop(expression))
-
-        return proto.build()
-    }
+            .build()
 
     fun serializeEnumConstructorCall(call: IrEnumConstructorCall): KotlinIr.IrEnumConstructorCall {
         val proto = KotlinIr.IrEnumConstructorCall.newBuilder()
@@ -504,17 +508,19 @@ open class IrModuleSerializer(
         return proto.build()
     }
 
-    private fun serializeGetField(expression: IrGetField): KotlinIr.IrGetField {
-        val proto = KotlinIr.IrGetField.newBuilder()
-            .setFieldAccess(serializeFieldAccessCommon(expression))
-        return proto.build()
-    }
+    private fun serializeGetField(expression: IrGetField): KotlinIr.IrGetField =
+        KotlinIr.IrGetField.newBuilder()
+            .setFieldAccess(serializeFieldAccessCommon(expression)).apply {
+                expression.origin?.let { setOrigin(serializeIrStatementOrigin(it)) }
+            }
+            .build()
 
-    private fun serializeGetValue(expression: IrGetValue): KotlinIr.IrGetValue {
-        val proto = KotlinIr.IrGetValue.newBuilder()
-            .setSymbol(serializeIrSymbol(expression.symbol))
-        return proto.build()
-    }
+    private fun serializeGetValue(expression: IrGetValue): KotlinIr.IrGetValue =
+        KotlinIr.IrGetValue.newBuilder()
+            .setSymbol(serializeIrSymbol(expression.symbol)).apply {
+                expression.origin?.let { setOrigin(serializeIrStatementOrigin(it)) }
+            }
+            .build()
 
     private fun serializeGetObject(expression: IrGetObjectValue): KotlinIr.IrGetObject {
         val proto = KotlinIr.IrGetObject.newBuilder()
@@ -537,19 +543,21 @@ open class IrModuleSerializer(
         return proto.build()
     }
 
-    private fun serializeSetField(expression: IrSetField): KotlinIr.IrSetField {
-        val proto = KotlinIr.IrSetField.newBuilder()
+    private fun serializeSetField(expression: IrSetField): KotlinIr.IrSetField =
+        KotlinIr.IrSetField.newBuilder()
             .setFieldAccess(serializeFieldAccessCommon(expression))
-            .setValue(serializeExpression(expression.value))
-        return proto.build()
-    }
+            .setValue(serializeExpression(expression.value)).apply {
+                expression.origin?.let{ setOrigin(serializeIrStatementOrigin(it)) }
+            }
+            .build()
 
-    private fun serializeSetVariable(expression: IrSetVariable): KotlinIr.IrSetVariable {
-        val proto = KotlinIr.IrSetVariable.newBuilder()
+    private fun serializeSetVariable(expression: IrSetVariable): KotlinIr.IrSetVariable =
+        KotlinIr.IrSetVariable.newBuilder()
             .setSymbol(serializeIrSymbol(expression.symbol))
-            .setValue(serializeExpression(expression.value))
-        return proto.build()
-    }
+            .setValue(serializeExpression(expression.value)).apply {
+                expression.origin?.let{ setOrigin(serializeIrStatementOrigin(it)) }
+            }
+            .build()
 
     private fun serializeSpreadElement(element: IrSpreadElement): KotlinIr.IrSpreadElement {
         val coordinates = serializeCoordinates(element.startOffset, element.endOffset)
@@ -642,6 +650,8 @@ open class IrModuleSerializer(
     private fun serializeWhen(expression: IrWhen): KotlinIr.IrWhen {
         val proto = KotlinIr.IrWhen.newBuilder()
 
+        expression.origin?.let{ proto.setOrigin(serializeIrStatementOrigin(it)) }
+
         val branches = expression.branches
         branches.forEach {
             proto.addBranch(serializeStatement(it))
@@ -652,7 +662,10 @@ open class IrModuleSerializer(
 
     private fun serializeLoop(expression: IrLoop): KotlinIr.Loop {
         val proto = KotlinIr.Loop.newBuilder()
-            .setCondition(serializeExpression(expression.condition))
+            .setCondition(serializeExpression(expression.condition)).apply {
+                expression.origin?.let{ setOrigin(serializeIrStatementOrigin(it)) }
+            }
+
         val label = expression.label?.let { serializeString(it) }
         if (label != null) {
             proto.label = label
@@ -986,8 +999,7 @@ open class IrModuleSerializer(
             .setIsLateinit(property.isLateinit)
             .setIsDelegated(property.isDelegated)
             .setIsExternal(property.isExternal)
-
-        descriptorReferenceSerializer.serializeDescriptorReference(property)?.let { proto.setDescriptorReference(it) }
+            .setSymbol(serializeIrSymbol(property.symbol))
 
         val backingField = property.backingField
         val getter = property.getter

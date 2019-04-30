@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.types.model.*
 import java.util.*
 import kotlin.math.max
 
-class ConstraintInjector(val constraintIncorporator: ConstraintIncorporator, val typeApproximator: TypeApproximator) {
+class ConstraintInjector(val constraintIncorporator: ConstraintIncorporator, val typeApproximator: AbstractTypeApproximator) {
     private val ALLOWED_DEPTH_DELTA_FOR_INCORPORATION = 1
 
     interface Context : TypeSystemInferenceExtensionContext {
@@ -154,7 +154,7 @@ class ConstraintInjector(val constraintIncorporator: ConstraintIncorporator, val
             addConstraint(typeVariable, subType, LOWER)
 
         private fun isCapturedTypeFromSubtyping(type: KotlinTypeMarker) =
-            when ((type as? NewCapturedType)?.captureStatus) {
+            when ((type as? CapturedTypeMarker)?.captureStatus()) {
                 null, CaptureStatus.FROM_EXPRESSION -> false
                 CaptureStatus.FOR_SUBTYPING -> true
                 CaptureStatus.FOR_INCORPORATION ->
