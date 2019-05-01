@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.java.JavaSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.AbstractFirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.FirProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.service
@@ -62,6 +63,10 @@ class IdeFirDependenciesSymbolProvider(
                 depScope.compare(o1.containingFile.virtualFile, o2.containingFile.virtualFile)
             })
         }
+    }
+
+    override fun getClassUseSiteMemberScope(classId: ClassId, useSiteSession: FirSession, scopeSession: ScopeSession): FirScope? {
+        TODO("not implemented")
     }
 
     private fun tryKotlin(classId: ClassId): ConeClassLikeSymbol? {

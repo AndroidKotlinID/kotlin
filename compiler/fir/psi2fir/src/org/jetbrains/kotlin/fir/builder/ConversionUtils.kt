@@ -10,11 +10,13 @@ import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.fir.FirReference
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirWhenSubject
 import org.jetbrains.kotlin.fir.declarations.impl.FirVariableImpl
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirExplicitThisReference
+import org.jetbrains.kotlin.fir.references.FirResolvedCallableReferenceImpl
 import org.jetbrains.kotlin.fir.references.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -179,10 +181,12 @@ internal fun FirExpression.generateNotNullOrOther(
 ): FirWhenExpression {
     val subjectName = Name.special("<$caseId>")
     val subjectVariable = generateTemporaryVariable(session, psi, subjectName, this)
-    val subjectExpression = FirWhenSubjectExpression(session, psi)
+    val subject = FirWhenSubject()
+    val subjectExpression = FirWhenSubjectExpressionImpl(session, psi, subject)
     return FirWhenExpressionImpl(
         session, basePsi, this, subjectVariable
     ).apply {
+        subject.bind(this)
         branches += FirWhenBranchImpl(
             session, psi,
             FirOperatorCallImpl(session, psi, FirOperation.EQ).apply {
@@ -193,7 +197,7 @@ internal fun FirExpression.generateNotNullOrOther(
         )
         branches += FirWhenBranchImpl(
             session, other.psi, FirElseIfTrueCondition(session, psi),
-            FirSingleExpressionBlock(session, generateAccessExpression(session, psi, subjectName))
+            FirSingleExpressionBlock(session, generateResolvedAccessExpression(session, psi, subjectVariable))
         )
     }
 }
@@ -219,10 +223,11 @@ internal fun FirExpression.generateLazyLogicalOperation(
 
 internal fun KtWhenCondition.toFirWhenCondition(
     session: FirSession,
+    subject: FirWhenSubject,
     convert: KtExpression?.(String) -> FirExpression,
     toFirOrErrorTypeRef: KtTypeReference?.() -> FirTypeRef
 ): FirExpression {
-    val firSubjectExpression = FirWhenSubjectExpression(session, this)
+    val firSubjectExpression = FirWhenSubjectExpressionImpl(session, this, subject)
     return when (this) {
         is KtWhenConditionWithExpression -> {
             FirOperatorCallImpl(
@@ -255,12 +260,13 @@ internal fun KtWhenCondition.toFirWhenCondition(
 internal fun Array<KtWhenCondition>.toFirWhenCondition(
     session: FirSession,
     basePsi: KtElement,
+    subject: FirWhenSubject,
     convert: KtExpression?.(String) -> FirExpression,
     toFirOrErrorTypeRef: KtTypeReference?.() -> FirTypeRef
 ): FirExpression {
     var firCondition: FirExpression? = null
     for (condition in this) {
-        val firConditionElement = condition.toFirWhenCondition(session, convert, toFirOrErrorTypeRef)
+        val firConditionElement = condition.toFirWhenCondition(session, subject, convert, toFirOrErrorTypeRef)
         firCondition = when (firCondition) {
             null -> firConditionElement
             else -> firCondition.generateLazyLogicalOperation(
@@ -338,6 +344,31 @@ internal fun FirExpression.generateContainsOperation(
     }
 }
 
+
+/**
+ * given:
+ * argument++
+ *
+ * result:
+ * {
+ *     val <unary> = argument
+ *     argument = <unary>.inc()
+ *     ^<unary>
+ * }
+ *
+ * given:
+ * ++argument
+ *
+ * result:
+ * {
+ *     val <unary> = argument
+ *     argument = <unary>.inc()
+ *     ^argument
+ * }
+ *
+ */
+
+// TODO: Refactor, support receiver capturing in case of a.b
 internal fun generateIncrementOrDecrementBlock(
     session: FirSession,
     baseExpression: KtUnaryExpression,
@@ -351,17 +382,18 @@ internal fun generateIncrementOrDecrementBlock(
     }
     return FirBlockImpl(session, baseExpression).apply {
         val tempName = Name.special("<unary>")
-        statements += generateTemporaryVariable(session, baseExpression, tempName, argument.convert())
+        val temporaryVariable = generateTemporaryVariable(session, baseExpression, tempName, argument.convert())
+        statements += temporaryVariable
         val resultName = Name.special("<unary-result>")
         val resultInitializer = FirFunctionCallImpl(session, baseExpression).apply {
             this.calleeReference = FirSimpleNamedReference(session, baseExpression.operationReference, callName)
-            this.arguments += generateAccessExpression(session, baseExpression, tempName)
+            this.explicitReceiver = generateResolvedAccessExpression(session, baseExpression, temporaryVariable)
         }
         val resultVar = generateTemporaryVariable(session, baseExpression, resultName, resultInitializer)
         val assignment = argument.generateAssignment(
             session, baseExpression,
             if (prefix && argument !is KtSimpleNameExpression)
-                generateAccessExpression(session, baseExpression, resultName)
+                generateResolvedAccessExpression(session, baseExpression, resultVar)
             else
                 resultInitializer,
             FirOperation.ASSIGN, convert
@@ -379,14 +411,14 @@ internal fun generateIncrementOrDecrementBlock(
             if (argument !is KtSimpleNameExpression) {
                 statements += resultVar
                 appendAssignment()
-                statements += generateAccessExpression(session, baseExpression, resultName)
+                statements += generateResolvedAccessExpression(session, baseExpression, resultVar)
             } else {
                 appendAssignment()
                 statements += generateAccessExpression(session, baseExpression, argument.getReferencedNameAsName())
             }
         } else {
             appendAssignment()
-            statements += generateAccessExpression(session, baseExpression, tempName)
+            statements += generateResolvedAccessExpression(session, baseExpression, temporaryVariable)
         }
     }
 }
@@ -394,6 +426,11 @@ internal fun generateIncrementOrDecrementBlock(
 internal fun generateAccessExpression(session: FirSession, psi: PsiElement?, name: Name): FirQualifiedAccessExpression =
     FirQualifiedAccessExpressionImpl(session, psi).apply {
         calleeReference = FirSimpleNamedReference(session, psi, name)
+    }
+
+internal fun generateResolvedAccessExpression(session: FirSession, psi: PsiElement?, variable: FirVariable): FirQualifiedAccessExpression =
+    FirQualifiedAccessExpressionImpl(session, psi).apply {
+        calleeReference = FirResolvedCallableReferenceImpl(session, psi, variable.name, variable.symbol)
     }
 
 internal fun generateDestructuringBlock(
@@ -413,7 +450,7 @@ internal fun generateDestructuringBlock(
             statements += FirVariableImpl(
                 session, entry, entry.nameAsSafeName,
                 entry.typeReference.toFirOrImplicitTypeRef(), isVar,
-                FirComponentCallImpl(session, entry, index + 1, generateAccessExpression(session, entry, container.name)),
+                FirComponentCallImpl(session, entry, index + 1, generateResolvedAccessExpression(session, entry, container)),
                 FirVariableSymbol(entry.nameAsSafeName) // TODO?
             ).apply {
                 entry.extractAnnotationsTo(this)

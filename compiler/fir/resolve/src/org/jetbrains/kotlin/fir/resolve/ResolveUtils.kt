@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeAbbreviatedTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
-import org.jetbrains.kotlin.fir.types.impl.ConeFunctionTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
@@ -42,7 +41,7 @@ fun ConeClassifierLookupTag.toSymbol(useSiteSession: FirSession): ConeClassifier
     when (this) {
         is ConeClassLikeLookupTag -> toSymbol(useSiteSession)
         is ConeTypeParameterSymbol -> this
-        else -> error("sealed")
+        else -> error("sealed ${this::class}")
     }
 
 fun ConeClassLikeLookupTag.constructClassType(typeArguments: Array<ConeKotlinTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
@@ -113,10 +112,10 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
             typeArguments,
             nullability.isNullable
         ) as T
-        is ConeFunctionTypeImpl -> ConeFunctionTypeImpl(receiverType, parameterTypes, returnType, lookupTag, nullability.isNullable) as T
         is ConeTypeParameterTypeImpl -> ConeTypeParameterTypeImpl(lookupTag, nullability.isNullable) as T
         is ConeFlexibleType -> ConeFlexibleType(lowerBound.withNullability(nullability), upperBound.withNullability(nullability)) as T
-        else -> TODO("FIX KOTLIN COMPILER")
+        is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag) as T
+        else -> error("sealed: ${this::class}")
     }
 }
 
@@ -134,7 +133,6 @@ fun <T : ConeKotlinType> T.withArguments(arguments: Array<ConeKotlinTypeProjecti
             arguments,
             nullability.isNullable
         ) as T
-        //is ConeFunctionTypeImpl -> ConeFunctionTypeImpl(receiverType, parameterTypes, returnType, lookupTag, nullability.isNullable) as T
         else -> error("Not supported: $this: ${this.render()}")
     }
 }

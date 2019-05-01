@@ -5,15 +5,20 @@
 
 package org.jetbrains.kotlin.fir.resolve.impl
 
+import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.FirProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.resolve.buildDefaultUseSiteScope
+import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassDeclaredMemberScope
-import org.jetbrains.kotlin.fir.symbols.CallableId
-import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
-import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
-import org.jetbrains.kotlin.fir.symbols.FirSymbolOwner
+import org.jetbrains.kotlin.fir.symbols.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
+import org.jetbrains.kotlin.fir.types.ConeLookupTagBasedType
+import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -21,7 +26,7 @@ import org.jetbrains.kotlin.name.Name
 
 class FirProviderImpl(val session: FirSession) : FirProvider {
     override fun getFirCallableContainerFile(symbol: ConeCallableSymbol): FirFile? {
-        return callableContainerMap[symbol]
+        return state.callableContainerMap[symbol]
     }
 
     override fun getClassLikeSymbolByFqName(classId: ClassId): ConeClassLikeSymbol? {
@@ -29,48 +34,48 @@ class FirProviderImpl(val session: FirSession) : FirProvider {
     }
 
     override fun getTopLevelCallableSymbols(packageFqName: FqName, name: Name): List<ConeCallableSymbol> {
-        return (callableMap[CallableId(packageFqName, null, name)] ?: emptyList())
+        return (state.callableMap[CallableId(packageFqName, null, name)] ?: emptyList())
     }
 
     override fun getClassDeclaredMemberScope(classId: ClassId) =
         (getFirClassifierByFqName(classId) as? FirRegularClass)?.let(::FirClassDeclaredMemberScope)
 
     override fun getFirClassifierContainerFile(fqName: ClassId): FirFile {
-        return classifierContainerFileMap[fqName] ?: error("Couldn't find container for $fqName")
+        return state.classifierContainerFileMap[fqName] ?: error("Couldn't find container for $fqName")
     }
 
     fun recordFile(file: FirFile) {
+        recordFile(file, state)
+    }
+
+    private fun recordFile(file: FirFile, state: State) {
         val packageName = file.packageFqName
-        fileMap.merge(packageName, listOf(file)) { a, b -> a + b }
+        state.fileMap.merge(packageName, listOf(file)) { a, b -> a + b }
 
         file.acceptChildren(object : FirVisitorVoid() {
             override fun visitElement(element: FirElement) {}
 
-            var containerFqName: FqName = FqName.ROOT
 
             override fun visitRegularClass(regularClass: FirRegularClass) {
-                val fqName = containerFqName.child(regularClass.name)
-                val classId = ClassId(packageName, fqName, false)
-                classifierMap[classId] = regularClass
-                classifierContainerFileMap[classId] = file
+                val classId = regularClass.symbol.classId
 
-                containerFqName = fqName
+                state.classifierMap[classId] = regularClass
+                state.classifierContainerFileMap[classId] = file
+
                 regularClass.acceptChildren(this)
-                containerFqName = fqName.parent()
             }
 
             override fun visitTypeAlias(typeAlias: FirTypeAlias) {
-                val fqName = containerFqName.child(typeAlias.name)
-                val classId = ClassId(packageName, fqName, false)
-                classifierMap[classId] = typeAlias
-                classifierContainerFileMap[classId] = file
+                val classId = typeAlias.symbol.classId
+                state.classifierMap[classId] = typeAlias
+                state.classifierContainerFileMap[classId] = file
             }
 
             override fun visitCallableMemberDeclaration(callableMemberDeclaration: FirCallableMemberDeclaration) {
                 val symbol = callableMemberDeclaration.symbol as ConeCallableSymbol
                 val callableId = symbol.callableId
-                callableMap.merge(callableId, listOf(symbol)) { a, b -> a + b }
-                callableContainerMap[symbol] = file
+                state.callableMap.merge(callableId, listOf(symbol)) { a, b -> a + b }
+                state.callableContainerMap[symbol] = file
             }
 
             override fun visitConstructor(constructor: FirConstructor) {
@@ -87,18 +92,125 @@ class FirProviderImpl(val session: FirSession) : FirProvider {
         })
     }
 
-    private val fileMap = mutableMapOf<FqName, List<FirFile>>()
-    private val classifierMap = mutableMapOf<ClassId, FirClassLikeDeclaration>()
-    private val classifierContainerFileMap = mutableMapOf<ClassId, FirFile>()
-    private val callableMap = mutableMapOf<CallableId, List<ConeCallableSymbol>>()
-    private val callableContainerMap = mutableMapOf<ConeCallableSymbol, FirFile>()
+    private val state = State()
+
+    private class State {
+        val fileMap = mutableMapOf<FqName, List<FirFile>>()
+        val classifierMap = mutableMapOf<ClassId, FirClassLikeDeclaration>()
+        val classifierContainerFileMap = mutableMapOf<ClassId, FirFile>()
+        val callableMap = mutableMapOf<CallableId, List<ConeCallableSymbol>>()
+        val callableContainerMap = mutableMapOf<ConeCallableSymbol, FirFile>()
+
+        fun setFrom(other: State) {
+            fileMap.clear()
+            classifierMap.clear()
+            classifierContainerFileMap.clear()
+            callableMap.clear()
+            callableContainerMap.clear()
+
+            fileMap.putAll(other.fileMap)
+            classifierMap.putAll(other.classifierMap)
+            classifierContainerFileMap.putAll(other.classifierContainerFileMap)
+            callableMap.putAll(other.callableMap)
+            callableContainerMap.putAll(other.callableContainerMap)
+        }
+    }
 
     override fun getFirFilesByPackage(fqName: FqName): List<FirFile> {
-        return fileMap[fqName].orEmpty()
+        return state.fileMap[fqName].orEmpty()
     }
 
     override fun getFirClassifierByFqName(fqName: ClassId): FirClassLikeDeclaration? {
-        return classifierMap[fqName]
+        return state.classifierMap[fqName]
+    }
+
+    @TestOnly
+    fun ensureConsistent(files: List<FirFile>) {
+        val newState = State()
+        files.forEach { recordFile(it, newState) }
+
+        val failures = mutableListOf<String>()
+
+        fun <K, V> checkMapDiff(
+            title: String,
+            a: Map<K, V>,
+            b: Map<K, V>,
+            equal: (old: V?, new: V?) -> Boolean = { old, new -> old === new }
+        ) {
+            var hasTitle = false
+            val unionKeys = a.keys + b.keys
+
+            for ((key, aValue, bValue) in unionKeys.map { Triple(it, a[it], b[it]) }) {
+                if (!equal(aValue, bValue)) {
+                    if (!hasTitle) {
+                        failures += title
+                        hasTitle = true
+                    }
+                    failures += "diff at key = '$key': was: '$aValue', become: '$bValue'"
+                }
+            }
+        }
+
+        fun <K, V> checkMMapDiff(title: String, a: Map<K, List<V>>, b: Map<K, List<V>>) {
+            var hasTitle = false
+            val unionKeys = a.keys + b.keys
+            for ((key, aValue, bValue) in unionKeys.map { Triple(it, a[it], b[it]) }) {
+                if (aValue == null || bValue == null) {
+                    if (!hasTitle) {
+                        failures += title
+                        hasTitle = true
+                    }
+                    failures += "diff at key = '$key': was: $aValue, become: $bValue"
+                } else {
+                    val aSet = aValue.toSet()
+                    val bSet = bValue.toSet()
+
+                    val aLost = aSet - bSet
+                    val bNew = bSet - aSet
+                    if (aLost.isNotEmpty() || bNew.isNotEmpty()) {
+                        failures += "diff at key = '$key':"
+                        failures += "    Lost:"
+                        aLost.forEach { failures += "     $it" }
+                        failures += "    New:"
+                        bNew.forEach { failures += "     $it" }
+                    }
+                }
+            }
+
+        }
+
+        checkMMapDiff("fileMap", state.fileMap, newState.fileMap)
+        checkMapDiff("classifierMap", state.classifierMap, newState.classifierMap)
+        checkMapDiff("classifierContainerFileMap", state.classifierContainerFileMap, newState.classifierContainerFileMap)
+        checkMMapDiff("callableMap", state.callableMap, newState.callableMap)
+        checkMapDiff("callableContainerMap", state.callableContainerMap, newState.callableContainerMap)
+
+        if (!rebuildIndex) {
+            assert(failures.isEmpty()) {
+                failures.joinToString(separator = "\n")
+            }
+        } else {
+            state.setFrom(newState)
+        }
+    }
+
+    override fun getClassUseSiteMemberScope(
+        classId: ClassId,
+        useSiteSession: FirSession,
+        scopeSession: ScopeSession
+    ): FirScope? {
+        return when (val symbol = this.getClassLikeSymbolByFqName(classId) ?: return null) {
+            is FirClassSymbol -> symbol.fir.buildDefaultUseSiteScope(useSiteSession, scopeSession)
+            is FirTypeAliasSymbol -> {
+                val expandedTypeRef = symbol.fir.expandedTypeRef as FirResolvedTypeRef
+                val expandedType = expandedTypeRef.type as? ConeLookupTagBasedType ?: return null
+                val lookupTag = expandedType.lookupTag as? ConeClassLikeLookupTag ?: return null
+                getClassUseSiteMemberScope(lookupTag.classId, useSiteSession, scopeSession)
+            }
+            else -> throw IllegalArgumentException("Unexpected FIR symbol in getClassUseSiteMemberScope: $symbol")
+        }
     }
 
 }
+
+private const val rebuildIndex = true

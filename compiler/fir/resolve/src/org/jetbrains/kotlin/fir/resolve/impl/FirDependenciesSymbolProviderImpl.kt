@@ -9,6 +9,8 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
 import org.jetbrains.kotlin.fir.resolve.AbstractFirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
@@ -44,6 +46,14 @@ class FirDependenciesSymbolProviderImpl(val session: FirSession) : AbstractFirSy
             }
             null
         }
+    }
+
+    override fun getClassUseSiteMemberScope(
+        classId: ClassId,
+        useSiteSession: FirSession,
+        scopeSession: ScopeSession
+    ): FirScope? {
+        return dependencyProviders.firstNotNullResult { it.getClassUseSiteMemberScope(classId, useSiteSession, scopeSession) }
     }
 
     override fun getPackage(fqName: FqName): FqName? {

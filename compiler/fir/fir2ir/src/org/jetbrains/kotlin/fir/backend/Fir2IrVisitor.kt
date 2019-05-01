@@ -15,15 +15,14 @@ import org.jetbrains.kotlin.fir.descriptors.FirModuleDescriptor
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
-import org.jetbrains.kotlin.fir.expressions.impl.FirWhenSubjectExpression
 import org.jetbrains.kotlin.fir.references.FirPropertyFromParameterCallableReference
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.buildUseSiteScope
-import org.jetbrains.kotlin.fir.resolve.getCallableSymbols
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
-import org.jetbrains.kotlin.fir.symbols.CallableId
+import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
@@ -198,7 +197,7 @@ internal class Fir2IrVisitor(
     private fun IrClass.addFakeOverrides(klass: FirClass, processedFunctionNames: MutableList<Name>) {
         if (fakeOverrideMode == FakeOverrideMode.NONE) return
         val superTypesFunctionNames = klass.collectFunctionNamesFromSupertypes()
-        val useSiteScope = (klass as? FirRegularClass)?.buildUseSiteScope(session) ?: return
+        val useSiteScope = (klass as? FirRegularClass)?.buildUseSiteScope(session, ScopeSession()) ?: return
         for (name in superTypesFunctionNames) {
             if (name in processedFunctionNames) continue
             processedFunctionNames += name
@@ -393,10 +392,19 @@ internal class Fir2IrVisitor(
         val constructedIrType = constructedTypeRef.toIrType(this@Fir2IrVisitor.session, declarationStorage)
         // TODO: find delegated constructor correctly
         val classId = constructedClassSymbol.classId
-        val constructorId = CallableId(classId.packageFqName, classId.relativeClassName, classId.shortClassName)
-        val constructorSymbol = this@Fir2IrVisitor.session.service<FirSymbolProvider>().getCallableSymbols(constructorId).firstOrNull {
-            arguments.size <= ((it as FirFunctionSymbol).fir as FirFunction).valueParameters.size
-        } ?: return null
+        val provider = this@Fir2IrVisitor.session.service<FirSymbolProvider>()
+        var constructorSymbol: FirCallableSymbol? = null
+        provider.getClassUseSiteMemberScope(classId, this@Fir2IrVisitor.session, ScopeSession())!!.processFunctionsByName(
+            classId.shortClassName
+        ) {
+            if (arguments.size <= ((it as FirFunctionSymbol).fir as FirFunction).valueParameters.size) {
+                constructorSymbol = it
+                ProcessorAction.STOP
+            } else {
+                ProcessorAction.NEXT
+            }
+        }
+        if (constructorSymbol == null) return null
         return convertWithOffsets { startOffset, endOffset ->
             IrDelegatingConstructorCallImpl(
                 startOffset, endOffset,
@@ -784,18 +792,13 @@ internal class Fir2IrVisitor(
 
     private fun FirStatement.toIrStatement(): IrStatement? {
         if (this is FirTypeAlias) return null
+        if (this is FirUnitExpression) return toIrExpression()
         return accept(this@Fir2IrVisitor, null) as IrStatement
     }
 
     private fun FirExpression.toIrExpression(): IrExpression {
         return when (this) {
             is FirBlock -> convertToIrExpressionOrBlock()
-            is FirWhenSubjectExpression -> {
-                val lastSubjectVariable = subjectVariableStack.last()
-                convertWithOffsets { startOffset, endOffset ->
-                    IrGetValueImpl(startOffset, endOffset, lastSubjectVariable.type, lastSubjectVariable.symbol)
-                }
-            }
             is FirUnitExpression -> convertWithOffsets { startOffset, endOffset ->
                 IrGetObjectValueImpl(
                     startOffset, endOffset, unitType,
@@ -906,6 +909,13 @@ internal class Fir2IrVisitor(
             } else {
                 IrBranchImpl(startOffset, endOffset, condition.toIrExpression(), irResult)
             }
+        }
+    }
+
+    override fun visitWhenSubjectExpression(whenSubjectExpression: FirWhenSubjectExpression, data: Any?): IrElement {
+        val lastSubjectVariable = subjectVariableStack.last()
+        return whenSubjectExpression.convertWithOffsets { startOffset, endOffset ->
+            IrGetValueImpl(startOffset, endOffset, lastSubjectVariable.type, lastSubjectVariable.symbol)
         }
     }
 

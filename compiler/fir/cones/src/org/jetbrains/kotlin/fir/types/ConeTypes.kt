@@ -106,16 +106,16 @@ abstract class ConeTypeParameterType : ConeLookupTagBasedType() {
 }
 
 
-abstract class ConeFunctionType : ConeClassLikeType() {
 
-    abstract override val lookupTag: ConeClassLikeLookupTag
-    abstract val receiverType: ConeKotlinType?
-    abstract val parameterTypes: List<ConeKotlinType>
-    abstract val returnType: ConeKotlinType
-}
-
-class ConeFlexibleType(val lowerBound: ConeLookupTagBasedType, val upperBound: ConeLookupTagBasedType) : ConeKotlinType(),
+class ConeFlexibleType(val lowerBound: ConeKotlinType, val upperBound: ConeKotlinType) : ConeKotlinType(),
     FlexibleTypeMarker {
+
+    init {
+        val message = { "Bounds violation: $lowerBound, $upperBound" }
+        require(lowerBound is SimpleTypeMarker, message)
+        require(upperBound is SimpleTypeMarker, message)
+    }
+
     override val typeArguments: Array<out ConeKotlinTypeProjection>
         get() = emptyArray()
 
@@ -123,8 +123,12 @@ class ConeFlexibleType(val lowerBound: ConeLookupTagBasedType, val upperBound: C
         get() = lowerBound.nullability.takeIf { it == upperBound.nullability } ?: ConeNullability.UNKNOWN
 }
 
-class ConeCapturedTypeConstructor(val projection: ConeKotlinTypeProjection) : TypeConstructorMarker {
-    var supertypes: List<ConeKotlinType>? = null
+fun ConeKotlinType.upperBoundIfFlexible() = (this as? ConeFlexibleType)?.upperBound ?: this
+fun ConeKotlinType.lowerBoundIfFlexible() = (this as? ConeFlexibleType)?.lowerBound ?: this
+
+class ConeCapturedTypeConstructor(val projection: ConeKotlinTypeProjection, var supertypes: List<ConeKotlinType>? = null) :
+    TypeConstructorMarker {
+
 }
 
 class ConeCapturedType(
@@ -143,4 +147,18 @@ class ConeCapturedType(
 
     override val typeArguments: Array<out ConeKotlinTypeProjection>
         get() = emptyArray()
+}
+
+class ConeTypeVariableType(
+    override val nullability: ConeNullability,
+    override val lookupTag: ConeClassifierLookupTag
+) : ConeLookupTagBasedType() {
+    override val typeArguments: Array<out ConeKotlinTypeProjection> get() = emptyArray()
+}
+
+class ConeDefinitelyNotNullType(val original: ConeKotlinType): ConeKotlinType(), DefinitelyNotNullTypeMarker {
+    override val typeArguments: Array<out ConeKotlinTypeProjection>
+        get() = original.typeArguments
+    override val nullability: ConeNullability
+        get() = ConeNullability.NOT_NULL
 }

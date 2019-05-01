@@ -276,6 +276,10 @@ abstract class FirVisitor<out R, in D> {
         return visitExpression(whenExpression, data)
     }
 
+    open fun visitWhenSubjectExpression(whenSubjectExpression: FirWhenSubjectExpression, data: D): R {
+        return visitExpression(whenSubjectExpression, data)
+    }
+
     open fun visitWrappedArgumentExpression(wrappedArgumentExpression: FirWrappedArgumentExpression, data: D): R {
         return visitExpression(wrappedArgumentExpression, data)
     }
@@ -356,6 +360,18 @@ abstract class FirVisitor<out R, in D> {
         return visitTypeRef(implicitTypeRef, data)
     }
 
+    open fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: D): R {
+        return visitTypeRef(resolvedTypeRef, data)
+    }
+
+    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef, data: D): R {
+        return visitResolvedTypeRef(errorTypeRef, data)
+    }
+
+    open fun visitResolvedFunctionTypeRef(resolvedFunctionTypeRef: FirResolvedFunctionTypeRef, data: D): R {
+        return visitResolvedTypeRef(resolvedFunctionTypeRef, data)
+    }
+
     open fun visitTypeRefWithNullability(typeRefWithNullability: FirTypeRefWithNullability, data: D): R {
         return visitTypeRef(typeRefWithNullability, data)
     }
@@ -366,18 +382,6 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitFunctionTypeRef(functionTypeRef: FirFunctionTypeRef, data: D): R {
         return visitTypeRefWithNullability(functionTypeRef, data)
-    }
-
-    open fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: D): R {
-        return visitTypeRefWithNullability(resolvedTypeRef, data)
-    }
-
-    open fun visitErrorTypeRef(errorTypeRef: FirErrorTypeRef, data: D): R {
-        return visitResolvedTypeRef(errorTypeRef, data)
-    }
-
-    open fun visitResolvedFunctionTypeRef(resolvedFunctionTypeRef: FirResolvedFunctionTypeRef, data: D): R {
-        return visitResolvedTypeRef(resolvedFunctionTypeRef, data)
     }
 
     open fun visitUserTypeRef(userTypeRef: FirUserTypeRef, data: D): R {

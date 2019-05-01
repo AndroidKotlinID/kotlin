@@ -7,11 +7,13 @@ package org.jetbrains.kotlin.fir.scopes.impl
 
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.scopes.FirPosition
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction.NEXT
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction.STOP
 import org.jetbrains.kotlin.fir.symbols.*
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 
 class FirClassDeclaredMemberScope(
@@ -20,11 +22,22 @@ class FirClassDeclaredMemberScope(
     private val classId = klass.symbol.classId
     private val callablesIndex by lazy {
         klass.declarations.filterIsInstance<FirCallableDeclaration>()
-            .mapNotNull { it.symbol as? ConeCallableSymbol }
-            .groupBy { it.callableId }
+            .map { it.symbol }.groupBy { it.callableId }
+    }
+    private val classIndex by lazy {
+        klass.declarations.filterIsInstance<FirRegularClass>()
+            .map { it.symbol }.associateBy { it.classId }
     }
 
+
     override fun processFunctionsByName(name: Name, processor: (ConeFunctionSymbol) -> ProcessorAction): ProcessorAction {
+        val matchedClass = classIndex[ClassId(classId.packageFqName, classId.relativeClassName.child(name), false)]
+
+        if (matchedClass != null) {
+            if (FirClassDeclaredMemberScope(matchedClass.fir).processFunctionsByName(name, processor) == STOP) {
+                return STOP
+            }
+        }
         val symbols = callablesIndex[CallableId(classId.packageFqName, classId.relativeClassName, name)] ?: emptyList()
         for (symbol in symbols) {
             if (symbol is ConeFunctionSymbol && !processor(symbol)) {
@@ -42,5 +55,14 @@ class FirClassDeclaredMemberScope(
             }
         }
         return NEXT
+    }
+
+    override fun processClassifiersByName(name: Name, position: FirPosition, processor: (ConeClassifierSymbol) -> Boolean): Boolean {
+        val matchedClass = classIndex[classId.createNestedClassId(name)]
+        if (matchedClass != null && !processor(matchedClass)) {
+            return false
+        }
+
+        return super.processClassifiersByName(name, position, processor)
     }
 }

@@ -11,15 +11,14 @@ import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationContainer
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.FirConstExpressionImpl
-import org.jetbrains.kotlin.fir.java.declarations.FirJavaConstructor
-import org.jetbrains.kotlin.fir.java.declarations.FirJavaField
-import org.jetbrains.kotlin.fir.java.declarations.FirJavaMethod
-import org.jetbrains.kotlin.fir.java.declarations.FirJavaValueParameter
+import org.jetbrains.kotlin.fir.java.JavaTypeParameterStack
+import org.jetbrains.kotlin.fir.java.declarations.*
 import org.jetbrains.kotlin.fir.java.enhancement.*
 import org.jetbrains.kotlin.fir.java.enhancement.EnhancementSignatureParts
 import org.jetbrains.kotlin.fir.java.toNotNullConeKotlinType
 import org.jetbrains.kotlin.fir.java.types.FirJavaTypeRef
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.fir.resolve.transformers.firUnsafe
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.*
@@ -42,7 +41,10 @@ class JavaClassEnhancementScope(
     private val session: FirSession,
     private val useSiteScope: JavaClassUseSiteScope
 ) : FirScope {
-    private val owner: FirRegularClass get() = useSiteScope.symbol.fir
+    private val owner: FirRegularClass = useSiteScope.symbol.fir
+
+    private val javaTypeParameterStack: JavaTypeParameterStack =
+        if (owner is FirJavaClass) owner.javaTypeParameterStack else JavaTypeParameterStack.EMPTY
 
     private val jsr305State: Jsr305State = session.jsr305State ?: Jsr305State.DEFAULT
 
@@ -188,12 +190,14 @@ class JavaClassEnhancementScope(
                 newReceiverTypeRef, newReturnTypeRef
             ).apply {
                 this.valueParameters += newValueParameters
+                this.typeParameters += firMethod.typeParameters
             }
             else -> FirMemberFunctionImpl(
                 this@JavaClassEnhancementScope.session, null, symbol, name,
                 newReceiverTypeRef, newReturnTypeRef
             ).apply {
                 this.valueParameters += newValueParameters
+                this.typeParameters += firMethod.typeParameters
             }
         }
         function.apply {
@@ -226,7 +230,7 @@ class JavaClassEnhancementScope(
     private fun StringBuilder.appendErasedType(typeRef: FirTypeRef) {
         when (typeRef) {
             is FirResolvedTypeRef -> appendConeType(typeRef.type)
-            is FirJavaTypeRef -> appendConeType(typeRef.toNotNullConeKotlinType(session))
+            is FirJavaTypeRef -> appendConeType(typeRef.toNotNullConeKotlinType(session, javaTypeParameterStack))
         }
     }
 
@@ -313,26 +317,17 @@ class JavaClassEnhancementScope(
         return signatureParts.type
     }
 
-    private val overriddenMemberCache = mutableMapOf<FirCallableMemberDeclaration, List<FirCallableMemberDeclaration>>()
+    private val overrideBindCache = mutableMapOf<Name, Map<ConeFunctionSymbol?, List<ConeCallableSymbol>>>()
 
     private fun FirCallableMemberDeclaration.overriddenMembers(): List<FirCallableMemberDeclaration> {
-        return overriddenMemberCache.getOrPut(this) {
-            val result = mutableListOf<FirCallableMemberDeclaration>()
-            if (this is FirNamedFunction) {
-                val superTypesScope = useSiteScope.superTypesScope
-                superTypesScope.processFunctionsByName(this.name) { basicFunctionSymbol ->
-                    val overriddenBy = with(useSiteScope) {
-                        basicFunctionSymbol.getOverridden(setOf(this@overriddenMembers.symbol as ConeFunctionSymbol))
-                    }
-                    val overriddenByFir = (overriddenBy as? FirFunctionSymbol)?.fir
-                    if (overriddenByFir === this@overriddenMembers) {
-                        result += (basicFunctionSymbol as FirFunctionSymbol).fir as FirCallableMemberDeclaration
-                    }
-                    ProcessorAction.NEXT
-                }
-            }
-            result
+        val backMap = overrideBindCache.getOrPut(this.name) {
+            useSiteScope.bindOverrides(this.name)
+            useSiteScope
+                .overriddenByBase
+                .toList()
+                .groupBy({ (_, key) -> key }, { (value) -> value })
         }
+        return backMap[this.symbol]?.map { it.firUnsafe() } ?: emptyList()
     }
 
     private sealed class TypeInSignature {
@@ -390,6 +385,7 @@ class JavaClassEnhancementScope(
         return EnhancementSignatureParts(
             typeQualifierResolver,
             typeContainer,
+            javaTypeParameterStack,
             typeRef as FirJavaTypeRef,
             overriddenMembers.map {
                 typeInSignature.getTypeRef(it)

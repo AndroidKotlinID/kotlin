@@ -16,10 +16,12 @@ import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.impl.FirClassImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirEnumEntryImpl
+import org.jetbrains.kotlin.fir.deserialization.FirBuiltinAnnotationDeserializer
 import org.jetbrains.kotlin.fir.deserialization.FirDeserializationContext
 import org.jetbrains.kotlin.fir.deserialization.deserializeClassToSymbol
-import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.getOrPut
+import org.jetbrains.kotlin.fir.resolve.*
+import org.jetbrains.kotlin.fir.resolve.transformers.firUnsafe
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassDeclaredMemberScope
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
@@ -64,7 +66,10 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider 
         val classDataFinder = ProtoBasedClassDataFinder(packageProto, nameResolver, version) { SourceElement.NO_SOURCE }
 
         private val memberDeserializer by lazy {
-            FirDeserializationContext.createForPackage(fqName, packageProto.`package`, nameResolver, session).memberDeserializer
+            FirDeserializationContext.createForPackage(
+                fqName, packageProto.`package`, nameResolver, session,
+                FirBuiltinAnnotationDeserializer(session)
+            ).memberDeserializer
         }
 
         val lookup = mutableMapOf<ClassId, FirClassSymbol>()
@@ -76,16 +81,29 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider 
             classId: ClassId,
             parentContext: FirDeserializationContext? = null
         ): FirClassSymbol? {
-            if (classId !in classDataFinder.allClassIds) return null
+            val classIdExists = classId in classDataFinder.allClassIds
+            val shouldBeEnumEntry = !classIdExists && classId.outerClassId in classDataFinder.allClassIds
+            if (!classIdExists && !shouldBeEnumEntry) return null
+            if (shouldBeEnumEntry) {
+                val outerClassData = classDataFinder.findClassData(classId.outerClassId!!)!!
+                val outerClassProto = outerClassData.classProto
+                if (outerClassProto.enumEntryList.none { nameResolver.getName(it.name) == classId.shortClassName }) {
+                    return null
+                }
+            }
             return lookup.getOrPut(classId, { FirClassSymbol(classId) }) { symbol ->
-                val classData = classDataFinder.findClassData(classId)!!
-                val classProto = classData.classProto
+                if (shouldBeEnumEntry) {
+                    FirEnumEntryImpl(session, null, symbol, classId.shortClassName)
+                } else {
+                    val classData = classDataFinder.findClassData(classId)!!
+                    val classProto = classData.classProto
 
-                deserializeClassToSymbol(
-                    classId, classProto, symbol, nameResolver, session,
-                    parentContext,
-                    this::findAndDeserializeClass
-                )
+                    deserializeClassToSymbol(
+                        classId, classProto, symbol, nameResolver, session,
+                        null, parentContext,
+                        this::findAndDeserializeClass
+                    )
+                }
             }
         }
 
@@ -102,6 +120,15 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider 
         fun getAllClassNames(): Set<Name> {
             return classDataFinder.allClassIds.mapTo(mutableSetOf()) { it.shortClassName }
         }
+    }
+
+    override fun getClassUseSiteMemberScope(
+        classId: ClassId,
+        useSiteSession: FirSession,
+        scopeSession: ScopeSession
+    ): FirScope? {
+        val symbol = this.getClassLikeSymbolByFqName(classId) ?: return null
+        return symbol.firUnsafe<FirRegularClass>().buildDefaultUseSiteScope(useSiteSession, scopeSession)
     }
 
     override fun getPackage(fqName: FqName): FqName? {

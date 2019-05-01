@@ -13,7 +13,9 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
 import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
-import org.jetbrains.kotlin.fir.expressions.impl.FirWhenSubjectExpression
+import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
+import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
+import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.types.*
@@ -34,7 +36,8 @@ fun FirElement.render(): String = buildString { this@render.accept(FirRenderer(t
 
 fun ConeKotlinType.render(): String {
     return when (this) {
-        is ConeKotlinErrorType -> "error: $reason"
+        is ConeTypeVariableType -> "TypeVariable(${this.lookupTag.name})"
+        is ConeDefinitelyNotNullType -> "${original.render()}!"
         is ConeClassErrorType -> "class error: $reason"
         is ConeCapturedType -> "captured type: lowerType = ${lowerType?.render()}"
         is ConeClassLikeType -> {
@@ -54,18 +57,6 @@ fun ConeKotlinType.render(): String {
         }
         is ConeTypeParameterType -> {
             lookupTag.name.asString()
-        }
-        is ConeFunctionType -> {
-            buildString {
-                receiverType?.let {
-                    append(it.render())
-                    append(".")
-                }
-                append("(")
-                parameterTypes.joinTo(this) { it.render() }
-                append(") -> ")
-                append(returnType.render())
-            }
         }
         is ConeFlexibleType -> {
             buildString {
@@ -548,6 +539,10 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         println("}")
     }
 
+    override fun visitWhenSubjectExpression(whenSubjectExpression: FirWhenSubjectExpression) {
+        print("\$subj\$")
+    }
+
     override fun visitTryExpression(tryExpression: FirTryExpression) {
         tryExpression.annotations.renderAnnotations()
         print("try")
@@ -612,7 +607,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             when (expression) {
                 is FirExpressionStub -> "STUB"
                 is FirUnitExpression -> "Unit"
-                is FirWhenSubjectExpression -> "\$subj\$"
                 is FirElseIfTrueCondition -> "else"
                 else -> "??? ${expression.javaClass}"
             }
@@ -768,18 +762,25 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     }
 
     override fun visitNamedReference(namedReference: FirNamedReference) {
-        print("${namedReference.name}#")
+        if (namedReference is FirErrorNamedReference) {
+            print("<${namedReference.errorReason}>#")
+        } else {
+            print("${namedReference.name}#")
+        }
     }
 
     override fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference) {
         print("R|")
-        val isFakeOverride = (resolvedCallableReference.callableSymbol as? FirFunctionSymbol)?.isFakeOverride == true
+        val isFakeOverride = (resolvedCallableReference.coneSymbol as? FirFunctionSymbol)?.isFakeOverride == true
 
         if (isFakeOverride) {
             print("FakeOverride<")
         }
-        val symbol = resolvedCallableReference.callableSymbol
-        print(symbol.callableId)
+        val symbol = resolvedCallableReference.coneSymbol
+        if (symbol is ConeCallableSymbol)
+            print(symbol.callableId)
+        else if (symbol is ConeClassLikeSymbol)
+            print(symbol.classId)
         if (isFakeOverride) {
             when (symbol) {
                 is FirFunctionSymbol -> {
