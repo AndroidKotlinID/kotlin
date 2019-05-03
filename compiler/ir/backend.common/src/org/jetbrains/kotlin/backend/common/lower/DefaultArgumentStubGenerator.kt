@@ -7,13 +7,10 @@ package org.jetbrains.kotlin.backend.common.lower
 
 import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.descriptors.*
-import org.jetbrains.kotlin.backend.common.ir.copyTo
-import org.jetbrains.kotlin.backend.common.ir.copyTypeParametersFrom
-import org.jetbrains.kotlin.backend.common.ir.ir2string
+import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
@@ -136,11 +133,10 @@ open class DefaultArgumentStubGenerator(
                     endOffset = irFunction.endOffset,
                     type = context.irBuiltIns.unitType,
                     symbol = irFunction.symbol, descriptor = irFunction.symbol.descriptor,
-                    typeArgumentsCount = irFunction.typeParameters.size
+                    typeArgumentsCount = newIrFunction.parentAsClass.typeParameters.size + newIrFunction.typeParameters.size
                 ).apply {
-                    newIrFunction.typeParameters.forEachIndexed { i, param ->
-                        putTypeArgument(i, param.defaultType)
-                    }
+                    passTypeArgumentsFrom(newIrFunction.parentAsClass)
+                    passTypeArgumentsFrom(newIrFunction)
                     dispatchReceiver = newIrFunction.dispatchReceiverParameter?.let { irGet(it) }
 
                     params.forEachIndexed { i, variable -> putValueArgument(i, irGet(variable)) }
@@ -163,10 +159,8 @@ open class DefaultArgumentStubGenerator(
         newIrFunction: IrFunction,
         params: MutableList<IrVariable>
     ): IrExpression {
-        val dispatchCall = irCall(irFunction).apply {
-            newIrFunction.typeParameters.forEachIndexed { i, param ->
-                putTypeArgument(i, param.defaultType)
-            }
+        val dispatchCall = irCall(irFunction.symbol).apply {
+            passTypeArgumentsFrom(newIrFunction)
             dispatchReceiver = newIrFunction.dispatchReceiverParameter?.let { irGet(it) }
             extensionReceiver = newIrFunction.extensionReceiverParameter?.let { irGet(it) }
 

@@ -19,14 +19,14 @@ import org.jetbrains.org.objectweb.asm.commons.Method
 
 abstract class IntrinsicMethod {
     open fun toCallable(
-        expression: IrMemberAccessExpression,
+        expression: IrFunctionAccessExpression,
         signature: JvmMethodSignature,
         context: JvmBackendContext
     ): IrIntrinsicFunction = TODO("implement toCallable() or invoke() of $this")
 
     open fun invoke(expression: IrFunctionAccessExpression, codegen: ExpressionCodegen, data: BlockInfo): PromisedValue? =
         with(codegen) {
-            val descriptor = typeMapper.mapSignatureSkipGeneric(expression.descriptor)
+            val descriptor = typeMapper.mapSignatureSkipGeneric(expression.symbol.owner)
             val stackValue = toCallable(expression, descriptor, context).invoke(mv, codegen, data)
             return object : PromisedValue(mv, stackValue.type) {
                 override fun materialize() = stackValue.put(mv)

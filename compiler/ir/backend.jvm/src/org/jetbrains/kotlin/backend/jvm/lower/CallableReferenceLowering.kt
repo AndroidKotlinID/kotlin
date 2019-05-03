@@ -107,8 +107,8 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                 ) {
                     val vararg = IrVarargImpl(
                         UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                        context.ir.symbols.array.typeWith(),
-                        context.irBuiltIns.anyClass.typeWith(),
+                        context.ir.symbols.array.typeWith(context.irBuiltIns.anyNType),
+                        context.irBuiltIns.anyNType,
                         (0 until argumentsCount).map { i -> expression.getValueArgument(i)!! }
                     )
                     val invokeFun = context.ir.symbols.functionN.owner.declarations.single {
@@ -172,10 +172,13 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
         private val boundCalleeParameters = irFunctionReference.getArgumentsWithIr().map { it.first }
         private val unboundCalleeParameters = calleeParameters - boundCalleeParameters
 
-        private val typeArgumentsMap = callee.typeParameters.associate { typeParam ->
-            typeParam to irFunctionReference.getTypeArgument(typeParam.index)!!
+        private val typeParameters = if (callee is IrConstructor)
+            callee.parentAsClass.typeParameters + callee.typeParameters
+        else
+            callee.typeParameters
+        private val typeArgumentsMap = typeParameters.associate { typeParam ->
+            typeParam.symbol to irFunctionReference.getTypeArgument(typeParam.index)!!
         }
-
 
         private lateinit var functionReferenceClass: IrClass
         private lateinit var functionReferenceThis: IrValueParameterSymbol
@@ -189,9 +192,7 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
 
         fun build(): BuiltFunctionReference {
             val returnType = irFunctionReference.symbol.owner.returnType
-            val functionReferenceClassSuperTypes: MutableList<IrType> = mutableListOf(
-                functionReferenceOrLambda.owner.defaultType // type arguments?
-            )
+            val functionReferenceClassSuperTypes: MutableList<IrType> = mutableListOf(functionReferenceOrLambda.owner.defaultType)
 
             val numberOfParameters = unboundCalleeParameters.size
             useVararg = (numberOfParameters > MAX_ARGCOUNT_WITHOUT_VARARG)
@@ -392,6 +393,10 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                     }
                     +irReturn(
                         irCall(irFunctionReference.symbol).apply {
+                            for ((typeParameter, typeArgument) in typeArgumentsMap) {
+                                putTypeArgument(typeParameter.owner.index, typeArgument)
+                            }
+
                             var unboundIndex = 0
 
                             calleeParameters.forEach { parameter ->
@@ -589,27 +594,4 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
     companion object {
         const val MAX_ARGCOUNT_WITHOUT_VARARG = 22
     }
-}
-
-// TODO: Move to IrUtils
-private fun IrType.substitute(substitutionMap: Map<IrTypeParameter, IrType>): IrType {
-    if (this !is IrSimpleType) return this
-
-    substitutionMap[classifier]?.let { return it }
-
-    val newArguments = arguments.map {
-        if (it is IrTypeProjection) {
-            makeTypeProjection(it.type.substitute(substitutionMap), it.variance)
-        } else {
-            it
-        }
-    }
-
-    val newAnnotations = annotations.map { it.deepCopyWithSymbols() }
-    return IrSimpleTypeImpl(
-        classifier,
-        hasQuestionMark,
-        newArguments,
-        newAnnotations
-    )
 }
