@@ -19,13 +19,11 @@ import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.SAFE
 import org.jetbrains.kotlin.codegen.pseudoInsns.fakeAlwaysFalseIfeq
 import org.jetbrains.kotlin.codegen.pseudoInsns.fixStackAndJump
 import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
-import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
@@ -54,17 +52,22 @@ class TryInfo(val onExit: IrExpression) : ExpressionInfo() {
     val gaps = mutableListOf<Pair<Label, Label>>()
 }
 
-class BlockInfo private constructor(val parent: BlockInfo?) {
-    val variables = mutableListOf<VariableInfo>()
-    val infos = Stack<ExpressionInfo>()
+class ReturnableBlockInfo(
+    val returnLabel: Label,
+    val returnSymbol: IrSymbol,
+    val returnTemporary: Int? = null
+) : ExpressionInfo()
 
-    fun create() = BlockInfo(this).apply {
-        this@apply.infos.addAll(this@BlockInfo.infos)
-    }
+class BlockInfo(val parent: BlockInfo? = null) {
+    val variables = mutableListOf<VariableInfo>()
+    private val infos: Stack<ExpressionInfo> = parent?.infos ?: Stack()
 
     fun hasFinallyBlocks(): Boolean = infos.firstIsInstanceOrNull<TryInfo>() != null
 
-    inline fun <T : ExpressionInfo, R> withBlock(info: T, f: (T) -> R): R {
+    internal inline fun <reified T : ExpressionInfo> findBlock(predicate: (T) -> Boolean): T? =
+        infos.find { it is T && predicate(it) } as? T
+
+    internal inline fun <T : ExpressionInfo, R> withBlock(info: T, f: (T) -> R): R {
         infos.add(info)
         try {
             return f(info)
@@ -73,7 +76,7 @@ class BlockInfo private constructor(val parent: BlockInfo?) {
         }
     }
 
-    inline fun <R> handleBlock(f: (ExpressionInfo) -> R): R? {
+    internal inline fun <R> handleBlock(f: (ExpressionInfo) -> R): R? {
         if (infos.isEmpty()) {
             return null
         }
@@ -83,10 +86,6 @@ class BlockInfo private constructor(val parent: BlockInfo?) {
         } finally {
             infos.add(top)
         }
-    }
-
-    companion object {
-        fun create() = BlockInfo(null)
     }
 }
 
@@ -155,7 +154,7 @@ class ExpressionCodegen(
     fun generate() {
         mv.visitCode()
         val startLabel = markNewLabel()
-        val info = BlockInfo.create()
+        val info = BlockInfo()
         val body = irFunction.body!!
         val result = body.accept(this, info)
         // If this function has an expression body, return the result of that expression.
@@ -171,25 +170,26 @@ class ExpressionCodegen(
             result.coerce(returnType).materialize()
             mv.areturn(returnType)
         }
-        writeLocalVariablesInTable(info)
-        writeParameterInLocalVariableTable(startLabel)
+        val endLabel = markNewLabel()
+        writeLocalVariablesInTable(info, endLabel)
+        writeParameterInLocalVariableTable(startLabel, endLabel)
         mv.visitEnd()
     }
 
-    private fun writeParameterInLocalVariableTable(startLabel: Label) {
+    private fun writeParameterInLocalVariableTable(startLabel: Label, endLabel: Label) {
         if (!irFunction.isStatic) {
-            mv.visitLocalVariable("this", classCodegen.type.descriptor, null, startLabel, markNewLabel(), 0)
+            mv.visitLocalVariable("this", classCodegen.type.descriptor, null, startLabel, endLabel, 0)
         }
         val extensionReceiverParameter = irFunction.extensionReceiverParameter
         if (extensionReceiverParameter != null) {
-            writeValueParameterInLocalVariableTable(extensionReceiverParameter, startLabel)
+            writeValueParameterInLocalVariableTable(extensionReceiverParameter, startLabel, endLabel)
         }
         for (param in irFunction.valueParameters) {
-            writeValueParameterInLocalVariableTable(param, startLabel)
+            writeValueParameterInLocalVariableTable(param, startLabel, endLabel)
         }
     }
 
-    private fun writeValueParameterInLocalVariableTable(param: IrValueParameter, startLabel: Label) {
+    private fun writeValueParameterInLocalVariableTable(param: IrValueParameter, startLabel: Label, endLabel: Label) {
         // TODO: old code has a special treatment for destructuring lambda parameters.
         // There is no (easy) way to reproduce it with IR structures.
         // Does not show up in tests, but might come to bite us at some point.
@@ -198,22 +198,43 @@ class ExpressionCodegen(
         val type = typeMapper.mapType(param)
         // NOTE: we expect all value parameters to be present in the frame.
         mv.visitLocalVariable(
-            name, type.descriptor, null, startLabel, markNewLabel(), findLocalIndex(param.symbol)
+            name, type.descriptor, null, startLabel, endLabel, findLocalIndex(param.symbol)
         )
     }
 
     override fun visitBlock(expression: IrBlock, data: BlockInfo): PromisedValue {
         if (expression.isTransparentScope)
             return super.visitBlock(expression, data)
-        val info = data.create()
-        // Force materialization to avoid reading from out-of-scope variables.
-        return super.visitBlock(expression, info).materialized.apply {
-            writeLocalVariablesInTable(info)
+        val info = BlockInfo(data)
+        return if (expression is IrReturnableBlock) {
+            val returnType = expression.asmType
+            val returnLabel = Label()
+            // Because the return might be inside an expression, it will need to pop excess items
+            // before jumping and store the result in a temporary variable.
+            val returnTemporary = if (returnType != Type.VOID_TYPE) frameMap.enterTemp(returnType) else null
+            info.withBlock(ReturnableBlockInfo(returnLabel, expression.symbol, returnTemporary)) {
+                // Remember current stack depth.
+                mv.fakeAlwaysFalseIfeq(returnLabel)
+                super.visitBlock(expression, info).materialized.also {
+                    returnTemporary?.let { mv.store(it, returnType) }
+                    // Variables leave the scope in reverse order, so must write locals first.
+                    mv.mark(returnLabel)
+                    writeLocalVariablesInTable(info, returnLabel)
+                    returnTemporary?.let {
+                        mv.load(it, returnType)
+                        frameMap.leaveTemp(returnType)
+                    }
+                }
+            }
+        } else {
+            // Force materialization to avoid reading from out-of-scope variables.
+            super.visitBlock(expression, info).materialized.also {
+                writeLocalVariablesInTable(info, markNewLabel())
+            }
         }
     }
 
-    private fun writeLocalVariablesInTable(info: BlockInfo) {
-        val endLabel = markNewLabel()
+    private fun writeLocalVariablesInTable(info: BlockInfo, endLabel: Label) {
         info.variables.forEach {
             when (it.declaration.origin) {
                 IrDeclarationOrigin.IR_TEMPORARY_VARIABLE,
@@ -246,63 +267,28 @@ class ExpressionCodegen(
     override fun visitContainerExpression(expression: IrContainerExpression, data: BlockInfo) =
         visitStatementContainer(expression, data).coerce(expression.asmType)
 
-    override fun visitDelegatingConstructorCall(expression: IrDelegatingConstructorCall, data: BlockInfo): PromisedValue {
-        expression.markLineNumber(startOffset = true)
-        mv.load(0, OBJECT_TYPE) // HACK
-        return generateCall(expression, null, data)
-    }
-
-    override fun visitCall(expression: IrCall, data: BlockInfo): PromisedValue {
-        expression.markLineNumber(startOffset = true)
-        if (expression.symbol.owner is IrConstructor) {
-            throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
-        }
-        return generateCall(expression, expression.superQualifierSymbol, data)
-    }
-
-    override fun visitConstructorCall(expression: IrConstructorCall, data: BlockInfo): PromisedValue {
-        val type = expression.asmType
-        if (type.sort == Type.ARRAY) {
-            //noinspection ConstantConditions
-            return generateNewArray(expression, data)
-        }
-
-        mv.anew(expression.asmType)
-        mv.dup()
-        generateCall(expression, null, data)
-        return expression.onStack
-    }
-
-    private fun generateNewArray(expression: IrConstructorCall, data: BlockInfo): PromisedValue {
-        val args = expression.symbol.owner.valueParameters
-        assert(args.size == 1 || args.size == 2) { "Unknown constructor called: " + args.size + " arguments" }
-
-        if (args.size == 1) {
-            // TODO move to the intrinsic
-            expression.getValueArgument(0)!!.accept(this, data).coerce(Type.INT_TYPE).materialize()
-            newArrayInstruction(expression.type)
-            return expression.onStack
-        }
-
-        return generateCall(expression, null, data)
-    }
-
-    private fun generateCall(expression: IrFunctionAccessExpression, superQualifierSymbol: IrClassSymbol?, data: BlockInfo): PromisedValue {
+    override fun visitFunctionAccess(expression: IrFunctionAccessExpression, data: BlockInfo): PromisedValue {
         classCodegen.context.irIntrinsics.getIntrinsic(expression.symbol)
             ?.invoke(expression, this, data)?.let { return it.coerce(expression.asmType) }
-        val isSuperCall = superQualifierSymbol != null
-        val callable = resolveToCallable(expression, isSuperCall)
-        return generateCall(expression, callable, data, isSuperCall)
-    }
 
-    fun generateCall(
-        expression: IrFunctionAccessExpression,
-        callable: Callable,
-        data: BlockInfo,
-        isSuperCall: Boolean = false
-    ): PromisedValue {
+        val isSuperCall = (expression as? IrCall)?.superQualifier != null
+        val callable = resolveToCallable(expression, isSuperCall)
         val callee = expression.symbol.owner
         val callGenerator = getOrCreateCallGenerator(expression, data)
+
+        when {
+            expression is IrConstructorCall -> {
+                // IR constructors have no receiver and return the new instance, but on JVM they are void-returning
+                // instance methods named <init>.
+                mv.anew(expression.asmType)
+                mv.dup()
+            }
+            expression is IrDelegatingConstructorCall ->
+                // In this case the receiver is `this` (not specified in IR) and the return value is discarded anyway.
+                mv.load(0, OBJECT_TYPE)
+            expression.descriptor is ConstructorDescriptor ->
+                throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
+        }
 
         val receiver = expression.dispatchReceiver
         receiver?.apply {
@@ -366,6 +352,7 @@ class ExpressionCodegen(
             }
         }
 
+        expression.markLineNumber(true)
         callGenerator.genCall(
             callable,
             defaultMask.generateOnStackIfNeeded(callGenerator, callee is IrConstructor, this),
@@ -374,17 +361,19 @@ class ExpressionCodegen(
         )
 
         val returnType = callee.returnType.substitute(typeSubstitutionMap)
-        if (returnType.isNothing()) {
-            mv.aconst(null)
-            mv.athrow()
-            return voidValue
-        } else if (callee is IrConstructor) {
-            return voidValue
-        } else if (expression.type.isUnit()) {
-            // NewInference allows casting `() -> T` to `() -> Unit`. A CHECKCAST here will fail.
-            return MaterialValue(mv, callable.returnType).discard().coerce(expression.asmType)
+        return when {
+            returnType.isNothing() -> {
+                mv.aconst(null)
+                mv.athrow()
+                voidValue
+            }
+            expression is IrConstructorCall -> expression.onStack
+            expression is IrDelegatingConstructorCall -> voidValue
+            expression.type.isUnit() ->
+                // NewInference allows casting `() -> T` to `() -> Unit`. A CHECKCAST here will fail.
+                MaterialValue(mv, callable.returnType).discard().coerce(expression.asmType)
+            else -> MaterialValue(mv, callable.returnType).coerce(expression.asmType)
         }
-        return MaterialValue(mv, callable.returnType).coerce(expression.asmType)
     }
 
     override fun visitVariable(declaration: IrVariable, data: BlockInfo): PromisedValue {
@@ -635,15 +624,21 @@ class ExpressionCodegen(
             return voidValue
         }
 
+        val target = data.findBlock<ReturnableBlockInfo> { it.returnSymbol == expression.returnTargetSymbol }
         val returnType = typeMapper.mapReturnType(owner)
         val afterReturnLabel = Label()
         expression.value.accept(this, data).coerce(returnType).materialize()
-        generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data)
+        generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data, target)
         expression.markLineNumber(startOffset = true)
-        if (isNonLocalReturn) {
-            generateGlobalReturnFlag(mv, (owner as IrFunction).name.asString())
+        if (target != null) {
+            target.returnTemporary?.let { mv.store(it, returnType) }
+            mv.fixStackAndJump(target.returnLabel)
+        } else {
+            if (isNonLocalReturn) {
+                generateGlobalReturnFlag(mv, (owner as IrFunction).name.asString())
+            }
+            mv.areturn(returnType)
         }
-        mv.areturn(returnType)
         mv.mark(afterReturnLabel)
         mv.nop()/*TODO check RESTORE_STACK_IN_TRY_CATCH processor*/
         return voidValue
@@ -831,20 +826,18 @@ class ExpressionCodegen(
         return voidValue
     }
 
-    private fun unwindBlockStack(endLabel: Label, data: BlockInfo, loop: IrLoop? = null): LoopInfo? {
+    private fun unwindBlockStack(endLabel: Label, data: BlockInfo, stop: (ExpressionInfo) -> Boolean): ExpressionInfo? {
         return data.handleBlock {
-            when {
-                it is TryInfo -> genFinallyBlock(it, null, endLabel, data)
-                it is LoopInfo && it.loop == loop -> return it
-            }
-            unwindBlockStack(endLabel, data, loop)
+            if (it is TryInfo)
+                genFinallyBlock(it, null, endLabel, data)
+            return if (stop(it)) it else unwindBlockStack(endLabel, data, stop)
         }
     }
 
     override fun visitBreakContinue(jump: IrBreakContinue, data: BlockInfo): PromisedValue {
         jump.markLineNumber(startOffset = true)
         val endLabel = Label()
-        val stackElement = unwindBlockStack(endLabel, data, jump.loop)
+        val stackElement = unwindBlockStack(endLabel, data) { it is LoopInfo && it.loop == jump.loop } as LoopInfo?
             ?: throw AssertionError("Target label for break/continue not found")
         mv.fixStackAndJump(if (jump is IrBreak) stackElement.breakLabel else stackElement.continueLabel)
         mv.mark(endLabel)
@@ -976,16 +969,16 @@ class ExpressionCodegen(
         tryInfo.gaps.add(gapStart to (afterJumpLabel ?: markNewLabel()))
     }
 
-    fun generateFinallyBlocksIfNeeded(returnType: Type, afterReturnLabel: Label, data: BlockInfo) {
+    fun generateFinallyBlocksIfNeeded(returnType: Type, afterReturnLabel: Label, data: BlockInfo, target: ReturnableBlockInfo? = null) {
         if (data.hasFinallyBlocks()) {
             if (Type.VOID_TYPE != returnType) {
                 val returnValIndex = frameMap.enterTemp(returnType)
                 mv.store(returnValIndex, returnType)
-                unwindBlockStack(afterReturnLabel, data, null)
+                unwindBlockStack(afterReturnLabel, data) { it == target }
                 mv.load(returnValIndex, returnType)
                 frameMap.leaveTemp(returnType)
             } else {
-                unwindBlockStack(afterReturnLabel, data, null)
+                unwindBlockStack(afterReturnLabel, data) { it == target }
             }
         }
     }
@@ -1040,50 +1033,23 @@ class ExpressionCodegen(
         return typeMapper.mapToCallableMethod(irCall.symbol.owner, isSuper)
     }
 
-    private fun getOrCreateCallGenerator(
-        irFunction: IrFunction,
-        element: IrMemberAccessExpression?,
-        typeParameterMappings: IrTypeParameterMappings?,
-        isDefaultCompilation: Boolean,
-        data: BlockInfo
-    ): IrCallGenerator {
-        if (element == null) return IrCallGenerator.DefaultCallGenerator
-
-        // We should inline callable containing reified type parameters even if inline is disabled
-        // because they may contain something to reify and straight call will probably fail at runtime
-        val isInline = irFunction.isInlineCall(state)
-
-        if (!isInline) return IrCallGenerator.DefaultCallGenerator
-
-        val original = (irFunction as? IrSimpleFunction)?.resolveFakeOverride() ?: irFunction
-        return if (isDefaultCompilation) {
-            TODO()
-        } else {
-            IrInlineCodegen(this, state, original.descriptor, typeParameterMappings!!, IrSourceCompilerForInline(state, element, this, data))
+    private fun getOrCreateCallGenerator(element: IrFunctionAccessExpression, data: BlockInfo): IrCallGenerator {
+        if (!element.symbol.owner.isInlineFunctionCall(context)) {
+            return IrCallGenerator.DefaultCallGenerator
         }
-    }
 
-    private fun getOrCreateCallGenerator(
-        functionAccessExpression: IrFunctionAccessExpression,
-        data: BlockInfo
-    ): IrCallGenerator {
-        val callee = functionAccessExpression.symbol.owner
+        val callee = element.symbol.owner
         val typeArgumentContainer = if (callee is IrConstructor) callee.parentAsClass else callee
         val typeArguments =
-            if (functionAccessExpression.typeArgumentsCount == 0) {
+            if (element.typeArgumentsCount == 0) {
                 //avoid ambiguity with type constructor type parameters
                 emptyMap()
             } else typeArgumentContainer.typeParameters.keysToMap {
-                functionAccessExpression.getTypeArgumentOrDefault(it)
+                element.getTypeArgumentOrDefault(it)
             }
 
         val mappings = IrTypeParameterMappings()
-        for (entry in typeArguments.entries) {
-            val key = entry.key
-            val type = entry.value
-
-            val isReified = key.isReified || callee.isArrayConstructorWithLambda()
-
+        for ((key, type) in typeArguments.entries) {
             val reificationArgument = extractReificationArgument(type)
             if (reificationArgument == null) {
                 // type is not generic
@@ -1091,16 +1057,17 @@ class ExpressionCodegen(
                 val asmType = typeMapper.mapTypeParameter(type, signatureWriter)
 
                 mappings.addParameterMappingToType(
-                    key.name.identifier, type, asmType, signatureWriter.toString(), isReified
+                    key.name.identifier, type, asmType, signatureWriter.toString(), key.isReified
                 )
             } else {
                 mappings.addParameterMappingForFurtherReification(
-                    key.name.identifier, type, reificationArgument, isReified
+                    key.name.identifier, type, reificationArgument, key.isReified
                 )
             }
         }
 
-        return getOrCreateCallGenerator(callee, functionAccessExpression, mappings, false, data)
+        val original = (callee as? IrSimpleFunction)?.resolveFakeOverride() ?: irFunction
+        return IrInlineCodegen(this, state, original.descriptor, mappings, IrSourceCompilerForInline(state, element, this, data))
     }
 
     override fun consumeReifiedOperationMarker(typeParameterDescriptor: TypeParameterDescriptor) {
@@ -1121,7 +1088,9 @@ class ExpressionCodegen(
     }
 
     override fun markLineNumberAfterInlineIfNeeded() {
-        //TODO
+        // Inline function has its own line number which is in a separate instance of codegen,
+        // therefore we need to reset lastLineNumber to force a line number generation after visiting inline function.
+        lastLineNumber = -1
     }
 
     fun isFinallyMarkerRequired(): Boolean {
@@ -1213,20 +1182,8 @@ fun DefaultCallArgs.generateOnStackIfNeeded(callGenerator: IrCallGenerator, isCo
     return toInts.isNotEmpty()
 }
 
-internal fun IrFunction.isInlineCall(state: GenerationState) =
-    (!state.isInlineDisabled || containsReifiedTypeParameters()) &&
-            (isInline || isArrayConstructorWithLambda())
-
 val IrType.isReifiedTypeParameter: Boolean
     get() = this.classifierOrNull?.safeAs<IrTypeParameterSymbol>()?.owner?.isReified == true
-
-/* Copied and modified from InlineUtil.java */
-fun isInline(declaration: IrDeclaration?): Boolean = declaration is IrSimpleFunction && declaration.isInline
-
-fun IrFunction.containsReifiedTypeParameters(): Boolean =
-    typeParameters.any { it.isReified }
-
-fun IrClass.isArrayOrPrimitiveArray() = this.defaultType.let { it.isArray() || it.isPrimitiveArray() }
 
 /* From typeUtil.java */
 fun IrType.getTypeParameterOrNull() = classifierOrNull?.owner?.safeAs<IrTypeParameter>()

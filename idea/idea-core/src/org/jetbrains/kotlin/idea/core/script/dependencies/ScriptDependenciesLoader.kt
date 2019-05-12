@@ -21,20 +21,23 @@ import org.jetbrains.kotlin.scripting.resolve.ScriptContentLoader
 import org.jetbrains.kotlin.scripting.resolve.ScriptReportSink
 import org.jetbrains.kotlin.scripting.resolve.adjustByDefinition
 import kotlin.script.experimental.dependencies.DependenciesResolver
+import kotlin.script.experimental.dependencies.ScriptDependencies
 
 abstract class ScriptDependenciesLoader(protected val project: Project) {
 
-    fun updateDependencies(file: VirtualFile, scriptDef: KotlinScriptDefinition) {
+    fun updateDependencies(file: VirtualFile) {
         if (fileModificationStamps[file.path] != file.modificationStamp) {
             fileModificationStamps.put(file.path, file.modificationStamp)
 
-            loadDependencies(file, scriptDef)
+            loadDependencies(file)
         }
     }
 
     private val fileModificationStamps: SLRUMap<String, Long> = SLRUMap(MAX_SCRIPTS_CACHED, MAX_SCRIPTS_CACHED)
 
-    protected abstract fun loadDependencies(file: VirtualFile, scriptDef: KotlinScriptDefinition)
+    abstract fun isApplicable(file: VirtualFile): Boolean
+
+    protected abstract fun loadDependencies(file: VirtualFile)
     protected abstract fun shouldShowNotification(): Boolean
 
     protected var shouldNotifyRootsChanged = false
@@ -84,6 +87,10 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
         }
 
         val dependencies = result.dependencies?.adjustByDefinition(scriptDef) ?: return
+        saveToCache(file, dependencies)
+    }
+
+    protected fun saveToCache(file: VirtualFile, dependencies: ScriptDependencies) {
         val rootsChanged = cache.hasNotCachedRoots(dependencies)
         if (cache.save(file, dependencies)) {
             file.scriptDependencies = dependencies

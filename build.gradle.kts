@@ -10,7 +10,7 @@ buildscript {
     extra["defaultSnapshotVersion"] = "1.3-SNAPSHOT"
 
     // when updating please also update JPS artifacts configuration: https://jetbrains.quip.com/zzGUAYSJ6gv3/JPS-Build-update-bootstrap
-    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.3.40-dev-2251", onlySuccessBootstrap = false))
+    kotlinBootstrapFrom(BootstrapOption.TeamCity("1.3.50-dev-44", onlySuccessBootstrap = false))
 
     repositories.withRedirector(project) {
         bootstrapKotlinRepo?.let(::maven)
@@ -31,8 +31,12 @@ buildscript {
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
 
         // a workaround to add another one buildSrc with Cidr-specific tools to Gradle classpath
+        val kotlinUltimateBuildSrcDep = "org.jetbrains.kotlin.ultimate:buildSrc:1.0"
         if (findProperty("cidrPluginsEnabled")?.toString()?.toBoolean() == true) {
-            classpath("org.jetbrains.kotlin.ultimate:buildSrc:1.0")
+            logger.info("Adding buildscript classpath dependency \"$kotlinUltimateBuildSrcDep\" in build.gradle.kts")
+            classpath(kotlinUltimateBuildSrcDep)
+        } else {
+            logger.info("NOT adding buildscript classpath dependency \"$kotlinUltimateBuildSrcDep\" in build.gradle.kts")
         }
     }
 }
