@@ -1211,6 +1211,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/addNameToArgument/kt11679.kt");
         }
 
+        @TestMetadata("linkedList.kt")
+        public void testLinkedList() throws Exception {
+            runTest("idea/testData/intentions/addNameToArgument/linkedList.kt");
+        }
+
         @TestMetadata("notInsideIndices.kt")
         public void testNotInsideIndices() throws Exception {
             runTest("idea/testData/intentions/addNameToArgument/notInsideIndices.kt");
@@ -1275,6 +1280,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         public void testVararg3() throws Exception {
             runTest("idea/testData/intentions/addNameToArgument/vararg3.kt");
         }
+
+        @TestMetadata("withComment.kt")
+        public void testWithComment() throws Exception {
+            runTest("idea/testData/intentions/addNameToArgument/withComment.kt");
+        }
     }
 
     @TestMetadata("idea/testData/intentions/addNamesToCallArguments")
@@ -1314,11 +1324,6 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/addNamesToCallArguments/javaMethod.kt");
         }
 
-        @TestMetadata("notOnCallee.kt")
-        public void testNotOnCallee() throws Exception {
-            runTest("idea/testData/intentions/addNamesToCallArguments/notOnCallee.kt");
-        }
-
         @TestMetadata("notResolved.kt")
         public void testNotResolved() throws Exception {
             runTest("idea/testData/intentions/addNamesToCallArguments/notResolved.kt");
@@ -1327,6 +1332,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("idea/testData/intentions/addNamesToCallArguments/simple.kt");
+        }
+
+        @TestMetadata("singleArgument.kt")
+        public void testSingleArgument() throws Exception {
+            runTest("idea/testData/intentions/addNamesToCallArguments/singleArgument.kt");
         }
 
         @TestMetadata("superClassConstructor.kt")
@@ -1352,6 +1362,34 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("varargSingleWithSpread.kt")
         public void testVarargSingleWithSpread() throws Exception {
             runTest("idea/testData/intentions/addNamesToCallArguments/varargSingleWithSpread.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/intentions/addNamesToFollowingArguments")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class AddNamesToFollowingArguments extends AbstractIntentionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInAddNamesToFollowingArguments() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/addNamesToFollowingArguments"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("first.kt")
+        public void testFirst() throws Exception {
+            runTest("idea/testData/intentions/addNamesToFollowingArguments/first.kt");
+        }
+
+        @TestMetadata("last.kt")
+        public void testLast() throws Exception {
+            runTest("idea/testData/intentions/addNamesToFollowingArguments/last.kt");
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("idea/testData/intentions/addNamesToFollowingArguments/simple.kt");
         }
     }
 

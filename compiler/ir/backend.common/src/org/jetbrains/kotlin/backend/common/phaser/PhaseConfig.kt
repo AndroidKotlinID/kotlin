@@ -19,6 +19,8 @@ class PhaseConfig(
     val verbose: Set<AnyNamedPhase> = emptySet(),
     val toDumpStateBefore: Set<AnyNamedPhase> = emptySet(),
     val toDumpStateAfter: Set<AnyNamedPhase> = emptySet(),
+    val dumpToDirectory: String? = null,
+    val dumpOnlyFqName: String? = null,
     val toValidateStateBefore: Set<AnyNamedPhase> = emptySet(),
     val toValidateStateAfter: Set<AnyNamedPhase> = emptySet(),
     val namesOfElementsExcludedFromDumping: Set<String> = emptySet(),
@@ -42,7 +44,7 @@ class PhaseConfig(
             val enabled = if (phase in enabled) "(Enabled)" else ""
             val verbose = if (phase in verbose) "(Verbose)" else ""
 
-            println(String.format("%1$-50s %2$-50s %3$-10s", "${"\t".repeat(depth)}${phase.name}:", phase.description, "$enabled $verbose"))
+            println(String.format("%1$-50s %2$-50s %3$-10s", "${"    ".repeat(depth)}${phase.name}:", phase.description, "$enabled $verbose"))
         }
     }
 

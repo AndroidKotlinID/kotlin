@@ -460,6 +460,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/branched/introduceWhenSubject/lineBreaksAndComments.kt");
             }
 
+            @TestMetadata("this.kt")
+            public void testThis() throws Exception {
+                runTest("idea/testData/inspectionsLocal/branched/introduceWhenSubject/this.kt");
+            }
+
             @TestMetadata("whenWithEqualityTests.kt")
             public void testWhenWithEqualityTests() throws Exception {
                 runTest("idea/testData/inspectionsLocal/branched/introduceWhenSubject/whenWithEqualityTests.kt");
@@ -2137,6 +2142,54 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
+    @TestMetadata("idea/testData/inspectionsLocal/convertNaNEquality")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConvertNaNEquality extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInConvertNaNEquality() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/convertNaNEquality"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("float.kt")
+        public void testFloat() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/float.kt");
+        }
+
+        @TestMetadata("importedProperty.kt")
+        public void testImportedProperty() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/importedProperty.kt");
+        }
+
+        @TestMetadata("inequality.kt")
+        public void testInequality() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/inequality.kt");
+        }
+
+        @TestMetadata("javaDouble.kt")
+        public void testJavaDouble() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/javaDouble.kt");
+        }
+
+        @TestMetadata("javaFloatNaN.kt")
+        public void testJavaFloatNaN() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/javaFloatNaN.kt");
+        }
+
+        @TestMetadata("negative.kt")
+        public void testNegative() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/negative.kt");
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("idea/testData/inspectionsLocal/convertNaNEquality/simple.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/inspectionsLocal/convertPairConstructorToToFunction")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3223,7 +3276,7 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
     }
 
-    @TestMetadata("idea/testData/inspectionsLocal/ImplicitNullableNothingType")
+    @TestMetadata("idea/testData/inspectionsLocal/implicitNullableNothingType")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
     public static class ImplicitNullableNothingType extends AbstractLocalInspectionTest {
@@ -3232,32 +3285,52 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
 
         public void testAllFilesPresentInImplicitNullableNothingType() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/ImplicitNullableNothingType"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/implicitNullableNothingType"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
         }
 
         @TestMetadata("final.kt")
         public void testFinal() throws Exception {
-            runTest("idea/testData/inspectionsLocal/ImplicitNullableNothingType/final.kt");
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/final.kt");
         }
 
         @TestMetadata("function.kt")
         public void testFunction() throws Exception {
-            runTest("idea/testData/inspectionsLocal/ImplicitNullableNothingType/function.kt");
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/function.kt");
+        }
+
+        @TestMetadata("overrideFunction.kt")
+        public void testOverrideFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/overrideFunction.kt");
+        }
+
+        @TestMetadata("overrideNullableNothingFunction.kt")
+        public void testOverrideNullableNothingFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/overrideNullableNothingFunction.kt");
+        }
+
+        @TestMetadata("overrideNullableNothingProperty.kt")
+        public void testOverrideNullableNothingProperty() throws Exception {
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/overrideNullableNothingProperty.kt");
+        }
+
+        @TestMetadata("overrideProperty.kt")
+        public void testOverrideProperty() throws Exception {
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/overrideProperty.kt");
         }
 
         @TestMetadata("top.kt")
         public void testTop() throws Exception {
-            runTest("idea/testData/inspectionsLocal/ImplicitNullableNothingType/top.kt");
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/top.kt");
         }
 
         @TestMetadata("val.kt")
         public void testVal() throws Exception {
-            runTest("idea/testData/inspectionsLocal/ImplicitNullableNothingType/val.kt");
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/val.kt");
         }
 
         @TestMetadata("variable.kt")
         public void testVariable() throws Exception {
-            runTest("idea/testData/inspectionsLocal/ImplicitNullableNothingType/variable.kt");
+            runTest("idea/testData/inspectionsLocal/implicitNullableNothingType/variable.kt");
         }
     }
 
@@ -5731,6 +5804,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         public void testRequire() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantRequireNotNullCall/require.kt");
         }
+
+        @TestMetadata("usedAsExpression.kt")
+        public void testUsedAsExpression() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantRequireNotNullCall/usedAsExpression.kt");
+        }
+
+        @TestMetadata("usedAsExpression2.kt")
+        public void testUsedAsExpression2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantRequireNotNullCall/usedAsExpression2.kt");
+        }
+
+        @TestMetadata("usedAsExpression3.kt")
+        public void testUsedAsExpression3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantRequireNotNullCall/usedAsExpression3.kt");
+        }
     }
 
     @TestMetadata("idea/testData/inspectionsLocal/redundantReturnLabel")
@@ -7660,6 +7748,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("shortToString.kt")
             public void testShortToString() throws Exception {
                 runTest("idea/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString/shortToString.kt");
+            }
+
+            @TestMetadata("toExtension.kt")
+            public void testToExtension() throws Exception {
+                runTest("idea/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString/toExtension.kt");
             }
         }
     }

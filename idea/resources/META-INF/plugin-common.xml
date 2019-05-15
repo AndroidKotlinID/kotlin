@@ -1262,6 +1262,11 @@
     </intentionAction>
 
     <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.AddNamesToFollowingArgumentsIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.ReplaceUnderscoreWithParameterNameIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -2360,6 +2365,15 @@
                      groupName="Style issues"
                      enabledByDefault="true"
                      level="INFO"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ConvertNaNEqualityInspection"
+                     displayName="Convert equality check with 'NaN' to 'isNaN' call"
+                     groupPath="Kotlin"
+                     groupName="Probable bugs"
+                     enabledByDefault="true"
+                     level="WARNING"
                      language="kotlin"
     />
 
