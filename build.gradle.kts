@@ -27,7 +27,7 @@ buildscript {
 
         classpath("com.gradle.publish:plugin-publish-plugin:0.9.7")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
-        classpath("net.sf.proguard:proguard-gradle:6.0.3")
+        classpath("net.sf.proguard:proguard-gradle:6.1.0")
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
 
         // a workaround to add another one buildSrc with Cidr-specific tools to Gradle classpath
@@ -159,7 +159,7 @@ extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
-extra["versions.kotlin-native-shared"] = "1.0-dev-50"
+extra["versions.kotlin-native-shared"] = "1.0-dev-57"
 
 if (!project.hasProperty("versions.kotlin-native")) {
     extra["versions.kotlin-native"] = "1.3-dev-9780"
