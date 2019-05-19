@@ -15,6 +15,7 @@ buildscript {
     repositories.withRedirector(project) {
         bootstrapKotlinRepo?.let(::maven)
         maven("https://plugins.gradle.org/m2")
+        maven("https://dl.bintray.com/kotlin/ktor")
     }
 
     // a workaround for kotlin compiler classpath in kotlin project: sometimes gradle substitutes
@@ -95,6 +96,17 @@ val artifactsDir = "$distDir/artifacts"
 val ideaPluginDir = "$artifactsDir/ideaPlugin/Kotlin"
 val ideaUltimatePluginDir = "$artifactsDir/ideaUltimatePlugin/Kotlin"
 
+extra["ktorExcludesForDaemon"] = listOf(
+    "org.jetbrains.kotlin" to "kotlin-reflect",
+    "org.jetbrains.kotlin" to "kotlin-stdlib",
+    "org.jetbrains.kotlin" to "kotlin-stdlib-common",
+    "org.jetbrains.kotlin" to "kotlin-stdlib-jdk8",
+    "org.jetbrains.kotlin" to "kotlin-stdlib-jdk7",
+    "org.jetbrains.kotlinx" to "kotlinx-coroutines-jdk8",
+    "org.jetbrains.kotlinx" to "kotlinx-coroutines-core",
+    "org.jetbrains.kotlinx" to "kotlinx-coroutines-core-common"
+)
+
 // TODO: use "by extra()" syntax where possible
 extra["distLibDir"] = project.file(distLibDir)
 extra["libsDir"] = project.file(distLibDir)
@@ -161,6 +173,9 @@ extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
 extra["versions.kotlin-native-shared"] = "1.0-dev-57"
 
+// NOTE: please, also change KTOR_NAME in pathUtil.kt and all versions in corresponding jar names in daemon tests.
+extra["versions.ktor-network"] = "1.0.1"
+
 if (!project.hasProperty("versions.kotlin-native")) {
     extra["versions.kotlin-native"] = "1.3-dev-9780"
 }
@@ -197,8 +212,6 @@ extra["compilerModules"] = arrayOf(
         ":compiler:frontend.common",
         ":compiler:frontend.java",
         ":compiler:cli-common",
-        ":compiler:daemon-common",
-        ":compiler:daemon",
         ":compiler:ir.tree",
         ":compiler:ir.psi2ir",
         ":compiler:ir.backend.common",
@@ -319,6 +332,7 @@ allprojects {
         maven(intellijRepo)
         maven(bootstrapKotlinRepo!!.replace("artifacts/content/maven/", "artifacts/content/internal/repo"))
         maven(kotlinNativeRepo)
+        maven("https://dl.bintray.com/kotlin/ktor")
     }
 
     configureJvmProject(javaHome!!, jvmTarget!!)
@@ -621,7 +635,18 @@ val zipCompiler by task<Zip> {
     }
 }
 
+val zipStdlibTests by task<Zip> {
+    destinationDirectory.set(file(distDir))
+    archiveFileName.set("kotlin-stdlib-tests.zip")
+    from("libraries/stdlib/common/test") { into("common") }
+    from("libraries/stdlib/test") { into("test") }
+    doLast {
+        logger.lifecycle("Stdlib tests are packed to ${archiveFile.get()}")
+    }
+}
+
 val zipTestData by task<Zip> {
+    dependsOn(zipStdlibTests)
     destinationDir = file(distDir)
     archiveName = "kotlin-test-data.zip"
     from("compiler/testData") { into("compiler") }

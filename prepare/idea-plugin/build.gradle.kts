@@ -21,7 +21,8 @@ val projectsToShadow by extra(listOf(
         ":kotlin-build-common",
         ":compiler:cli-common",
         ":compiler:container",
-        ":compiler:daemon-common",
+        ":daemon-common",
+        ":daemon-common-new",
         ":core:metadata",
         ":core:metadata.jvm",
         ":core:descriptors",
@@ -119,6 +120,10 @@ dependencies {
     libraries(project(":kotlin-reflect"))
     libraries(project(":kotlin-compiler-client-embeddable"))
     libraries(project(":kotlin-daemon-client"))
+    libraries(project(":kotlin-daemon-client-new"))
+    libraries(project(":kotlin-daemon")) {
+        isTransitive = false
+    }
     libraries(project(":kotlin-script-runtime"))
     libraries(project(":kotlin-script-util"))
     libraries(project(":kotlin-scripting-common"))

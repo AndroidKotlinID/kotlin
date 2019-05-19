@@ -34,7 +34,7 @@ dependencies {
     compile(project(":kotlin-gradle-plugin-model"))
     compileOnly(project(":compiler"))
     compileOnly(project(":compiler:incremental-compilation-impl"))
-    compileOnly(project(":compiler:daemon-common"))
+    compileOnly(project(":daemon-common"))
 
     compile(kotlinStdlib())
     compileOnly(project(":kotlin-reflect-api"))
@@ -46,6 +46,7 @@ dependencies {
     compileOnly(project(":kotlin-scripting-compiler-impl"))
 
     compile("com.google.code.gson:gson:${rootProject.extra["versions.jar.gson"]}")
+    compile("de.undercouch:gradle-download-task:3.4.3")
     
     compileOnly("com.android.tools.build:gradle:2.0.0")
     compileOnly("com.android.tools.build:gradle-core:2.0.0")
