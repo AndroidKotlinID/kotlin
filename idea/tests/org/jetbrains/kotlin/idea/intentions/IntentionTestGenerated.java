@@ -2165,6 +2165,26 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/branched/elvisToIfThen"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
             }
 
+            @TestMetadata("assignmentAndBreak.kt")
+            public void testAssignmentAndBreak() throws Exception {
+                runTest("idea/testData/intentions/branched/elvisToIfThen/assignmentAndBreak.kt");
+            }
+
+            @TestMetadata("assignmentAndContinue.kt")
+            public void testAssignmentAndContinue() throws Exception {
+                runTest("idea/testData/intentions/branched/elvisToIfThen/assignmentAndContinue.kt");
+            }
+
+            @TestMetadata("assignmentAndReturn.kt")
+            public void testAssignmentAndReturn() throws Exception {
+                runTest("idea/testData/intentions/branched/elvisToIfThen/assignmentAndReturn.kt");
+            }
+
+            @TestMetadata("assignmentAndThrow.kt")
+            public void testAssignmentAndThrow() throws Exception {
+                runTest("idea/testData/intentions/branched/elvisToIfThen/assignmentAndThrow.kt");
+            }
+
             @TestMetadata("callExpression.kt")
             public void testCallExpression() throws Exception {
                 runTest("idea/testData/intentions/branched/elvisToIfThen/callExpression.kt");
@@ -2203,6 +2223,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("safeCast.kt")
             public void testSafeCast() throws Exception {
                 runTest("idea/testData/intentions/branched/elvisToIfThen/safeCast.kt");
+            }
+
+            @TestMetadata("safeCastAndReturn.kt")
+            public void testSafeCastAndReturn() throws Exception {
+                runTest("idea/testData/intentions/branched/elvisToIfThen/safeCastAndReturn.kt");
             }
 
             @TestMetadata("safeCastUnstable.kt")
@@ -6612,6 +6637,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("expressionBody.kt")
         public void testExpressionBody() throws Exception {
             runTest("idea/testData/intentions/convertPropertyToFunction/expressionBody.kt");
+        }
+
+        @TestMetadata("expressionBodyWithGenericType.kt")
+        public void testExpressionBodyWithGenericType() throws Exception {
+            runTest("idea/testData/intentions/convertPropertyToFunction/expressionBodyWithGenericType.kt");
         }
 
         @TestMetadata("initializer.kt")

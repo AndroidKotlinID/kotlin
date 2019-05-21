@@ -28,17 +28,16 @@ internal class NpmProjectVisitor(val resolver: NpmResolver, val project: Project
     private val byCompilation = mutableMapOf<KotlinJsCompilation, NpmProjectPackage>()
     private val byNpmDependency = mutableMapOf<NpmDependency, NpmProjectPackage>()
     private val taskRequirements = mutableMapOf<RequiresNpmDependencies, Collection<RequiredKotlinJsDependency>>()
-    private val requiredFromTasksByCompilation = mutableMapOf<KotlinJsCompilation, MutableList<Dependency>>()
+    private val requiredFromTasksByCompilation = mutableMapOf<KotlinJsCompilation, MutableList<RequiresNpmDependencies>>()
 
     private fun addTaskRequirements(task: RequiresNpmDependencies) {
         val requirements = task.requiredNpmDependencies.toList()
 
         taskRequirements[task] = requirements
 
-        val requiredDependenciesList = requiredFromTasksByCompilation.getOrPut(task.compilation) { mutableListOf() }
-        requirements.forEach { requiredDependency ->
-            requiredDependenciesList.add(requiredDependency.createDependency(project))
-        }
+        requiredFromTasksByCompilation
+            .getOrPut(task.compilation) { mutableListOf() }
+            .add(task)
     }
 
     private fun addNpmProject(resolved: NpmProjectPackage) {
@@ -84,8 +83,10 @@ internal class NpmProjectVisitor(val resolver: NpmResolver, val project: Project
     private fun visitTarget(target: KotlinTarget) {
         if (target.platformType == KotlinPlatformType.js) {
             target.compilations.toList().forEach { compilation ->
-                compilation as KotlinJsCompilation
-                visitCompilation(compilation)
+                if (compilation is KotlinJsCompilation) {
+                    // compilation may be KotlinWithJavaTarget for old Kotlin2JsPlugin
+                    visitCompilation(compilation)
+                }
             }
         }
     }
@@ -111,10 +112,14 @@ internal class NpmProjectVisitor(val resolver: NpmResolver, val project: Project
         packageJson.main = npmProject.main
 
         val requiredByTasks = requiredFromTasksByCompilation[compilation]
+        var nodeModulesRequired = false
         if (requiredByTasks != null && requiredByTasks.isNotEmpty()) {
             val configuration = project.configurations.create("$name-jsTools")
             requiredByTasks.forEach {
-                configuration.dependencies.add(it)
+                if (it.nodeModulesRequired) nodeModulesRequired = true
+                it.requiredNpmDependencies.forEach { requirement ->
+                    configuration.dependencies.add(requirement.createDependency(project))
+                }
             }
             configuration.resolve()
             visitConfiguration(configuration, npmDependencies, gradleDeps)
@@ -139,7 +144,7 @@ internal class NpmProjectVisitor(val resolver: NpmResolver, val project: Project
             it(packageJson)
         }
 
-        val npmPackage = NpmProjectPackage(project, npmProject, npmDependencies, gradleDeps, packageJson)
+        val npmPackage = NpmProjectPackage(project, npmProject, npmDependencies, gradleDeps, packageJson, nodeModulesRequired)
         npmPackage.packageJson.saveTo(npmProject.packageJsonFile)
 
         resolver.packageManager.resolveProject(npmPackage)

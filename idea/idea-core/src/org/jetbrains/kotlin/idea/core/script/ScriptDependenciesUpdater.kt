@@ -92,7 +92,10 @@ class ScriptDependenciesUpdater(
     }
 
     private fun updateDependencies(file: VirtualFile) {
-        loaders.filter { it.isApplicable(file) }.forEach { it.updateDependencies(file) }
+        if (!ScriptDefinitionsManager.getInstance(project).isReady()) return
+        if (!cache.shouldRunDependenciesUpdate(file)) return
+
+        loaders.filter { it.isApplicable(file) }.forEach { it.loadDependencies(file) }
     }
 
     private fun makeRootsChangeIfNeeded() {

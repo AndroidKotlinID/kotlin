@@ -8,13 +8,12 @@ package org.jetbrains.kotlin.idea.core.script.dependencies
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.components.ServiceManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx
 import com.intellij.openapi.util.EmptyRunnable
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.util.containers.SLRUMap
 import org.jetbrains.kotlin.idea.core.script.*
-import org.jetbrains.kotlin.idea.core.script.ScriptDependenciesCache.Companion.MAX_SCRIPTS_CACHED
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.scripting.definitions.KotlinScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.ScriptContentLoader
@@ -25,19 +24,9 @@ import kotlin.script.experimental.dependencies.ScriptDependencies
 
 abstract class ScriptDependenciesLoader(protected val project: Project) {
 
-    fun updateDependencies(file: VirtualFile) {
-        if (fileModificationStamps[file.path] != file.modificationStamp) {
-            fileModificationStamps.put(file.path, file.modificationStamp)
-
-            loadDependencies(file)
-        }
-    }
-
-    private val fileModificationStamps: SLRUMap<String, Long> = SLRUMap(MAX_SCRIPTS_CACHED, MAX_SCRIPTS_CACHED)
-
     abstract fun isApplicable(file: VirtualFile): Boolean
+    abstract fun loadDependencies(file: VirtualFile)
 
-    protected abstract fun loadDependencies(file: VirtualFile)
     protected abstract fun shouldShowNotification(): Boolean
 
     protected var shouldNotifyRootsChanged = false
@@ -48,6 +37,8 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
     private val reporter: ScriptReportSink = ServiceManager.getService(project, ScriptReportSink::class.java)
 
     protected fun processResult(result: DependenciesResolver.ResolveResult, file: VirtualFile, scriptDef: KotlinScriptDefinition) {
+        debug(file) { "dependencies from ${this.javaClass} received = $result" }
+
         if (cache[file] == null) {
             saveDependencies(result, file, scriptDef)
             attachReportsIfChanged(result, file, scriptDef)
@@ -57,12 +48,18 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
         val newDependencies = result.dependencies?.adjustByDefinition(scriptDef)
         if (cache[file] != newDependencies) {
             if (shouldShowNotification() && !ApplicationManager.getApplication().isUnitTestMode) {
+                debug(file) {
+                    "dependencies changed, notification was shown: old = ${cache[file]}, new = $newDependencies"
+                }
                 file.addScriptDependenciesNotificationPanel(result, project) {
                     saveDependencies(it, file, scriptDef)
                     attachReportsIfChanged(it, file, scriptDef)
                     submitMakeRootsChange()
                 }
             } else {
+                debug(file) {
+                    "dependencies changed, new dependencies were applied automatically: old = ${cache[file]}, new = $newDependencies"
+                }
                 saveDependencies(result, file, scriptDef)
                 attachReportsIfChanged(result, file, scriptDef)
             }
@@ -93,6 +90,9 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
     protected fun saveToCache(file: VirtualFile, dependencies: ScriptDependencies) {
         val rootsChanged = cache.hasNotCachedRoots(dependencies)
         if (cache.save(file, dependencies)) {
+            debug(file) {
+                "dependencies were saved to file attributes: dependencies = $dependencies"
+            }
             file.scriptDependencies = dependencies
         }
 
@@ -110,6 +110,8 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
             runWriteAction {
                 if (project.isDisposed) return@runWriteAction
 
+                debug(null) { "root change event for ${this.javaClass}" }
+
                 shouldNotifyRootsChanged = false
                 ProjectRootManagerEx.getInstanceEx(project)?.makeRootsChange(EmptyRunnable.getInstance(), false, true)
                 ScriptDependenciesModificationTracker.getInstance(project).incModificationCount()
@@ -123,5 +125,15 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
         }
 
         return true
+    }
+
+    companion object {
+        private val LOG = Logger.getInstance("#org.jetbrains.kotlin.idea.script")
+
+        internal fun debug(file: VirtualFile? = null, message: () -> String) {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("[KOTLIN SCRIPT] " + (file?.let { "file = ${file.path}, " } ?: "") + message())
+            }
+        }
     }
 }
