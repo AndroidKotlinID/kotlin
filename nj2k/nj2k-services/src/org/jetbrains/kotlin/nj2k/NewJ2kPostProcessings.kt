@@ -12,10 +12,9 @@ import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
-import com.intellij.psi.util.parentOfType
-import com.intellij.psi.util.parentsOfType
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
+import org.jetbrains.kotlin.descriptors.VariableDescriptor
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.diagnostics.DiagnosticFactory
 import org.jetbrains.kotlin.diagnostics.DiagnosticWithParameters2
@@ -291,6 +290,11 @@ object NewJ2KPostProcessingRegistrar {
                 RemoveModifierFix.createRemoveModifierFromListOwnerFactory(KtTokens.OPEN_KEYWORD),
                 Errors.NON_FINAL_MEMBER_IN_FINAL_CLASS, Errors.NON_FINAL_MEMBER_IN_OBJECT
             ),
+            registerDiagnosticBasedProcessingWithFixFactory(
+                MakeVisibleFactory,
+                Errors.INVISIBLE_MEMBER
+            ),
+
             registerDiagnosticBasedProcessingFactory(
                 Errors.VAL_REASSIGNMENT, Errors.CAPTURED_VAL_INITIALIZATION, Errors.CAPTURED_MEMBER_VAL_INITIALIZATION
             ) { element: KtSimpleNameExpression, _: Diagnostic ->
@@ -495,13 +499,11 @@ object NewJ2KPostProcessingRegistrar {
                 if (needLocalVariablesTypes && element.isLocal) return false
                 if (needFieldTypes && element.isMember) return false
                 val initializer = element.initializer ?: return false
-                val withoutExpectedType = initializer.analyzeInContext(initializer.getResolutionScope())
+                val withoutExpectedType =
+                    initializer.analyzeInContext(initializer.getResolutionScope()).getType(initializer) ?: return false
                 val descriptor = element.resolveToDescriptorIfAny() as? CallableDescriptor ?: return false
-                return when (withoutExpectedType.getType(initializer)) {
-                    descriptor.returnType -> true
-                    descriptor.returnType?.makeNotNullable() -> !element.isVar
-                    else -> false
-                }
+                return if (element.isVar) withoutExpectedType == descriptor.returnType
+                else withoutExpectedType.makeNotNullable() == descriptor.returnType?.makeNotNullable()
             }
 
             if (!check(element)) {
@@ -753,6 +755,8 @@ object NewJ2KPostProcessingRegistrar {
             fun check(element: KtProperty): Boolean {
                 if (!element.isVar) return false
                 if (!element.isPrivate()) return false
+                val descriptor = element.resolveToDescriptorIfAny() ?: return false
+                if (descriptor.overriddenDescriptors.any { it.safeAs<VariableDescriptor>()?.isVar == true }) return false
                 return !element.hasWriteUsages()
             }
 

@@ -377,7 +377,7 @@ class NewMultiplatformIT : BaseGradleIT() {
 
                 val jvmTestTaskName = if (testJavaSupportInJvmTargets) "jvm6Test" else "test"
                 assertTasksExecuted(":$jvmTestTaskName")
-                assertFileExists("build/reports/tests/$jvmTestTaskName/classes/com.example.lib.JavaTest.html")
+                assertFileExists("build/reports/tests/allTests/classes/com.example.lib.JavaTest.html")
 
                 if (testJavaSupportInJvmTargets) {
                     assertNotContains(KotlinJvmWithJavaTargetPreset.DEPRECATION_WARNING)
@@ -432,8 +432,6 @@ class NewMultiplatformIT : BaseGradleIT() {
             )
 
             val expectedKotlinOutputFiles = listOf(
-                kotlinClassesDir(sourceSet = "js/main") + "new-mpp-lib-with-tests.js",
-                kotlinClassesDir(sourceSet = "js/test") + "new-mpp-lib-with-tests_test.js",
                 *kotlinClassesDir(sourceSet = "jvmWithJava/main").let {
                     arrayOf(
                         it + "com/example/lib/JavaClassUsageKt.class",
@@ -466,6 +464,14 @@ class NewMultiplatformIT : BaseGradleIT() {
             )
 
             expectedKotlinOutputFiles.forEach { assertFileExists(it) }
+
+            assertTestResults(
+                "testProject/new-mpp-lib-with-tests/TEST-all.xml",
+                "jsBrowserTest",
+                "jsNodeTest",
+                "test", // jvmTest
+                "${nativeHostTargetName}Test"
+            )
         }
     }
 

@@ -20,35 +20,41 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiComment;
-import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
+import com.intellij.psi.SyntaxTraverser;
+import com.intellij.util.containers.ContainerUtil;
+import com.intellij.util.containers.TreeTraversal;
 import com.maddyhome.idea.copyright.CopyrightProfile;
 import com.maddyhome.idea.copyright.psi.UpdatePsiFileCopyright;
-import org.jetbrains.kotlin.psi.KtImportList;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.kotlin.psi.KtDeclaration;
 
-class UpdateKotlinCopyright extends UpdatePsiFileCopyright {
+import java.util.List;
 
+public class UpdateKotlinCopyright extends UpdatePsiFileCopyright {
     UpdateKotlinCopyright(Project project, Module module, VirtualFile root, CopyrightProfile copyrightProfile) {
         super(project, module, root, copyrightProfile);
     }
 
     @Override
     protected void scanFile() {
-        PsiElement first = getFile().getFirstChild();
-        PsiElement last = first;
-        PsiElement next = first;
-        while (next != null) {
-            if (next instanceof PsiComment || next instanceof PsiWhiteSpace || next.getText().isEmpty()) {
-                next = getNextSibling(next);
-            }
-            else {
-                break;
-            }
-            last = next;
-        }
+        List<PsiComment> comments = getExistentComments(getFile());
+        checkComments(ContainerUtil.getLastItem(comments), true, comments);
+    }
 
-        if (first != null) {
-            checkComments(first, last, true);
-        }
+    @NotNull
+    public static List<PsiComment> getExistentComments(@NotNull PsiFile psiFile) {
+        return SyntaxTraverser.psiTraverser(psiFile)
+                .withTraversal(TreeTraversal.LEAVES_DFS)
+                .traverse()
+                .takeWhile(
+                        element ->
+                                (element instanceof PsiComment && !(element.getParent() instanceof KtDeclaration)) ||
+                                element instanceof PsiWhiteSpace ||
+                                element.getText().isEmpty()
+                )
+                .filter(PsiComment.class)
+                .toList();
     }
 }

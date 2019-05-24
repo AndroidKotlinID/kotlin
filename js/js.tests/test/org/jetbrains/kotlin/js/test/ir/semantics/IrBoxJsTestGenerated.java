@@ -6778,6 +6778,39 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
                 runTest("js/js.translator/testData/box/regression/stdlibTestSnippets/throwable.kt");
             }
         }
+
+        @TestMetadata("js/js.translator/testData/box/regression/typeChecks")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class TypeChecks extends AbstractIrBoxJsTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInTypeChecks() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("js/js.translator/testData/box/regression/typeChecks"), Pattern.compile("^([^_](.+))\\.kt$"), TargetBackend.JS_IR, true);
+            }
+
+            @TestMetadata("booleanOperatorsTypes.kt")
+            public void testBooleanOperatorsTypes() throws Exception {
+                runTest("js/js.translator/testData/box/regression/typeChecks/booleanOperatorsTypes.kt");
+            }
+
+            @TestMetadata("emptyVarargInConstructorCall.kt")
+            public void testEmptyVarargInConstructorCall() throws Exception {
+                runTest("js/js.translator/testData/box/regression/typeChecks/emptyVarargInConstructorCall.kt");
+            }
+
+            @TestMetadata("taggedArrayCopy.kt")
+            public void testTaggedArrayCopy() throws Exception {
+                runTest("js/js.translator/testData/box/regression/typeChecks/taggedArrayCopy.kt");
+            }
+
+            @TestMetadata("toStringExtension.kt")
+            public void testToStringExtension() throws Exception {
+                runTest("js/js.translator/testData/box/regression/typeChecks/toStringExtension.kt");
+            }
+        }
     }
 
     @TestMetadata("js/js.translator/testData/box/reified")
