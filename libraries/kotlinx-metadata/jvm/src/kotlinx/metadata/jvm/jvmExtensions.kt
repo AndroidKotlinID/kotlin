@@ -32,6 +32,13 @@ abstract class JvmDeclarationContainerExtensionVisitor @JvmOverloads constructor
      */
     open fun visitLocalDelegatedProperty(flags: Flags, name: String, getterFlags: Flags, setterFlags: Flags): KmPropertyVisitor? =
         delegate?.visitLocalDelegatedProperty(flags, name, getterFlags, setterFlags)
+
+    /**
+     * Visits the name of the module where this container is declared.
+     */
+    open fun visitModuleName(name: String) {
+        delegate?.visitModuleName(name)
+    }
 }
 
 /**
@@ -42,6 +49,9 @@ open class JvmClassExtensionVisitor @JvmOverloads constructor(
 ) : KmClassExtensionVisitor, JvmDeclarationContainerExtensionVisitor(delegate) {
     override val delegate: JvmClassExtensionVisitor?
         get() = super.delegate as JvmClassExtensionVisitor?
+
+    final override val type: KmExtensionType
+        get() = TYPE
 
     /**
      * Visits the JVM internal name of the original class this anonymous object is copied from. This method is called for
@@ -78,6 +88,9 @@ open class JvmPackageExtensionVisitor @JvmOverloads constructor(
     override val delegate: JvmPackageExtensionVisitor?
         get() = super.delegate as JvmPackageExtensionVisitor?
 
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
      * Visits the end of JVM extensions for the package fragment.
      */
@@ -102,16 +115,19 @@ open class JvmPackageExtensionVisitor @JvmOverloads constructor(
 open class JvmFunctionExtensionVisitor @JvmOverloads constructor(
     private val delegate: JvmFunctionExtensionVisitor? = null
 ) : KmFunctionExtensionVisitor {
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
      * Visits the JVM signature of the function in the JVM-based format,
      * or null if the JVM signature of this function is unknown.
      *
      * Example: `JvmMethodSignature("equals", "(Ljava/lang/Object;)Z")`
      *
-     * @param desc the signature of the function
+     * @param signature the signature of the function
      */
-    open fun visit(desc: JvmMethodSignature?) {
-        delegate?.visit(desc)
+    open fun visit(signature: JvmMethodSignature?) {
+        delegate?.visit(signature)
     }
 
     /**
@@ -146,22 +162,44 @@ open class JvmFunctionExtensionVisitor @JvmOverloads constructor(
 open class JvmPropertyExtensionVisitor @JvmOverloads constructor(
     private val delegate: JvmPropertyExtensionVisitor? = null
 ) : KmPropertyExtensionVisitor {
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
      * Visits JVM signatures of field and accessors generated for the property.
      *
-     * @param fieldDesc the name and the type of the field in the JVM-based format, or `null` if this property has no field.
-     *                  Example: `JvmFieldSignature("X", "Ljava/lang/Object;")`
-     *
-     * @param getterDesc the signature of the property getter in the JVM-based format,
-     *                   or `null` if this property has no getter or its signature is unknown.
-     *                   Example: `JvmMethodSignature("getX()", "Ljava/lang/Object;")`
-     *
-     * @param setterDesc the signature of the property setter in the JVM-based format,
-     *                   or `null` if this property has no setter or its signature is unknown
-     *                   Example: `JvmMethodSignature("setX", "(Ljava/lang/Object;)V")`,
+     * @param jvmFlags JVM-specific flags of the property, consisting of [JvmFlag.Property] flags
+     * @param fieldSignature the signature of the field, or `null` if this property has no field.
+     *                       Example: `JvmFieldSignature("X", "Ljava/lang/Object;")`
+     * @param getterSignature the signature of the property getter, or `null` if this property has no getter or its signature is unknown.
+     *                        Example: `JvmMethodSignature("getX()", "Ljava/lang/Object;")`
+     * @param setterSignature the signature of the property setter, or `null` if this property has no setter or its signature is unknown.
+     *                        Example: `JvmMethodSignature("setX", "(Ljava/lang/Object;)V")`
      */
-    open fun visit(fieldDesc: JvmFieldSignature?, getterDesc: JvmMethodSignature?, setterDesc: JvmMethodSignature?) {
-        delegate?.visit(fieldDesc, getterDesc, setterDesc)
+    open fun visit(
+        jvmFlags: Flags,
+        fieldSignature: JvmFieldSignature?,
+        getterSignature: JvmMethodSignature?,
+        setterSignature: JvmMethodSignature?
+    ) {
+        delegate?.visit(jvmFlags, fieldSignature, getterSignature, setterSignature)
+
+        @Suppress("DEPRECATION_ERROR")
+        visit(fieldSignature, getterSignature, setterSignature)
+    }
+
+    @Deprecated(
+        "Use visit(Flags, JvmFieldSignature?, JvmMethodSignature?, JvmMethodSignature?) instead.",
+        level = DeprecationLevel.ERROR,
+        replaceWith = ReplaceWith("visit(flagsOf(), fieldSignature, getterSignature, setterSignature)", "kotlinx.metadata.flagsOf")
+    )
+    open fun visit(
+        fieldSignature: JvmFieldSignature?,
+        getterSignature: JvmMethodSignature?,
+        setterSignature: JvmMethodSignature?
+    ) {
+        @Suppress("DEPRECATION_ERROR")
+        delegate?.visit(fieldSignature, getterSignature, setterSignature)
     }
 
     /**
@@ -169,10 +207,10 @@ open class JvmPropertyExtensionVisitor @JvmOverloads constructor(
      *
      * Example: `JvmMethodSignature("getX$annotations", "()V")`
      *
-     * @param desc the signature of the synthetic method
+     * @param signature the signature of the synthetic method
      */
-    open fun visitSyntheticMethodForAnnotations(desc: JvmMethodSignature?) {
-        delegate?.visitSyntheticMethodForAnnotations(desc)
+    open fun visitSyntheticMethodForAnnotations(signature: JvmMethodSignature?) {
+        delegate?.visitSyntheticMethodForAnnotations(signature)
     }
 
     /**
@@ -199,16 +237,18 @@ open class JvmPropertyExtensionVisitor @JvmOverloads constructor(
 open class JvmConstructorExtensionVisitor @JvmOverloads constructor(
     private val delegate: JvmConstructorExtensionVisitor? = null
 ) : KmConstructorExtensionVisitor {
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
-     * Visits the JVM signature of the constructor in the JVM-based format,
-     * or null if the JVM signature of this constructor is unknown.
+     * Visits the JVM signature of the constructor, or null if the JVM signature of this constructor is unknown.
      *
      * Example: `JvmMethodSignature("<init>", "(Ljava/lang/Object;)V")`
      *
-     * @param desc the signature of the constructor
+     * @param signature the signature of the constructor
      */
-    open fun visit(desc: JvmMethodSignature?) {
-        delegate?.visit(desc)
+    open fun visit(signature: JvmMethodSignature?) {
+        delegate?.visit(signature)
     }
 
     companion object {
@@ -228,6 +268,9 @@ open class JvmConstructorExtensionVisitor @JvmOverloads constructor(
 open class JvmTypeParameterExtensionVisitor @JvmOverloads constructor(
     private val delegate: JvmTypeParameterExtensionVisitor? = null
 ) : KmTypeParameterExtensionVisitor {
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
      * Visits an annotation on the type parameter.
      *
@@ -261,6 +304,9 @@ open class JvmTypeParameterExtensionVisitor @JvmOverloads constructor(
 open class JvmTypeExtensionVisitor @JvmOverloads constructor(
     private val delegate: JvmTypeExtensionVisitor? = null
 ) : KmTypeExtensionVisitor {
+    final override val type: KmExtensionType
+        get() = TYPE
+
     /**
      * Visits the JVM-specific flags of a type.
      *

@@ -41,9 +41,9 @@ class MetadataSmokeTest {
                         if (type != JvmFunctionExtensionVisitor.TYPE) return null
 
                         return object : JvmFunctionExtensionVisitor() {
-                            override fun visit(desc: JvmMethodSignature?) {
-                                if (Flag.Function.IS_INLINE(flags) && desc != null) {
-                                    inlineFunctions += desc.asString()
+                            override fun visit(signature: JvmMethodSignature?) {
+                                if (Flag.Function.IS_INLINE(flags) && signature != null) {
+                                    inlineFunctions += signature.asString()
                                 }
                             }
                         }
@@ -173,8 +173,6 @@ class MetadataSmokeTest {
         assertEquals("kotlin/coroutines/CoroutineContext\$Key", coroutineContextKey.jvmInternalName)
     }
 
-    /*
-    // TODO: uncomment after bootstrap compiler has a fix for KT-29790
     @Test
     fun lambdaVersionRequirement() {
         val x: suspend Int.(String, String) -> Unit = { _, _ -> }
@@ -199,5 +197,4 @@ class MetadataSmokeTest {
                 }
         })
     }
-    */
 }
