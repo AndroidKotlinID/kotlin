@@ -127,13 +127,13 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext {
         return this.constructor
     }
 
-    override fun SimpleTypeMarker.argumentsCount(): Int {
-        require(this is SimpleType, this::errorMessage)
+    override fun KotlinTypeMarker.argumentsCount(): Int {
+        require(this is KotlinType, this::errorMessage)
         return this.arguments.size
     }
 
-    override fun SimpleTypeMarker.getArgument(index: Int): TypeArgumentMarker {
-        require(this is SimpleType, this::errorMessage)
+    override fun KotlinTypeMarker.getArgument(index: Int): TypeArgumentMarker {
+        require(this is KotlinType, this::errorMessage)
         return this.arguments[index]
     }
 

@@ -1704,6 +1704,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/callableReference/parsingPriorityOfGenericArgumentsVsLess.kt");
         }
 
+        @TestMetadata("rewriteAtSliceOnGetOperator.kt")
+        public void testRewriteAtSliceOnGetOperator() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/rewriteAtSliceOnGetOperator.kt");
+        }
+
         @TestMetadata("sam.kt")
         public void testSam() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/sam.kt");
@@ -10014,6 +10019,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/constraints"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
             }
 
+            @TestMetadata("constraintFromVariantTypeWithNestedProjection.kt")
+            public void testConstraintFromVariantTypeWithNestedProjection() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/constraints/constraintFromVariantTypeWithNestedProjection.kt");
+            }
+
             @TestMetadata("constraintOnFunctionLiteral.kt")
             public void testConstraintOnFunctionLiteral() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/constraints/constraintOnFunctionLiteral.kt");
@@ -10052,6 +10062,16 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             @TestMetadata("kt8879.kt")
             public void testKt8879() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/constraints/kt8879.kt");
+            }
+
+            @TestMetadata("manyConstraintsDueToFlexibleRawTypes.kt")
+            public void testManyConstraintsDueToFlexibleRawTypes() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/constraints/manyConstraintsDueToFlexibleRawTypes.kt");
+            }
+
+            @TestMetadata("manyConstraintsDueToRecursiveFlexibleTypesWithWildcards.kt")
+            public void testManyConstraintsDueToRecursiveFlexibleTypesWithWildcards() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/constraints/manyConstraintsDueToRecursiveFlexibleTypesWithWildcards.kt");
             }
 
             @TestMetadata("notNullConstraintOnNullableType.kt")
@@ -10198,6 +10218,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             @TestMetadata("nothingWithCallableReference.kt")
             public void testNothingWithCallableReference() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/nothingType/nothingWithCallableReference.kt");
+            }
+
+            @TestMetadata("platformNothingAsUsefulConstraint.kt")
+            public void testPlatformNothingAsUsefulConstraint() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/nothingType/platformNothingAsUsefulConstraint.kt");
             }
         }
 
@@ -12366,6 +12391,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             @TestMetadata("privateCandidatesWithWrongArguments.kt")
             public void testPrivateCandidatesWithWrongArguments() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/j+k/sam/privateCandidatesWithWrongArguments.kt");
+            }
+
+            @TestMetadata("recursiveSamsAndInvoke.kt")
+            public void testRecursiveSamsAndInvoke() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/j+k/sam/recursiveSamsAndInvoke.kt");
             }
 
             @TestMetadata("samOnTypeParameter.kt")
@@ -22371,6 +22401,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/typealias/importFromTypeAliasObject.kt");
         }
 
+        @TestMetadata("importMemberFromJavaViaAlias.kt")
+        public void testImportMemberFromJavaViaAlias() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/typealias/importMemberFromJavaViaAlias.kt");
+        }
+
         @TestMetadata("inGenerics.kt")
         public void testInGenerics() throws Exception {
             runTest("compiler/testData/diagnostics/tests/typealias/inGenerics.kt");
@@ -22541,6 +22576,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/typealias/simpleTypeAlias.kt");
         }
 
+        @TestMetadata("starImportOnTypeAlias.kt")
+        public void testStarImportOnTypeAlias() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/typealias/starImportOnTypeAlias.kt");
+        }
+
         @TestMetadata("starProjection.kt")
         public void testStarProjection() throws Exception {
             runTest("compiler/testData/diagnostics/tests/typealias/starProjection.kt");
@@ -22704,6 +22744,16 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
         @TestMetadata("typeAliasShouldExpandToClass.kt")
         public void testTypeAliasShouldExpandToClass() throws Exception {
             runTest("compiler/testData/diagnostics/tests/typealias/typeAliasShouldExpandToClass.kt");
+        }
+
+        @TestMetadata("typeAliasesInImportDirectives.kt")
+        public void testTypeAliasesInImportDirectives() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/typealias/typeAliasesInImportDirectives.kt");
+        }
+
+        @TestMetadata("typeAliasesInQualifiers.kt")
+        public void testTypeAliasesInQualifiers() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/typealias/typeAliasesInQualifiers.kt");
         }
 
         @TestMetadata("typealiasRhsAnnotations.kt")
