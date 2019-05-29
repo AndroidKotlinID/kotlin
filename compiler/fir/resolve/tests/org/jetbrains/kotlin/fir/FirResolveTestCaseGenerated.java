@@ -29,6 +29,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve"), Pattern.compile("^([^.]+)\\.kt$"), TargetBackend.ANY, true, "stdlib");
     }
 
+    @TestMetadata("cast.kt")
+    public void testCast() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/cast.kt");
+    }
+
     @TestMetadata("companion.kt")
     public void testCompanion() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/companion.kt");
@@ -47,6 +52,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
     @TestMetadata("enum.kt")
     public void testEnum() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/enum.kt");
+    }
+
+    @TestMetadata("extension.kt")
+    public void testExtension() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/extension.kt");
     }
 
     @TestMetadata("F.kt")
@@ -255,6 +265,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         @TestMetadata("objects.kt")
         public void testObjects() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/objects.kt");
+        }
+
+        @TestMetadata("qualifiedExpressions.kt")
+        public void testQualifiedExpressions() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/qualifiedExpressions.kt");
         }
 
         @TestMetadata("receiverConsistency.kt")

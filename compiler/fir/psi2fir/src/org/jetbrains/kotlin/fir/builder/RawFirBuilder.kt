@@ -199,7 +199,12 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     { expression }.toFirExpression("Argument is absent")
                 }
             }
-            return if (name != null) FirNamedArgumentExpressionImpl(session, expression, name, firExpression) else firExpression
+            val isSpread = getSpreadElement() != null
+            return when {
+                name != null -> FirNamedArgumentExpressionImpl(session, expression, name, isSpread, firExpression)
+                isSpread -> FirSpreadArgumentExpressionImpl(session, expression, firExpression)
+                else -> firExpression
+            }
         }
 
         private fun KtPropertyAccessor?.toFirPropertyAccessor(
@@ -281,7 +286,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     )
                 },
                 getter = FirDefaultPropertyGetter(session, this, type, visibility),
-                setter = FirDefaultPropertySetter(session, this, type, visibility),
+                setter = if (isMutable) FirDefaultPropertySetter(session, this, type, visibility) else null,
                 delegate = null
             )
             extractAnnotationsTo(firProperty)
@@ -796,7 +801,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     isVar,
                     initializer,
                     property.getter.toFirPropertyAccessor(property, propertyType, isGetter = true),
-                    property.setter.toFirPropertyAccessor(property, propertyType, isGetter = false),
+                    if (isVar) property.setter.toFirPropertyAccessor(property, propertyType, isGetter = false) else null,
                     if (property.hasDelegate()) {
                         { property.delegate?.expression }.toFirExpression("Should have delegate")
                     } else null

@@ -48,10 +48,6 @@ FILE fqName:<root> fileName:/destructuringInLambda.kt
         EXPRESSION_BODY
           CALL 'public final fun <get-y> (): kotlin.Int declared in <root>.A' type=kotlin.Int origin=null
       BLOCK_BODY
-        RETURN type=kotlin.Nothing from='public final fun copy (x: kotlin.Int, y: kotlin.Int): <root>.A declared in <root>.A'
-          CONSTRUCTOR_CALL 'public constructor <init> (x: kotlin.Int, y: kotlin.Int) [primary] declared in <root>.A' type=<root>.A origin=null
-            x: GET_VAR 'x: kotlin.Int declared in <root>.A.copy' type=IrErrorType origin=null
-            y: GET_VAR 'y: kotlin.Int declared in <root>.A.copy' type=IrErrorType origin=null
     FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean
       overridden:
         public open fun equals (other: kotlin.Any?): kotlin.Boolean declared in kotlin.Any
@@ -68,7 +64,7 @@ FILE fqName:<root> fileName:/destructuringInLambda.kt
   PROPERTY name:fn visibility:public modality:FINAL [var] 
     FIELD PROPERTY_BACKING_FIELD name:fn type:kotlin.Function1<<root>.A, kotlin.Int> visibility:public [static] 
       EXPRESSION_BODY
-        BLOCK type=kotlin.Function1<<root>.A, kotlin.Int> origin=LAMBDA
+        BLOCK type=kotlin.Function2<kotlin.Function1<<root>.A, kotlin.Int>, IrErrorType, kotlin.Function1<<root>.A, kotlin.Int>> origin=LAMBDA
           FUN LOCAL_FUNCTION_FOR_LAMBDA name:<anonymous> visibility:local modality:FINAL <> (<destruct>:IrErrorType) returnType:kotlin.Function1<<root>.A, kotlin.Int> 
             VALUE_PARAMETER name:<destruct> index:0 type:IrErrorType 
             BLOCK_BODY
@@ -78,7 +74,7 @@ FILE fqName:<root> fileName:/destructuringInLambda.kt
                 ERROR_CALL 'Unresolved reference: <Unresolved name: component2>#' type=IrErrorType
               ERROR_CALL 'Unresolved reference: <Ambiguity: plus, [kotlin/Int.plus, kotlin/Int.plus, kotlin/Int.plus, kotlin/Int.plus, kotlin/Int.plus, kotlin/Int.plus]>#' type=IrErrorType
                 GET_VAR 'val y: IrErrorType [val] declared in <root>.fn.<anonymous>' type=IrErrorType origin=null
-          FUNCTION_REFERENCE 'local final fun <anonymous> (<destruct>: IrErrorType): kotlin.Function1<<root>.A, kotlin.Int> declared in <root>.fn' type=kotlin.Function1<<root>.A, kotlin.Int> origin=LAMBDA
+          FUNCTION_REFERENCE 'local final fun <anonymous> (<destruct>: IrErrorType): kotlin.Function1<<root>.A, kotlin.Int> declared in <root>.fn' type=kotlin.Function2<kotlin.Function1<<root>.A, kotlin.Int>, IrErrorType, kotlin.Function1<<root>.A, kotlin.Int>> origin=LAMBDA
     FUN DEFAULT_PROPERTY_ACCESSOR name:<get-fn> visibility:public modality:FINAL <> () returnType:kotlin.Function1<<root>.A, kotlin.Int> 
       correspondingProperty: PROPERTY name:fn visibility:public modality:FINAL [var] 
       BLOCK_BODY

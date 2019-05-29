@@ -268,6 +268,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitJump(returnExpression, null)
     }
 
+    open fun visitResolvedQualifier(resolvedQualifier: FirResolvedQualifier) {
+        visitExpression(resolvedQualifier, null)
+    }
+
     open fun visitThrowExpression(throwExpression: FirThrowExpression) {
         visitExpression(throwExpression, null)
     }
@@ -294,6 +298,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression) {
         visitWrappedArgumentExpression(namedArgumentExpression, null)
+    }
+
+    open fun visitSpreadArgumentExpression(spreadArgumentExpression: FirSpreadArgumentExpression) {
+        visitWrappedArgumentExpression(spreadArgumentExpression, null)
     }
 
     open fun visitLoop(loop: FirLoop) {
@@ -664,12 +672,20 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitResolvedImport(resolvedImport)
     }
 
+    final override fun visitResolvedQualifier(resolvedQualifier: FirResolvedQualifier, data: Nothing?) {
+        visitResolvedQualifier(resolvedQualifier)
+    }
+
     final override fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: Nothing?) {
         visitResolvedTypeRef(resolvedTypeRef)
     }
 
     final override fun visitReturnExpression(returnExpression: FirReturnExpression, data: Nothing?) {
         visitReturnExpression(returnExpression)
+    }
+
+    final override fun visitSpreadArgumentExpression(spreadArgumentExpression: FirSpreadArgumentExpression, data: Nothing?) {
+        visitSpreadArgumentExpression(spreadArgumentExpression)
     }
 
     final override fun visitStarProjection(starProjection: FirStarProjection, data: Nothing?) {

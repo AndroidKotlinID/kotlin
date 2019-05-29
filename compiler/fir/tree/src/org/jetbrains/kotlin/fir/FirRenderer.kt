@@ -350,8 +350,8 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             println()
         }
         if (property.isVar) {
-            property.setter.accept(this)
-            if (property.setter.body == null) {
+            property.setter?.accept(this)
+            if (property.setter?.body == null) {
                 println()
             }
         }
@@ -627,7 +627,17 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     override fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression) {
         print(namedArgumentExpression.name)
         print(" = ")
+        if (namedArgumentExpression.isSpread) {
+            print("*")
+        }
         namedArgumentExpression.expression.accept(this)
+    }
+
+    override fun visitSpreadArgumentExpression(spreadArgumentExpression: FirSpreadArgumentExpression) {
+        if (spreadArgumentExpression.isSpread) {
+            print("*")
+        }
+        spreadArgumentExpression.expression.accept(this)
     }
 
     override fun visitLambdaArgumentExpression(lambdaArgumentExpression: FirLambdaArgumentExpression) {
@@ -929,5 +939,16 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     override fun visitUncheckedNotNullCast(uncheckedNotNullCast: FirUncheckedNotNullCast) {
         uncheckedNotNullCast.expression.accept(this)
         print("!")
+    }
+
+    override fun visitResolvedQualifier(resolvedQualifier: FirResolvedQualifier) {
+        print("Q|")
+        val classId = resolvedQualifier.classId
+        if (classId != null) {
+            print(classId.asString())
+        } else {
+            print(resolvedQualifier.packageFqName.asString().replace(".", "/"))
+        }
+        print("|")
     }
 }

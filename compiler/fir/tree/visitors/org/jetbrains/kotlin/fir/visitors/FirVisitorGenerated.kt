@@ -268,6 +268,10 @@ abstract class FirVisitor<out R, in D> {
         return visitJump(returnExpression, data)
     }
 
+    open fun visitResolvedQualifier(resolvedQualifier: FirResolvedQualifier, data: D): R {
+        return visitExpression(resolvedQualifier, data)
+    }
+
     open fun visitThrowExpression(throwExpression: FirThrowExpression, data: D): R {
         return visitExpression(throwExpression, data)
     }
@@ -294,6 +298,10 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression, data: D): R {
         return visitWrappedArgumentExpression(namedArgumentExpression, data)
+    }
+
+    open fun visitSpreadArgumentExpression(spreadArgumentExpression: FirSpreadArgumentExpression, data: D): R {
+        return visitWrappedArgumentExpression(spreadArgumentExpression, data)
     }
 
     open fun visitLoop(loop: FirLoop, data: D): R {

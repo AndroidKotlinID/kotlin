@@ -9,7 +9,6 @@ import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.expressions.FirLambdaArgumentExpression
 import org.jetbrains.kotlin.fir.expressions.FirNamedArgumentExpression
 import org.jetbrains.kotlin.fir.transformSingle
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -20,6 +19,7 @@ class FirNamedArgumentExpressionImpl(
     session: FirSession,
     psi: PsiElement?,
     override val name: Name,
+    override val isSpread: Boolean,
     override var expression: FirExpression
 ) : FirNamedArgumentExpression, FirAbstractExpression(session, psi) {
     override var typeRef: FirTypeRef

@@ -10,10 +10,7 @@ import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.types.ConeClassErrorType
-import org.jetbrains.kotlin.fir.types.ConeKotlinErrorType
-import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.psi.KtFile
@@ -126,6 +123,14 @@ class FirResolveBench(val withProgress: Boolean) {
                         }
                     }
 
+                    override fun visitImplicitTypeRef(implicitTypeRef: FirImplicitTypeRef) {
+                        if (implicitTypeRef is FirResolvedTypeRef) {
+                            visitResolvedTypeRef(implicitTypeRef)
+                        } else {
+                            visitTypeRef(implicitTypeRef)
+                        }
+                    }
+
                     override fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef) {
                         resolvedTypes++
                         val type = resolvedTypeRef.type
@@ -162,11 +167,17 @@ class FirResolveBench(val withProgress: Boolean) {
                 stream.println(it.report)
             }
 
-        stream.println("UNRESOLVED TYPES: $unresolvedTypes")
-        stream.println("RESOLVED TYPES: $resolvedTypes")
-        stream.println("GOOD TYPES: ${resolvedTypes - errorTypes}")
-        stream.println("ERROR TYPES: $errorTypes")
-        stream.println("IMPLICIT TYPES: $implicitTypes")
+        infix fun Int.percentOf(other: Int): String {
+            return String.format("%.1f%%", this * 100.0 / other)
+        }
+
+        val totalTypes = unresolvedTypes + resolvedTypes
+        stream.println("UNRESOLVED TYPES: $unresolvedTypes (${unresolvedTypes percentOf totalTypes})")
+        stream.println("RESOLVED TYPES: $resolvedTypes (${resolvedTypes percentOf totalTypes})")
+        val goodTypes = resolvedTypes - errorTypes - implicitTypes
+        stream.println("GOOD TYPES: $goodTypes (${goodTypes percentOf resolvedTypes} of resolved)")
+        stream.println("ERROR TYPES: $errorTypes (${errorTypes percentOf resolvedTypes} of resolved)")
+        stream.println("IMPLICIT TYPES: $implicitTypes (${implicitTypes percentOf resolvedTypes} of resolved)")
         stream.println("UNIQUE ERROR TYPES: ${errorTypesReports.size}")
 
 

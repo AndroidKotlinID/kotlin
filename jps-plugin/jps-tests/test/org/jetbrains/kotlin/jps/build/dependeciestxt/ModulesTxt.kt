@@ -16,8 +16,8 @@ import org.jetbrains.kotlin.config.KotlinModuleKind.COMPILATION_AND_SOURCE_SET_H
 import org.jetbrains.kotlin.config.KotlinModuleKind.SOURCE_SET_HOLDER
 import org.jetbrains.kotlin.jps.build.dependeciestxt.ModulesTxt.Dependency.Kind.*
 import org.jetbrains.kotlin.platform.impl.FakeK2NativeCompilerArguments
-import org.jetbrains.kotlin.platform.impl.isCommon
-import org.jetbrains.kotlin.platform.impl.isJvm
+import org.jetbrains.kotlin.platform.isCommon
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import java.io.File
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.full.findAnnotation
@@ -52,11 +52,11 @@ data class ModulesTxt(
 
         val isCommonModule
             get() =
-                kotlinFacetSettings?.platform.isCommon ||
+                kotlinFacetSettings?.targetPlatform.isCommon() ||
                         kotlinFacetSettings?.kind == SOURCE_SET_HOLDER
 
         val isJvmModule
-            get() = kotlinFacetSettings?.platform.isJvm
+            get() = kotlinFacetSettings?.targetPlatform.isJvm()
 
         val expectedBy
             get() = dependencies.filter {

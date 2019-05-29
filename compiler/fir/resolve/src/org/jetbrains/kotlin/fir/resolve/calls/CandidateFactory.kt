@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.FirWrappedArgumentExpression
 import org.jetbrains.kotlin.fir.symbols.ConeSymbol
 import org.jetbrains.kotlin.resolve.calls.components.PostponedArgumentsAnalyzer
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
@@ -31,15 +32,20 @@ class CandidateFactory(
     fun createCandidate(
         symbol: ConeSymbol,
         dispatchReceiverValue: ClassDispatchReceiverValue?,
+        implicitExtensionReceiverValue: ImplicitReceiverValue?,
         explicitReceiverKind: ExplicitReceiverKind
     ): Candidate {
-        return Candidate(symbol, dispatchReceiverValue, explicitReceiverKind, inferenceComponents, baseSystem)
+        return Candidate(
+            symbol, dispatchReceiverValue, implicitExtensionReceiverValue,
+            explicitReceiverKind, inferenceComponents, baseSystem
+        )
     }
 }
 
 fun PostponedArgumentsAnalyzer.Context.addSubsystemFromExpression(expression: FirExpression) {
     when (expression) {
         is FirFunctionCall -> expression.candidate()?.let { addOtherSystem(it.system.asReadOnlyStorage()) }
+        is FirWrappedArgumentExpression -> addSubsystemFromExpression(expression.expression)
     }
 }
 

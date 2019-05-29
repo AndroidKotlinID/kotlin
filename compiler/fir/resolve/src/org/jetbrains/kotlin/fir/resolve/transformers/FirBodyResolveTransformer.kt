@@ -6,10 +6,12 @@
 package org.jetbrains.kotlin.fir.resolve.transformers
 
 import com.google.common.collect.LinkedHashMultimap
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.expressions.*
+import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedQualifierImpl
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.resolve.*
@@ -123,6 +125,10 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
             primaryConstructorParametersScope = null
             val type = regularClass.defaultType()
             scopes.addIfNotNull(type.scope(session, scopeSession))
+            val companionObject = regularClass.companionObject
+            if (companionObject != null) {
+                scopes.addIfNotNull(symbolProvider.getClassUseSiteMemberScope(companionObject.classId, session, scopeSession))
+            }
             val result = withLabelAndReceiverType(regularClass.name, regularClass, type) {
                 super.transformRegularClass(regularClass, data)
             }
@@ -159,10 +165,10 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
             }
             FirOperation.SAFE_AS -> {
                 resolved.resultType =
-                        resolved.conversionTypeRef.withReplacedConeType(
-                            session,
-                            resolved.conversionTypeRef.coneTypeUnsafe<ConeKotlinType>().withNullability(ConeNullability.NULLABLE)
-                        )
+                    resolved.conversionTypeRef.withReplacedConeType(
+                        session,
+                        resolved.conversionTypeRef.coneTypeUnsafe<ConeKotlinType>().withNullability(ConeNullability.NULLABLE)
+                    )
             }
             else -> error("Unknown type operator")
         }
@@ -249,12 +255,81 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         override fun KotlinTypeMarker.removeExactAnnotation(): KotlinTypeMarker {
             return this
         }
-    }, session)
+    }, session, jump)
 
-    private fun <T : FirQualifiedAccess> transformCallee(qualifiedAccess: T): T {
+    private var qualifierStack = mutableListOf<Name>()
+    private var qualifierPartsToDrop = 0
+
+    private fun tryResolveAsQualifier(): FirStatement? {
+
+        val symbolProvider = session.service<FirSymbolProvider>()
+        var qualifierParts = qualifierStack.asReversed().map { it.asString() }
+        var resolved: PackageOrClass?
+        do {
+            resolved = resolveToPackageOrClass(
+                symbolProvider,
+                FqName.fromSegments(qualifierParts)
+            )
+            if (resolved == null)
+                qualifierParts = qualifierParts.dropLast(1)
+        } while (resolved == null && qualifierParts.isNotEmpty())
+
+        if (resolved != null) {
+            qualifierPartsToDrop = qualifierParts.size - 1
+            return FirResolvedQualifierImpl(session, null /* TODO */, resolved.packageFqName, resolved.relativeClassFqName)
+                .apply { resultType = typeForQualifier(this) }
+        }
+
+        return null
+    }
+
+    private fun typeForQualifier(resolvedQualifier: FirResolvedQualifier): FirTypeRef {
+        val classId = resolvedQualifier.classId
+        val resultType = resolvedQualifier.resultType
+        if (classId != null) {
+            val classSymbol = symbolProvider.getClassLikeSymbolByFqName(classId)!!
+            val declaration = classSymbol.firUnsafe<FirClassLikeDeclaration>()
+            if (declaration is FirClass) {
+                if (declaration.classKind == ClassKind.OBJECT) {
+                    return resultType.resolvedTypeFromPrototype(
+                        classSymbol.constructType(emptyArray(), false)
+                    )
+                } else if (declaration.classKind == ClassKind.ENUM_ENTRY) {
+                    val enumClassSymbol = symbolProvider.getClassLikeSymbolByFqName(classSymbol.classId.outerClassId!!)!!
+                    return resultType.resolvedTypeFromPrototype(
+                        enumClassSymbol.constructType(emptyArray(), false)
+                    )
+                } else {
+                    if (declaration is FirRegularClass) {
+                        val companionObject = declaration.companionObject
+                        if (companionObject != null) {
+                            return resultType.resolvedTypeFromPrototype(
+                                companionObject.symbol.constructType(emptyArray(), false)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        // TODO: Handle no value type here
+        return resultType.resolvedTypeFromPrototype(
+            StandardClassIds.Unit(symbolProvider).constructType(emptyArray(), isNullable = false)
+        )
+    }
+
+    private fun <T : FirQualifiedAccess> transformCallee(qualifiedAccess: T): FirStatement {
         val callee = qualifiedAccess.calleeReference as? FirSimpleNamedReference ?: return qualifiedAccess
+        if (qualifiedAccess.safe || callee.name.isSpecial) {
+            qualifierStack.clear()
+        } else {
+            qualifierStack.add(callee.name)
+        }
 
         val qualifiedAccess = qualifiedAccess.transformExplicitReceiver(this, noExpectedType)
+        if (qualifierPartsToDrop > 0) {
+            qualifierPartsToDrop--
+            return qualifiedAccess.explicitReceiver ?: qualifiedAccess
+        }
 
         val info = CallInfo(
             CallKind.VariableAccess,
@@ -277,11 +352,31 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         )
         val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
 
+        val candidates = result.bestCandidates()
         val nameReference = createResolvedNamedReference(
             callee,
-            result.bestCandidates(),
+            candidates,
             result.currentApplicability
         )
+
+        if (qualifiedAccess.explicitReceiver == null &&
+            (candidates.size <= 1 && result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED)
+        ) {
+            tryResolveAsQualifier()?.let { return it }
+        }
+
+        if (nameReference is FirResolvedCallableReference) {
+            val symbol = nameReference.coneSymbol as? ConeClassLikeSymbol
+            if (symbol != null) {
+                return FirResolvedQualifierImpl(session, nameReference.psi, symbol.classId).apply {
+                    resultType = typeForQualifier(this)
+                }
+            }
+        }
+
+        if (qualifiedAccess.explicitReceiver == null) {
+            qualifierStack.clear()
+        }
 
         val resultExpression =
             qualifiedAccess.transformCalleeReference(StoreNameReference, nameReference) as T
@@ -304,15 +399,14 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
             }
             is FirSuperReference -> {
                 qualifiedAccessExpression.resultType =
-                        callee.superTypeRef as? FirResolvedTypeRef ?:
-                        implicitReceiverStack.filterIsInstance<ImplicitDispatchReceiverValue>().lastOrNull()
+                    callee.superTypeRef as? FirResolvedTypeRef
+                        ?: implicitReceiverStack.filterIsInstance<ImplicitDispatchReceiverValue>().lastOrNull()
                             ?.boundSymbol?.fir?.superTypeRefs?.firstOrNull()
-                        ?: FirErrorTypeRefImpl(session, qualifiedAccessExpression.psi, "No super type")
+                                ?: FirErrorTypeRefImpl(session, qualifiedAccessExpression.psi, "No super type")
             }
             is FirResolvedCallableReference -> {
                 if (qualifiedAccessExpression.typeRef !is FirResolvedTypeRef) {
-                    qualifiedAccessExpression.resultType =
-                            jump.tryCalculateReturnType(callee.coneSymbol.firUnsafe<FirCallableDeclaration>())
+                    storeTypeFromCallee(qualifiedAccessExpression)
                 }
             }
         }
@@ -328,12 +422,78 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
     }
 
     override fun transformAnonymousFunction(anonymousFunction: FirAnonymousFunction, data: Any?): CompositeTransformResult<FirDeclaration> {
-        if (data == null) return anonymousFunction.compose()
-        if (data is LambdaResolution) return transformAnonymousFunction(anonymousFunction, data).compose()
-        return super.transformAnonymousFunction(anonymousFunction, data)
+        return when (data) {
+            null -> {
+                anonymousFunction.compose()
+            }
+            is LambdaResolution -> {
+                transformAnonymousFunctionWithLambdaResolution(anonymousFunction, data).compose()
+            }
+            is FirTypeRef -> {
+                val resolvedLambdaAtom = (data as? FirResolvedTypeRef)?.let {
+                    extractLambdaInfoFromFunctionalType(
+                        it.type, it, anonymousFunction
+                    )
+                }
+                var af = super.transformAnonymousFunction(anonymousFunction, data).single as FirAnonymousFunction
+                val valueParameters =
+                    if (resolvedLambdaAtom == null) af.valueParameters
+                    else {
+                        val singleParameterType = resolvedLambdaAtom.parameters.singleOrNull()
+                        val itParam = when {
+                            af.valueParameters.isEmpty() && singleParameterType != null ->
+                                FirValueParameterImpl(
+                                    session,
+                                    null,
+                                    Name.identifier("it"),
+                                    FirResolvedTypeRefImpl(session, null, singleParameterType, emptyList()),
+                                    defaultValue = null,
+                                    isCrossinline = false,
+                                    isNoinline = false,
+                                    isVararg = false
+                                )
+                            else -> null
+                        }
+                        if (itParam != null) {
+                            listOf(itParam)
+                        } else {
+                            af.valueParameters.mapIndexed { index, param ->
+                                if (param.returnTypeRef is FirResolvedTypeRef) {
+                                    param
+                                } else {
+                                    param.transformReturnTypeRef(
+                                        StoreType,
+                                        param.returnTypeRef.resolvedTypeFromPrototype(
+                                            resolvedLambdaAtom.parameters[index]
+                                        )
+                                    )
+                                    param
+                                }
+                            }
+                        }
+
+                    }
+                af = af.copy(
+                    receiverTypeRef = af.receiverTypeRef?.takeIf { it !is FirImplicitTypeRef }
+                        ?: resolvedLambdaAtom?.receiver?.let { af.receiverTypeRef?.resolvedTypeFromPrototype(it) },
+                    valueParameters = valueParameters,
+                    returnTypeRef = (af.returnTypeRef as? FirResolvedTypeRef)
+                        ?: resolvedLambdaAtom?.returnType?.let { af.returnTypeRef.resolvedTypeFromPrototype(it) }
+                        ?: af.body?.resultType?.takeIf { af.returnTypeRef is FirImplicitTypeRef }
+                        ?: FirErrorTypeRefImpl(session, af.psi, "No result type for lambda")
+                )
+                af.replaceTypeRef(af.constructFunctionalTypeRef(session))
+                af.compose()
+            }
+            else -> {
+                super.transformAnonymousFunction(anonymousFunction, data)
+            }
+        }
     }
 
-    fun transformAnonymousFunction(anonymousFunction: FirAnonymousFunction, lambdaResolution: LambdaResolution): FirAnonymousFunction {
+    private fun transformAnonymousFunctionWithLambdaResolution(
+        anonymousFunction: FirAnonymousFunction, lambdaResolution: LambdaResolution
+    ): FirAnonymousFunction {
         val receiverTypeRef = anonymousFunction.receiverTypeRef
         fun transform(): FirAnonymousFunction {
             return withScopeCleanup(scopes) {
@@ -365,6 +525,8 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
 
     private fun resolveCallAndSelectCandidate(functionCall: FirFunctionCall, expectedTypeRef: FirTypeRef?): FirFunctionCall {
 
+        qualifierStack.clear()
+
         val functionCall =
             (functionCall.transformExplicitReceiver(this, noExpectedType) as FirFunctionCall)
                 .transformArguments(this, null) as FirFunctionCall
@@ -392,8 +554,12 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         val consumer = createFunctionConsumer(session, name, info, inferenceComponents)
         val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
         val bestCandidates = result.bestCandidates()
-        val reducedCandidates = ConeOverloadConflictResolver(TypeSpecificityComparator.NONE, inferenceComponents)
-            .chooseMaximallySpecificCandidates(bestCandidates, discriminateGenerics = false)
+        val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {
+            bestCandidates.toSet()
+        } else {
+            ConeOverloadConflictResolver(TypeSpecificityComparator.NONE, inferenceComponents)
+                .chooseMaximallySpecificCandidates(bestCandidates, discriminateGenerics = false)
+        }
 
 
 //        fun isInvoke()
@@ -462,6 +628,7 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
                 receiverType: ConeKotlinType?,
                 parameters: List<ConeKotlinType>,
                 expectedReturnType: ConeKotlinType?,
+                rawReturnType: ConeKotlinType,
                 stubsForPostponedVariables: Map<TypeVariableMarker, StubTypeMarker>
             ): Pair<List<FirExpression>, InferenceSession> {
 
@@ -485,9 +652,9 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
                     valueParameters = lambdaArgument.valueParameters.mapIndexed { index, parameter ->
                         parameter.transformReturnTypeRef(StoreType, parameter.returnTypeRef.resolvedTypeFromPrototype(parameters[index]))
                         parameter
-                    } + listOfNotNull(itParam)
+                    } + listOfNotNull(itParam),
+                    returnTypeRef = lambdaArgument.returnTypeRef.resolvedTypeFromPrototype(rawReturnType)
                 )
-
 
                 val expectedReturnTypeRef = expectedReturnType?.let { newLambdaExpression.returnTypeRef.resolvedTypeFromPrototype(it) }
                 replacements[lambdaArgument] =
@@ -609,7 +776,11 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
             is FirExpression -> statement
             else -> null
         }
-        block.resultType = (resultExpression?.resultType as? FirResolvedTypeRef) ?: FirErrorTypeRefImpl(session, null, "No type for block")
+        block.resultType = if (resultExpression == null) {
+            FirImplicitUnitTypeRef(session, block.psi)
+        } else {
+            (resultExpression.resultType as? FirResolvedTypeRef) ?: FirErrorTypeRefImpl(session, null, "No type for block")
+        }
 
         return block.compose()
     }
@@ -774,7 +945,9 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         if (property.returnTypeRef !is FirImplicitTypeRef && implicitTypeOnly) return property.compose()
         return withScopeCleanup(localScopes) {
             localScopes.addIfNotNull(primaryConstructorParametersScope)
-            transformVariable(property, data)
+            (transformVariable(property, data).single as FirProperty).apply {
+                setter?.let { it.valueParameters[0].transformReturnTypeRef(StoreType, property.returnTypeRef) }
+            }.compose()
         }
     }
 
@@ -795,13 +968,33 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
     override fun transformGetClassCall(getClassCall: FirGetClassCall, data: Any?): CompositeTransformResult<FirStatement> {
         val transformedGetClassCall = super.transformGetClassCall(getClassCall, data).single as FirGetClassCall
         val kClassSymbol = ClassId.fromString("kotlin/reflect/KClass")(session.service())
+
+        val typeOfExpression = when (val lhs = transformedGetClassCall.argument) {
+            is FirResolvedQualifier -> {
+                val classId = lhs.classId
+                if (classId != null) {
+                    val symbol = symbolProvider.getClassLikeSymbolByFqName(classId)!!
+                    // TODO: Unify logic?
+                    symbol.constructType(
+                        Array(symbol.firUnsafe<FirClassLikeDeclaration>().typeParameters.size) {
+                            ConeStarProjection
+                        },
+                        isNullable = false
+                    )
+                } else {
+                    lhs.resultType.coneTypeUnsafe<ConeKotlinType>()
+                }
+            }
+            else -> lhs.resultType.coneTypeUnsafe<ConeKotlinType>()
+        }
+
         transformedGetClassCall.resultType =
-                FirResolvedTypeRefImpl(
-                    session,
-                    null,
-                    kClassSymbol.constructType(arrayOf(transformedGetClassCall.argument.resultType.coneTypeUnsafe()), false),
-                    emptyList()
-                )
+            FirResolvedTypeRefImpl(
+                session,
+                null,
+                kClassSymbol.constructType(arrayOf(typeOfExpression), false),
+                emptyList()
+            )
         return transformedGetClassCall.compose()
     }
 }
@@ -973,17 +1166,10 @@ private object ReplaceInArguments : FirTransformer<Map<FirElement, FirElement>>(
         return (functionCall.transformChildren(this, data) as FirStatement).compose()
     }
 
-    override fun transformNamedArgumentExpression(
-        namedArgumentExpression: FirNamedArgumentExpression,
+    override fun transformWrappedArgumentExpression(
+        wrappedArgumentExpression: FirWrappedArgumentExpression,
         data: Map<FirElement, FirElement>
     ): CompositeTransformResult<FirStatement> {
-        return (namedArgumentExpression.transformChildren(this, data) as FirStatement).compose()
-    }
-
-    override fun transformLambdaArgumentExpression(
-        lambdaArgumentExpression: FirLambdaArgumentExpression,
-        data: Map<FirElement, FirElement>
-    ): CompositeTransformResult<FirStatement> {
-        return (lambdaArgumentExpression.transformChildren(this, data) as FirStatement).compose()
+        return (wrappedArgumentExpression.transformChildren(this, data) as FirStatement).compose()
     }
 }

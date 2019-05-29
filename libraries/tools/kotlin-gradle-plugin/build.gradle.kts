@@ -23,7 +23,6 @@ javadocJar()
 repositories {
     google()
     maven("https://plugins.gradle.org/m2/")
-    maven(kotlinNativeRepo)
 }
 
 pill {
@@ -38,6 +37,7 @@ dependencies {
     compileOnly(project(":daemon-common"))
 
     compile(kotlinStdlib())
+    compile(project(":kotlin-native:kotlin-native-utils"))
     compileOnly(project(":kotlin-reflect-api"))
     compileOnly(project(":kotlin-android-extensions"))
     compileOnly(project(":kotlin-build-common"))
@@ -68,10 +68,6 @@ dependencies {
 
     jarContents(compileOnly(intellijDep()) {
         includeJars("asm-all", "serviceMessages", "gson", rootProject = rootProject)
-    })
-    
-    jarContents(compileOnly(commonDep("org.jetbrains.kotlin:kotlin-native-shared")) {
-        isTransitive = false
     })
 
     // com.android.tools.build:gradle has ~50 unneeded transitive dependencies
@@ -116,8 +112,7 @@ tasks {
     named<ProcessResources>("processResources") {
         val propertiesToExpand = mapOf(
             "projectVersion" to project.version,
-            "kotlinNativeVersion" to project.kotlinNativeVersion,
-            "kotlinNativeSharedVersion" to project.kotlinNativeSharedVersion
+            "kotlinNativeVersion" to project.kotlinNativeVersion
         )
         for ((name, value) in propertiesToExpand) {
             inputs.property(name, value)

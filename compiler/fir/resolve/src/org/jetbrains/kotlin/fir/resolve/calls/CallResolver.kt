@@ -8,16 +8,21 @@ package org.jetbrains.kotlin.fir.resolve.calls
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.impl.FirImportImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedImportImpl
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.scope
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculator
 import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculatorWithJump
+import org.jetbrains.kotlin.fir.resolve.transformers.firUnsafe
 import org.jetbrains.kotlin.fir.scopes.FirPosition
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
+import org.jetbrains.kotlin.fir.scopes.impl.FirExplicitSimpleImportingScope
 import org.jetbrains.kotlin.fir.scopes.processClassifiersByNameWithAction
 import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.*
@@ -25,11 +30,14 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
 import org.jetbrains.kotlin.resolve.calls.model.PostponedResolvedAtomMarker
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 import org.jetbrains.kotlin.utils.addToStdlib.cast
+import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.createCoroutineUnintercepted
 
 class CallInfo(
     val callKind: CallKind,
@@ -49,14 +57,33 @@ class CallInfo(
 
 interface CheckerSink {
     fun reportApplicability(new: CandidateApplicability)
+    suspend fun yield()
+    suspend fun yieldApplicability(new: CandidateApplicability) {
+        reportApplicability(new)
+        yield()
+    }
+
     val components: InferenceComponents
+
+    suspend fun yieldIfNeed()
 }
 
 
-class CheckerSinkImpl(override val components: InferenceComponents) : CheckerSink {
+class CheckerSinkImpl(override val components: InferenceComponents, var continuation: Continuation<Unit>? = null) : CheckerSink {
     var current = CandidateApplicability.RESOLVED
     override fun reportApplicability(new: CandidateApplicability) {
         if (new < current) current = new
+    }
+
+    override suspend fun yield() = kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn<Unit> {
+        continuation = it
+        kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+    }
+
+    override suspend fun yieldIfNeed() {
+        if (current < CandidateApplicability.SYNTHETIC_RESOLVED) {
+            yield()
+        }
     }
 }
 
@@ -64,6 +91,7 @@ class CheckerSinkImpl(override val components: InferenceComponents) : CheckerSin
 class Candidate(
     val symbol: ConeSymbol,
     val dispatchReceiverValue: ClassDispatchReceiverValue?,
+    val implicitExtensionReceiverValue: ImplicitReceiverValue?,
     val explicitReceiverKind: ExplicitReceiverKind,
     private val inferenceComponents: InferenceComponents,
     private val baseSystem: ConstraintStorage
@@ -118,7 +146,11 @@ interface TowerScopeLevel {
     ): ProcessorAction
 
     interface TowerScopeLevelProcessor<T : ConeSymbol> {
-        fun consumeCandidate(symbol: T, dispatchReceiverValue: ClassDispatchReceiverValue?): ProcessorAction
+        fun consumeCandidate(
+            symbol: T,
+            dispatchReceiverValue: ClassDispatchReceiverValue?,
+            implicitExtensionReceiverValue: ImplicitReceiverValue?
+        ): ProcessorAction
     }
 
     object Empty : TowerScopeLevel {
@@ -155,7 +187,7 @@ abstract class SessionBasedTowerLevel(val session: FirSession) : TowerScopeLevel
 class MemberScopeTowerLevel(
     session: FirSession,
     val dispatchReceiver: ReceiverValue,
-    val implicitExtensionReceiver: ReceiverValue? = null
+    val implicitExtensionReceiver: ImplicitReceiverValue? = null
 ) : SessionBasedTowerLevel(session) {
 
     private fun <T : ConeSymbol> processMembers(
@@ -170,9 +202,9 @@ class MemberScopeTowerLevel(
                 if (candidate is ConeCallableSymbol && candidate.hasConsistentExtensionReceiver(extensionReceiver)) {
                     // NB: we do not check dispatchReceiverValue != null here,
                     // because of objects & constructors (see comments in dispatchReceiverValue() implementation)
-                    output.consumeCandidate(candidate, candidate.dispatchReceiverValue())
+                    output.consumeCandidate(candidate, candidate.dispatchReceiverValue(), implicitExtensionReceiver)
                 } else if (candidate is ConeClassLikeSymbol) {
-                    output.consumeCandidate(candidate, null)
+                    output.consumeCandidate(candidate, null, implicitExtensionReceiver)
                 } else {
                     ProcessorAction.NEXT
                 }
@@ -180,7 +212,7 @@ class MemberScopeTowerLevel(
         ) return ProcessorAction.STOP
         val withSynthetic = FirSyntheticPropertiesScope(session, scope, ReturnTypeCalculatorWithJump(session))
         return withSynthetic.processScopeMembers { symbol ->
-            output.consumeCandidate(symbol, symbol.dispatchReceiverValue())
+            output.consumeCandidate(symbol, symbol.dispatchReceiverValue(), implicitExtensionReceiver)
         }
     }
 
@@ -217,7 +249,8 @@ private fun ConeCallableSymbol.hasExtensionReceiver(): Boolean = (this as? FirCa
 // (if explicit receiver exists, it always *should* be an extension receiver)
 class ScopeTowerLevel(
     session: FirSession,
-    val scope: FirScope
+    val scope: FirScope,
+    val implicitExtensionReceiver: ImplicitReceiverValue? = null
 ) : SessionBasedTowerLevel(session) {
     override fun <T : ConeSymbol> processElementsByName(
         token: TowerScopeLevel.Token<T>,
@@ -225,32 +258,123 @@ class ScopeTowerLevel(
         explicitReceiver: ExpressionReceiverValue?,
         processor: TowerScopeLevel.TowerScopeLevelProcessor<T>
     ): ProcessorAction {
+        if (explicitReceiver != null && implicitExtensionReceiver != null) {
+            return ProcessorAction.NEXT
+        }
+        val extensionReceiver = explicitReceiver ?: implicitExtensionReceiver
         return when (token) {
 
             TowerScopeLevel.Token.Properties -> scope.processPropertiesByName(name) { candidate ->
-                if (candidate.hasConsistentExtensionReceiver(explicitReceiver) && candidate.dispatchReceiverValue() == null) {
-                    processor.consumeCandidate(candidate as T, dispatchReceiverValue = null)
+                if (candidate.hasConsistentExtensionReceiver(extensionReceiver) && candidate.dispatchReceiverValue() == null) {
+                    processor.consumeCandidate(
+                        candidate as T, dispatchReceiverValue = null,
+                        implicitExtensionReceiverValue = implicitExtensionReceiver
+                    )
                 } else {
                     ProcessorAction.NEXT
                 }
             }
             TowerScopeLevel.Token.Functions -> scope.processFunctionsByName(name) { candidate ->
-                // TODO: fix implicit receiver
-                if (candidate.hasConsistentExtensionReceiver(explicitReceiver) && candidate.dispatchReceiverValue() == null) {
-                    processor.consumeCandidate(candidate as T, dispatchReceiverValue = null)
+                if (candidate.hasConsistentExtensionReceiver(extensionReceiver) && candidate.dispatchReceiverValue() == null) {
+                    processor.consumeCandidate(
+                        candidate as T, dispatchReceiverValue = null,
+                        implicitExtensionReceiverValue = implicitExtensionReceiver)
                 } else {
                     ProcessorAction.NEXT
                 }
             }
             TowerScopeLevel.Token.Objects -> scope.processClassifiersByNameWithAction(name, FirPosition.OTHER) {
                 processor.consumeCandidate(
-                    it as T,
-                    dispatchReceiverValue = null
+                    it as T, dispatchReceiverValue = null,
+                    implicitExtensionReceiverValue = null
                 )
             }
         }
     }
 
+}
+
+/**
+ *  Handles only statics and top-levels, DOES NOT handle objects/companions members
+ */
+class QualifiedReceiverTowerLevel(session: FirSession) : SessionBasedTowerLevel(session) {
+    override fun <T : ConeSymbol> processElementsByName(
+        token: TowerScopeLevel.Token<T>,
+        name: Name,
+        explicitReceiver: ExpressionReceiverValue?,
+        processor: TowerScopeLevel.TowerScopeLevelProcessor<T>
+    ): ProcessorAction {
+        val qualifiedReceiver = explicitReceiver?.explicitReceiverExpression as FirResolvedQualifier
+        val scope = FirExplicitSimpleImportingScope(
+            listOf(
+                FirResolvedImportImpl(
+                    session,
+                    FirImportImpl(session, null, FqName.topLevel(name), false, null),
+                    qualifiedReceiver.packageFqName,
+                    qualifiedReceiver.relativeClassFqName
+                )
+            ), session
+        )
+
+        return if (token == TowerScopeLevel.Token.Objects) {
+            scope.processClassifiersByNameWithAction(name, FirPosition.OTHER) {
+                processor.consumeCandidate(it as T, null, null)
+            }
+        } else {
+            scope.processCallables(name, token.cast()) {
+                val fir = it.firUnsafe<FirCallableMemberDeclaration>()
+                if (fir.isStatic || it.callableId.classId == null) {
+                    processor.consumeCandidate(it as T, null, null)
+                } else {
+                    ProcessorAction.NEXT
+                }
+            }
+        }
+    }
+
+}
+
+class QualifiedReceiverTowerDataConsumer<T : ConeSymbol>(
+    val session: FirSession,
+    val name: Name,
+    val token: TowerScopeLevel.Token<T>,
+    val explicitReceiver: ExpressionReceiverValue,
+    val candidateFactory: CandidateFactory
+) : TowerDataConsumer() {
+    override fun consume(
+        kind: TowerDataKind,
+        towerScopeLevel: TowerScopeLevel,
+        resultCollector: CandidateCollector,
+        group: Int
+    ): ProcessorAction {
+        if (checkSkip(group, resultCollector)) return ProcessorAction.NEXT
+        if (kind != TowerDataKind.EMPTY) return ProcessorAction.NEXT
+
+        return QualifiedReceiverTowerLevel(session).processElementsByName(
+            token,
+            name,
+            explicitReceiver,
+            processor = object : TowerScopeLevel.TowerScopeLevelProcessor<T> {
+                override fun consumeCandidate(
+                    symbol: T,
+                    dispatchReceiverValue: ClassDispatchReceiverValue?,
+                    implicitExtensionReceiverValue: ImplicitReceiverValue?
+                ): ProcessorAction {
+                    assert(dispatchReceiverValue == null)
+                    resultCollector.consumeCandidate(
+                        group,
+                        candidateFactory.createCandidate(
+                            symbol,
+                            dispatchReceiverValue = null,
+                            implicitExtensionReceiverValue = null,
+                            explicitReceiverKind = ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
+                        )
+                    )
+                    return ProcessorAction.NEXT
+                }
+            }
+        )
+    }
 }
 
 
@@ -321,14 +445,25 @@ fun createSimpleConsumer(
     inferenceComponents: InferenceComponents
 ): TowerDataConsumer {
     val factory = CandidateFactory(inferenceComponents, callInfo)
-    return if (callInfo.explicitReceiver != null) {
-        ExplicitReceiverTowerDataConsumer(
-            session,
-            name,
-            token,
-            ExpressionReceiverValue(callInfo.explicitReceiver, callInfo.typeProvider),
-            factory
-        )
+    val explicitReceiver = callInfo.explicitReceiver
+    return if (explicitReceiver != null) {
+        val receiverValue = ExpressionReceiverValue(explicitReceiver, callInfo.typeProvider)
+        if (explicitReceiver is FirResolvedQualifier) {
+            val qualified =
+                QualifiedReceiverTowerDataConsumer(session, name, token, receiverValue, factory)
+
+            if (explicitReceiver.classId != null) {
+                PrioritizedTowerDataConsumer(
+                    qualified,
+                    ExplicitReceiverTowerDataConsumer(session, name, token, receiverValue, factory)
+                )
+            } else {
+                qualified
+            }
+
+        } else {
+            ExplicitReceiverTowerDataConsumer(session, name, token, receiverValue, factory)
+        }
     } else {
         NoExplicitReceiverTowerDataConsumer(session, name, token, factory)
     }
@@ -379,12 +514,17 @@ class ExplicitReceiverTowerDataConsumer<T : ConeSymbol>(
                     name,
                     explicitReceiver = null,
                     processor = object : TowerScopeLevel.TowerScopeLevelProcessor<T> {
-                        override fun consumeCandidate(symbol: T, dispatchReceiverValue: ClassDispatchReceiverValue?): ProcessorAction {
+                        override fun consumeCandidate(
+                            symbol: T,
+                            dispatchReceiverValue: ClassDispatchReceiverValue?,
+                            implicitExtensionReceiverValue: ImplicitReceiverValue?
+                        ): ProcessorAction {
                             resultCollector.consumeCandidate(
                                 group,
                                 candidateFactory.createCandidate(
                                     symbol,
                                     dispatchReceiverValue,
+                                    implicitExtensionReceiverValue,
                                     ExplicitReceiverKind.DISPATCH_RECEIVER
                                 )
                             )
@@ -399,12 +539,17 @@ class ExplicitReceiverTowerDataConsumer<T : ConeSymbol>(
                     name,
                     explicitReceiver = explicitReceiver,
                     processor = object : TowerScopeLevel.TowerScopeLevelProcessor<T> {
-                        override fun consumeCandidate(symbol: T, dispatchReceiverValue: ClassDispatchReceiverValue?): ProcessorAction {
+                        override fun consumeCandidate(
+                            symbol: T,
+                            dispatchReceiverValue: ClassDispatchReceiverValue?,
+                            implicitExtensionReceiverValue: ImplicitReceiverValue?
+                        ): ProcessorAction {
                             resultCollector.consumeCandidate(
                                 group,
                                 candidateFactory.createCandidate(
                                     symbol,
                                     dispatchReceiverValue,
+                                    implicitExtensionReceiverValue,
                                     ExplicitReceiverKind.EXTENSION_RECEIVER
                                 )
                             )
@@ -441,12 +586,17 @@ class NoExplicitReceiverTowerDataConsumer<T : ConeSymbol>(
                     name,
                     explicitReceiver = null,
                     processor = object : TowerScopeLevel.TowerScopeLevelProcessor<T> {
-                        override fun consumeCandidate(symbol: T, dispatchReceiverValue: ClassDispatchReceiverValue?): ProcessorAction {
+                        override fun consumeCandidate(
+                            symbol: T,
+                            dispatchReceiverValue: ClassDispatchReceiverValue?,
+                            implicitExtensionReceiverValue: ImplicitReceiverValue?
+                        ): ProcessorAction {
                             resultCollector.consumeCandidate(
                                 group,
                                 candidateFactory.createCandidate(
                                     symbol,
                                     dispatchReceiverValue,
+                                    implicitExtensionReceiverValue,
                                     ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
                                 )
                             )
@@ -488,6 +638,14 @@ class CallResolver(val typeCalculator: ReturnTypeCalculator, val components: Inf
             MemberScopeTowerLevel(session, implicitReceiverValue, implicitReceiverValue),
             collector, group++
         )
+
+        for (scope in scopes!!) {
+            towerDataConsumer.consume(
+                TowerDataKind.TOWER_LEVEL,
+                ScopeTowerLevel(session, scope, implicitReceiverValue),
+                collector, group++
+            )
+        }
 
         return group
     }
@@ -532,6 +690,9 @@ enum class CandidateApplicability {
     RESOLVED
 }
 
+
+var ID = ""
+
 class CandidateCollector(val callInfo: CallInfo, val components: InferenceComponents) {
 
     val groupNumbers = mutableListOf<Int>()
@@ -553,12 +714,30 @@ class CandidateCollector(val callInfo: CallInfo, val components: InferenceCompon
     ): CandidateApplicability {
 
         val sink = CheckerSinkImpl(components)
+        var finished = false
+        sink.continuation = suspend {
+            for (stage in callInfo.callKind.sequence()) {
+                stage.check(candidate, sink, callInfo)
+            }
+        }.createCoroutineUnintercepted(completion = object : Continuation<Unit> {
+            override val context: CoroutineContext
+                get() = EmptyCoroutineContext
+
+            override fun resumeWith(result: Result<Unit>) {
+                result.exceptionOrNull()?.let { throw it }
+                finished = true
+            }
+        })
 
 
-        callInfo.callKind.sequence().forEach {
-            it.check(candidate, sink, callInfo)
+
+
+        while (!finished) {
+            sink.continuation!!.resume(Unit)
+            if (sink.current < CandidateApplicability.SYNTHETIC_RESOLVED) {
+                break
+            }
         }
-
         return sink.current
     }
 

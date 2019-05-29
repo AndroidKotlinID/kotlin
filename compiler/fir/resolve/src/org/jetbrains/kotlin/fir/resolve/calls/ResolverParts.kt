@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.resolve.calls
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.transformers.firSafeNullable
 import org.jetbrains.kotlin.fir.resolve.transformers.firUnsafe
@@ -27,25 +28,26 @@ import java.lang.IllegalStateException
 
 
 abstract class ResolutionStage {
-    abstract fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo)
+    abstract suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo)
 }
 
 abstract class CheckerStage : ResolutionStage()
 
 internal object CheckExplicitReceiverConsistency : ResolutionStage() {
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         val receiverKind = candidate.explicitReceiverKind
         val explicitReceiver = callInfo.explicitReceiver
         // TODO: add invoke cases
         when (receiverKind) {
             NO_EXPLICIT_RECEIVER -> {
-                if (explicitReceiver != null) return sink.reportApplicability(CandidateApplicability.WRONG_RECEIVER)
+                if (explicitReceiver != null && explicitReceiver !is FirResolvedQualifier)
+                    return sink.yieldApplicability(CandidateApplicability.WRONG_RECEIVER)
             }
             EXTENSION_RECEIVER, DISPATCH_RECEIVER -> {
-                if (explicitReceiver == null) return sink.reportApplicability(CandidateApplicability.WRONG_RECEIVER)
+                if (explicitReceiver == null) return sink.yieldApplicability(CandidateApplicability.WRONG_RECEIVER)
             }
             BOTH_RECEIVERS -> {
-                if (explicitReceiver == null) return sink.reportApplicability(CandidateApplicability.WRONG_RECEIVER)
+                if (explicitReceiver == null) return sink.yieldApplicability(CandidateApplicability.WRONG_RECEIVER)
                 // Here we should also check additional invoke receiver
             }
         }
@@ -95,45 +97,57 @@ internal sealed class CheckReceivers : ResolutionStage() {
 
     abstract fun ExplicitReceiverKind.shouldBeResolvedAsImplicit(): Boolean
 
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
-        val receiverParameterValue = candidate.getReceiverValue()
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+        val expectedReceiverParameterValue = candidate.getReceiverValue()
         val explicitReceiverExpression = callInfo.explicitReceiver
         val explicitReceiverKind = candidate.explicitReceiverKind
 
-        if (receiverParameterValue != null) {
+        if (expectedReceiverParameterValue != null) {
             if (explicitReceiverExpression != null && explicitReceiverKind.shouldBeResolvedAsExplicit()) {
                 resolveArgumentExpression(
                     candidate.csBuilder,
-                    explicitReceiverExpression,
-                    candidate.substitutor.substituteOrSelf(receiverParameterValue.type),
-                    explicitReceiverExpression.typeRef,
-                    sink,
+                    argument = explicitReceiverExpression,
+                    expectedType = candidate.substitutor.substituteOrSelf(expectedReceiverParameterValue.type),
+                    expectedTypeRef = explicitReceiverExpression.typeRef,
+                    sink = sink,
                     isReceiver = true,
                     isSafeCall = callInfo.isSafeCall,
                     typeProvider = callInfo.typeProvider,
                     acceptLambdaAtoms = { candidate.postponedAtoms += it }
                 )
+            } else {
+                val argumentExtensionReceiverValue = candidate.implicitExtensionReceiverValue
+                if (argumentExtensionReceiverValue != null && explicitReceiverKind.shouldBeResolvedAsImplicit()) {
+                    resolvePlainArgumentType(
+                        candidate.csBuilder,
+                        argumentType = argumentExtensionReceiverValue.type,
+                        expectedType = candidate.substitutor.substituteOrSelf(expectedReceiverParameterValue.type),
+                        sink = sink,
+                        isReceiver = true,
+                        isSafeCall = callInfo.isSafeCall
+                    )
+                }
             }
         }
     }
 }
 
 internal object MapArguments : ResolutionStage() {
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         val symbol = candidate.symbol as? FirFunctionSymbol ?: return sink.reportApplicability(CandidateApplicability.HIDDEN)
         val function = symbol.firUnsafe<FirFunction>()
         val processor = FirCallArgumentsProcessor(function, callInfo.arguments)
         val mappingResult = processor.process()
         candidate.argumentMapping = mappingResult.argumentMapping
         if (!mappingResult.isSuccess) {
-            return sink.reportApplicability(CandidateApplicability.PARAMETER_MAPPING_ERROR)
+            return sink.yieldApplicability(CandidateApplicability.PARAMETER_MAPPING_ERROR)
         }
     }
 
 }
 
 internal object CheckArguments : CheckerStage() {
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         val argumentMapping =
             candidate.argumentMapping ?: throw IllegalStateException("Argument should be already mapped while checking arguments!")
         for ((argument, parameter) in argumentMapping) {
@@ -145,16 +159,16 @@ internal object CheckArguments : CheckerStage() {
                 typeProvider = callInfo.typeProvider,
                 sink = sink
             )
-        }
-
-        if (candidate.system.hasContradiction) {
-            sink.reportApplicability(CandidateApplicability.INAPPLICABLE)
+            if (candidate.system.hasContradiction) {
+                sink.yieldApplicability(CandidateApplicability.INAPPLICABLE)
+            }
+            sink.yield()
         }
     }
 }
 
 internal object DiscriminateSynthetics : CheckerStage() {
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         if (candidate.symbol is SyntheticSymbol) {
             sink.reportApplicability(CandidateApplicability.SYNTHETIC_RESOLVED)
         }
@@ -172,7 +186,7 @@ internal object CheckVisibility : CheckerStage() {
         }
     }
 
-    override fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         val symbol = candidate.symbol
         val declaration = symbol.firSafeNullable<FirMemberDeclaration>()
         if (declaration != null && !declaration.visibility.isPublicAPI) {
@@ -198,7 +212,7 @@ internal object CheckVisibility : CheckerStage() {
             }
 
             if (!visible) {
-                sink.reportApplicability(CandidateApplicability.HIDDEN)
+                sink.yieldApplicability(CandidateApplicability.HIDDEN)
             }
         }
     }

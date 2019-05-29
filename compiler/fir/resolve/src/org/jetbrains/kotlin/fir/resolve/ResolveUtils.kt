@@ -6,14 +6,16 @@
 package org.jetbrains.kotlin.fir.resolve
 
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.declarations.expandedConeType
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeAbbreviatedTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
+import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
@@ -115,6 +117,7 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
         is ConeTypeParameterTypeImpl -> ConeTypeParameterTypeImpl(lookupTag, nullability.isNullable) as T
         is ConeFlexibleType -> ConeFlexibleType(lowerBound.withNullability(nullability), upperBound.withNullability(nullability)) as T
         is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag) as T
+        is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor) as T
         else -> error("sealed: ${this::class}")
     }
 }
@@ -135,4 +138,23 @@ fun <T : ConeKotlinType> T.withArguments(arguments: Array<ConeKotlinTypeProjecti
         ) as T
         else -> error("Not supported: $this: ${this.render()}")
     }
+}
+
+fun FirFunction.constructFunctionalTypeRef(session: FirSession): FirResolvedTypeRef {
+    val receiverTypeRef = when (this) {
+        is FirNamedFunction -> receiverTypeRef
+        is FirAnonymousFunction -> receiverTypeRef
+        else -> null
+    }
+    val receiverType = receiverTypeRef?.coneTypeUnsafe<ConeKotlinType>()
+    val parameters = valueParameters.map {
+        it.returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: ConeKotlinErrorType("No type for parameter")
+    }
+    val rawReturnType = (this as FirTypedDeclaration).returnTypeRef.coneTypeUnsafe<ConeKotlinType>()
+    val receiverAndParameterTypes = listOfNotNull(receiverType) + parameters + listOf(rawReturnType)
+
+    val functionalTypeId = StandardClassIds.byName("Function${receiverAndParameterTypes.size - 1}")
+    val functionalType = functionalTypeId(session.service()).constructType(receiverAndParameterTypes.toTypedArray(), isNullable = false)
+
+    return FirResolvedTypeRefImpl(session, psi, functionalType)
 }

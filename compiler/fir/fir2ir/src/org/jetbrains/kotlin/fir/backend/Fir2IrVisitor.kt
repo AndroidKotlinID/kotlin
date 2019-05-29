@@ -21,6 +21,9 @@ import org.jetbrains.kotlin.fir.resolve.buildUseSiteScope
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
+import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
+import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTagImpl
+import org.jetbrains.kotlin.fir.symbols.ConeClassifierLookupTag
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
@@ -494,7 +497,7 @@ internal class Fir2IrVisitor(
         }
         getter = property.getter.accept(this@Fir2IrVisitor, type) as IrSimpleFunction
         if (property.isVar) {
-            setter = property.setter.accept(this@Fir2IrVisitor, type) as IrSimpleFunction
+            setter = property.setter!!.accept(this@Fir2IrVisitor, type) as IrSimpleFunction
         }
         property.annotations.forEach {
             annotations += it.accept(this@Fir2IrVisitor, null) as IrConstructorCall
@@ -1159,5 +1162,20 @@ internal class Fir2IrVisitor(
                 "FirArraySetCall (resolve isn't supported yet)"
             )
         }
+    }
+
+    override fun visitResolvedQualifier(resolvedQualifier: FirResolvedQualifier, data: Any?): IrElement {
+        val classId = resolvedQualifier.classId
+        if (classId != null) {
+            val classSymbol = ConeClassLikeLookupTagImpl(classId).toSymbol(session)!!
+            return resolvedQualifier.convertWithOffsets { startOffset, endOffset ->
+                IrGetObjectValueImpl(
+                    startOffset, endOffset,
+                    resolvedQualifier.typeRef.toIrType(session, declarationStorage),
+                    classSymbol.toIrSymbol(session, declarationStorage) as IrClassSymbol
+                )
+            }
+        }
+        return super.visitResolvedQualifier(resolvedQualifier, data)
     }
 }
