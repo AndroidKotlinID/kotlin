@@ -954,11 +954,6 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToDoubleBangIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.ElvisToIfThenIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -985,11 +980,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.EliminateWhenSubjectIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.MergeWhenIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -1064,37 +1054,12 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceSubstringWithDropLastIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceSubstringWithSubstringAfterIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceSubstringWithSubstringBeforeIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceSubstringWithTakeIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.RemoveBracesIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.AddBracesIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertNegatedBooleanSequenceIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -1140,16 +1105,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.ReplaceWithOrdinaryAssignmentIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertAssertToIfWithThrowIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertIfWithThrowToAssertIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -1419,16 +1374,6 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceMathMaxWithCoerceAtLeastIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceMathMinWithCoerceAtMostIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.RemoveConstructorKeywordIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -1594,11 +1539,6 @@
     </intentionAction>
 
     <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertClassToSealedClassIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.AddPropertyAccessorsIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -1615,11 +1555,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.MoveMemberToTopLevelIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ReplaceSubstringWithIndexingOperationIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -1690,16 +1625,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.AddWhenRemainingBranchesIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertTrimMarginToTrimIndentIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.ConvertTrimIndentToTrimMarginIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -2115,6 +2040,51 @@
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.AddVarianceModifierInspection"
                      displayName="Type parameter can have 'in' or 'out' variance"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.substring.ReplaceSubstringWithDropLastInspection"
+                     displayName="Replace 'substring' call with 'dropLast' call"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.substring.ReplaceSubstringWithTakeInspection"
+                     displayName="Replace 'substring' call with 'take' call"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.substring.ReplaceSubstringWithIndexingOperationInspection"
+                     displayName="Replace 'substring' call with indexing operation call"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.substring.ReplaceSubstringWithSubstringAfterInspection"
+                     displayName="Replace 'substring' call with 'substringAfter' call"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="INFORMATION"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.substring.ReplaceSubstringWithSubstringBeforeInspection"
+                     displayName="Replace 'substring' call with 'substringBefore' call"
                      groupPath="Kotlin"
                      groupName="Style issues"
                      enabledByDefault="true"
@@ -3404,7 +3374,16 @@
                      level="WEAK WARNING"
                      language="kotlin"
     />
-    
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ControlFlowWithEmptyBodyInspection"
+                     displayName="Control flow with empty body"
+                     groupPath="Kotlin"
+                     groupName="Probable bugs"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"
+    />
+
     <referenceImporter implementation="org.jetbrains.kotlin.idea.quickfix.KotlinReferenceImporter"/>
 
     <fileType.fileViewProviderFactory filetype="KJSM" implementationClass="com.intellij.psi.ClassFileViewProviderFactory"/>
