@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.idea.quickfix
 
 import com.intellij.facet.FacetManager
 import com.intellij.facet.impl.FacetUtil
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.roots.ModuleRootModificationUtil.updateModel
 import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.roots.ui.configuration.libraryEditor.NewLibraryEditor
@@ -32,6 +33,9 @@ import java.io.File
 
 @RunWith(JUnit3WithIdeaConfigurationRunner::class)
 class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase() {
+
+    val module: Module get() = myModule
+
     fun testDisableInlineClasses() {
         configureRuntime("mockRuntime11")
         resetProjectSettings(LanguageVersion.KOTLIN_1_3)
@@ -66,7 +70,7 @@ class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase(
 
     fun testEnableCoroutinesFacet() {
         configureRuntime("mockRuntime11")
-        val facet = configureKotlinFacet(myModule) {
+        val facet = configureKotlinFacet(module) {
             settings.languageLevel = LanguageVersion.KOTLIN_1_1
         }
         resetProjectSettings(LanguageVersion.KOTLIN_1_1)
@@ -102,15 +106,15 @@ class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase(
     fun testIncreaseLangLevelFacet() {
         configureRuntime("mockRuntime11")
         resetProjectSettings(LanguageVersion.KOTLIN_1_0)
-        configureKotlinFacet(myModule) {
+        configureKotlinFacet(module) {
             settings.languageLevel = LanguageVersion.KOTLIN_1_0
             settings.apiLevel = LanguageVersion.KOTLIN_1_0
         }
         myFixture.configureByText("foo.kt", "val x get() = 1")
 
-        assertEquals(LanguageVersion.KOTLIN_1_0, myModule.languageVersionSettings.languageVersion)
+        assertEquals(LanguageVersion.KOTLIN_1_0, module.languageVersionSettings.languageVersion)
         myFixture.launchAction(myFixture.findSingleIntention("Set module language version to 1.1"))
-        assertEquals(LanguageVersion.KOTLIN_1_1, myModule.languageVersionSettings.languageVersion)
+        assertEquals(LanguageVersion.KOTLIN_1_1, module.languageVersionSettings.languageVersion)
     }
 
     fun testIncreaseLangAndApiLevel() {
@@ -140,15 +144,15 @@ class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase(
     fun testIncreaseLangLevelFacet_10() {
         configureRuntime("mockRuntime106")
         resetProjectSettings(LanguageVersion.KOTLIN_1_0)
-        configureKotlinFacet(myModule) {
+        configureKotlinFacet(module) {
             settings.languageLevel = LanguageVersion.KOTLIN_1_0
             settings.apiLevel = LanguageVersion.KOTLIN_1_0
         }
         myFixture.configureByText("foo.kt", "val x = <caret>\"s\"::length")
 
-        assertEquals(LanguageVersion.KOTLIN_1_0, myModule.languageVersionSettings.languageVersion)
+        assertEquals(LanguageVersion.KOTLIN_1_0, module.languageVersionSettings.languageVersion)
         myFixture.launchAction(myFixture.findSingleIntention("Set module language version to 1.1"))
-        assertEquals(LanguageVersion.KOTLIN_1_1, myModule.languageVersionSettings.languageVersion)
+        assertEquals(LanguageVersion.KOTLIN_1_1, module.languageVersionSettings.languageVersion)
 
         assertEquals(bundledRuntimeVersion(), getRuntimeLibraryVersion(myFixture.module))
     }
@@ -162,7 +166,7 @@ class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase(
             fun y01() = Foo::prop.gett<caret>er
             """)
         myFixture.launchAction(myFixture.findSingleIntention("Add kotlin-reflect.jar to the classpath"))
-        val kotlinRuntime = KotlinJavaModuleConfigurator.instance.getKotlinLibrary(myModule)!!
+        val kotlinRuntime = KotlinJavaModuleConfigurator.instance.getKotlinLibrary(module)!!
         val classes = kotlinRuntime.getFiles(OrderRootType.CLASSES).map { it.name }
         assertContainsElements(classes, "kotlin-reflect.jar")
         val sources = kotlinRuntime.getFiles(OrderRootType.SOURCES)
@@ -200,10 +204,10 @@ class UpdateConfigurationQuickFixTest : LightPlatformCodeInsightFixtureTestCase(
         get() = project.getLanguageVersionSettings().getFeatureSupport(LanguageFeature.InlineClasses)
 
     override fun tearDown() {
-        FacetManager.getInstance(myModule).getFacetByType(KotlinFacetType.TYPE_ID)?.let {
+        FacetManager.getInstance(module).getFacetByType(KotlinFacetType.TYPE_ID)?.let {
             FacetUtil.deleteFacet(it)
         }
-        ConfigLibraryUtil.removeLibrary(myModule, "KotlinJavaRuntime")
+        ConfigLibraryUtil.removeLibrary(module, "KotlinJavaRuntime")
         super.tearDown()
     }
 }

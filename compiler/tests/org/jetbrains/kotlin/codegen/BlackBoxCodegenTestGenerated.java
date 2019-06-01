@@ -1834,6 +1834,16 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/callableReference/bound/boundJvmFieldInInterfaceCompanion.kt");
             }
 
+            @TestMetadata("captureVarInInitBlock.kt")
+            public void testCaptureVarInInitBlock() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/bound/captureVarInInitBlock.kt");
+            }
+
+            @TestMetadata("captureVarInPropertyInit.kt")
+            public void testCaptureVarInPropertyInit() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/bound/captureVarInPropertyInit.kt");
+            }
+
             @TestMetadata("coercionToUnit.kt")
             public void testCoercionToUnit() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/bound/coercionToUnit.kt");
@@ -16148,6 +16158,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("inheritedFromExpectedClass.kt")
             public void testInheritedFromExpectedClass() throws Exception {
                 runTest("compiler/testData/codegen/box/multiplatform/defaultArguments/inheritedFromExpectedClass.kt");
+            }
+
+            @TestMetadata("inheritedFromExpectedFunction.kt")
+            public void testInheritedFromExpectedFunction() throws Exception {
+                runTest("compiler/testData/codegen/box/multiplatform/defaultArguments/inheritedFromExpectedFunction.kt");
             }
 
             @TestMetadata("inheritedFromExpectedInterface.kt")
