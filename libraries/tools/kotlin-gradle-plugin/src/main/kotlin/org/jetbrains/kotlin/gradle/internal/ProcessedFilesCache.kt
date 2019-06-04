@@ -24,7 +24,7 @@ import java.io.File
  *
  * @param version When updating logic in `compute`, `version` should be increased to invalidate cache
  */
-internal class ProcessedFilesCache(
+internal open class ProcessedFilesCache(
     val project: Project,
     val targetDir: File,
     stateFileName: String,
@@ -35,13 +35,18 @@ internal class ProcessedFilesCache(
 
     private class State {
         var version: String? = null
-        val visited: MutableMap<String, Element> = mutableMapOf()
+        val byHash = mutableMapOf<String, Element>()
+        val byTarget = mutableMapOf<String, Element>()
 
         operator fun get(elementHash: ByteArray) =
-            visited[elementHash.toHexString()]
+            byHash[elementHash.toHexString()]
 
         operator fun set(elementHash: ByteArray, element: Element) {
-            visited[elementHash.toHexString()] = element
+            byHash[elementHash.toHexString()] = element
+            val target = element.target
+            if (target != null) {
+                byTarget[target] = element
+            }
         }
     }
 
@@ -60,7 +65,10 @@ internal class ProcessedFilesCache(
             stateFile.reader().use {
                 gson.fromJson(it, State::class.java)
             }.let {
-                if (it.version != version) null else it
+                if (it.version != version) {
+                    targetDir.deleteRecursively()
+                    null
+                } else it
             }
         } catch (e: JsonParseException) {
             project.logger.warn("Cannot read $stateFile", e)
@@ -90,6 +98,12 @@ internal class ProcessedFilesCache(
             return old.target
         } else {
             val key = compute()
+            val existedTarget = new.byTarget[key]
+            if (key != null && existedTarget != null) {
+                if (existedTarget.src != file.canonicalPath) {
+                    reportTargetClash(key, file, File(existedTarget.src))
+                }
+            }
             new[hash] = Element(file.canonicalPath, key)
             return key
         }
@@ -100,19 +114,22 @@ internal class ProcessedFilesCache(
     }
 
     val targets: Collection<String>
-        get() = new.visited.mapNotNullTo(mutableSetOf()) { it.value.target }
+        get() = new.byHash.mapNotNullTo(mutableSetOf()) { it.value.target }
+
+    protected open fun reportTargetClash(target: String, existedSrc: File, newSrc: File): Nothing =
+        error("Both `$existedSrc` and `$newSrc` produces `$target`")
 
     private fun getDeletedTargets(): MutableSet<String> {
         val result = mutableSetOf<String>()
 
-        old.visited.forEach {
+        old.byHash.forEach {
             val target = it.value.target
             if (target != null) {
                 result.add(target)
             }
         }
 
-        new.visited.forEach {
+        new.byHash.forEach {
             val target = it.value.target
             if (target != null) {
                 result.remove(target)

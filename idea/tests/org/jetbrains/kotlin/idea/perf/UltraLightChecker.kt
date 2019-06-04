@@ -6,23 +6,24 @@
 package org.jetbrains.kotlin.idea.perf
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.*
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.UsefulTestCase
 import org.jetbrains.kotlin.asJava.LightClassGenerationSupport
-import org.jetbrains.kotlin.asJava.classes.KtLightClassForSourceDeclaration
-import org.jetbrains.kotlin.asJava.classes.KtUltraLightClass
-import org.jetbrains.kotlin.asJava.classes.isPrivateOrParameterInPrivateMethod
+import org.jetbrains.kotlin.asJava.classes.*
 import org.jetbrains.kotlin.asJava.elements.KtLightNullabilityAnnotation
 import org.jetbrains.kotlin.load.kotlin.NON_EXISTENT_CLASS_NAME
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.junit.Assert
 
 fun UsefulTestCase.forceUsingOldLightClassesForTest() {
-    KtUltraLightClass.forceUsingOldLightClasses = true
+    KtUltraLightSupport.forceUsingOldLightClasses = true
     Disposer.register(testRootDisposable, Disposable {
-        KtUltraLightClass.forceUsingOldLightClasses = false
+        KtUltraLightSupport.forceUsingOldLightClasses = false
     })
 }
 
@@ -36,10 +37,35 @@ object UltraLightChecker {
     fun allClasses(file: KtFile): List<KtClassOrObject> =
         SyntaxTraverser.psiTraverser(file).filter(KtClassOrObject::class.java).toList()
 
+
+    fun checkFacadeEquivalence(
+        fqName: FqName,
+        searchScope: GlobalSearchScope,
+        project: Project
+    ): KtLightClassForFacade? {
+
+        val oldForceFlag = KtUltraLightSupport.forceUsingOldLightClasses
+        KtUltraLightSupport.forceUsingOldLightClasses = true
+        val gold = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project)
+        KtUltraLightSupport.forceUsingOldLightClasses = false
+        val ultraLightClass = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project) ?: return null
+        KtUltraLightSupport.forceUsingOldLightClasses = oldForceFlag
+
+        checkClassEquivalenceByRendering(gold, ultraLightClass)
+
+        return ultraLightClass
+    }
+
     fun checkClassEquivalence(ktClass: KtClassOrObject): KtUltraLightClass? {
         val gold = KtLightClassForSourceDeclaration.createNoCache(ktClass, forceUsingOldLightClasses = true)
         val ultraLightClass = LightClassGenerationSupport.getInstance(ktClass.project).createUltraLightClass(ktClass) ?: return null
 
+        checkClassEquivalenceByRendering(gold, ultraLightClass)
+
+        return ultraLightClass
+    }
+
+    private fun checkClassEquivalenceByRendering(gold: PsiClass?, ultraLightClass: PsiClass) {
         if (gold != null) {
             Assert.assertFalse(gold.javaClass.name.contains("Ultra"))
         }
@@ -53,7 +79,6 @@ object UltraLightChecker {
                 "// Ultra-light implementation:\n$ultraText"
             )
         }
-        return ultraLightClass
     }
 
     private fun PsiAnnotation.renderAnnotation() =

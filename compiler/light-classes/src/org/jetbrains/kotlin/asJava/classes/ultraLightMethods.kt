@@ -29,7 +29,7 @@ internal abstract class KtUltraLightMethod(
     internal val delegate: LightMethodBuilder,
     closestDeclarationForOrigin: KtDeclaration?,
     protected val support: KtUltraLightSupport,
-    containingClass: KtUltraLightClass
+    containingClass: KtLightClass
 ) : KtLightMethodImpl(
     { delegate },
     closestDeclarationForOrigin?.let {
@@ -71,6 +71,8 @@ internal abstract class KtUltraLightMethod(
         list
     }
 
+    private val _deprecated: Boolean by lazyPub { kotlinOrigin?.isDeprecated(support) ?: false }
+
     override fun getHierarchicalMethodSignature() = PsiSuperMethodImplUtil.getHierarchicalMethodSignature(this)
 
     override fun findSuperMethodSignaturesIncludingStatic(checkAccess: Boolean): List<MethodSignatureBackedByPsiMethod> =
@@ -95,13 +97,15 @@ internal abstract class KtUltraLightMethod(
     override fun equals(other: Any?): Boolean = this === other
 
     override fun hashCode(): Int = name.hashCode()
+
+    override fun isDeprecated(): Boolean = _deprecated
 }
 
 internal class KtUltraLightMethodForSourceDeclaration(
     delegate: LightMethodBuilder,
     declaration: KtDeclaration,
     support: KtUltraLightSupport,
-    containingClass: KtUltraLightClass
+    containingClass: KtLightClass
 ) : KtUltraLightMethod(
     delegate,
     declaration,

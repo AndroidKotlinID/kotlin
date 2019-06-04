@@ -307,8 +307,8 @@
 
     <projectService serviceImplementation="org.jetbrains.kotlin.idea.compiler.configuration.KotlinCompilerWorkspaceSettings"/>
 
-    <projectService serviceInterface="org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade$FacadeStubCache"
-                    serviceImplementation="org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade$FacadeStubCache"/>
+    <projectService serviceInterface="org.jetbrains.kotlin.asJava.classes.FacadeCache"
+                    serviceImplementation="org.jetbrains.kotlin.asJava.classes.FacadeCache"/>
 
     <projectService serviceInterface="org.jetbrains.kotlin.resolve.lazy.declarations.DeclarationProviderFactoryService"
                     serviceImplementation="org.jetbrains.kotlin.idea.stubindex.resolve.PluginDeclarationProviderFactoryService"/>
@@ -995,11 +995,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.RemoveExplicitSuperQualifierIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.RemoveCurlyBracesFromTemplateIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -1824,7 +1819,7 @@
                      language="kotlin"
     />
 
-    <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.RemoveCurlyBracesFromTemplateInspection"
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RemoveCurlyBracesFromTemplateInspection"
                      displayName="Redundant curly braces in string template"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
@@ -1933,7 +1928,7 @@
                      groupPath="Kotlin"
                      groupName="Java interop issues"
                      enabledByDefault="true"
-                     level="WARNING"
+                     level="INFO"
                      language="kotlin"
     />
 
