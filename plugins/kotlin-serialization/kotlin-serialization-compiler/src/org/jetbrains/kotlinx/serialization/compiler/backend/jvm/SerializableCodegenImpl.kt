@@ -57,7 +57,7 @@ class SerializableCodegenImpl(
     private val descToProps = classCodegen.myClass.bodyPropertiesDescriptorsMap(classCodegen.bindingContext)
 
     private val paramsToProps: Map<PropertyDescriptor, KtParameter> =
-        classCodegen.myClass.primaryPropertiesDescriptorsMap(classCodegen.bindingContext)
+        classCodegen.myClass.primaryConstructorPropertiesDescriptorsMap(classCodegen.bindingContext)
 
     private fun getProp(prop: SerializableProperty) = descToProps[prop.descriptor]
     private fun getParam(prop: SerializableProperty) = paramsToProps[prop.descriptor]
@@ -93,7 +93,7 @@ class SerializableCodegenImpl(
         val superClass = serializableDescriptor.getSuperClassOrAny()
         val myPropsStart: Int
         if (superClass.isInternalSerializable) {
-            myPropsStart = SerializableProperties(superClass, classCodegen.bindingContext).serializableProperties.size
+            myPropsStart = bindingContext.serializablePropertiesFor(superClass).serializableProperties.size
             val superTypeArguments =
                 serializableDescriptor.typeConstructor.supertypes.single { it.toClassDescriptor?.isInternalSerializable == true }.arguments
             //super.writeSelf(output, serialDesc)
@@ -259,7 +259,7 @@ class SerializableCodegenImpl(
             invokespecial(superType, "<init>", desc, false)
             return 0 to propStartVar
         } else {
-            val superProps = SerializableProperties(superClass, classCodegen.bindingContext).serializableProperties
+            val superProps = bindingContext.serializablePropertiesFor(superClass).serializableProperties
             val creator = buildInternalConstructorDesc(propStartVar, 1, classCodegen, superProps)
             invokespecial(superType, "<init>", creator, false)
             return superProps.size to propStartVar + superProps.sumBy { it.asmType.size }

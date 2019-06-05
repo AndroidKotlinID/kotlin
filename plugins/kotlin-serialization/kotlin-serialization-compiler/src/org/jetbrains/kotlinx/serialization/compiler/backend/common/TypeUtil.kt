@@ -105,18 +105,25 @@ fun analyzeSpecialSerializers(
     else -> null
 }
 
+fun AbstractSerialGenerator.findTypeSerializerOrContextUnchecked(
+    module: ModuleDescriptor,
+    kType: KotlinType
+): ClassDescriptor? {
+    val annotations = kType.annotations
+    if (kType.isTypeParameter()) return null
+    if (kType.isMarkedNullable) return findTypeSerializerOrContextUnchecked(module, kType.makeNotNullable())
+    annotations.serializableWith(module)?.let { return it.toClassDescriptor }
+    additionalSerializersInScopeOfCurrentFile[kType]?.let { return it }
+    if (kType in contextualKClassListInCurrentFile) return module.getClassFromSerializationPackage(SpecialBuiltins.contextSerializer)
+    return analyzeSpecialSerializers(module, annotations) ?: findTypeSerializer(module, kType)
+}
+
 fun AbstractSerialGenerator.findTypeSerializerOrContext(
     module: ModuleDescriptor,
     kType: KotlinType,
     sourceElement: PsiElement? = null
-): ClassDescriptor? {
-    val annotations = kType.annotations
-    if (kType.isTypeParameter()) return null
-    if (kType.isMarkedNullable) return findTypeSerializerOrContext(module, kType.makeNotNullable(), sourceElement)
-    annotations.serializableWith(module)?.let { return it.toClassDescriptor }
-    additionalSerializersInScopeOfCurrentFile[kType]?.let { return it }
-    if (kType in contextualKClassListInCurrentFile) return module.getClassFromSerializationPackage(SpecialBuiltins.contextSerializer)
-    return analyzeSpecialSerializers(module, annotations) ?: findTypeSerializer(module, kType) ?: throw CompilationException(
+): ClassDescriptor {
+    return findTypeSerializerOrContextUnchecked(module, kType) ?: throw CompilationException(
         "Serializer for element of type $kType has not been found.\n" +
                 "To use context serializer as fallback, explicitly annotate element with @ContextualSerialization",
         null,
@@ -182,20 +189,23 @@ fun findEnumTypeSerializer(module: ModuleDescriptor, kType: KotlinType): ClassDe
     return if (classDescriptor.kind == ClassKind.ENUM_CLASS) module.findClassAcrossModuleDependencies(enumSerializerId) else null
 }
 
-fun KtPureClassOrObject.bodyPropertiesDescriptorsMap(bindingContext: BindingContext): Map<PropertyDescriptor, KtProperty> = declarations
+internal fun KtPureClassOrObject.bodyPropertiesDescriptorsMap(
+    bindingContext: BindingContext,
+    filterUninitialized: Boolean = true
+): Map<PropertyDescriptor, KtProperty> = declarations
     .asSequence()
     .filterIsInstance<KtProperty>()
     // can filter here because it's impossible to create body property w/ backing field w/o explicit delegating or initializing
-    .filter { it.delegateExpressionOrInitializer != null }
+    .filter { if (filterUninitialized) it.delegateExpressionOrInitializer != null else true }
     .associateBy { (bindingContext[BindingContext.DECLARATION_TO_DESCRIPTOR, it] as? PropertyDescriptor)!! }
 
-fun KtPureClassOrObject.primaryPropertiesDescriptorsMap(bindingContext: BindingContext): Map<PropertyDescriptor, KtParameter> =
+internal fun KtPureClassOrObject.primaryConstructorPropertiesDescriptorsMap(bindingContext: BindingContext): Map<PropertyDescriptor, KtParameter> =
     primaryConstructorParameters
         .asSequence()
         .filter { it.hasValOrVar() }
         .associateBy { bindingContext[BindingContext.PRIMARY_CONSTRUCTOR_PARAMETER, it]!! }
 
-fun KtPureClassOrObject.anonymousInitializers() = declarations
+internal fun KtPureClassOrObject.anonymousInitializers() = declarations
     .asSequence()
     .filterIsInstance<KtAnonymousInitializer>()
     .mapNotNull { it.body }

@@ -863,6 +863,8 @@
 
     <orderEnumerationHandlerFactory implementation="org.jetbrains.kotlin.idea.roots.KotlinNonJvmOrderEnumerationHandler$Factory"/>
 
+    <lang.substitutor language="kotlin" order="last" implementationClass="org.jetbrains.kotlin.idea.KotlinLanguageSubstitutor"/>
+
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.FoldInitializerAndIfToElvisIntention</className>
       <category>Kotlin</category>
@@ -1260,11 +1262,6 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.testIntegration.KotlinCreateTestIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.AddOperatorModifierIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 
@@ -3376,6 +3373,15 @@
                      groupName="Probable bugs"
                      enabledByDefault="true"
                      level="WARNING"
+                     language="kotlin"
+    />
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.AddOperatorModifierInspection"
+                     displayName="Function should have 'operator' modifier"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
                      language="kotlin"
     />
 

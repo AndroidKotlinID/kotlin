@@ -5,16 +5,19 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.ir.isInlineParameter
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.AsmUtil.BOUND_REFERENCE_RECEIVER
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.state.GenerationState
-import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.ir.util.dump
+import org.jetbrains.kotlin.ir.util.getArguments
 import org.jetbrains.kotlin.utils.keysToMap
 import org.jetbrains.org.objectweb.asm.Type
 import org.jetbrains.org.objectweb.asm.commons.Method
@@ -52,7 +55,15 @@ class IrInlineCodegen(
         if (irValueParameter?.isInlineParameter() == true && isInlineIrExpression(argumentExpression)) {
             val irReference: IrFunctionReference =
                 (argumentExpression as IrBlock).statements.filterIsInstance<IrFunctionReference>().single()
-            rememberClosure(irReference, parameterType, irValueParameter) as IrExpressionLambdaImpl
+            val boundReceiver = argumentExpression.statements.filterIsInstance<IrVariable>().singleOrNull()
+            val lambdaInfo =
+                rememberClosure(irReference, parameterType, irValueParameter, boundReceiver) as IrExpressionLambdaImpl
+
+            if (boundReceiver != null) {
+                activeLambda = lambdaInfo
+                putCapturedValueOnStack(boundReceiver.initializer!!, lambdaInfo.capturedParamsInDesc.single(), 0)
+                activeLambda = null
+            }
         } else {
             putValueOnStack(argumentExpression, parameterType, irValueParameter?.index ?: -1, blockInfo)
         }
@@ -102,11 +113,15 @@ class IrInlineCodegen(
         }
     }
 
-    private fun rememberClosure(irReference: IrFunctionReference, type: Type, parameter: IrValueParameter): LambdaInfo {
-        //assert(InlineUtil.isInlinableParameterExpression(ktLambda)) { "Couldn't find inline expression in ${expression.text}" }
-        val expression = irReference.symbol.owner
+    private fun rememberClosure(
+        irReference: IrFunctionReference,
+        type: Type,
+        parameter: IrValueParameter,
+        boundReceiver: IrVariable?
+    ): LambdaInfo {
+        val referencedFunction = irReference.symbol.owner
         return IrExpressionLambdaImpl(
-            irReference, expression, typeMapper, parameter.isCrossinline, false/*TODO*/,
+            irReference, referencedFunction, codegen.typeMapper, parameter.isCrossinline, boundReceiver != null,
             parameter.type.isExtensionFunctionType
         ).also { lambda ->
             val closureInfo = invocationParamBuilder.addNextValueParameter(type, true, null, parameter.index)
@@ -119,27 +134,36 @@ class IrInlineCodegen(
 class IrExpressionLambdaImpl(
     val reference: IrFunctionReference,
     val function: IrFunction,
-    typeMapper: KotlinTypeMapper,
+    private val typeMapper: IrTypeMapper,
     isCrossInline: Boolean,
     override val isBoundCallableReference: Boolean,
     override val isExtensionLambda: Boolean
-) : ExpressionLambda(typeMapper, isCrossInline), IrExpressionLambda {
+) : ExpressionLambda(isCrossInline), IrExpressionLambda {
 
     override fun isReturnFromMe(labelName: String): Boolean {
         return false //always false
     }
 
-    override val lambdaClassType: Type = Type.getObjectType("test123")
+    companion object {
+        private var counter: Int = 123//TODO: pass proper type
+    }
+
+    override val lambdaClassType: Type = Type.getObjectType("test${counter++}")
 
     override val capturedVars: List<CapturedParamDesc> =
         arrayListOf<CapturedParamDesc>().apply {
             reference.getArguments().forEachIndexed { _, (_, ir) ->
-                val getValue = ir as? IrGetValue ?: error("Unrecognized expression: $ir")
-                add(capturedParamDesc(getValue.descriptor.name.asString(), typeMapper.mapType(getValue.descriptor.type)))
+                add(
+                    when (ir) {
+                        is IrGetValue -> capturedParamDesc(ir.descriptor.name.asString(), typeMapper.mapType(ir.type))
+                        is IrConst<*> -> capturedParamDesc(BOUND_REFERENCE_RECEIVER, typeMapper.mapType(ir.type))
+                        else -> error("Unrecognized expression: ${ir.dump()}")
+                    }
+                )
             }
         }
 
-    private val loweredMethod = typeMapper.mapAsmMethod(function.descriptor)
+    private val loweredMethod = typeMapper.mapAsmMethod(function)
 
     val capturedParamsInDesc: List<Type> =
         loweredMethod.argumentTypes.drop(if (isExtensionLambda) 1 else 0).take(capturedVars.size)
@@ -161,11 +185,15 @@ class IrExpressionLambdaImpl(
 }
 
 fun isInlineIrExpression(argumentExpression: IrExpression) =
-    argumentExpression is IrBlock &&
-            (argumentExpression.origin == IrStatementOrigin.LAMBDA || argumentExpression.origin == IrStatementOrigin.ANONYMOUS_FUNCTION)
+    when (argumentExpression) {
+        is IrBlock -> (argumentExpression.origin == IrStatementOrigin.LAMBDA || argumentExpression.origin == IrStatementOrigin.ANONYMOUS_FUNCTION)
+        is IrCallableReference -> true.also {
+            assert((0 until argumentExpression.valueArgumentsCount).count { argumentExpression.getValueArgument(it) != null } == 0) {
+                "Expecting 0 value arguments for bounded callable reference: ${argumentExpression.dump()}"
+            }
+        }
+        else -> false
+    }
 
 fun IrFunction.isInlineFunctionCall(context: JvmBackendContext) =
     (!context.state.isInlineDisabled || typeParameters.any { it.isReified }) && isInline
-
-fun IrValueParameter.isInlineParameter() =
-    !isNoinline && !type.isNullable() && type.isFunctionOrKFunction()
