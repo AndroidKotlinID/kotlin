@@ -284,11 +284,11 @@
     <projectService serviceInterface="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesManager"
                     serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesManager"/>
 
-    <projectService serviceInterface="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesCache"
-                    serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesCache"/>
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationCache"
+                    serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationCache"/>
 
-    <projectService serviceInterface="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesUpdater"
-                    serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptDependenciesUpdater"/>
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationUpdater"
+                    serviceImplementation="org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationUpdater"/>
 
     <projectService serviceInterface="org.jetbrains.kotlin.scripting.resolve.ScriptReportSink"
                     serviceImplementation="org.jetbrains.kotlin.idea.core.script.IdeScriptReportSink"/>
@@ -864,11 +864,6 @@
     <orderEnumerationHandlerFactory implementation="org.jetbrains.kotlin.idea.roots.KotlinNonJvmOrderEnumerationHandler$Factory"/>
 
     <lang.substitutor language="kotlin" order="last" implementationClass="org.jetbrains.kotlin.idea.KotlinLanguageSubstitutor"/>
-
-    <intentionAction>
-      <className>org.jetbrains.kotlin.idea.intentions.FoldInitializerAndIfToElvisIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.ImportMemberIntention</className>
@@ -1743,7 +1738,7 @@
                      language="kotlin"
     />
 
-    <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToElvisInspection"
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.branchedTransformations.IfThenToElvisInspection"
                      displayName="If-Then foldable to '?:'"
                      groupPath="Kotlin"
                      groupName="Style issues"
@@ -1761,7 +1756,7 @@
                      language="kotlin"
     />
 
-    <localInspection implementationClass="org.jetbrains.kotlin.idea.intentions.FoldInitializerAndIfToElvisInspection"
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.FoldInitializerAndIfToElvisInspection"
                      displayName="If-Null return/break/... foldable to '?:'"
                      groupPath="Kotlin"
                      groupName="Style issues"

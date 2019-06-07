@@ -12,15 +12,59 @@ import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.asJava.elements.KtLightAbstractAnnotation
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 import org.jetbrains.kotlin.asJava.elements.KtLightSimpleModifierList
+import org.jetbrains.kotlin.asJava.elements.LightParameter
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
-import org.jetbrains.kotlin.descriptors.CallableDescriptor
-import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
-import org.jetbrains.kotlin.descriptors.ParameterDescriptor
-import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
-import org.jetbrains.kotlin.psi.KtCallableDeclaration
-import org.jetbrains.kotlin.psi.KtDeclaration
-import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.builtins.isSuspendFunctionType
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.codegen.coroutines.SUSPEND_FUNCTION_CONTINUATION_PARAMETER
+import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
+import org.jetbrains.kotlin.psi.*
+
+internal class KtUltraLightSuspendContinuationParameter(
+    private val ktFunction: KtFunction,
+    private val support: KtUltraLightSupport,
+    method: KtLightMethod
+) : LightParameter(SUSPEND_FUNCTION_CONTINUATION_PARAMETER, PsiType.NULL, method, method.language),
+    KtUltraLightElementWithNullabilityAnnotation<KtDeclaration, PsiParameter> {
+
+    override val kotlinTypeForNullabilityAnnotation: KotlinType? get() = ktType
+    override val psiTypeForNullabilityAnnotation: PsiType? get() = psiType
+    override val kotlinOrigin: KtDeclaration? = null
+    override val clsDelegate: PsiParameter
+        get() = throw IllegalStateException("Cls delegate shouldn't be loaded for ultra-light PSI!")
+
+    private val ktType by lazyPub {
+        val descriptor = ktFunction.resolve() as? FunctionDescriptor
+        val returnType = descriptor?.returnType ?: return@lazyPub null
+        support.moduleDescriptor.getContinuationOfTypeOrAny(returnType, support.isReleasedCoroutine)
+    }
+
+    private val psiType by lazyPub {
+        ktType?.asPsiType(support, TypeMappingMode.DEFAULT, method) ?: PsiType.NULL
+    }
+
+    private val lightModifierList by lazyPub { KtLightSimpleModifierList(this, emptySet()) }
+
+    override fun getType(): PsiType = psiType
+
+    override fun equals(other: Any?): Boolean =
+        other is KtUltraLightSuspendContinuationParameter && other.ktFunction === this.ktFunction
+
+    override fun isVarArgs(): Boolean = false
+    override fun hashCode(): Int = name.hashCode()
+    override fun getModifierList(): PsiModifierList = lightModifierList
+    override fun getNavigationElement(): PsiElement = ktFunction.navigationElement
+    override fun getUseScope(): SearchScope = ktFunction.useScope
+    override fun isValid() = ktFunction.isValid
+    override fun getContainingFile(): PsiFile = ktFunction.containingFile
+    override fun getParent(): PsiElement = method.parameterList
+
+    override fun isEquivalentTo(another: PsiElement?): Boolean =
+        another is KtUltraLightSuspendContinuationParameter && another.psiType == this.psiType
+
+    override fun copy(): PsiElement = KtUltraLightSuspendContinuationParameter(ktFunction, support, method)
+}
 
 internal abstract class KtUltraLightParameter(
     name: String,
@@ -67,9 +111,14 @@ internal abstract class KtUltraLightParameter(
 
     private val _type: PsiType by lazyPub {
         val kotlinType = kotlinType ?: return@lazyPub PsiType.NULL
-        val containingDescriptor = computeContainingDescriptor() ?: return@lazyPub PsiType.NULL
-        support.mapType(this) { typeMapper, sw ->
-            typeMapper.writeParameterType(sw, kotlinType, containingDescriptor)
+
+        if (kotlinType.isSuspendFunctionType) {
+            kotlinType.asPsiType(support, TypeMappingMode.DEFAULT, this)
+        } else {
+            val containingDescriptor = computeContainingDescriptor() ?: return@lazyPub PsiType.NULL
+            support.mapType(this) { typeMapper, sw ->
+                typeMapper.writeParameterType(sw, kotlinType, containingDescriptor)
+            }
         }
     }
 

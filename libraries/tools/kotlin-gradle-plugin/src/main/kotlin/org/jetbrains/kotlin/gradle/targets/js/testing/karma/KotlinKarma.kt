@@ -104,6 +104,7 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
 
     private fun useWebpack() {
         requiredDependencies.add(versions.karmaWebpack)
+        requiredDependencies.add(versions.webpack)
 
         addPreprocessor("webpack")
         confJsWriters.add {
@@ -190,6 +191,10 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
         forkOptions: ProcessForkOptions,
         nodeJsArgs: MutableList<String>
     ): TCServiceMessagesTestExecutionSpec {
+        if (config.browsers.isEmpty()) {
+            error("No browsers configured for $task")
+        }
+
         val clientSettings = TCServiceMessagesClientSettings(
             task.name,
             testNameSuffix = task.targetName,

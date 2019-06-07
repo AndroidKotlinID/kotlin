@@ -7,6 +7,9 @@ package kotlin.script.experimental.jvmhost.test
 
 import junit.framework.TestCase
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.org.objectweb.asm.ClassReader
+import org.jetbrains.org.objectweb.asm.ClassVisitor
+import org.jetbrains.org.objectweb.asm.Opcodes
 import org.junit.Assert
 import org.junit.Test
 import java.io.*
@@ -18,13 +21,14 @@ import java.util.jar.JarFile
 import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.BasicScriptingHost
-import kotlin.script.experimental.host.FileScriptSource
+import kotlin.script.experimental.host.FileBasedScriptSource
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvm.BasicJvmScriptEvaluator
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
+import kotlin.script.experimental.jvm.impl.KJvmCompiledScript
 import kotlin.script.experimental.jvmhost.*
 import kotlin.script.experimental.jvmhost.impl.CompiledScriptClassLoader
-import kotlin.script.experimental.jvm.impl.KJvmCompiledScript
+import kotlin.script.experimental.jvmhost.impl.KJvmCompiledModuleInMemory
 import kotlin.script.templates.standard.SimpleScriptTemplate
 
 class ScriptingHostTest : TestCase() {
@@ -86,7 +90,7 @@ class ScriptingHostTest : TestCase() {
         val scriptName = "SavedRunnableScript"
         val compiledScript = runBlocking {
             compiler("println(\"$greeting\")".toScriptSource(name = "$scriptName.kts"), compilationConfiguration).throwOnFailure()
-                .resultOrNull()!!
+                .valueOrNull()!!
         }
         val saver = BasicJvmScriptJarGenerator(outJar)
         runBlocking {
@@ -275,6 +279,38 @@ class ScriptingHostTest : TestCase() {
         assertNotNull(res.reports.find { it.message == "The following compiler arguments are ignored when configured from refinement callbacks: -no-jdk, -no-stdlib" })
     }
 
+    fun jvmTargetTestImpl(target: String, expectedVersion: Int) {
+        val script = "println(\"Hi\")"
+        val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<SimpleScriptTemplate> {
+            compilerOptions("-jvm-target", target)
+        }
+        val compiler = JvmScriptCompiler(defaultJvmScriptingHostConfiguration)
+        val compiledScript = runBlocking { compiler(script.toScriptSource(name = "SavedScript.kts"), compilationConfiguration) }
+        assertTrue(compiledScript is ResultWithDiagnostics.Success)
+
+        val jvmCompiledScript = compiledScript.valueOrNull()!! as KJvmCompiledScript
+        val jvmCompiledModule = jvmCompiledScript.compiledModule as KJvmCompiledModuleInMemory
+        val bytes = jvmCompiledModule.compilerOutputFiles["SavedScript.class"]!!
+
+        var classFileVersion: Int? = null
+        ClassReader(bytes).accept(object : ClassVisitor(Opcodes.API_VERSION) {
+            override fun visit(
+                version: Int, access: Int, name: String?, signature: String?, superName: String?, interfaces: Array<out String>?
+            ) {
+                classFileVersion = version
+            }
+        }, 0)
+
+        assertEquals(expectedVersion, classFileVersion)
+    }
+
+    @Test
+    fun testJvmTarget() {
+        jvmTargetTestImpl("1.6", 50)
+        jvmTargetTestImpl("1.8", 52)
+        jvmTargetTestImpl("9", 53)
+    }
+
     @Test
     fun testMemoryCache() {
         val script = "val x = 1\nprintln(\"x = \$x\")"
@@ -353,8 +389,8 @@ class ScriptingHostTest : TestCase() {
         val compiledScriptClassRes = runBlocking { compiledScript!!.getClass(null) }
         val cachedScriptClassRes = runBlocking { cachedScript!!.getClass(null) }
 
-        val compiledScriptClass = compiledScriptClassRes.resultOrNull()
-        val cachedScriptClass = cachedScriptClassRes.resultOrNull()
+        val compiledScriptClass = compiledScriptClassRes.valueOrNull()
+        val cachedScriptClass = cachedScriptClassRes.valueOrNull()
 
         Assert.assertEquals(compiledScriptClass!!.qualifiedName, cachedScriptClass!!.qualifiedName)
         Assert.assertEquals(compiledScriptClass!!.supertypes, cachedScriptClass!!.supertypes)
@@ -380,7 +416,7 @@ class ScriptingHostTest : TestCase() {
             val res = compiler(script.toScriptSource(), scriptCompilationConfiguration).throwOnFailure()
             (res as ResultWithDiagnostics.Success<CompiledScript<*>>).value
         }
-        val compiledScriptClass = runBlocking { compiledScript.getClass(null).throwOnFailure().resultOrNull()!! as KClass<*> }
+        val compiledScriptClass = runBlocking { compiledScript.getClass(null).throwOnFailure().valueOrNull()!! as KClass<*> }
         val classLoader = compiledScriptClass.java.classLoader
 
         Assert.assertTrue(classLoader is CompiledScriptClassLoader)
@@ -463,7 +499,7 @@ private fun ScriptCompilationConfiguration.Builder.makeSimpleConfigurationWithTe
     refineConfiguration {
         beforeCompiling { ctx ->
             val importedScript = File(ScriptingHostTest.TEST_DATA_DIR, "importTest/helloWithVal.kts")
-            if ((ctx.script as? FileScriptSource)?.file?.canonicalFile == importedScript.canonicalFile) {
+            if ((ctx.script as? FileBasedScriptSource)?.file?.canonicalFile == importedScript.canonicalFile) {
                 ctx.compilationConfiguration
             } else {
                 ScriptCompilationConfiguration(ctx.compilationConfiguration) {

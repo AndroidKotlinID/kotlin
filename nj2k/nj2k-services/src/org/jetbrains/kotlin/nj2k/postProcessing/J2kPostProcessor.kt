@@ -7,24 +7,27 @@ package org.jetbrains.kotlin.nj2k.postProcessing
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.RangeMarker
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.diagnostics.DiagnosticWithParameters2
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveImportReference
 import org.jetbrains.kotlin.idea.core.util.EDT
+import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import org.jetbrains.kotlin.idea.inspections.*
+import org.jetbrains.kotlin.idea.inspections.branchedTransformations.IfThenToElvisInspection
 import org.jetbrains.kotlin.idea.inspections.branchedTransformations.IfThenToSafeAccessInspection
 import org.jetbrains.kotlin.idea.inspections.conventionNameCalls.ReplaceGetOrSetInspection
 import org.jetbrains.kotlin.idea.intentions.*
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.FoldIfToReturnAsymmetricallyIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.FoldIfToReturnIntention
-import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToElvisIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isNullExpression
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isTrivialStatementBody
 import org.jetbrains.kotlin.idea.quickfix.*
@@ -55,10 +58,29 @@ class NewJ2kPostProcessor : PostProcessor {
         }
     }
 
-    override fun doAdditionalProcessing(file: KtFile, converterContext: ConverterContext?, rangeMarker: RangeMarker?) {
+    override val phasesCount = processings.size
+
+    override fun doAdditionalProcessing(
+        file: KtFile,
+        converterContext: ConverterContext?,
+        rangeMarker: RangeMarker?,
+        onPhaseChanged: ((Int, String) -> Unit)?
+    ) {
         runBlocking(EDT.ModalityStateElement(ModalityState.defaultModalityState())) {
-            for (processing in processings) {
+            for ((i, processing) in processings.withIndex()) {
+                onPhaseChanged?.invoke(i, processing.description)
                 processing.runProcessing(file, rangeMarker, converterContext as NewJ2kConverterContext)
+                commitFile(file)
+            }
+        }
+    }
+
+    private suspend fun commitFile(file: KtFile) {
+        withContext(EDT) {
+            CommandProcessor.getInstance().runUndoTransparentAction {
+                runWriteAction {
+                    file.commitAndUnblockDocument()
+                }
             }
         }
     }
@@ -68,15 +90,20 @@ private val processings: List<GeneralPostProcessing> = listOf(
     nullabilityProcessing,
     formatCodeProcessing,
     shortenReferencesProcessing,
-    InspectionLikeProcessingGroup(VarToValProcessing()),
+    InspectionLikeProcessingGroup(ConvertGettersAndSettersToPropertyProcessing.DESCRIPTION, VarToValProcessing()),
     ConvertGettersAndSettersToPropertyProcessing(),
-    InspectionLikeProcessingGroup(MoveGetterAndSetterAnnotationsToPropertyProcessing()),
     InspectionLikeProcessingGroup(
+        ConvertGettersAndSettersToPropertyProcessing.DESCRIPTION,
+        MoveGetterAndSetterAnnotationsToPropertyProcessing()
+    ),
+    InspectionLikeProcessingGroup(
+        ConvertGettersAndSettersToPropertyProcessing.DESCRIPTION,
         generalInspectionBasedProcessing(RedundantGetterInspection()),
         generalInspectionBasedProcessing(RedundantSetterInspection())
     ),
     ConvertToDataClassProcessing(),
     InspectionLikeProcessingGroup(
+        "Cleaning up Kotlin code",
         RemoveRedundantVisibilityModifierProcessing(),
         RemoveRedundantModalityModifierProcessing(),
         RemoveRedundantConstructorKeywordProcessing(),
@@ -105,7 +132,7 @@ private val processings: List<GeneralPostProcessing> = listOf(
         RemoveExplicitPropertyTypeProcessing(),
         RemoveRedundantNullabilityProcessing(),
         generalInspectionBasedProcessing(CanBeValInspection(ignoreNotUsedVals = false)),
-        intentionBasedProcessing(FoldInitializerAndIfToElvisIntention()),
+        inspectionBasedProcessing(FoldInitializerAndIfToElvisInspection()),
         generalInspectionBasedProcessing(RedundantSemicolonInspection()),
         intentionBasedProcessing(RemoveEmptyClassBodyIntention()),
         intentionBasedProcessing(
@@ -122,7 +149,7 @@ private val processings: List<GeneralPostProcessing> = listOf(
 
         inspectionBasedProcessing(IfThenToSafeAccessInspection()),
         inspectionBasedProcessing(IfThenToSafeAccessInspection()),
-        intentionBasedProcessing(IfThenToElvisIntention()),
+        inspectionBasedProcessing(IfThenToElvisInspection(true)),
         inspectionBasedProcessing(SimplifyNegatedBinaryExpressionInspection()),
         inspectionBasedProcessing(ReplaceGetOrSetInspection()),
         inspectionBasedProcessing(AddOperatorModifierInspection()),

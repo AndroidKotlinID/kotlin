@@ -19,9 +19,11 @@ import org.jetbrains.kotlin.descriptors.annotations.Annotated
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.lexer.KtTokens.REIFIED_KEYWORD
 import org.jetbrains.kotlin.load.java.JvmAbi
+import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.hasSuspendModifier
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.descriptorUtil.isPublishedApi
@@ -144,7 +146,6 @@ internal class UltraLightMembersCreator(
         val wrapper = KtUltraLightMethodForSourceDeclaration(method, ktFunction, support, containingClass)
         addReceiverParameter(ktFunction, wrapper)
 
-
         var remainingNumberOfDefaultParametersToAdd =
             if (numberOfDefaultParametersToAdd >= 0)
                 numberOfDefaultParametersToAdd
@@ -160,10 +161,19 @@ internal class UltraLightMembersCreator(
 
             method.addParameter(KtUltraLightParameterForSource(parameter.name.orEmpty(), parameter, support, wrapper, ktFunction))
         }
-        val returnType: PsiType? by lazyPub {
-            if (isConstructor) null
-            else methodReturnType(ktFunction, wrapper)
+
+        val isSuspendFunction = ktFunction.modifierList?.hasSuspendModifier() == true
+        if (isSuspendFunction) {
+            method.addParameter(KtUltraLightSuspendContinuationParameter(ktFunction, support, wrapper))
         }
+
+        val returnType: PsiType? by lazyPub {
+            when {
+                isConstructor -> null
+                else -> methodReturnType(ktFunction, wrapper, isSuspendFunction)
+            }
+        }
+
         method.setMethodReturnType { returnType }
         return wrapper
     }
@@ -173,7 +183,20 @@ internal class UltraLightMembersCreator(
         method.delegate.addParameter(KtUltraLightReceiverParameter(callable, support, method))
     }
 
-    private fun methodReturnType(ktDeclaration: KtDeclaration, wrapper: KtUltraLightMethod): PsiType {
+    private fun methodReturnType(ktDeclaration: KtDeclaration, wrapper: KtUltraLightMethod, isSuspendFunction: Boolean): PsiType {
+
+        if (isSuspendFunction) {
+            return support.moduleDescriptor
+                .builtIns
+                .nullableAnyType
+                .asPsiType(support, TypeMappingMode.DEFAULT, wrapper)
+        }
+
+        if (ktDeclaration is KtNamedFunction &&
+            ktDeclaration.hasBlockBody() &&
+            !ktDeclaration.hasDeclaredReturnType()
+        ) return PsiType.VOID
+
         val desc =
             ktDeclaration.resolve()?.getterIfProperty() as? FunctionDescriptor
                 ?: return PsiType.NULL
@@ -344,7 +367,7 @@ internal class UltraLightMembersCreator(
             val getterName = computeMethodName(ktGetter ?: declaration, JvmAbi.getterName(propertyName), MethodType.GETTER)
             val getterPrototype = lightMethod(getterName, ktGetter ?: declaration, onlyJvmStatic || forceStatic)
             val getterWrapper = KtUltraLightMethodForSourceDeclaration(getterPrototype, declaration, support, containingClass)
-            val getterType: PsiType by lazyPub { methodReturnType(declaration, getterWrapper) }
+            val getterType: PsiType by lazyPub { methodReturnType(declaration, getterWrapper, isSuspendFunction = false) }
             getterPrototype.setMethodReturnType { getterType }
             addReceiverParameter(declaration, getterWrapper)
             result.add(getterWrapper)

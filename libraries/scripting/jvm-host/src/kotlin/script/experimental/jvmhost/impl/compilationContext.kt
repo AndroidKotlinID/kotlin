@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.config.JvmTarget
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.compiler.plugin.ScriptingCompilerConfigurationComponentRegistrar
 import org.jetbrains.kotlin.scripting.configuration.ScriptingConfigurationKeys
+import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.dependencies.ScriptsCompilationDependencies
 import org.jetbrains.kotlin.scripting.dependencies.collectScriptsCompilationDependencies
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
@@ -88,14 +89,42 @@ internal fun createInitialConfigurations(
 
     kotlinCompilerConfiguration.add(
         ScriptingConfigurationKeys.SCRIPT_DEFINITIONS,
-        BridgeScriptDefinition(
-            scriptCompilationConfiguration,
+        ScriptDefinition.FromLegacy(
             hostConfiguration,
-            scriptCompilationState
+            BridgeScriptDefinition(
+                scriptCompilationConfiguration,
+                hostConfiguration,
+                scriptCompilationState
+            )
         )
     )
 
+    initialScriptCompilationConfiguration[ScriptCompilationConfiguration.compilerOptions]?.let { compilerOptions ->
+        kotlinCompilerConfiguration.updateWithCompilerOptions(compilerOptions, messageCollector, ignoredOptionsReportingState, false)
+    }
+
     return Pair(initialScriptCompilationConfiguration, kotlinCompilerConfiguration)
+}
+
+private fun CompilerConfiguration.updateWithCompilerOptions(
+    compilerOptions: List<String>,
+    messageCollector: ScriptDiagnosticsMessageCollector,
+    ignoredOptionsReportingState: IgnoredOptionsReportingState,
+    isRefinement: Boolean
+) {
+    val compilerArguments = K2JVMCompilerArguments()
+    parseCommandLineArguments(compilerOptions, compilerArguments)
+
+    reportArgumentsIgnoredGenerally(compilerArguments, messageCollector, ignoredOptionsReportingState)
+    if (isRefinement) {
+        reportArgumentsIgnoredFromRefinement(compilerArguments, messageCollector, ignoredOptionsReportingState)
+    }
+
+    setupCommonArguments(compilerArguments)
+
+    setupJvmSpecificArguments(compilerArguments)
+
+    configureAdvancedJvmOptions(compilerArguments)
 }
 
 private fun ScriptCompilationConfiguration.withUpdatesFromCompilerConfiguration(kotlinCompilerConfiguration: CompilerConfiguration) =
@@ -208,17 +237,6 @@ private fun CompilerConfiguration.updateWithRefinedConfigurations(
     if (updatedCompilerOptions.isNotEmpty() &&
         updatedCompilerOptions != initialScriptCompilationConfiguration[ScriptCompilationConfiguration.compilerOptions]
     ) {
-
-        val updatedArguments = K2JVMCompilerArguments()
-        parseCommandLineArguments(updatedCompilerOptions, updatedArguments)
-
-        reportArgumentsIgnoredGenerally(updatedArguments, messageCollector, reportingState)
-        reportArgumentsIgnoredFromRefinement(updatedArguments, messageCollector, reportingState)
-
-        setupCommonArguments(updatedArguments)
-
-        setupJvmSpecificArguments(updatedArguments)
-
-        configureAdvancedJvmOptions(updatedArguments)
+        updateWithCompilerOptions(updatedCompilerOptions, messageCollector, reportingState, true)
     }
 }

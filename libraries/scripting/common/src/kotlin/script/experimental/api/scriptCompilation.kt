@@ -34,6 +34,16 @@ open class ScriptCompilationConfiguration(baseConfigurations: Iterable<ScriptCom
     companion object : ScriptCompilationConfigurationKeys
 
     object Default : ScriptCompilationConfiguration()
+
+    /**
+     * An alternative to the constructor with base configuration, which returns a new configuration only if [body] adds anything
+     * to the original one, otherwise returns original
+     */
+    fun withUpdates(body: Builder.() -> Unit = {}): ScriptCompilationConfiguration {
+        val newConfiguration = ScriptCompilationConfiguration(this, body = body)
+        return if (newConfiguration == this) this
+        else newConfiguration
+    }
 }
 
 /**
@@ -49,7 +59,7 @@ val ScriptCompilationConfigurationKeys.fileExtension by PropertiesCollection.key
 /**
  * The superclass for target script class
  */
-val ScriptCompilationConfigurationKeys.baseClass by PropertiesCollection.key<KotlinType>() // script base class
+val ScriptCompilationConfigurationKeys.baseClass by PropertiesCollection.key<KotlinType>(KotlinType(Any::class)) // script base class
 
 /**
  * The list of classes that will be used as implicit receivers in the script body, as if the whole body is wrapped with "with" calls:

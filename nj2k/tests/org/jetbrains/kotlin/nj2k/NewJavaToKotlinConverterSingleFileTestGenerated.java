@@ -2676,6 +2676,16 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
             runTest("nj2k/testData/newJ2k/issues/kt-14248.java");
         }
 
+        @TestMetadata("kt-15791.java")
+        public void testKt_15791() throws Exception {
+            runTest("nj2k/testData/newJ2k/issues/kt-15791.java");
+        }
+
+        @TestMetadata("kt-16662.java")
+        public void testKt_16662() throws Exception {
+            runTest("nj2k/testData/newJ2k/issues/kt-16662.java");
+        }
+
         @TestMetadata("kt-17379.java")
         public void testKt_17379() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-17379.java");
@@ -2689,6 +2699,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("kt-19943.java")
         public void testKt_19943() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-19943.java");
+        }
+
+        @TestMetadata("kt-31818.java")
+        public void testKt_31818() throws Exception {
+            runTest("nj2k/testData/newJ2k/issues/kt-31818.java");
         }
 
         @TestMetadata("kt-5294.java")
@@ -3076,6 +3091,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("hex.java")
         public void testHex() throws Exception {
             runTest("nj2k/testData/newJ2k/literalExpression/hex.java");
+        }
+
+        @TestMetadata("kt-15991.java")
+        public void testKt_15991() throws Exception {
+            runTest("nj2k/testData/newJ2k/literalExpression/kt-15991.java");
         }
 
         @TestMetadata("long.java")
@@ -3469,6 +3489,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("IndirectOverride.java")
         public void testIndirectOverride() throws Exception {
             runTest("nj2k/testData/newJ2k/nullability/IndirectOverride.java");
+        }
+
+        @TestMetadata("kt-12050.java")
+        public void testKt_12050() throws Exception {
+            runTest("nj2k/testData/newJ2k/nullability/kt-12050.java");
         }
 
         @TestMetadata("LocalValReassignment.java")

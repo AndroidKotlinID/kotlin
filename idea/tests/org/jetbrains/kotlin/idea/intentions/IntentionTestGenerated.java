@@ -2289,302 +2289,6 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             }
         }
 
-        @TestMetadata("idea/testData/intentions/branched/ifThenToElvis")
-        @TestDataPath("$PROJECT_ROOT")
-        @RunWith(JUnit3RunnerWithInners.class)
-        public static class IfThenToElvis extends AbstractIntentionTest {
-            private void runTest(String testDataFilePath) throws Exception {
-                KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
-            }
-
-            public void testAllFilesPresentInIfThenToElvis() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/branched/ifThenToElvis"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
-            }
-
-            @TestMetadata("applicableForLocalStableVar.kt")
-            public void testApplicableForLocalStableVar() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/applicableForLocalStableVar.kt");
-            }
-
-            @TestMetadata("blockHasMoreThanOneStatement.kt")
-            public void testBlockHasMoreThanOneStatement() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/blockHasMoreThanOneStatement.kt");
-            }
-
-            @TestMetadata("blockUsesDifferentVar.kt")
-            public void testBlockUsesDifferentVar() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/blockUsesDifferentVar.kt");
-            }
-
-            @TestMetadata("comparisonInElse.kt")
-            public void testComparisonInElse() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/comparisonInElse.kt");
-            }
-
-            @TestMetadata("conditionComparesNullWithNull.kt")
-            public void testConditionComparesNullWithNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/conditionComparesNullWithNull.kt");
-            }
-
-            @TestMetadata("conditionInvalidBinaryExp.kt")
-            public void testConditionInvalidBinaryExp() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/conditionInvalidBinaryExp.kt");
-            }
-
-            @TestMetadata("conditionNotBinaryExpr.kt")
-            public void testConditionNotBinaryExpr() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/conditionNotBinaryExpr.kt");
-            }
-
-            @TestMetadata("doesNotInlineVariableInMultiDeclaration.kt")
-            public void testDoesNotInlineVariableInMultiDeclaration() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/doesNotInlineVariableInMultiDeclaration.kt");
-            }
-
-            @TestMetadata("doesNotinlineValueIfUsedMoreThanOnce.kt")
-            public void testDoesNotinlineValueIfUsedMoreThanOnce() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/doesNotinlineValueIfUsedMoreThanOnce.kt");
-            }
-
-            @TestMetadata("doesNotinlineValueOutsideOfScope.kt")
-            public void testDoesNotinlineValueOutsideOfScope() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/doesNotinlineValueOutsideOfScope.kt");
-            }
-
-            @TestMetadata("emptyCondition.kt")
-            public void testEmptyCondition() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/emptyCondition.kt");
-            }
-
-            @TestMetadata("emptyElseBlock.kt")
-            public void testEmptyElseBlock() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/emptyElseBlock.kt");
-            }
-
-            @TestMetadata("emptyThenBlock.kt")
-            public void testEmptyThenBlock() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/emptyThenBlock.kt");
-            }
-
-            @TestMetadata("extensionFunctionInClass.kt")
-            public void testExtensionFunctionInClass() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/extensionFunctionInClass.kt");
-            }
-
-            @TestMetadata("ifAndElseBothInBlocks.kt")
-            public void testIfAndElseBothInBlocks() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/ifAndElseBothInBlocks.kt");
-            }
-
-            @TestMetadata("ifAndElseNotInBlocks.kt")
-            public void testIfAndElseNotInBlocks() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/ifAndElseNotInBlocks.kt");
-            }
-
-            @TestMetadata("ifAsExpression.kt")
-            public void testIfAsExpression() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/ifAsExpression.kt");
-            }
-
-            @TestMetadata("ifAsPartOfExpression.kt")
-            public void testIfAsPartOfExpression() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/ifAsPartOfExpression.kt");
-            }
-
-            @TestMetadata("ifToElvisSwallowComments.kt")
-            public void testIfToElvisSwallowComments() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/ifToElvisSwallowComments.kt");
-            }
-
-            @TestMetadata("implicitReceiver.kt")
-            public void testImplicitReceiver() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/implicitReceiver.kt");
-            }
-
-            @TestMetadata("isCheck.kt")
-            public void testIsCheck() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/isCheck.kt");
-            }
-
-            @TestMetadata("isCheckForNullableType.kt")
-            public void testIsCheckForNullableType() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/isCheckForNullableType.kt");
-            }
-
-            @TestMetadata("isCheckForUnrelatedType.kt")
-            public void testIsCheckForUnrelatedType() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/isCheckForUnrelatedType.kt");
-            }
-
-            @TestMetadata("isCheckWithSelector.kt")
-            public void testIsCheckWithSelector() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/isCheckWithSelector.kt");
-            }
-
-            @TestMetadata("isCheckWithSelectorChain.kt")
-            public void testIsCheckWithSelectorChain() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/isCheckWithSelectorChain.kt");
-            }
-
-            @TestMetadata("kt19666.kt")
-            public void testKt19666() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/kt19666.kt");
-            }
-
-            @TestMetadata("lhsEqualsNull.kt")
-            public void testLhsEqualsNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/lhsEqualsNull.kt");
-            }
-
-            @TestMetadata("lhsNotEqualsNull.kt")
-            public void testLhsNotEqualsNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/lhsNotEqualsNull.kt");
-            }
-
-            @TestMetadata("missingElseClause.kt")
-            public void testMissingElseClause() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/missingElseClause.kt");
-            }
-
-            @TestMetadata("missingThenClause.kt")
-            public void testMissingThenClause() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/missingThenClause.kt");
-            }
-
-            @TestMetadata("noCondition.kt")
-            public void testNoCondition() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/noCondition.kt");
-            }
-
-            @TestMetadata("noNullInCondition.kt")
-            public void testNoNullInCondition() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/noNullInCondition.kt");
-            }
-
-            @TestMetadata("notApplicableForFunction.kt")
-            public void testNotApplicableForFunction() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/notApplicableForFunction.kt");
-            }
-
-            @TestMetadata("notApplicableForLocalUnstableVar.kt")
-            public void testNotApplicableForLocalUnstableVar() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/notApplicableForLocalUnstableVar.kt");
-            }
-
-            @TestMetadata("notApplicableForSimpleKotlinNPE.kt")
-            public void testNotApplicableForSimpleKotlinNPE() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/notApplicableForSimpleKotlinNPE.kt");
-            }
-
-            @TestMetadata("notApplicableForSimpleNPE.kt")
-            public void testNotApplicableForSimpleNPE() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/notApplicableForSimpleNPE.kt");
-            }
-
-            @TestMetadata("notIsCheck.kt")
-            public void testNotIsCheck() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/notIsCheck.kt");
-            }
-
-            @TestMetadata("nullBranchAlsoNull.kt")
-            public void testNullBranchAlsoNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullBranchAlsoNull.kt");
-            }
-
-            @TestMetadata("nullCheckWithSelector.kt")
-            public void testNullCheckWithSelector() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullCheckWithSelector.kt");
-            }
-
-            @TestMetadata("nullCheckWithSelectorCall.kt")
-            public void testNullCheckWithSelectorCall() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullCheckWithSelectorCall.kt");
-            }
-
-            @TestMetadata("nullCheckWithSelectorCallChain.kt")
-            public void testNullCheckWithSelectorCallChain() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullCheckWithSelectorCallChain.kt");
-            }
-
-            @TestMetadata("nullableResultWithImplicitReceiver.kt")
-            public void testNullableResultWithImplicitReceiver() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullableResultWithImplicitReceiver.kt");
-            }
-
-            @TestMetadata("nullableThen.kt")
-            public void testNullableThen() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/nullableThen.kt");
-            }
-
-            @TestMetadata("otherBlockHasMoreThanOneStatement.kt")
-            public void testOtherBlockHasMoreThanOneStatement() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/otherBlockHasMoreThanOneStatement.kt");
-            }
-
-            @TestMetadata("replaceWithLet.kt")
-            public void testReplaceWithLet() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLet.kt");
-            }
-
-            @TestMetadata("replaceWithLetAndRenameIt.kt")
-            public void testReplaceWithLetAndRenameIt() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLetAndRenameIt.kt");
-            }
-
-            @TestMetadata("replaceWithLetInMember.kt")
-            public void testReplaceWithLetInMember() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLetInMember.kt");
-            }
-
-            @TestMetadata("replaceWithLetInMemberWithIs.kt")
-            public void testReplaceWithLetInMemberWithIs() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/replaceWithLetInMemberWithIs.kt");
-            }
-
-            @TestMetadata("rhsEqualsNull.kt")
-            public void testRhsEqualsNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/rhsEqualsNull.kt");
-            }
-
-            @TestMetadata("rhsNotEqualsNull.kt")
-            public void testRhsNotEqualsNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/rhsNotEqualsNull.kt");
-            }
-
-            @TestMetadata("thenAndElseBothNull.kt")
-            public void testThenAndElseBothNull() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/thenAndElseBothNull.kt");
-            }
-
-            @TestMetadata("throwsNPEwithArgument.kt")
-            public void testThrowsNPEwithArgument() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/throwsNPEwithArgument.kt");
-            }
-
-            @TestMetadata("unitResult.kt")
-            public void testUnitResult() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/unitResult.kt");
-            }
-
-            @TestMetadata("willNotInlineClassProperty.kt")
-            public void testWillNotInlineClassProperty() throws Exception {
-                runTest("idea/testData/intentions/branched/ifThenToElvis/willNotInlineClassProperty.kt");
-            }
-
-            @TestMetadata("idea/testData/intentions/branched/ifThenToElvis/inspectionData")
-            @TestDataPath("$PROJECT_ROOT")
-            @RunWith(JUnit3RunnerWithInners.class)
-            public static class InspectionData extends AbstractIntentionTest {
-                private void runTest(String testDataFilePath) throws Exception {
-                    KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
-                }
-
-                public void testAllFilesPresentInInspectionData() throws Exception {
-                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/branched/ifThenToElvis/inspectionData"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
-                }
-            }
-        }
-
         @TestMetadata("idea/testData/intentions/branched/ifWhen")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -8548,139 +8252,6 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("withModifiers.kt")
         public void testWithModifiers() throws Exception {
             runTest("idea/testData/intentions/destructuringVariables/withModifiers.kt");
-        }
-    }
-
-    @TestMetadata("idea/testData/intentions/foldInitializerAndIfToElvis")
-    @TestDataPath("$PROJECT_ROOT")
-    @RunWith(JUnit3RunnerWithInners.class)
-    public static class FoldInitializerAndIfToElvis extends AbstractIntentionTest {
-        private void runTest(String testDataFilePath) throws Exception {
-            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
-        }
-
-        public void testAllFilesPresentInFoldInitializerAndIfToElvis() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/intentions/foldInitializerAndIfToElvis"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
-        }
-
-        @TestMetadata("Break.kt")
-        public void testBreak() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Break.kt");
-        }
-
-        @TestMetadata("CommentInBlock.kt")
-        public void testCommentInBlock() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/CommentInBlock.kt");
-        }
-
-        @TestMetadata("Comments.kt")
-        public void testComments() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Comments.kt");
-        }
-
-        @TestMetadata("Comments2.kt")
-        public void testComments2() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Comments2.kt");
-        }
-
-        @TestMetadata("Continue.kt")
-        public void testContinue() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Continue.kt");
-        }
-
-        @TestMetadata("ExplicitValType.kt")
-        public void testExplicitValType() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/ExplicitValType.kt");
-        }
-
-        @TestMetadata("ExplicitVarType.kt")
-        public void testExplicitVarType() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/ExplicitVarType.kt");
-        }
-
-        @TestMetadata("IfNotNull.kt")
-        public void testIfNotNull() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/IfNotNull.kt");
-        }
-
-        @TestMetadata("ifStatementPriority.kt")
-        public void testIfStatementPriority() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/ifStatementPriority.kt");
-        }
-
-        @TestMetadata("IsSameType.kt")
-        public void testIsSameType() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/IsSameType.kt");
-        }
-
-        @TestMetadata("IsSideTypeFake.kt")
-        public void testIsSideTypeFake() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/IsSideTypeFake.kt");
-        }
-
-        @TestMetadata("IsSubType.kt")
-        public void testIsSubType() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/IsSubType.kt");
-        }
-
-        @TestMetadata("IsSuperTypeFake.kt")
-        public void testIsSuperTypeFake() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/IsSuperTypeFake.kt");
-        }
-
-        @TestMetadata("MultiStatementBlock.kt")
-        public void testMultiStatementBlock() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/MultiStatementBlock.kt");
-        }
-
-        @TestMetadata("NotExit.kt")
-        public void testNotExit() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/NotExit.kt");
-        }
-
-        @TestMetadata("NotIs.kt")
-        public void testNotIs() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/NotIs.kt");
-        }
-
-        @TestMetadata("NotIsNullableType.kt")
-        public void testNotIsNullableType() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/NotIsNullableType.kt");
-        }
-
-        @TestMetadata("OtherVar1.kt")
-        public void testOtherVar1() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/OtherVar1.kt");
-        }
-
-        @TestMetadata("OtherVar2.kt")
-        public void testOtherVar2() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/OtherVar2.kt");
-        }
-
-        @TestMetadata("Return.kt")
-        public void testReturn() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Return.kt");
-        }
-
-        @TestMetadata("ThrowInBlock.kt")
-        public void testThrowInBlock() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/ThrowInBlock.kt");
-        }
-
-        @TestMetadata("UsedInside.kt")
-        public void testUsedInside() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/UsedInside.kt");
-        }
-
-        @TestMetadata("UsedInsideInTemplate.kt")
-        public void testUsedInsideInTemplate() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/UsedInsideInTemplate.kt");
-        }
-
-        @TestMetadata("Var.kt")
-        public void testVar() throws Exception {
-            runTest("idea/testData/intentions/foldInitializerAndIfToElvis/Var.kt");
         }
     }
 
@@ -16575,6 +16146,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/usePropertyAccessSyntax/set.kt");
         }
 
+        @TestMetadata("setAnonymouseFunctionArgument.kt")
+        public void testSetAnonymouseFunctionArgument() throws Exception {
+            runTest("idea/testData/intentions/usePropertyAccessSyntax/setAnonymouseFunctionArgument.kt");
+        }
+
         @TestMetadata("setAsExpressionBody.kt")
         public void testSetAsExpressionBody() throws Exception {
             runTest("idea/testData/intentions/usePropertyAccessSyntax/setAsExpressionBody.kt");
@@ -16590,9 +16166,24 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/usePropertyAccessSyntax/setAsExpressionBodyUnqualified.kt");
         }
 
+        @TestMetadata("setFunctionReferenceArgument.kt")
+        public void testSetFunctionReferenceArgument() throws Exception {
+            runTest("idea/testData/intentions/usePropertyAccessSyntax/setFunctionReferenceArgument.kt");
+        }
+
         @TestMetadata("setImplicitReceiver.kt")
         public void testSetImplicitReceiver() throws Exception {
             runTest("idea/testData/intentions/usePropertyAccessSyntax/setImplicitReceiver.kt");
+        }
+
+        @TestMetadata("setLambdaArgument.kt")
+        public void testSetLambdaArgument() throws Exception {
+            runTest("idea/testData/intentions/usePropertyAccessSyntax/setLambdaArgument.kt");
+        }
+
+        @TestMetadata("setLambdaArgument2.kt")
+        public void testSetLambdaArgument2() throws Exception {
+            runTest("idea/testData/intentions/usePropertyAccessSyntax/setLambdaArgument2.kt");
         }
 
         @TestMetadata("setReservedWord1.kt")

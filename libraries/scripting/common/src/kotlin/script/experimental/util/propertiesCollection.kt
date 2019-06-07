@@ -57,9 +57,9 @@ open class PropertiesCollection(private val properties: Map<Key<*>, Any?> = empt
     override fun hashCode(): Int = properties.hashCode()
 
     companion object {
-        fun <T> key(defaultValue: T? = null) = PropertyKeyDelegate(defaultValue)
-        fun <T> key(getDefaultValue: PropertiesCollection.() -> T?) = PropertyKeyDelegate(getDefaultValue)
-        fun <T> keyCopy(source: Key<T>) = PropertyKeyCopyDelegate(source)
+        fun <T> key(defaultValue: T? = null): PropertyKeyDelegate<T> = PropertyKeyDelegate(defaultValue)
+        fun <T> key(getDefaultValue: PropertiesCollection.() -> T?): PropertyKeyDelegate<T> = PropertyKeyDelegate(getDefaultValue)
+        fun <T> keyCopy(source: Key<T>): PropertyKeyCopyDelegate<T> = PropertyKeyCopyDelegate(source)
 
         @JvmStatic
         private val serialVersionUID = 1L
@@ -81,6 +81,31 @@ open class PropertiesCollection(private val properties: Map<Key<*>, Any?> = empt
 
         fun <T> PropertiesCollection.Key<T>.put(v: T) {
             data[this] = v
+        }
+
+        fun <T> PropertiesCollection.Key<T>.putIfNotNull(v: T?) {
+            if (v != null) {
+                data[this] = v
+            }
+        }
+
+        fun <T> PropertiesCollection.Key<in List<T>>.putIfAny(vals: Iterable<T>?) {
+            if (vals?.any() == true) {
+                data[this] = if (vals is List) vals else vals.toList()
+            }
+        }
+
+        @JvmName("putIfAny_map")
+        fun <K, V> PropertiesCollection.Key<in Map<K, V>>.putIfAny(vals: Iterable<Pair<K, V>>?) {
+            if (vals?.any() == true) {
+                data[this] = vals.toMap()
+            }
+        }
+
+        fun <K, V> PropertiesCollection.Key<in Map<K, V>>.putIfAny(vals: Map<K, V>?) {
+            if (vals?.isNotEmpty() == true) {
+                data[this] = vals
+            }
         }
 
         // generic for lists

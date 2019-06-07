@@ -73,6 +73,10 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
             else -> this.text
         }
 
+        override val isReleasedCoroutine
+            get() = KotlinFacet.get(module)
+                ?.configuration?.settings?.languageLevel?.let { it.major >= 1 && it.minor >= 3 } ?: true
+
         override fun isTooComplexForUltraLightGeneration(element: KtDeclaration): Boolean {
             val facet = KotlinFacet.get(module)
             val pluginClasspaths = facet?.configuration?.settings?.compilerArguments?.pluginClasspaths
@@ -143,11 +147,7 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
         }
 
         private fun findTooComplexDeclaration(declaration: KtDeclaration): PsiElement? {
-            if (declaration.hasExpectModifier() ||
-                declaration.hasModifier(KtTokens.ANNOTATION_KEYWORD) ||
-                declaration.hasModifier(KtTokens.INLINE_KEYWORD) && declaration is KtClassOrObject ||
-                declaration.hasModifier(KtTokens.SUSPEND_KEYWORD)
-            ) {
+            if (declaration.hasExpectModifier() || declaration.hasModifier(KtTokens.ANNOTATION_KEYWORD)) {
                 return declaration
             }
 
@@ -166,9 +166,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
             }
             if (declaration is KtCallableDeclaration) {
                 declaration.valueParameters.mapNotNull { findTooComplexDeclaration(it) }.firstOrNull()?.let { return it }
-                if (declaration.typeReference?.hasModifier(KtTokens.SUSPEND_KEYWORD) == true) {
-                    return declaration.typeReference
-                }
             }
             if (declaration is KtProperty) {
                 declaration.accessors.mapNotNull { findTooComplexDeclaration(it) }.firstOrNull()?.let { return it }
@@ -213,7 +210,10 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
 
         val module = ModuleUtilCore.findModuleForPsiElement(element) ?: return null
 
-        return KtUltraLightClass(element, KtUltraLightSupportImpl(element, module))
+        return KtUltraLightSupportImpl(element, module).let {
+            if (element.hasModifier(KtTokens.INLINE_KEYWORD)) KtUltraLightInlineClass(element, it)
+            else KtUltraLightClass(element, it)
+        }
     }
 
     private fun implementsKotlinCollection(classOrObject: KtClassOrObject): Boolean {
