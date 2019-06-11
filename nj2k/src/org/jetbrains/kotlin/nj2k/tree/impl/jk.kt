@@ -248,7 +248,7 @@ class JKBooleanLiteral(val value: Boolean) : JKLiteralExpression, JKElementBase(
 fun JKLiteralExpression.LiteralType.toJkType(symbolProvider: JKSymbolProvider): JKType {
     fun defaultTypeByName(name: String) =
         JKClassTypeImpl(
-            symbolProvider.provideByFqName("kotlin.$name"), emptyList(), Nullability.NotNull
+            symbolProvider.provideClassSymbol("kotlin.$name"), emptyList(), Nullability.NotNull
         )
 
     return when (this) {
@@ -366,7 +366,8 @@ class JKIfStatementImpl(condition: JKExpression, thenBranch: JKStatement) : JKIf
     override fun <R, D> accept(visitor: JKVisitor<R, D>, data: D): R = visitor.visitIfStatement(this, data)
 }
 
-class JKIfElseStatementImpl(condition: JKExpression, thenBranch: JKStatement, elseBranch: JKStatement) : JKIfElseStatement(), PsiOwner by PsiOwnerImpl() {
+class JKIfElseStatementImpl(condition: JKExpression, thenBranch: JKStatement, elseBranch: JKStatement) : JKIfElseStatement(),
+    PsiOwner by PsiOwnerImpl() {
     override var elseBranch by child(elseBranch)
     override var thenBranch by child(thenBranch)
     override var condition by child(condition)
@@ -429,6 +430,7 @@ class JKFieldAccessExpressionImpl(override var identifier: JKFieldSymbol) : JKFi
     PsiOwner by PsiOwnerImpl() {
     override fun <R, D> accept(visitor: JKVisitor<R, D>, data: D): R = visitor.visitFieldAccessExpression(this, data)
 }
+
 class JKPackageAccessExpressionImpl(override var identifier: JKPackageSymbol) : JKPackageAccessExpression, JKElementBase(),
     PsiOwner by PsiOwnerImpl() {
     override fun <R, D> accept(visitor: JKVisitor<R, D>, data: D): R = visitor.visitPackageAccessExpression(this, data)

@@ -239,23 +239,7 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         }
     }
 
-    private val inferenceComponents = InferenceComponents(object : ConeInferenceContext, TypeSystemInferenceExtensionContextDelegate {
-        override fun findCommonIntegerLiteralTypesSuperType(explicitSupertypes: List<SimpleTypeMarker>): SimpleTypeMarker? {
-            //TODO wtf
-            return explicitSupertypes.firstOrNull()
-        }
 
-        override fun TypeConstructorMarker.getApproximatedIntegerLiteralType(): KotlinTypeMarker {
-            TODO("not implemented")
-        }
-
-        override val session: FirSession
-            get() = this@FirBodyResolveTransformer.session
-
-        override fun KotlinTypeMarker.removeExactAnnotation(): KotlinTypeMarker {
-            return this
-        }
-    }, session, jump)
 
     private var qualifierStack = mutableListOf<Name>()
     private var qualifierPartsToDrop = 0
@@ -522,6 +506,7 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
     }
 
     private val noExpectedType = FirImplicitTypeRefImpl(session, null)
+    private val inferenceComponents = inferenceComponents(session, jump)
 
     private fun resolveCallAndSelectCandidate(functionCall: FirFunctionCall, expectedTypeRef: FirTypeRef?): FirFunctionCall {
 
@@ -768,7 +753,7 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
 
 
     override fun transformBlock(block: FirBlock, data: Any?): CompositeTransformResult<FirStatement> {
-        val block = super.transformBlock(block, data).single as FirBlock
+        val block = block.transformChildren(this, data) as FirBlock
         val statement = block.statements.lastOrNull()
 
         val resultExpression = when (statement) {
@@ -998,6 +983,25 @@ open class FirBodyResolveTransformer(val session: FirSession, val implicitTypeOn
         return transformedGetClassCall.compose()
     }
 }
+
+private fun inferenceComponents(session: FirSession, jump: ReturnTypeCalculatorWithJump) =
+    InferenceComponents(object : ConeInferenceContext, TypeSystemInferenceExtensionContextDelegate {
+        override fun findCommonIntegerLiteralTypesSuperType(explicitSupertypes: List<SimpleTypeMarker>): SimpleTypeMarker? {
+            //TODO wtf
+            return explicitSupertypes.firstOrNull()
+        }
+
+        override fun TypeConstructorMarker.getApproximatedIntegerLiteralType(): KotlinTypeMarker {
+            TODO("not implemented")
+        }
+
+        override val session: FirSession
+            get() = session
+
+        override fun KotlinTypeMarker.removeExactAnnotation(): KotlinTypeMarker {
+            return this
+        }
+    }, session, jump)
 
 
 class ReturnTypeCalculatorWithJump(val session: FirSession) : ReturnTypeCalculator {

@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.resolve
 
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirSymbolProviderAwareSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.service
@@ -31,8 +32,13 @@ inline fun <K, V, VA : V> MutableMap<K, V>.getOrPut(key: K, defaultValue: (K) ->
     }
 }
 
-fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): ConeClassifierSymbol? =
-    useSiteSession.getService(FirSymbolProvider::class).getSymbolByLookupTag(this)
+fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): ConeClassifierSymbol? {
+    val firSymbolProvider =
+        (useSiteSession as? FirSymbolProviderAwareSession)?.firSymbolProvider
+            ?: useSiteSession.getService(FirSymbolProvider::class)
+
+    return firSymbolProvider.getSymbolByLookupTag(this)
+}
 
 fun ConeAbbreviatedType.directExpansionType(useSiteSession: FirSession): ConeClassLikeType? =
     abbreviationLookupTag
@@ -42,7 +48,7 @@ fun ConeAbbreviatedType.directExpansionType(useSiteSession: FirSession): ConeCla
 fun ConeClassifierLookupTag.toSymbol(useSiteSession: FirSession): ConeClassifierSymbol? =
     when (this) {
         is ConeClassLikeLookupTag -> toSymbol(useSiteSession)
-        is ConeTypeParameterSymbol -> this
+        is ConeTypeParameterLookupTag -> this.symbol
         else -> error("sealed ${this::class}")
     }
 
@@ -61,7 +67,7 @@ fun ConeClassifierLookupTag.constructType(typeArguments: Array<ConeKotlinTypePro
 fun ConeClassifierSymbol.constructType(typeArguments: Array<ConeKotlinTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
     return when (this) {
         is ConeTypeParameterSymbol -> {
-            ConeTypeParameterTypeImpl(this, isNullable)
+            ConeTypeParameterTypeImpl(this.toLookupTag(), isNullable)
         }
         is ConeClassSymbol -> {
             ConeClassTypeImpl(this.toLookupTag(), typeArguments, isNullable)
