@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.backend.common.ir
 
+import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.DumpIrTreeWithDescriptorsVisitor
 import org.jetbrains.kotlin.backend.common.deepCopyWithVariables
 import org.jetbrains.kotlin.backend.common.descriptors.*
@@ -112,6 +113,14 @@ val IrSimpleFunction.isOverridable: Boolean
 
 val IrSimpleFunction.isOverridableOrOverrides: Boolean get() = isOverridable || overriddenSymbols.isNotEmpty()
 
+fun IrReturnTarget.returnType(context: CommonBackendContext) =
+    when (this) {
+        is IrConstructor -> context.irBuiltIns.unitType
+        is IrFunction -> returnType
+        is IrReturnableBlock -> type
+        else -> error("Unknown ReturnTarget: $this")
+    }
+
 val IrClass.isFinalClass: Boolean
     get() = modality == Modality.FINAL && kind != ClassKind.ENUM_CLASS
 
@@ -170,10 +179,7 @@ fun IrTypeParameter.copyToWithoutSuperTypes(
     }
 }
 
-fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
-    assert(typeParameters.isEmpty())
-    copyTypeParametersFrom(from)
-
+fun IrFunction.copyValueParametersFrom(from: IrFunction) {
     // TODO: should dispatch receiver be copied?
     dispatchReceiverParameter = from.dispatchReceiverParameter?.let {
         IrValueParameterImpl(it.startOffset, it.endOffset, it.origin, it.descriptor, it.type, it.varargElementType).also {
@@ -186,22 +192,32 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
     valueParameters += from.valueParameters.map { it.copyTo(this, index = it.index + shift) }
 }
 
-fun IrTypeParametersContainer.copyTypeParametersFrom(
-    source: IrTypeParametersContainer,
+fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
+    assert(typeParameters.isEmpty())
+    copyTypeParametersFrom(from)
+    copyValueParametersFrom(from)
+}
+
+fun IrTypeParametersContainer.copyTypeParameters(
+    srcTypeParameters: List<IrTypeParameter>,
     origin: IrDeclarationOrigin? = null
 ) {
-    val target = this
-    val shift = target.typeParameters.size
+    val shift = typeParameters.size
     // Any type parameter can figure in a boundary type for any other parameter.
     // Therefore, we first copy the parameters themselves, then set up their supertypes.
-    source.typeParameters.forEachIndexed { i, sourceParameter ->
+    srcTypeParameters.forEachIndexed { i, sourceParameter ->
         assert(sourceParameter.index == i)
-        target.typeParameters.add(sourceParameter.copyToWithoutSuperTypes(target, shift = shift, origin = origin ?: sourceParameter.origin))
+        typeParameters.add(sourceParameter.copyToWithoutSuperTypes(this, shift = shift, origin = origin ?: sourceParameter.origin))
     }
-    source.typeParameters.zip(target.typeParameters.drop(shift)).forEach { (srcParameter, dstParameter) ->
+    srcTypeParameters.zip(typeParameters.drop(shift)).forEach { (srcParameter, dstParameter) ->
         dstParameter.copySuperTypesFrom(srcParameter)
     }
 }
+
+fun IrTypeParametersContainer.copyTypeParametersFrom(
+    source: IrTypeParametersContainer,
+    origin: IrDeclarationOrigin? = null
+) = copyTypeParameters(source.typeParameters, origin)
 
 private fun IrTypeParameter.copySuperTypesFrom(source: IrTypeParameter) {
     val target = this
@@ -379,6 +395,9 @@ fun IrClass.simpleFunctions() = declarations.flatMap {
     }
 }
 
+val IrClass.primaryConstructor: IrConstructor?
+    get() = constructors.singleOrNull(IrConstructor::isPrimary)
+
 fun IrClass.createParameterDeclarations() {
     assert (thisReceiver == null)
 
@@ -482,6 +501,3 @@ fun IrClass.addFakeOverrides() {
 
     declarations += fakeOverriddenFunctions.values
 }
-
-fun IrValueParameter.isInlineParameter() =
-    !isNoinline && !type.isNullable() && (type.isFunction() || type.isSuspendFunctionTypeOrSubtype())

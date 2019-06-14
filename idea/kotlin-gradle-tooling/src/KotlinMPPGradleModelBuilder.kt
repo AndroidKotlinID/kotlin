@@ -48,11 +48,16 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val sourceSets = buildSourceSets(dependencyResolver, project) ?: return null
         val sourceSetMap = sourceSets.map { it.name to it }.toMap()
         val targets = buildTargets(sourceSetMap, dependencyResolver, project) ?: return null
-        computeSourceSetsDeferredInfo(sourceSets, targets)
+        computeSourceSetsDeferredInfo(sourceSetMap, targets, isHMPPEnabled(project))
         val coroutinesState = getCoroutinesState(project)
         reportUnresolvedDependencies(targets)
         val kotlinNativeHome = KotlinNativeHomeEvaluator.getKotlinNativeHome(project) ?: NO_KOTLIN_NATIVE_HOME
         return KotlinMPPGradleModelImpl(sourceSetMap, targets, ExtraFeaturesImpl(coroutinesState), kotlinNativeHome)
+    }
+
+    private fun isHMPPEnabled(project: Project): Boolean {
+        //TODO(auskov): replace with Project.isKotlinGranularMetadataEnabled after merging with gradle pranch
+        return (project.findProperty("kotlin.mpp.enableGranularSourceSetsMetadata") as? String)?.toBoolean() ?: false
     }
 
     private fun reportUnresolvedDependencies(targets: Collection<KotlinTarget>) {
@@ -73,13 +78,46 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         return getCoroutines(experimentalExt) as? String
     }
 
+
+    private fun calculateDependsOnClosure(
+        sourceSet: KotlinSourceSetImpl?,
+        sourceSetsMap: Map<String, KotlinSourceSetImpl>,
+        cache: MutableMap<String, Set<String>>
+    ): Set<String> {
+        return if (sourceSet == null) {
+            emptySet()
+        } else {
+            cache[sourceSet.name] ?: sourceSet.dependsOnSourceSets.flatMap { name ->
+                calculateDependsOnClosure(
+                    sourceSetsMap[name],
+                    sourceSetsMap,
+                    cache
+                ).union(setOf(name))
+            }.toSet().also { cache[sourceSet.name] = it }
+        }
+    }
+
     private fun buildSourceSets(dependencyResolver: DependencyResolver, project: Project): Collection<KotlinSourceSetImpl>? {
         val kotlinExt = project.extensions.findByName("kotlin") ?: return null
         val getSourceSets = kotlinExt.javaClass.getMethodOrNull("getSourceSets") ?: return null
         @Suppress("UNCHECKED_CAST")
         val sourceSets =
             (getSourceSets(kotlinExt) as? NamedDomainObjectContainer<Named>)?.asMap?.values ?: emptyList<Named>()
-        return sourceSets.mapNotNull { buildSourceSet(it, dependencyResolver, project) }
+        val allSourceSets = sourceSets.mapNotNull { buildSourceSet(it, dependencyResolver, project) }
+        val map = allSourceSets.map { it.name to it }.toMap()
+        val dependsOnCache = HashMap<String, Set<String>>()
+        return allSourceSets.map { sourceSet ->
+            KotlinSourceSetImpl(
+                sourceSet.name,
+                sourceSet.languageSettings,
+                sourceSet.sourceDirs,
+                sourceSet.resourceDirs,
+                sourceSet.dependencies,
+                calculateDependsOnClosure(sourceSet, map, dependsOnCache),
+                sourceSet.actualPlatforms as KotlinPlatformContainerImpl,
+                sourceSet.isTestModule
+            )
+        }
     }
 
     private fun buildSourceSet(
@@ -175,7 +213,6 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
     ): KotlinTarget? {
         val targetClass = gradleTarget.javaClass
         val getPlatformType = targetClass.getMethodOrNull("getPlatformType") ?: return null
-        val getCompilations = targetClass.getMethodOrNull("getCompilations") ?: return null
         val getDisambiguationClassifier = targetClass.getMethodOrNull("getDisambiguationClassifier") ?: return null
         val platformId = (getPlatformType.invoke(gradleTarget) as? Named)?.name ?: return null
         val platform = KotlinPlatform.byId(platformId) ?: return null
@@ -189,9 +226,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         } catch (e: Throwable) {
             "${e::class.java.name}:${e.message}"
         }
-        @Suppress("UNCHECKED_CAST")
-        val gradleCompilations =
-            (getCompilations.invoke(gradleTarget) as? NamedDomainObjectContainer<Named>)?.asMap?.values ?: emptyList<Named>()
+
+        val gradleCompilations = getCompilations(gradleTarget) ?: return null
         val compilations = gradleCompilations.mapNotNull {
             buildCompilation(it, disambiguationClassifier, sourceSetMap, dependencyResolver, project)
         }
@@ -227,10 +263,7 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         @Suppress("UNCHECKED_CAST")
         val kotlinGradleSourceSets = (getKotlinSourceSets(gradleCompilation) as? Collection<Named>) ?: return null
         val kotlinSourceSets = kotlinGradleSourceSets.mapNotNull { sourceSetMap[it.name] }
-        val getCompileKotlinTaskName = compilationClass.getMethodOrNull("getCompileKotlinTaskName") ?: return null
-        @Suppress("UNCHECKED_CAST")
-        val compileKotlinTaskName = (getCompileKotlinTaskName(gradleCompilation) as? String) ?: return null
-        val compileKotlinTask = project.tasks.findByName(compileKotlinTaskName) ?: return null
+        val compileKotlinTask = getCompileKotlinTaskName(project, gradleCompilation) ?: return null
         val output = buildCompilationOutput(gradleCompilation, compileKotlinTask) ?: return null
         val arguments = buildCompilationArguments(compileKotlinTask) ?: return null
         val dependencyClasspath = buildDependencyClasspath(compileKotlinTask)
@@ -381,8 +414,9 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
     }
 
     private fun computeSourceSetsDeferredInfo(
-        sourceSets: Collection<KotlinSourceSetImpl>,
-        targets: Collection<KotlinTarget>
+        sourceSets: Map<String, KotlinSourceSetImpl>,
+        targets: Collection<KotlinTarget>,
+        isHMPPEnabled: Boolean
     ) {
         val sourceSetToCompilations = LinkedHashMap<KotlinSourceSet, MutableSet<KotlinCompilation>>()
         for (target in targets) {
@@ -392,22 +426,29 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
                 }
             }
         }
-        for (sourceSet in sourceSets) {
+
+        for (sourceSet in sourceSets.values) {
             val name = sourceSet.name
             if (name == KotlinSourceSet.COMMON_MAIN_SOURCE_SET_NAME) {
-                sourceSet.platform = KotlinPlatform.COMMON
                 sourceSet.isTestModule = false
                 continue
             }
             if (name == KotlinSourceSet.COMMON_TEST_SOURCE_SET_NAME) {
-                sourceSet.platform = KotlinPlatform.COMMON
                 sourceSet.isTestModule = true
                 continue
             }
 
             val compilations = sourceSetToCompilations[sourceSet]
             if (compilations != null) {
-                sourceSet.platform = compilations.map { it.platform }.distinct().singleOrNull() ?: KotlinPlatform.COMMON
+                val platforms = compilations.map { it.platform }
+                sourceSet.actualPlatforms.addSimplePlatforms(platforms)
+
+                if (isHMPPEnabled) {
+                    sourceSet.dependsOnSourceSets.mapNotNull { sourceSets[it] }.forEach {
+                        it?.actualPlatforms?.addSimplePlatforms(platforms)
+                    }
+                }
+
                 sourceSet.isTestModule = compilations.all { it.isTestModule }
             } else {
                 // TODO: change me after design about it
@@ -546,6 +587,20 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
             val getTargets = kotlinExt.javaClass.getMethodOrNull("getTargets") ?: return null
             @Suppress("UNCHECKED_CAST")
             return (getTargets.invoke(kotlinExt) as? NamedDomainObjectContainer<Named>)?.asMap?.values ?: emptyList()
+        }
+
+        fun getCompilations(target: Named): Collection<Named>? {
+            val getCompilationsMethod = target.javaClass.getMethodOrNull("getCompilations") ?: return null
+            @Suppress("UNCHECKED_CAST")
+            return (getCompilationsMethod.invoke(target) as? NamedDomainObjectContainer<Named>)?.asMap?.values ?: emptyList()
+        }
+
+        fun getCompileKotlinTaskName(project: Project, compilation: Named): Task? {
+            val compilationClass = compilation.javaClass
+            val getCompileKotlinTaskName = compilationClass.getMethodOrNull("getCompileKotlinTaskName") ?: return null
+            @Suppress("UNCHECKED_CAST")
+            val compileKotlinTaskName = (getCompileKotlinTaskName(compilation) as? String) ?: return null
+            return project.tasks.findByName(compileKotlinTaskName) ?: return null
         }
     }
 }

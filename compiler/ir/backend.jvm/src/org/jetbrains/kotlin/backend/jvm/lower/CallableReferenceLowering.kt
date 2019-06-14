@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.backend.common.descriptors.isFunctionOrKFunctionType
 import org.jetbrains.kotlin.backend.common.descriptors.synthesizedName
 import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.backend.common.ir.createImplicitParameterDeclarationWithWrappedDescriptor
-import org.jetbrains.kotlin.backend.common.ir.isInlineParameter
+import org.jetbrains.kotlin.backend.jvm.ir.isInlineParameter
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlock
 import org.jetbrains.kotlin.backend.common.lower.irIfThen
@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.codegen.isInlineFunctionCall
 import org.jetbrains.kotlin.backend.jvm.codegen.isInlineIrExpression
+import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isPrimaryInlineClassConstructor
 import org.jetbrains.kotlin.codegen.PropertyReferenceCodegen
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -341,6 +342,18 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                 }
             }
 
+        private fun IrSimpleFunction.invokeInlineClassConstructor(irConstructor: IrConstructor): IrBody {
+            val irBuilder = context.createIrBuilder(symbol, startOffset, endOffset)
+            val param = irConstructor.valueParameters[0].copyTo(this)
+            valueParameters.add(param)
+            val from = irConstructor.valueParameters[0].type
+            val to = irConstructor.returnType
+            val call = irBuilder.irCall(context.ir.symbols.unsafeCoerceIntrinsicSymbol, to, listOf(from, to)).apply {
+                putValueArgument(0, irBuilder.irGet(param))
+            }
+            return irBuilder.irExprBody(call)
+        }
+
         private fun createInvokeMethod(superFunction: IrSimpleFunction): IrSimpleFunction =
             buildFun {
                 setSourceRange(irFunctionReference)
@@ -356,6 +369,11 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                 annotations.addAll(callee.annotations)
 
                 dispatchReceiverParameter = functionReferenceClass.thisReceiver?.copyTo(function)
+
+                if (callee.isPrimaryInlineClassConstructor) {
+                    body = invokeInlineClassConstructor(callee as IrConstructor)
+                    return this
+                }
 
                 val unboundArgsSet = unboundCalleeParameters.toSet()
                 if (useVararg) {
@@ -432,11 +450,7 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                                         irGet(valueParameters[unboundIndex++])
                                     }
                                 }
-                                when (parameter) {
-                                    callee.dispatchReceiverParameter -> dispatchReceiver = argument
-                                    callee.extensionReceiverParameter -> extensionReceiver = argument
-                                    else -> putValueArgument(parameter.index, argument)
-                                }
+                                putArgument(callee, parameter, argument)
                             }
 
                             if (!useVararg) assert(unboundIndex == valueParameters.size) { "Not all arguments of <invoke> are used" }
@@ -486,6 +500,9 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                 }
             }
 
+        private val IrFunction.originalName: Name
+            get() = (metadata as? MetadataSource.Function)?.descriptor?.name ?: name
+
         private fun createGetNameMethod(superFunction: IrSimpleFunction): IrSimpleFunction =
             buildFun {
                 setSourceRange(irFunctionReference)
@@ -503,7 +520,7 @@ internal class CallableReferenceLowering(val context: JvmBackendContext) : FileL
                 val irBuilder = context.createIrBuilder(function.symbol, startOffset, endOffset)
                 body = irBuilder.irBlockBody(startOffset, endOffset) {
                     +irReturn(
-                        IrConstImpl.string(-1, -1, context.irBuiltIns.stringType, callee.name.asString())
+                        IrConstImpl.string(-1, -1, context.irBuiltIns.stringType, callee.originalName.asString())
                     )
                 }
             }

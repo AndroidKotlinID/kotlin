@@ -74,8 +74,9 @@ dependencies {
     testRuntime(project(":kotlin-native:kotlin-native-utils")) { isTransitive = false }
 
     if (intellijUltimateEnabled) {
-        testCompileOnly(intellijUltimateDep()) { includeJars("platform-api", "platform-impl", "gson", "trove4j", "openapi", "idea", "util", "jdom", rootProject = rootProject) }
+        testCompileOnly(intellijUltimateDep())
     }
+    
     testCompile(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-core")) { isTransitive = false }
 
     testRuntime(project(":kotlin-reflect"))
@@ -87,6 +88,11 @@ dependencies {
     testRuntime(project(":idea:idea-android")) { isTransitive = false }
     testRuntime(project(":idea:idea-maven")) { isTransitive = false }
     testRuntime(project(":idea:idea-jps-common")) { isTransitive = false }
+    testRuntime(project(":idea:jvm-debugger:eval4j")) { isTransitive = false }
+    testRuntime(project(":idea:jvm-debugger:jvm-debugger-util")) { isTransitive = false }
+    testRuntime(project(":idea:jvm-debugger:jvm-debugger-core")) { isTransitive = false }
+    testRuntime(project(":idea:jvm-debugger:jvm-debugger-evaluation")) { isTransitive = false }
+    testRuntime(project(":idea:jvm-debugger:jvm-debugger-sequence")) { isTransitive = false }
     testRuntime(project(":idea:formatter")) { isTransitive = false }
     testRuntime(project(":sam-with-receiver-ide-plugin")) { isTransitive = false }
     testRuntime(project(":kotlin-sam-with-receiver-compiler-plugin")) { isTransitive = false }
