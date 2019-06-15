@@ -56,13 +56,25 @@ class KotlinBuildProperties(
     val useBootstrapStdlib: Boolean
         get() = isInJpsBuildIdeaSync
 
-    val includeCidrPlugins: Boolean =
-        getBoolean("cidrPluginsEnabled") && propertiesProvider.rootProjectDir.resolve("kotlin-ultimate").exists()
+    val kotlinUltimateExists: Boolean = propertiesProvider.rootProjectDir.resolve("kotlin-ultimate").exists()
+
+    val includeCidrPlugins: Boolean = kotlinUltimateExists && getBoolean("cidrPluginsEnabled")
+
+    val isTeamcityBuild: Boolean = getBoolean("teamcity") || System.getenv("TEAMCITY_VERSION") != null
+
+    val intellijUltimateEnabled: Boolean
+        get() {
+            val explicitlyEnabled = getBoolean("intellijUltimateEnabled")
+            if (!kotlinUltimateExists && explicitlyEnabled) {
+                error("intellijUltimateEnabled property is set, while kotlin-ultimate repository is not provided")
+            }
+            return kotlinUltimateExists && (explicitlyEnabled || isTeamcityBuild)
+        }
 }
 
 private const val extensionName = "kotlinBuildFlags"
 
-class ProjectProperties(val project: Project): PropertiesProvider {
+class ProjectProperties(val project: Project) : PropertiesProvider {
     override val rootProjectDir: File
         get() = project.projectDir
 
@@ -75,7 +87,7 @@ val Project.kotlinBuildProperties: KotlinBuildProperties
             rootProject.extensions.add(extensionName, it)
         }
 
-class SettingsProperties(val settings: Settings): PropertiesProvider {
+class SettingsProperties(val settings: Settings) : PropertiesProvider {
     override val rootProjectDir: File
         get() = settings.rootDir
 
