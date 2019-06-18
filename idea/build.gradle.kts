@@ -32,7 +32,6 @@ sourceSets {
     "performanceTest" {
         java.srcDirs("performanceTests")
     }
-
 }
 
 val performanceTestCompile by configurations
@@ -41,7 +40,7 @@ performanceTestCompile.apply {
 }
 
 val performanceTestCompileOnly by configurations
-performanceTestCompile.apply {
+performanceTestCompileOnly.apply {
     extendsFrom(configurations["testCompileOnly"])
 }
 
@@ -175,6 +174,7 @@ dependencies {
 
     performanceTestCompile(sourceSets["test"].output)
     performanceTestCompile(sourceSets["main"].output)
+    performanceTestRuntime(sourceSets["performanceTest"].output)
 }
 
 projectTest(parallel = true) {

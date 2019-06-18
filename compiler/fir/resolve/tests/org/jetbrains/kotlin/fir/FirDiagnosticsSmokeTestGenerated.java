@@ -1659,6 +1659,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/callableReference/classVsPackage.kt");
         }
 
+        @TestMetadata("correctInfoAfterArrayLikeCall.kt")
+        public void testCorrectInfoAfterArrayLikeCall() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/correctInfoAfterArrayLikeCall.kt");
+        }
+
         @TestMetadata("ea81649_errorPropertyLHS.kt")
         public void testEa81649_errorPropertyLHS() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/ea81649_errorPropertyLHS.kt");
@@ -1684,6 +1689,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/callableReference/kt25433.kt");
         }
 
+        @TestMetadata("kt31981.kt")
+        public void testKt31981() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/kt31981.kt");
+        }
+
         @TestMetadata("kt7430_wrongClassOnLHS.kt")
         public void testKt7430_wrongClassOnLHS() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/kt7430_wrongClassOnLHS.kt");
@@ -1692,6 +1702,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
         @TestMetadata("memberExtensionsImportedFromObjectsUnsupported.kt")
         public void testMemberExtensionsImportedFromObjectsUnsupported() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/memberExtensionsImportedFromObjectsUnsupported.kt");
+        }
+
+        @TestMetadata("noExceptionOnRedCodeWithArrayLikeCall.kt")
+        public void testNoExceptionOnRedCodeWithArrayLikeCall() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/noExceptionOnRedCodeWithArrayLikeCall.kt");
         }
 
         @TestMetadata("packageInLhs.kt")
