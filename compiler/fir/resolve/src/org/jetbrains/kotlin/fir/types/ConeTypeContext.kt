@@ -46,6 +46,10 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext {
         TODO("not implemented")
     }
 
+    override fun SimpleTypeMarker.isIntegerLiteralType(): Boolean {
+        return false
+    }
+
     override fun KotlinTypeMarker.asSimpleType(): SimpleTypeMarker? {
         assert(this is ConeKotlinType)
         return when (this) {
@@ -280,10 +284,14 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext {
 
     override fun captureFromArguments(type: SimpleTypeMarker, status: CaptureStatus): SimpleTypeMarker? {
         require(type is ConeKotlinType)
+        val argumentsCount = type.argumentsCount()
+        if (argumentsCount == 0) return null
+
         val typeConstructor = type.typeConstructor()
-        if (type.argumentsCount() != typeConstructor.parametersCount()) return null
+        if (argumentsCount != typeConstructor.parametersCount()) return null
+
         if (type.asArgumentList().all(this) { !it.isStarProjection() && it.getVariance() == TypeVariance.INV }) return null
-        val newArguments = Array(type.argumentsCount()) { index ->
+        val newArguments = Array(argumentsCount) { index ->
             val argument = type.getArgument(index)
             if (!argument.isStarProjection() && argument.getVariance() == TypeVariance.INV) return@Array argument as ConeKotlinTypeProjection
 
@@ -296,7 +304,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext {
             ConeCapturedType(status, lowerType, argument as ConeKotlinTypeProjection)
         }
 
-        for (index in 0 until type.argumentsCount()) {
+        for (index in 0 until argumentsCount) {
             val oldArgument = type.getArgument(index)
             val newArgument = newArguments[index]
 
@@ -330,13 +338,12 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext {
     }
 
     override fun TypeConstructorMarker.isAnyConstructor(): Boolean {
-        return this is ConeClassLikeSymbol && classId.asString() == "kotlin/Any"
+        return this is ConeClassLikeSymbol && classId == StandardClassIds.Any
     }
 
     override fun TypeConstructorMarker.isNothingConstructor(): Boolean {
-        return this is ConeClassLikeSymbol && classId.asString() == "kotlin/Nothing"
+        return this is ConeClassLikeSymbol && classId == StandardClassIds.Nothing
     }
-
 
     override fun KotlinTypeMarker.isNotNullNothing(): Boolean {
         require(this is ConeKotlinType)

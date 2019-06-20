@@ -8,10 +8,7 @@ package org.jetbrains.kotlin.fir.java.deserialization
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.descriptors.SourceElement
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirEnumEntry
-import org.jetbrains.kotlin.fir.declarations.FirNamedDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirEnumEntryImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirMemberFunctionImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirMemberPropertyImpl
@@ -21,6 +18,7 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.*
+import org.jetbrains.kotlin.fir.java.JavaSymbolProvider
 import org.jetbrains.kotlin.fir.java.createConstant
 import org.jetbrains.kotlin.fir.java.topLevelName
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
@@ -55,18 +53,21 @@ import org.jetbrains.kotlin.resolve.jvm.JvmClassName
 import org.jetbrains.kotlin.serialization.deserialization.IncompatibleVersionErrorData
 import org.jetbrains.kotlin.serialization.deserialization.getName
 import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
+import org.jetbrains.kotlin.utils.getOrPutNullable
 
 class KotlinDeserializedJvmSymbolsProvider(
     val session: FirSession,
     val project: Project,
     private val packagePartProvider: PackagePartProvider,
+    private val javaSymbolProvider: JavaSymbolProvider,
     private val kotlinClassFinder: KotlinClassFinder,
     private val javaClassFinder: JavaClassFinder
 ) : AbstractFirSymbolProvider() {
+    private val classesCache = HashMap<ClassId, FirClassSymbol>()
+    private val typeAliasCache = HashMap<ClassId, FirTypeAliasSymbol?>()
+    private val packagePartsCache = HashMap<FqName, Collection<PackagePartsCacheData>>()
 
-    private val classesCache = mutableMapOf<ClassId, FirClassSymbol>()
-    private val typeAliasCache = mutableMapOf<ClassId, FirTypeAliasSymbol?>()
-    private val packagePartsCache = mutableMapOf<FqName, Collection<PackagePartsCacheData>>()
+    private val handledByJava = HashSet<ClassId>()
 
     private class PackagePartsCacheData(
         val proto: ProtoBuf.Package,
@@ -156,7 +157,7 @@ class KotlinDeserializedJvmSymbolsProvider(
     private fun findAndDeserializeTypeAlias(
         classId: ClassId
     ): FirTypeAliasSymbol? {
-        return typeAliasCache.getOrPut(classId) {
+        return typeAliasCache.getOrPutNullable(classId) {
             getPackageParts(classId.packageFqName).firstNotNullResult { part ->
                 val ids = part.typeAliasNameIndex[classId.shortClassName]
                 if (ids == null || ids.isEmpty()) return@firstNotNullResult null
@@ -313,29 +314,20 @@ class KotlinDeserializedJvmSymbolsProvider(
         if (!hasTopLevelClassOf(classId)) return null
         if (classesCache.containsKey(classId)) return classesCache[classId]
 
+        if (classId in handledByJava) return null
 
-//        return classesCache.getOrPut(classId) {
-        //return null
-        val kotlinJvmBinaryClass = kotlinClassFinder.findKotlinClass(classId)
+        val result = kotlinClassFinder.findKotlinClassOrContent(classId)
+        val kotlinJvmBinaryClass = when (result) {
+            is KotlinClassFinder.Result.KotlinClass -> result.kotlinJvmBinaryClass
+            is KotlinClassFinder.Result.ClassFileContent -> {
+                handledByJava.add(classId)
+                return javaSymbolProvider.getFirJavaClass(classId, result) as FirClassSymbol?
+            }
+            null -> null
+        }
         if (kotlinJvmBinaryClass == null) {
             val outerClassId = classId.outerClassId ?: return null
-            val outerJvmBinaryClass = kotlinClassFinder.findKotlinClass(outerClassId) ?: return null
-            if (outerJvmBinaryClass.classHeader.kind != KotlinClassHeader.Kind.CLASS) return null
-            val (nameResolver, outerClassProto) = outerJvmBinaryClass.readClassDataFrom() ?: return null
-            if (outerClassProto.enumEntryList.none { nameResolver.getName(it.name) == classId.shortClassName }) {
-                return null
-            }
-
-            val symbol = FirClassSymbol(classId)
-            FirEnumEntryImpl(session, null, symbol, classId.shortClassName).apply {
-                superTypeRefs += FirResolvedTypeRefImpl(
-                    session,
-                    null,
-                    ConeClassTypeImpl(ConeClassLikeLookupTagImpl(outerClassId), emptyArray(), false),
-                    emptyList()
-                )
-            }
-            classesCache[classId] = symbol
+            findAndDeserializeClass(outerClassId) ?: return null
         } else {
             if (kotlinJvmBinaryClass.classHeader.kind != KotlinClassHeader.Kind.CLASS) return null
             val (nameResolver, classProto) = kotlinJvmBinaryClass.readClassDataFrom() ?: return null
@@ -346,6 +338,9 @@ class KotlinDeserializedJvmSymbolsProvider(
                 JvmBinaryAnnotationDeserializer(session),
                 parentContext, this::findAndDeserializeClass
             )
+            symbol.fir.declarations.filterIsInstance<FirEnumEntryImpl>().forEach {
+                classesCache[it.symbol.classId] = it.symbol
+            }
             classesCache[classId] = symbol
             val annotations = mutableListOf<FirAnnotationCall>()
             kotlinJvmBinaryClass.loadClassAnnotations(object : KotlinJvmBinaryClass.AnnotationVisitor {

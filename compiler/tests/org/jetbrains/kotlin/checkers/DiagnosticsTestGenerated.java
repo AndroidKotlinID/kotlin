@@ -9915,6 +9915,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionToUnitForIfAsLastExpressionInLambda.kt");
                 }
 
+                @TestMetadata("coercionToUnitForLastLambdaInLambda.kt")
+                public void testCoercionToUnitForLastLambdaInLambda() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionToUnitForLastLambdaInLambda.kt");
+                }
+
                 @TestMetadata("coercionWithExpectedType.kt")
                 public void testCoercionWithExpectedType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionWithExpectedType.kt");
@@ -10003,14 +10008,39 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                     runTest("compiler/testData/diagnostics/tests/inference/commonSystem/kt30300.kt");
                 }
 
+                @TestMetadata("kt31969.kt")
+                public void testKt31969() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/kt31969.kt");
+                }
+
                 @TestMetadata("kt3372toCollection.kt")
                 public void testKt3372toCollection() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/commonSystem/kt3372toCollection.kt");
                 }
 
+                @TestMetadata("lessSpecificTypeForArgumentCallWithExactAnnotation.kt")
+                public void testLessSpecificTypeForArgumentCallWithExactAnnotation() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/lessSpecificTypeForArgumentCallWithExactAnnotation.kt");
+                }
+
+                @TestMetadata("lessSpecificTypeForArgumentCallWithExactAnnotation_ni.kt")
+                public void testLessSpecificTypeForArgumentCallWithExactAnnotation_ni() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/lessSpecificTypeForArgumentCallWithExactAnnotation_ni.kt");
+                }
+
                 @TestMetadata("nestedLambdas.kt")
                 public void testNestedLambdas() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/commonSystem/nestedLambdas.kt");
+                }
+
+                @TestMetadata("postponedCompletionWithExactAnnotation.kt")
+                public void testPostponedCompletionWithExactAnnotation() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/postponedCompletionWithExactAnnotation.kt");
+                }
+
+                @TestMetadata("postponedCompletionWithExactAnnotation_ni.kt")
+                public void testPostponedCompletionWithExactAnnotation_ni() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/postponedCompletionWithExactAnnotation_ni.kt");
                 }
 
                 @TestMetadata("selectFromCovariantAndContravariantTypes.kt")
