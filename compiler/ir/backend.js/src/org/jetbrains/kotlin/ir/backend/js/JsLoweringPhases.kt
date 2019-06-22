@@ -24,7 +24,7 @@ private fun ClassLoweringPass.runOnFilesPostfix(moduleFragment: IrModuleFragment
 
 private fun validationCallback(context: JsIrBackendContext, module: IrModuleFragment) {
     val validatorConfig = IrValidatorConfig(
-        abortOnError = false,
+        abortOnError = true,
         ensureAllNodesAreDifferent = true,
         checkTypes = false,
         checkDescriptors = false
@@ -248,7 +248,7 @@ private val varargLoweringPhase = makeJsModulePhase(
 )
 
 private val propertiesLoweringPhase = makeJsModulePhase(
-    { context -> PropertiesLowering(context, skipExternalProperties = true) },
+    { context -> PropertiesLowering(context, skipExternalProperties = true, generateAnnotationFields = true) },
     name = "PropertiesLowering",
     description = "Move fields and accessors out from its property"
 )

@@ -160,6 +160,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitNamedReference(resolvedCallableReference, null)
     }
 
+    open fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference) {
+        visitResolvedCallableReference(backingFieldReference, null)
+    }
+
     open fun visitSuperReference(superReference: FirSuperReference) {
         visitReference(superReference, null)
     }
@@ -192,6 +196,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitCall(callWithArgumentList, null)
     }
 
+    open fun visitAnnotationCall(annotationCall: FirAnnotationCall) {
+        visitCallWithArgumentList(annotationCall, null)
+    }
+
     open fun visitDelegatedConstructorCall(delegatedConstructorCall: FirDelegatedConstructorCall) {
         visitCallWithArgumentList(delegatedConstructorCall, null)
     }
@@ -214,10 +222,6 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitUnknownTypeCallWithArgumentList(unknownTypeCallWithArgumentList: FirUnknownTypeCallWithArgumentList) {
         visitCallWithArgumentList(unknownTypeCallWithArgumentList, null)
-    }
-
-    open fun visitAnnotationCall(annotationCall: FirAnnotationCall) {
-        visitUnknownTypeCallWithArgumentList(annotationCall, null)
     }
 
     open fun visitArrayOfCall(arrayOfCall: FirArrayOfCall) {
@@ -462,6 +466,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitAssignment(assignment: FirAssignment, data: Nothing?) {
         visitAssignment(assignment)
+    }
+
+    final override fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: Nothing?) {
+        visitBackingFieldReference(backingFieldReference)
     }
 
     final override fun visitBlock(block: FirBlock, data: Nothing?) {

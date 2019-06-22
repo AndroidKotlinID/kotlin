@@ -160,6 +160,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformNamedReference(resolvedCallableReference, data)
     }
 
+    open fun transformBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: D): CompositeTransformResult<FirNamedReference> {
+        return transformResolvedCallableReference(backingFieldReference, data)
+    }
+
     open fun <E : FirReference> transformSuperReference(superReference: E, data: D): CompositeTransformResult<E> {
         return transformReference(superReference, data)
     }
@@ -192,6 +196,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformCall(callWithArgumentList, data)
     }
 
+    open fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: D): CompositeTransformResult<FirStatement> {
+        return transformCallWithArgumentList(annotationCall, data)
+    }
+
     open fun transformDelegatedConstructorCall(delegatedConstructorCall: FirDelegatedConstructorCall, data: D): CompositeTransformResult<FirStatement> {
         return transformCallWithArgumentList(delegatedConstructorCall, data)
     }
@@ -214,10 +222,6 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun transformUnknownTypeCallWithArgumentList(unknownTypeCallWithArgumentList: FirUnknownTypeCallWithArgumentList, data: D): CompositeTransformResult<FirStatement> {
         return transformCallWithArgumentList(unknownTypeCallWithArgumentList, data)
-    }
-
-    open fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: D): CompositeTransformResult<FirStatement> {
-        return transformUnknownTypeCallWithArgumentList(annotationCall, data)
     }
 
     open fun transformArrayOfCall(arrayOfCall: FirArrayOfCall, data: D): CompositeTransformResult<FirStatement> {
@@ -462,6 +466,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitAssignment(assignment: FirAssignment, data: D): CompositeTransformResult<FirElement> {
         return transformAssignment(assignment, data)
+    }
+
+    final override fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: D): CompositeTransformResult<FirElement> {
+        return transformBackingFieldReference(backingFieldReference, data)
     }
 
     final override fun visitBlock(block: FirBlock, data: D): CompositeTransformResult<FirElement> {

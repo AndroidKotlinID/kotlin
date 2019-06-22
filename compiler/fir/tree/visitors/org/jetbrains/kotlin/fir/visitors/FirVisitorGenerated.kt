@@ -160,6 +160,10 @@ abstract class FirVisitor<out R, in D> {
         return visitNamedReference(resolvedCallableReference, data)
     }
 
+    open fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: D): R {
+        return visitResolvedCallableReference(backingFieldReference, data)
+    }
+
     open fun visitSuperReference(superReference: FirSuperReference, data: D): R {
         return visitReference(superReference, data)
     }
@@ -192,6 +196,10 @@ abstract class FirVisitor<out R, in D> {
         return visitCall(callWithArgumentList, data)
     }
 
+    open fun visitAnnotationCall(annotationCall: FirAnnotationCall, data: D): R {
+        return visitCallWithArgumentList(annotationCall, data)
+    }
+
     open fun visitDelegatedConstructorCall(delegatedConstructorCall: FirDelegatedConstructorCall, data: D): R {
         return visitCallWithArgumentList(delegatedConstructorCall, data)
     }
@@ -214,10 +222,6 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitUnknownTypeCallWithArgumentList(unknownTypeCallWithArgumentList: FirUnknownTypeCallWithArgumentList, data: D): R {
         return visitCallWithArgumentList(unknownTypeCallWithArgumentList, data)
-    }
-
-    open fun visitAnnotationCall(annotationCall: FirAnnotationCall, data: D): R {
-        return visitUnknownTypeCallWithArgumentList(annotationCall, data)
     }
 
     open fun visitArrayOfCall(arrayOfCall: FirArrayOfCall, data: D): R {
