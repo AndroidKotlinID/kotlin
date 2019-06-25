@@ -3758,6 +3758,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/explicitThis/differentReceiverInstanceExtension.kt");
         }
 
+        @TestMetadata("differentReceiverInstanceExtension2.kt")
+        public void testDifferentReceiverInstanceExtension2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/explicitThis/differentReceiverInstanceExtension2.kt");
+        }
+
+        @TestMetadata("differentReceiverInstanceExtension3.kt")
+        public void testDifferentReceiverInstanceExtension3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/explicitThis/differentReceiverInstanceExtension3.kt");
+        }
+
+        @TestMetadata("differentReceiverInstanceExtension4.kt")
+        public void testDifferentReceiverInstanceExtension4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/explicitThis/differentReceiverInstanceExtension4.kt");
+        }
+
         @TestMetadata("differentReceiverType.kt")
         public void testDifferentReceiverType() throws Exception {
             runTest("idea/testData/inspectionsLocal/explicitThis/differentReceiverType.kt");
@@ -7616,6 +7631,31 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/asReceiverProperty.kt");
         }
 
+        @TestMetadata("classLiteral.kt")
+        public void testClassLiteral() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/classLiteral.kt");
+        }
+
+        @TestMetadata("classLiteral2.kt")
+        public void testClassLiteral2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/classLiteral2.kt");
+        }
+
+        @TestMetadata("classLiteral3.kt")
+        public void testClassLiteral3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/classLiteral3.kt");
+        }
+
+        @TestMetadata("classLiteral4.kt")
+        public void testClassLiteral4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/classLiteral4.kt");
+        }
+
+        @TestMetadata("classLiteral5.kt")
+        public void testClassLiteral5() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/classLiteral5.kt");
+        }
+
         @TestMetadata("companionCollision.kt")
         public void testCompanionCollision() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/companionCollision.kt");
@@ -7784,6 +7824,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("notApplicableExpression3.kt")
         public void testNotApplicableExpression3() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableExpression3.kt");
+        }
+
+        @TestMetadata("notApplicableExpression4.kt")
+        public void testNotApplicableExpression4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableExpression4.kt");
         }
 
         @TestMetadata("notApplicableLocalFun.kt")
