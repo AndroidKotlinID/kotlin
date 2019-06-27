@@ -1721,6 +1721,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/callableReference/parsingPriorityOfGenericArgumentsVsLess.kt");
             }
 
+            @TestMetadata("propertyOfNestedGenericClass.kt")
+            public void testPropertyOfNestedGenericClass() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/propertyOfNestedGenericClass.kt");
+            }
+
             @TestMetadata("rewriteAtSliceOnGetOperator.kt")
             public void testRewriteAtSliceOnGetOperator() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/rewriteAtSliceOnGetOperator.kt");
@@ -7779,6 +7784,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/functionLiterals/functionLIteralInBlockInIf.kt");
             }
 
+            @TestMetadata("functionLiteralAsArgumentForFunction.kt")
+            public void testFunctionLiteralAsArgumentForFunction() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/functionLiterals/functionLiteralAsArgumentForFunction.kt");
+            }
+
             @TestMetadata("functionLiteralInIf.kt")
             public void testFunctionLiteralInIf() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/functionLiterals/functionLiteralInIf.kt");
@@ -9835,6 +9845,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("expectedTypeMismatchWithInVariance.kt")
                 public void testExpectedTypeMismatchWithInVariance() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/expectedTypeMismatchWithInVariance.kt");
+                }
+
+                @TestMetadata("invokeCallWithCapturedReceiver.kt")
+                public void testInvokeCallWithCapturedReceiver() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/invokeCallWithCapturedReceiver.kt");
                 }
 
                 @TestMetadata("kt25302.kt")

@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.*
+import org.jetbrains.kotlin.codegen.coroutines.INVOKE_SUSPEND_METHOD_NAME
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.AS
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.SAFE_AS
@@ -314,6 +315,7 @@ class ExpressionCodegen(
                 mv.load(0, OBJECT_TYPE)
             expression.descriptor is ConstructorDescriptor ->
                 throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
+            callee.isSuspend && !irFunction.isInvokeSuspendInContinuation() -> addInlineMarker(mv, isStartNotEnd = true)
         }
 
         val receiver = expression.dispatchReceiver
@@ -387,6 +389,12 @@ class ExpressionCodegen(
         }
 
         expression.markLineNumber(true)
+
+        // Do not generate redundant markers in continuation class.
+        if (callee.isSuspend && !irFunction.isInvokeSuspendInContinuation()) {
+            addSuspendMarker(mv, isStartNotEnd = true)
+        }
+
         callGenerator.genCall(
             callable,
             defaultMask.generateOnStackIfNeeded(callGenerator, callee is IrConstructor, this),
@@ -395,6 +403,12 @@ class ExpressionCodegen(
         )
 
         val returnType = callee.returnType
+
+        if (callee.isSuspend && !irFunction.isInvokeSuspendInContinuation()) {
+            addSuspendMarker(mv, isStartNotEnd = false)
+            addInlineMarker(mv, isStartNotEnd = false)
+        }
+
         return when {
             returnType.substitute(typeSubstitutionMap).isNothing() -> {
                 mv.aconst(null)
@@ -412,6 +426,9 @@ class ExpressionCodegen(
                 MaterialValue(this, callable.returnType, returnType).coerce(expression.type)
         }
     }
+
+    private fun IrFunction.isInvokeSuspendInContinuation(): Boolean =
+        name.asString() == INVOKE_SUSPEND_METHOD_NAME && parentAsClass in classCodegen.context.suspendFunctionContinuations.values
 
     override fun visitVariable(declaration: IrVariable, data: BlockInfo): PromisedValue {
         val varType = typeMapper.mapType(declaration)

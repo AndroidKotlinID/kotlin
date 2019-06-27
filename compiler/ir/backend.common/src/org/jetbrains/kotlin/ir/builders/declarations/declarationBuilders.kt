@@ -8,6 +8,8 @@ package org.jetbrains.kotlin.ir.builders.declarations
 import org.jetbrains.kotlin.backend.common.descriptors.*
 import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.*
 import org.jetbrains.kotlin.ir.symbols.impl.*
@@ -56,6 +58,13 @@ inline fun IrDeclarationContainer.addField(b: IrFieldBuilder.() -> Unit) =
     buildField(b).also { field ->
         field.parent = this
         declarations.add(field)
+    }
+
+fun IrClass.addField(fieldName: String, fieldType: IrType, fieldVisibility: Visibility = Visibilities.PRIVATE): IrField =
+    addField {
+        name = Name.identifier(fieldName)
+        type = fieldType
+        visibility = fieldVisibility
     }
 
 fun IrPropertyBuilder.buildProperty(): IrProperty {
