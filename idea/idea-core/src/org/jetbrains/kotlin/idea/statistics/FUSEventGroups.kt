@@ -8,7 +8,9 @@ package org.jetbrains.kotlin.idea.statistics
 /* Note: along with adding a group to this enum you should also add its GROUP_ID to plugin.xml and get it whitelisted
  * (see https://confluence.jetbrains.com/display/FUS/IntelliJ+Reporting+API).
  *
- * Default value for [events] parameter is intended for collectors which don't have yet a set of allowed values for FUS Whitelist
+ * Default value for [events] parameter is intended for collectors which
+ *    1. don't have yet a set of allowed values for FUS Whitelist
+ *    2. set of possible values is defined by enums in a feature's source code
  */
 enum class FUSEventGroups(groupIdSuffix: String, val events: Set<String> = setOf()) {
 
@@ -18,7 +20,8 @@ enum class FUSEventGroups(groupIdSuffix: String, val events: Set<String> = setOf
     Refactoring("ide.action.refactoring", refactoringEvents),
     NewFileTemplate("ide.newFileTempl", newFileTemplateEvents),
     NPWizards("ide.npwizards", NPWizardsEvents),
-    DebugEval("ide.debugger.eval", debugEvalEvents);
+    DebugEval("ide.debugger.eval", debugEvalEvents),
+    J2K("ide.j2k");
 
     val GROUP_ID: String = "kotlin.$groupIdSuffix"
 }
