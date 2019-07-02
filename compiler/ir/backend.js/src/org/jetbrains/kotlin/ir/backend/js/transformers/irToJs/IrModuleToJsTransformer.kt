@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.utils.*
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.isEffectivelyExternal
 import org.jetbrains.kotlin.ir.util.isObject
 import org.jetbrains.kotlin.js.backend.ast.*
@@ -93,6 +95,9 @@ class IrModuleToJsTransformer(
             return null
         }
 
+        if (!declaration.isExported())
+            return null
+
         if (declaration.isEffectivelyExternal())
             return null
 
@@ -120,8 +125,6 @@ class IrModuleToJsTransformer(
         return JsExpressionStatement(expression)
     }
 
-
-
     private fun generateModule(module: IrModuleFragment): JsProgram {
         val additionalPackages = with(backendContext) {
             externalPackageFragment.values + listOf(
@@ -135,13 +138,11 @@ class IrModuleToJsTransformer(
         val program = JsProgram()
 
         val nameGenerator = IrNamerImpl(
-            newNameTables = namer,
-            rootScope = program.rootScope
+            newNameTables = namer
         )
         val staticContext = JsStaticContext(
             backendContext = backendContext,
-            irNamer = nameGenerator,
-            rootScope = program.rootScope
+            irNamer = nameGenerator
         )
         val rootContext = JsGenerationContext(
             parent = null,
@@ -261,13 +262,13 @@ class IrModuleToJsTransformer(
         generateModule(declaration)
 
     private fun processClassModels(
-        classModelMap: Map<JsName, JsClassModel>,
+        classModelMap: Map<IrClassSymbol, JsIrClassModel>,
         preDeclarationBlock: JsBlock,
         postDeclarationBlock: JsBlock
     ) {
-        val declarationHandler = object : DFS.AbstractNodeHandler<JsName, Unit>() {
+        val declarationHandler = object : DFS.AbstractNodeHandler<IrClassSymbol, Unit>() {
             override fun result() {}
-            override fun afterChildren(current: JsName) {
+            override fun afterChildren(current: IrClassSymbol) {
                 classModelMap[current]?.let {
                     preDeclarationBlock.statements += it.preDeclarationBlock.statements
                     postDeclarationBlock.statements += it.postDeclarationBlock.statements
@@ -275,13 +276,34 @@ class IrModuleToJsTransformer(
             }
         }
 
-        DFS.dfs(classModelMap.keys, {
-            val neighbors = mutableListOf<JsName>()
-            classModelMap[it]?.run {
-                if (superName != null) neighbors += superName!!
-                neighbors += interfaces
-            }
-            neighbors
-        }, declarationHandler)
+        DFS.dfs(
+            classModelMap.keys,
+            { klass -> classModelMap[klass]?.superClasses ?: emptyList() },
+            declarationHandler
+        )
+    }
+
+    fun IrDeclarationWithName.isExported(): Boolean {
+        if (fqNameWhenAvailable in backendContext.additionalExportedDeclarations)
+            return true
+
+        // Hack to support properties
+        val correspondingProperty = when {
+            this is IrField -> correspondingPropertySymbol
+            this is IrSimpleFunction -> correspondingPropertySymbol
+            else -> null
+        }
+        correspondingProperty?.let {
+            return it.owner.isExported()
+        }
+
+        if (isJsExport())
+            return true
+
+        return when (val parent = parent) {
+            is IrDeclarationWithName -> parent.isExported()
+            is IrAnnotationContainer -> parent.isJsExport()
+            else -> false
+        }
     }
 }
