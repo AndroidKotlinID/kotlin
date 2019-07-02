@@ -1290,7 +1290,7 @@ class NewMultiplatformIT : BaseGradleIT() {
 
     @Test
     fun testNativeCompilerDownloading() {
-        // The plugin shouldn't download the K/N compiler if there is no corresponding targets in the project.
+        // The plugin shouldn't download the K/N compiler if there are no corresponding targets in the project.
         with(Project("sample-old-style-app", gradleVersion, "new-mpp-lib-and-app")) {
             build("tasks") {
                 assertSuccessful()
@@ -1301,6 +1301,49 @@ class NewMultiplatformIT : BaseGradleIT() {
             build("tasks") {
                 assertSuccessful()
                 assertTrue(output.contains("Kotlin/Native distribution: "))
+            }
+
+            build("tasks", "-Pkotlin.native.restrictedDistribution=true") {
+                assertSuccessful()
+                val dists = output.lineSequence().filter {
+                    it.contains("Kotlin/Native distribution: ")
+                }
+
+                // Restricted distribution is available for Mac hosts only.
+                if (HostManager.hostIsMac) {
+                    assertTrue(dists.all { it.contains("-restricted-") })
+                } else {
+                    assertTrue(dists.none { it.contains("-restricted-") })
+                }
+            }
+
+            // This directory actually doesn't contain a K/N distribution
+            // but we still can run a project configuration and check logs.
+            val currentDir = projectDir.absolutePath
+            build("tasks", "-Pkotlin.native.home=$currentDir") {
+                assertSuccessful()
+                assertContains("User-provided Kotlin/Native distribution: $currentDir")
+                assertNotContains("Project property 'org.jetbrains.kotlin.native.home' is deprecated")
+            }
+
+            // Deprecated property.
+            build("tasks", "-Porg.jetbrains.kotlin.native.home=$currentDir") {
+                assertSuccessful()
+                assertContains("User-provided Kotlin/Native distribution: $currentDir")
+                assertContains("Project property 'org.jetbrains.kotlin.native.home' is deprecated")
+            }
+
+            build("tasks", "-Pkotlin.native.version=1.3-eap-10779") {
+                assertSuccessful()
+                assertContainsRegex("Kotlin/Native distribution: .*kotlin-native-(macos|linux|windows)-1\\.3-eap-10779".toRegex())
+                assertNotContains("Project property 'org.jetbrains.kotlin.native.version' is deprecated")
+            }
+
+            // Deprecated property
+            build("tasks", "-Porg.jetbrains.kotlin.native.version=1.3-eap-10779") {
+                assertSuccessful()
+                assertContainsRegex("Kotlin/Native distribution: .*kotlin-native-(macos|linux|windows)-1\\.3-eap-10779".toRegex())
+                assertContains("Project property 'org.jetbrains.kotlin.native.version' is deprecated")
             }
         }
     }

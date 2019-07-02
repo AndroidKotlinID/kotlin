@@ -122,30 +122,19 @@ extra["JDK_9"] = jdkPath("9")
 extra["JDK_10"] = jdkPath("10")
 extra["JDK_11"] = jdkPath("11")
 
-gradle.taskGraph.beforeTask() {
+// allow opening the project without setting up all env variables (see KT-26413)
+if (!kotlinBuildProperties.isInIdeaSync) {
     checkJDK()
 }
 
-var jdkChecked: Boolean = false
 fun checkJDK() {
-    if (jdkChecked) {
-        return
+    val missingEnvVars = JdkMajorVersion.values()
+        .filter { it.isMandatory() && extra[it.name] == jdkNotFoundConst }
+        .mapTo(ArrayList()) { it.name }
+
+    if (missingEnvVars.isNotEmpty()) {
+        throw GradleException("Required environment variables are missing: ${missingEnvVars.joinToString()}")
     }
-
-    val unpresentJdks = JdkMajorVersion.values()
-        .filter { it.isMandatory() }
-        .map { it.name }
-        .filter { extra[it] == jdkNotFoundConst }
-        .toList()
-
-    if (unpresentJdks.isNotEmpty()) {
-        throw GradleException("Please set environment variable" +
-                                      (if (unpresentJdks.size > 1) "s" else "") +
-                                      ": " + unpresentJdks.joinToString() +
-                                      " to point to corresponding JDK installation.")
-    }
-
-    jdkChecked = true
 }
 
 rootProject.apply {
@@ -182,7 +171,7 @@ extra["versions.trove4j"] = "1.0.20181211"
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.3-dev-9780"
+    extra["versions.kotlin-native"] = "1.3.50-dev-11052"
 }
 
 val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild
@@ -339,8 +328,6 @@ allprojects {
         internalKotlinRepo?.let(::maven)
     }
 
-    configureJvmProject(javaHome!!, jvmTarget!!)
-
     val commonCompilerArgs = listOfNotNull(
         "-Xallow-kotlin-package",
         "-Xread-deserialized-contracts",
@@ -381,10 +368,8 @@ allprojects {
     task("listDistJar") { listConfigurationContents("distJar") }
 
     afterEvaluate {
-        if (javaHome != defaultJavaHome || jvmTarget != defaultJvmTarget) {
-            logger.info("configuring project $name to compile to the target jvm version $jvmTarget using jdk: $javaHome")
-            configureJvmProject(javaHome!!, jvmTarget!!)
-        } // else we will actually fail during the first task execution. We could not fail before configuration is done due to impact on import in IDE
+        logger.info("configuring project $name to compile to the target jvm version $jvmTarget using jdk: $javaHome")
+        configureJvmProject(javaHome!!, jvmTarget!!)
 
         fun File.toProjectRootRelativePathOrSelf() = (relativeToOrNull(rootDir)?.takeUnless { it.startsWith("..") } ?: this).path
 
@@ -731,10 +716,23 @@ fun jdkPath(version: String): String {
 
 
 fun Project.configureJvmProject(javaHome: String, javaVersion: String) {
+    val currentJavaHome = File(System.getProperty("java.home")!!).canonicalPath
+    val shouldFork = !currentJavaHome.startsWith(File(javaHome).canonicalPath)
+
     tasks.withType<JavaCompile> {
         if (name != "compileJava9Java") {
-            options.isFork = true
-            options.forkOptions.javaHome = file(javaHome)
+            sourceCompatibility = javaVersion
+            targetCompatibility = javaVersion
+
+            if (shouldFork) {
+                logger.info("$path will be forked with $javaHome")
+                options.isFork = true
+                options.forkOptions.javaHome = file(javaHome)
+            } else {
+                options.isFork = false
+                options.forkOptions.javaHome = null
+            }
+
             options.compilerArgs.add("-proc:none")
             options.encoding = "UTF-8"
         }
