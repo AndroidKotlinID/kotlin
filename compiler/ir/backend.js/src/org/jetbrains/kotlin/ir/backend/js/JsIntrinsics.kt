@@ -145,8 +145,8 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     // Other:
 
     val jsObjectCreate = defineObjectCreateIntrinsic() // Object.create
-    val jsGetJSField = defineGetJSPropertyIntrinsic() // till we don't have dynamic type we use intrinsic which sets a field with any name
-    val jsSetJSField = defineSetJSPropertyIntrinsic() // till we don't have dynamic type we use intrinsic which sets a field with any name
+    val jsGetJSField = defineGetJSPropertyIntrinsic() // TODO: Replace with dynamic operators
+    val jsSetJSField = defineSetJSPropertyIntrinsic() // TODO: Replace with dynamic operators
     val jsCode = getInternalFunction("js") // js("<code>")
     val jsHashCode = getInternalFunction("hashCode")
     val jsGetObjectHashCode = getInternalFunction("getObjectHashCode")
@@ -189,6 +189,15 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
 
     val charClassSymbol = getInternalClassWithoutPackage("kotlin.Char")
     val charConstructor = charClassSymbol.constructors.single().owner
+
+    val stringClassSymbol = getInternalClassWithoutPackage("kotlin.String")
+    val stringConstructorSymbol = stringClassSymbol.constructors.single()
+
+    val anyClassSymbol = getInternalClassWithoutPackage("kotlin.Any")
+    val anyConstructorSymbol = anyClassSymbol.constructors.single()
+
+    val jsObjectClassSymbol = getInternalClassWithoutPackage("kotlin.js.JsObject")
+    val jsObjectConstructorSymbol by lazy { jsObjectClassSymbol.constructors.single() }
 
     val uByteClassSymbol by lazy { getInternalClassWithoutPackage("kotlin.UByte") }
     val uShortClassSymbol by lazy { getInternalClassWithoutPackage("kotlin.UShort") }

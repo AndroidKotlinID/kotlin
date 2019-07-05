@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.ir.backend.js.transformers.irToJs
 
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.utils.*
@@ -34,15 +33,6 @@ class IrModuleToJsTransformer(
             JsStringLiteral("use strict").makeStmt()
         )
 
-        // TODO: fix it up with new name generator
-        val anyName = context.getNameForClass(backendContext.irBuiltIns.anyClass.owner)
-        val throwableName = context.getNameForClass(backendContext.irBuiltIns.throwableClass.owner)
-        val stringName = context.getNameForClass(backendContext.irBuiltIns.stringClass.owner)
-
-        statements += JsVars(JsVars.JsVar(anyName, Namer.JS_OBJECT))
-        statements += JsVars(JsVars.JsVar(throwableName, Namer.JS_ERROR))
-        statements += JsVars(JsVars.JsVar(stringName, JsNameRef("String")))
-
         val preDeclarationBlock = JsBlock()
         val postDeclarationBlock = JsBlock()
 
@@ -50,7 +40,7 @@ class IrModuleToJsTransformer(
 
         module.files.forEach {
             statements.add(JsDocComment(mapOf("file" to it.path)).makeStmt())
-            statements.add(it.accept(IrFileToJsTransformer(), context))
+            statements.addAll(it.accept(IrFileToJsTransformer(), context).statements)
         }
 
         // sort member forwarding code
@@ -117,7 +107,9 @@ class IrModuleToJsTransformer(
         val expression =
             if (declaration is IrClass && declaration.isObject) {
                 // TODO: Use export names for properties
-                defineProperty(internalModuleName.makeRef(), name.ident, getter = JsNameRef("${name.ident}_getInstance"))
+                val instanceGetter = backendContext.objectToGetInstanceFunction[declaration.symbol]!!
+                val instanceGetterName: JsName = context.getNameForStaticFunction(instanceGetter)
+                defineProperty(internalModuleName.makeRef(), name.ident, getter = JsNameRef(instanceGetterName))
             } else {
                 jsAssignment(JsNameRef(exportName, internalModuleName.makeRef()), name.makeRef())
             }
@@ -145,20 +137,17 @@ class IrModuleToJsTransformer(
             irNamer = nameGenerator
         )
         val rootContext = JsGenerationContext(
-            parent = null,
-            currentBlock = program.globalBlock,
             currentFunction = null,
-            currentScope = program.rootScope,
             staticContext = staticContext
         )
 
         val rootFunction = JsFunction(program.rootScope, JsBlock(), "root function")
-        val internalModuleName = rootFunction.scope.declareName("_")
+        val internalModuleName = JsName("_")
 
         val (importStatements, importedJsModules) =
             generateImportStatements(
                 getNameForExternalDeclaration = { rootContext.getNameForStaticDeclaration(it) },
-                declareFreshGlobal = { rootFunction.scope.declareFreshName(sanitizeName(it)) }
+                declareFreshGlobal = { JsName(sanitizeName(it)) } // TODO: Declare fresh name
             )
 
         val moduleBody = generateModuleBody(module, rootContext)
