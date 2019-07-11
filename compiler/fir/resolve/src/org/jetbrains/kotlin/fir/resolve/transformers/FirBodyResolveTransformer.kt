@@ -335,7 +335,8 @@ open class FirBodyResolveTransformer(
         val consumer = createVariableAndObjectConsumer(
             session,
             callee.name,
-            info, inferenceComponents
+            info, inferenceComponents,
+            resolver.collector
         )
         val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
 
@@ -550,7 +551,7 @@ open class FirBodyResolveTransformer(
         resolver.callInfo = info
         resolver.scopes = (scopes + localScopes).asReversed()
 
-        val consumer = createFunctionConsumer(session, name, info, inferenceComponents)
+        val consumer = createFunctionConsumer(session, name, info, inferenceComponents, resolver.collector, resolver)
         val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
         val bestCandidates = result.bestCandidates()
         val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {
@@ -596,11 +597,23 @@ open class FirBodyResolveTransformer(
         )
 
         val resultExpression = functionCall.transformCalleeReference(StoreNameReference, nameReference) as FirFunctionCall
-        val typeRef = typeFromCallee(functionCall)
-        if (typeRef.type is ConeKotlinErrorType) {
-            functionCall.resultType = typeRef
+        val candidate = resultExpression.candidate()
+
+        // We need desugaring
+        val resultFunctionCall = if (candidate != null && candidate.callInfo != info) {
+            functionCall.copy(
+                explicitReceiver = candidate.callInfo.explicitReceiver,
+                arguments = candidate.callInfo.arguments,
+                safe = candidate.callInfo.isSafeCall
+            )
+        } else {
+            resultExpression
         }
-        return resultExpression
+        val typeRef = typeFromCallee(resultFunctionCall)
+        if (typeRef.type is ConeKotlinErrorType) {
+            resultFunctionCall.resultType = typeRef
+        }
+        return resultFunctionCall
     }
 
     data class LambdaResolution(val expectedReturnTypeRef: FirResolvedTypeRef?)
@@ -971,9 +984,6 @@ open class FirBodyResolveTransformer(
                             else -> resultType
                         }
                     )
-                    if (variable is FirProperty) {
-                        variable.getter.transformReturnTypeRef(this, variable.returnTypeRef)
-                    }
                 }
                 variable.delegate != null -> {
                     // TODO: type from delegate
@@ -1004,6 +1014,9 @@ open class FirBodyResolveTransformer(
                         this, FirErrorTypeRefImpl(session, null, "Cannot infer variable type without initializer / getter / delegate")
                     )
                 }
+            }
+            if (variable is FirProperty && variable.getter.returnTypeRef is FirImplicitTypeRef) {
+                variable.getter.transformReturnTypeRef(this, variable.returnTypeRef)
             }
         }
     }
@@ -1268,6 +1281,18 @@ internal object StoreType : FirTransformer<FirTypeRef>() {
     override fun transformTypeRef(typeRef: FirTypeRef, data: FirTypeRef): CompositeTransformResult<FirTypeRef> {
         return data.compose()
     }
+}
+
+internal object StoreExplicitReceiver : FirTransformer<FirExpression>() {
+    override fun <E : FirElement> transformElement(element: E, data: FirExpression): CompositeTransformResult<E> {
+        return element.compose()
+    }
+
+    override fun transformExpression(expression: FirExpression, data: FirExpression): CompositeTransformResult<FirStatement> {
+        return data.compose()
+    }
+
+
 }
 
 private object ReplaceInArguments : FirTransformer<Map<FirElement, FirElement>>() {

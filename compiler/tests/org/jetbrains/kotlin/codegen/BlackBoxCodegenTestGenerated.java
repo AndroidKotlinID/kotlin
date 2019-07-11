@@ -10616,6 +10616,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/extensionFunctions/kt1953_class.kt");
         }
 
+        @TestMetadata("kt23675.kt")
+        public void testKt23675() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/kt23675.kt");
+        }
+
         @TestMetadata("kt3285.kt")
         public void testKt3285() throws Exception {
             runTest("compiler/testData/codegen/box/extensionFunctions/kt3285.kt");
@@ -13983,6 +13988,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnPrivateMemberExtensionReceiver_lv12.kt");
             }
 
+            @TestMetadata("paramAssertionMessage.kt")
+            public void testParamAssertionMessage() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/paramAssertionMessage.kt");
+            }
+
             @TestMetadata("compiler/testData/codegen/box/javaInterop/notNullAssertions/enhancedNullability")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -14867,6 +14877,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("innerClass.kt")
         public void testInnerClass() throws Exception {
             runTest("compiler/testData/codegen/box/jvmOverloads/innerClass.kt");
+        }
+
+        @TestMetadata("manyParameters.kt")
+        public void testManyParameters() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmOverloads/manyParameters.kt");
         }
 
         @TestMetadata("multipleDefaultParameters.kt")
@@ -20071,6 +20086,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
 
                 public void testAllFilesPresentInOnTypes() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/reflection/annotations/onTypes"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("arrayKClass.kt")
+                public void testArrayKClass() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/annotations/onTypes/arrayKClass.kt");
                 }
 
                 @TestMetadata("classLiteralWithExpectedType.kt")
