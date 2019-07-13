@@ -120,11 +120,22 @@ abstract class ScriptDefinition : UserDataHolderBase() {
             )
         }
 
-        override fun isScript(file: File): Boolean = file.name.endsWith(".$fileExtension")
+        private val filePathPattern by lazy {
+            compilationConfiguration[ScriptCompilationConfiguration.filePathPattern]?.takeIf { it.isNotBlank() }
+        }
+
+        override fun isScript(file: File): Boolean =
+            file.name.endsWith(".$fileExtension") &&
+                    (filePathPattern?.let {
+                        Regex(it).matches(file.path)
+                    } ?: true)
 
         override val fileExtension: String get() = compilationConfiguration[ScriptCompilationConfiguration.fileExtension]!!
 
-        override val name: String get() = compilationConfiguration[ScriptCompilationConfiguration.displayName]!!
+        override val name: String
+            get() =
+                compilationConfiguration[ScriptCompilationConfiguration.displayName]?.takeIf { it.isNotBlank() }
+                    ?: compilationConfiguration[ScriptCompilationConfiguration.baseClass]!!.typeName.substringAfterLast('.')
 
         override val definitionId: String get() = compilationConfiguration[ScriptCompilationConfiguration.baseClass]!!.typeName
 
