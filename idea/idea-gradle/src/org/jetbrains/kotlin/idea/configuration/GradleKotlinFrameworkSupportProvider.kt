@@ -188,7 +188,7 @@ open class GradleKotlinJavaFrameworkSupportProvider(
         }
     }
 
-    override fun getDescription() = "A Kotlin library or application targeting the JVM"
+    override fun getDescription() = "A single-platform Kotlin library or application targeting the JVM"
 }
 
 abstract class GradleKotlinJSFrameworkSupportProvider(
@@ -213,7 +213,7 @@ abstract class GradleKotlinJSFrameworkSupportProvider(
     override fun getPluginExpression() = "id 'org.jetbrains.kotlin.js'"
     override fun getDependencies(sdk: Sdk?) = listOf(MAVEN_JS_STDLIB_ID)
     override fun getTestDependencies() = listOf(MAVEN_JS_TEST_ID)
-    override fun getDescription() = "A Kotlin library or application targeting JavaScript"
+    override fun getDescription() = "A single-platform Kotlin library or application targeting JavaScript"
 }
 
 open class GradleKotlinJSBrowserFrameworkSupportProvider(
@@ -223,7 +223,7 @@ open class GradleKotlinJSBrowserFrameworkSupportProvider(
     override val jsSubTargetName: String
         get() = "browser"
 
-    override fun getDescription() = "A Kotlin library or application targeting JavaScript for browser"
+    override fun getDescription() = "A single-platform Kotlin library or application targeting JavaScript for browser"
 
     override fun addSupport(
         buildScriptData: BuildScriptDataBuilder,
@@ -286,11 +286,11 @@ open class GradleKotlinJSNodeFrameworkSupportProvider(
     override val jsSubTargetName: String
         get() = "nodejs"
 
-    override fun getDescription() = "A Kotlin library or application targeting JavaScript for Node.js"
+    override fun getDescription() = "A single-platform Kotlin library or application targeting JavaScript for Node.js"
 }
 
-class GradleKotlinMPPFrameworkSupportProvider : GradleKotlinFrameworkSupportProvider(
-    "KOTLIN_MPP", "Kotlin (Multiplatform - Experimental)", KotlinIcons.MPP
+open class GradleKotlinMPPFrameworkSupportProvider : GradleKotlinFrameworkSupportProvider(
+    "KOTLIN_MPP", "Kotlin/Multiplatform", KotlinIcons.MPP
 ) {
     override fun getPluginId() = "org.jetbrains.kotlin.multiplatform"
     override fun getPluginExpression() = "id 'org.jetbrains.kotlin.multiplatform'"
@@ -298,6 +298,41 @@ class GradleKotlinMPPFrameworkSupportProvider : GradleKotlinFrameworkSupportProv
     override fun getDependencies(sdk: Sdk?): List<String> = listOf()
     override fun getTestDependencies(): List<String> = listOf()
 
-    override fun getDescription() = "Kotlin multiplatform code"
+    override fun getDescription() = "Multi-targeted (JVM, JS, iOS, etc.) project with shared code in common modules"
+}
+
+open class GradleKotlinMPPSourceSetsFrameworkSupportProvider : GradleKotlinMPPFrameworkSupportProvider() {
+
+    override fun addSupport(
+        buildScriptData: BuildScriptDataBuilder,
+        module: Module,
+        sdk: Sdk?,
+        specifyPluginVersionIfNeeded: Boolean,
+        explicitPluginVersion: String?
+    ) {
+        super.addSupport(buildScriptData, module, sdk, specifyPluginVersionIfNeeded, explicitPluginVersion)
+
+        buildScriptData.addOther(
+            """kotlin {
+    /* Targets configuration omitted. 
+    *  To find out how to configure the targets, please follow the link:
+    *  https://kotlinlang.org/docs/reference/building-mpp-with-gradle.html#setting-up-targets */
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+            }
+        }
+    }
+}"""
+        )
+    }
 }
 

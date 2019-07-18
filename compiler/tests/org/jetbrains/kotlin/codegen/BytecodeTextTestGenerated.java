@@ -1742,26 +1742,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forInStringSpecialized.kt");
         }
 
-        @TestMetadata("forInUntil.kt")
-        public void testForInUntil() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil.kt");
-        }
-
-        @TestMetadata("forInUntilCharMaxValue.kt")
-        public void testForInUntilCharMaxValue() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntilCharMaxValue.kt");
-        }
-
-        @TestMetadata("forInUntilIntMaxValue.kt")
-        public void testForInUntilIntMaxValue() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntilIntMaxValue.kt");
-        }
-
-        @TestMetadata("forInUntilLongMaxValue.kt")
-        public void testForInUntilLongMaxValue() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntilLongMaxValue.kt");
-        }
-
         @TestMetadata("forIntInDownTo.kt")
         public void testForIntInDownTo() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forIntInDownTo.kt");
@@ -2077,6 +2057,64 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             @TestMetadata("forInSequenceWithIndexWithExplicitlyTypedIndexVariable.kt")
             public void testForInSequenceWithIndexWithExplicitlyTypedIndexVariable() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/forInSequenceWithIndex/forInSequenceWithIndexWithExplicitlyTypedIndexVariable.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/bytecodeText/forLoop/forInUntil")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ForInUntil extends AbstractBytecodeTextTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInForInUntil() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/forLoop/forInUntil"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("forInUntilChar.kt")
+            public void testForInUntilChar() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilChar.kt");
+            }
+
+            @TestMetadata("forInUntilCharMaxValue.kt")
+            public void testForInUntilCharMaxValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilCharMaxValue.kt");
+            }
+
+            @TestMetadata("forInUntilCharMinValue.kt")
+            public void testForInUntilCharMinValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilCharMinValue.kt");
+            }
+
+            @TestMetadata("forInUntilInt.kt")
+            public void testForInUntilInt() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilInt.kt");
+            }
+
+            @TestMetadata("forInUntilIntMaxValue.kt")
+            public void testForInUntilIntMaxValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilIntMaxValue.kt");
+            }
+
+            @TestMetadata("forInUntilIntMinValue.kt")
+            public void testForInUntilIntMinValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilIntMinValue.kt");
+            }
+
+            @TestMetadata("forInUntilLong.kt")
+            public void testForInUntilLong() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilLong.kt");
+            }
+
+            @TestMetadata("forInUntilLongMaxValue.kt")
+            public void testForInUntilLongMaxValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilLongMaxValue.kt");
+            }
+
+            @TestMetadata("forInUntilLongMinValue.kt")
+            public void testForInUntilLongMinValue() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilLongMinValue.kt");
             }
         }
     }
@@ -3643,6 +3681,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/unsignedTypes/unsignedIntRemainder_jvm18.kt");
         }
 
+        @TestMetadata("unsignedIntToString_jvm18.kt")
+        public void testUnsignedIntToString_jvm18() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/unsignedTypes/unsignedIntToString_jvm18.kt");
+        }
+
         @TestMetadata("unsignedLongCompare_jvm18.kt")
         public void testUnsignedLongCompare_jvm18() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/unsignedTypes/unsignedLongCompare_jvm18.kt");
@@ -3656,6 +3699,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("unsignedLongRemainder_jvm18.kt")
         public void testUnsignedLongRemainder_jvm18() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/unsignedTypes/unsignedLongRemainder_jvm18.kt");
+        }
+
+        @TestMetadata("unsignedLongToString_jvm18.kt")
+        public void testUnsignedLongToString_jvm18() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/unsignedTypes/unsignedLongToString_jvm18.kt");
         }
 
         @TestMetadata("whenByUnsigned.kt")
