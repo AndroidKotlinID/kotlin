@@ -153,7 +153,11 @@ fun IrValueParameter.copyTo(
     isCrossinline: Boolean = this.isCrossinline,
     isNoinline: Boolean = this.isNoinline
 ): IrValueParameter {
-    val descriptor = WrappedValueParameterDescriptor(symbol.descriptor.annotations, symbol.descriptor.source)
+    val descriptor = if (index < 0) {
+        WrappedReceiverParameterDescriptor(this.descriptor.annotations, this.descriptor.source)
+    } else {
+        WrappedValueParameterDescriptor(this.descriptor.annotations, this.descriptor.source)
+    }
     val symbol = IrValueParameterSymbolImpl(descriptor)
     val defaultValueCopy = defaultValue?.deepCopyWithVariables()
     defaultValueCopy?.patchDeclarationParents(irFunction)

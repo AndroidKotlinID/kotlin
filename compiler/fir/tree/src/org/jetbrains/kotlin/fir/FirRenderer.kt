@@ -346,8 +346,8 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         visitVariable(property)
         println()
         pushIndent()
-        property.getter.accept(this)
-        if (property.getter.body == null) {
+        property.getter?.accept(this)
+        if (property.getter?.body == null) {
             println()
         }
         if (property.isVar) {
@@ -625,6 +625,10 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         print("${constExpression.kind}(${constExpression.value})")
     }
 
+    override fun visitWrappedDelegateExpression(wrappedDelegateExpression: FirWrappedDelegateExpression) {
+        wrappedDelegateExpression.expression.accept(this)
+    }
+
     override fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression) {
         print(namedArgumentExpression.name)
         print(" = ")
@@ -801,6 +805,12 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     override fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference) {
         print("F|")
         print(backingFieldReference.coneSymbol.callableId)
+        print("|")
+    }
+
+    override fun visitDelegateFieldReference(delegateFieldReference: FirDelegateFieldReference) {
+        print("D|")
+        print(delegateFieldReference.coneSymbol.callableId)
         print("|")
     }
 
