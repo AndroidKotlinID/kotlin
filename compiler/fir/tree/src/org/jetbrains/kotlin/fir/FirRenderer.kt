@@ -16,7 +16,9 @@ import org.jetbrains.kotlin.fir.expressions.impl.FirLoopJump
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
+import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
+import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.types.*
@@ -25,6 +27,7 @@ import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.Printer
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 fun FirElement.renderWithType(): String = buildString {
     append(this@renderWithType)
@@ -33,45 +36,6 @@ fun FirElement.renderWithType(): String = buildString {
 }
 
 fun FirElement.render(): String = buildString { this@render.accept(FirRenderer(this)) }
-
-
-fun ConeKotlinType.render(): String {
-    return when (this) {
-        is ConeTypeVariableType -> "TypeVariable(${this.lookupTag.name})"
-        is ConeDefinitelyNotNullType -> "${original.render()}!"
-        is ConeClassErrorType -> "class error: $reason"
-        is ConeCapturedType -> "captured type: lowerType = ${lowerType?.render()}"
-        is ConeClassLikeType -> {
-            val sb = StringBuilder()
-            sb.append(lookupTag.classId.asString())
-            if (typeArguments.isNotEmpty()) {
-                sb.append(typeArguments.joinToString(prefix = "<", postfix = ">") {
-                    when (it) {
-                        ConeStarProjection -> "*"
-                        is ConeKotlinTypeProjectionIn -> "in ${it.type.render()}"
-                        is ConeKotlinTypeProjectionOut -> "out ${it.type.render()}"
-                        is ConeKotlinType -> it.render()
-                    }
-                })
-            }
-            sb.toString()
-        }
-        is ConeTypeParameterType -> {
-            lookupTag.name.asString()
-        }
-        is ConeFlexibleType -> {
-            buildString {
-                append("ft<")
-                append(lowerBound.render())
-                append(lowerBound.nullability.suffix)
-                append(", ")
-                append(upperBound.render())
-                append(upperBound.nullability.suffix)
-                append(">")
-            }
-        }
-    }
-}
 
 class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
     private val printer = Printer(builder)
@@ -461,9 +425,17 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         }
         typeParameter.variance.renderVariance()
         print(typeParameter.name)
-        if (typeParameter.bounds.isNotEmpty()) {
+
+        val meaningfulBounds = typeParameter.bounds.filter {
+            if (it !is FirResolvedTypeRef) return@filter true
+            if (!it.type.isNullable) return@filter true
+            val type = it.type as? ConeLookupTagBasedType ?: return@filter true
+            type.lookupTag.safeAs<ConeClassLikeLookupTag>()?.classId != StandardClassIds.Any
+        }
+
+        if (meaningfulBounds.isNotEmpty()) {
             print(" : ")
-            typeParameter.bounds.renderSeparated()
+            meaningfulBounds.renderSeparated()
         }
     }
 

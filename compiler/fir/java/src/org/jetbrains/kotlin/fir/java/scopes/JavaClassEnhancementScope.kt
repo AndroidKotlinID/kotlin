@@ -86,6 +86,7 @@ class JavaClassEnhancementScope(
                 with(firElement) {
                     FirJavaField(
                         this@JavaClassEnhancementScope.session,
+                        firElement.psi,
                         symbol,
                         name,
                         visibility,
@@ -175,6 +176,7 @@ class JavaClassEnhancementScope(
                     this.name, newTypeRef,
                     defaultValue ?: newDefaultValue, isCrossinline, isNoinline, isVararg
                 ).apply {
+                    resolvePhase = FirResolvePhase.DECLARATIONS
                     annotations += valueParameter.annotations
                 }
             }
@@ -184,7 +186,7 @@ class JavaClassEnhancementScope(
                 val symbol = FirConstructorSymbol(methodId)
                 if (firMethod.isPrimary) {
                     FirPrimaryConstructorImpl(
-                        this@JavaClassEnhancementScope.session, null, symbol,
+                        this@JavaClassEnhancementScope.session, firMethod.psi, symbol,
                         firMethod.visibility,
                         isExpect = false,
                         isActual = false,
@@ -193,20 +195,22 @@ class JavaClassEnhancementScope(
                     )
                 } else {
                     FirConstructorImpl(
-                        this@JavaClassEnhancementScope.session, null, symbol,
+                        this@JavaClassEnhancementScope.session, firMethod.psi, symbol,
                         newReceiverTypeRef, newReturnTypeRef
                     )
                 }.apply {
+                    resolvePhase = FirResolvePhase.DECLARATIONS
                     this.valueParameters += newValueParameters
                     this.typeParameters += firMethod.typeParameters
                 }
             }
             else -> FirMemberFunctionImpl(
-                this@JavaClassEnhancementScope.session, null,
+                this@JavaClassEnhancementScope.session, firMethod.psi,
                 if (!isAccessor) FirNamedFunctionSymbol(methodId)
                 else FirAccessorSymbol(callableId = propertyId!!, accessorId = methodId),
                 name, newReceiverTypeRef, newReturnTypeRef
             ).apply {
+                resolvePhase = FirResolvePhase.DECLARATIONS
                 this.valueParameters += newValueParameters
                 this.typeParameters += firMethod.typeParameters
             }
@@ -302,7 +306,7 @@ class JavaClassEnhancementScope(
         ).enhance(session, jsr305State, predefinedEnhancementInfo?.parametersInfo?.getOrNull(index))
         val firResolvedTypeRef = signatureParts.type
         val defaultValueExpression = when (val defaultValue = ownerParameter.getDefaultValueFromAnnotation()) {
-            NullDefaultValue -> FirConstExpressionImpl(session, null, IrConstKind.Null, null)
+            NullDefaultValue -> FirConstExpressionImpl(null, IrConstKind.Null, null)
             is StringDefaultValue -> firResolvedTypeRef.type.lexicalCastFrom(session, defaultValue.value)
             null -> null
         }
