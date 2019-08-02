@@ -13,20 +13,14 @@ import org.jetbrains.kotlin.fir.FirFunctionTarget
 import org.jetbrains.kotlin.fir.FirReference
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirWhenSubject
-import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableAccessorsOwner
-import org.jetbrains.kotlin.fir.declarations.impl.FirPropertyAccessorImpl
-import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
-import org.jetbrains.kotlin.fir.declarations.impl.FirVariableImpl
+import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
 import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.ConeStarProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.impl.FirImplicitBooleanTypeRef
-import org.jetbrains.kotlin.fir.types.impl.FirImplicitKPropertyTypeRef
-import org.jetbrains.kotlin.fir.types.impl.FirImplicitTypeRefImpl
-import org.jetbrains.kotlin.fir.types.impl.FirImplicitUnitTypeRef
+import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.Name
@@ -35,7 +29,7 @@ import org.jetbrains.kotlin.resolve.constants.evaluate.*
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
-internal fun String.parseCharacter(): Char? {
+fun String.parseCharacter(): Char? {
     // Strip the quotes
     if (length < 2 || this[0] != '\'' || this[length - 1] != '\'') {
         return null
@@ -58,7 +52,7 @@ internal fun String.parseCharacter(): Char? {
     }
 }
 
-internal fun escapedStringToCharacter(text: String): Char? {
+fun escapedStringToCharacter(text: String): Char? {
     assert(text.isNotEmpty() && text[0] == '\\') {
         "Only escaped sequences must be passed to this routine: $text"
     }
@@ -102,62 +96,15 @@ internal fun translateEscape(c: Char): Char? =
         else -> null
     }
 
-internal fun generateConstantExpressionByLiteral(expression: KtConstantExpression): FirExpression {
-    val type = expression.node.elementType
-    val text: String = expression.text
-    val convertedText: Any? = when (type) {
-        KtNodeTypes.INTEGER_CONSTANT, KtNodeTypes.FLOAT_CONSTANT -> parseNumericLiteral(text, type)
-        KtNodeTypes.BOOLEAN_CONSTANT -> parseBoolean(text)
-        else -> null
-    }
-    return when (type) {
-        KtNodeTypes.INTEGER_CONSTANT ->
-            if (convertedText is Long &&
-                (hasLongSuffix(text) || hasUnsignedLongSuffix(text) || hasUnsignedSuffix(text) ||
-                        convertedText > Int.MAX_VALUE || convertedText < Int.MIN_VALUE)
-            ) {
-                FirConstExpressionImpl(
-                    expression, IrConstKind.Long, convertedText, "Incorrect long: $text"
-                )
-            } else if (convertedText is Number) {
-                // TODO: support byte / short
-                FirConstExpressionImpl(expression, IrConstKind.Int, convertedText.toInt(), "Incorrect int: $text")
-            } else {
-                FirErrorExpressionImpl(expression, reason = "Incorrect constant expression: $text")
-            }
-        KtNodeTypes.FLOAT_CONSTANT ->
-            if (convertedText is Float) {
-                FirConstExpressionImpl(
-                    expression, IrConstKind.Float, convertedText, "Incorrect float: $text"
-                )
-            } else {
-                FirConstExpressionImpl(
-                    expression, IrConstKind.Double, convertedText as Double, "Incorrect double: $text"
-                )
-            }
-        KtNodeTypes.CHARACTER_CONSTANT ->
-            FirConstExpressionImpl(
-                expression, IrConstKind.Char, text.parseCharacter(), "Incorrect character: $text"
-            )
-        KtNodeTypes.BOOLEAN_CONSTANT ->
-            FirConstExpressionImpl(expression, IrConstKind.Boolean, convertedText as Boolean)
-        KtNodeTypes.NULL ->
-            FirConstExpressionImpl(expression, IrConstKind.Null, null)
-        else ->
-            throw AssertionError("Unknown literal type: $type, $text")
-    }
-
-}
-
-internal fun IElementType.toBinaryName(): Name? {
+fun IElementType.toBinaryName(): Name? {
     return OperatorConventions.BINARY_OPERATION_NAMES[this]
 }
 
-internal fun IElementType.toUnaryName(): Name? {
+fun IElementType.toUnaryName(): Name? {
     return OperatorConventions.UNARY_OPERATION_NAMES[this]
 }
 
-internal fun IElementType.toFirOperation(): FirOperation =
+fun IElementType.toFirOperation(): FirOperation =
     when (this) {
         KtTokens.LT -> FirOperation.LT
         KtTokens.GT -> FirOperation.GT
@@ -181,8 +128,14 @@ internal fun IElementType.toFirOperation(): FirOperation =
         else -> throw AssertionError(this.toString())
     }
 
-internal fun FirExpression.generateNotNullOrOther(
-    session: FirSession, other: FirExpression, caseId: String, basePsi: KtElement
+fun FirTypeParameterImpl.addDefaultBoundIfNecessary() {
+    if (bounds.isEmpty()) {
+        bounds += FirImplicitNullableAnyTypeRef(null)
+    }
+}
+
+fun FirExpression.generateNotNullOrOther(
+    session: FirSession, other: FirExpression, caseId: String, basePsi: KtElement?
 ): FirWhenExpression {
     val subjectName = Name.special("<$caseId>")
     val subjectVariable = generateTemporaryVariable(session, basePsi, subjectName, this)
@@ -209,8 +162,8 @@ internal fun FirExpression.generateNotNullOrOther(
     }
 }
 
-internal fun FirExpression.generateLazyLogicalOperation(
-    other: FirExpression, isAnd: Boolean, basePsi: KtElement
+fun FirExpression.generateLazyLogicalOperation(
+    other: FirExpression, isAnd: Boolean, basePsi: KtElement?
 ): FirWhenExpression {
     val terminalExpression = FirConstExpressionImpl(psi, IrConstKind.Boolean, !isAnd)
     val terminalBlock = FirSingleExpressionBlock(terminalExpression)
@@ -281,58 +234,11 @@ internal fun Array<KtWhenCondition>.toFirWhenCondition(
     return firCondition!!
 }
 
-internal fun Array<KtStringTemplateEntry>.toInterpolatingCall(
-    base: KtStringTemplateExpression,
-    convert: KtExpression?.(String) -> FirExpression
-): FirExpression {
-    val sb = StringBuilder()
-    var hasExpressions = false
-    var result: FirExpression? = null
-    var callCreated = false
-    for (entry in this) {
-        val nextArgument = when (entry) {
-            is KtLiteralStringTemplateEntry -> {
-                sb.append(entry.text)
-                FirConstExpressionImpl(entry, IrConstKind.String, entry.text)
-            }
-            is KtEscapeStringTemplateEntry -> {
-                sb.append(entry.unescapedValue)
-                FirConstExpressionImpl(entry, IrConstKind.String, entry.unescapedValue)
-            }
-            is KtStringTemplateEntryWithExpression -> {
-                val innerExpression = entry.expression
-                hasExpressions = true
-                innerExpression.convert("Incorrect template argument")
-            }
-            else -> {
-                hasExpressions = true
-                FirErrorExpressionImpl(
-                    entry, "Incorrect template entry: ${entry.text}"
-                )
-            }
-        }
-        result = when {
-            result == null -> nextArgument
-            callCreated && result is FirStringConcatenationCallImpl -> result.apply {
-                arguments += nextArgument
-            }
-            else -> {
-                callCreated = true
-                FirStringConcatenationCallImpl(base).apply {
-                    arguments += result!!
-                    arguments += nextArgument
-                }
-            }
-        }
-    }
-    return if (hasExpressions) result!! else FirConstExpressionImpl(base, IrConstKind.String, sb.toString())
-}
-
-internal fun FirExpression.generateContainsOperation(
+fun FirExpression.generateContainsOperation(
     argument: FirExpression,
     inverted: Boolean,
     base: KtExpression?,
-    operationReference: KtOperationReferenceExpression
+    operationReference: KtOperationReferenceExpression?
 ): FirFunctionCall {
     val containsCall = FirFunctionCallImpl(base).apply {
         calleeReference = FirSimpleNamedReference(operationReference, OperatorNameConventions.CONTAINS)
@@ -346,91 +252,12 @@ internal fun FirExpression.generateContainsOperation(
     }
 }
 
-
-/**
- * given:
- * argument++
- *
- * result:
- * {
- *     val <unary> = argument
- *     argument = <unary>.inc()
- *     ^<unary>
- * }
- *
- * given:
- * ++argument
- *
- * result:
- * {
- *     val <unary> = argument
- *     argument = <unary>.inc()
- *     ^argument
- * }
- *
- */
-
-// TODO: Refactor, support receiver capturing in case of a.b
-internal fun generateIncrementOrDecrementBlock(
-    session: FirSession,
-    baseExpression: KtUnaryExpression,
-    argument: KtExpression?,
-    callName: Name,
-    prefix: Boolean,
-    convert: KtExpression.() -> FirExpression
-): FirExpression {
-    if (argument == null) {
-        return FirErrorExpressionImpl(argument, "Inc/dec without operand")
-    }
-    return FirBlockImpl(baseExpression).apply {
-        val tempName = Name.special("<unary>")
-        val temporaryVariable = generateTemporaryVariable(session, baseExpression, tempName, argument.convert())
-        statements += temporaryVariable
-        val resultName = Name.special("<unary-result>")
-        val resultInitializer = FirFunctionCallImpl(baseExpression).apply {
-            this.calleeReference = FirSimpleNamedReference(baseExpression.operationReference, callName)
-            this.explicitReceiver = generateResolvedAccessExpression(baseExpression, temporaryVariable)
-        }
-        val resultVar = generateTemporaryVariable(session, baseExpression, resultName, resultInitializer)
-        val assignment = argument.generateAssignment(
-            session, baseExpression,
-            if (prefix && argument !is KtSimpleNameExpression)
-                generateResolvedAccessExpression(baseExpression, resultVar)
-            else
-                resultInitializer,
-            FirOperation.ASSIGN, convert
-        )
-
-        fun appendAssignment() {
-            if (assignment is FirBlock) {
-                statements += assignment.statements
-            } else {
-                statements += assignment
-            }
-        }
-
-        if (prefix) {
-            if (argument !is KtSimpleNameExpression) {
-                statements += resultVar
-                appendAssignment()
-                statements += generateResolvedAccessExpression(baseExpression, resultVar)
-            } else {
-                appendAssignment()
-                statements += generateAccessExpression(baseExpression, argument.getReferencedNameAsName())
-            }
-        } else {
-            appendAssignment()
-            statements += generateResolvedAccessExpression(baseExpression, temporaryVariable)
-        }
-    }
-}
-
-internal fun generateAccessExpression(psi: PsiElement?, name: Name): FirQualifiedAccessExpression =
+fun generateAccessExpression(psi: PsiElement?, name: Name): FirQualifiedAccessExpression =
     FirQualifiedAccessExpressionImpl(psi).apply {
         calleeReference = FirSimpleNamedReference(psi, name)
     }
 
-internal fun generateResolvedAccessExpression(psi: PsiElement?, variable: FirVariable<*>): FirQualifiedAccessExpression =
+fun generateResolvedAccessExpression(psi: PsiElement?, variable: FirVariable<*>): FirQualifiedAccessExpression =
     FirQualifiedAccessExpressionImpl(psi).apply {
         calleeReference = FirResolvedCallableReferenceImpl(psi, variable.name, variable.symbol)
     }
@@ -462,108 +289,18 @@ internal fun generateDestructuringBlock(
     }
 }
 
-internal fun generateTemporaryVariable(
+fun generateTemporaryVariable(
     session: FirSession, psi: PsiElement?, name: Name, initializer: FirExpression
 ): FirVariable<*> =
     FirVariableImpl(session, psi, name, FirImplicitTypeRefImpl(psi), false, initializer, FirVariableSymbol(name)).apply {
         symbol.bind(this)
     }
 
-internal fun generateTemporaryVariable(
+fun generateTemporaryVariable(
     session: FirSession, psi: PsiElement?, specialName: String, initializer: FirExpression
 ): FirVariable<*> = generateTemporaryVariable(session, psi, Name.special("<$specialName>"), initializer)
 
-private fun FirModifiableQualifiedAccess<*>.initializeLValue(
-    left: KtExpression?,
-    convertQualified: KtQualifiedExpression.() -> FirQualifiedAccess?
-): FirReference {
-    return when (left) {
-        is KtSimpleNameExpression -> {
-            FirSimpleNamedReference(left, left.getReferencedNameAsName())
-        }
-        is KtThisExpression -> {
-            FirExplicitThisReference(left, left.getLabelName())
-        }
-        is KtQualifiedExpression -> {
-            val firMemberAccess = left.convertQualified()
-            if (firMemberAccess != null) {
-                explicitReceiver = firMemberAccess.explicitReceiver
-                safe = firMemberAccess.safe
-                firMemberAccess.calleeReference
-            } else {
-                FirErrorNamedReference(left, "Unsupported qualified LValue: ${left.text}")
-            }
-        }
-        is KtParenthesizedExpression -> {
-            initializeLValue(left.expression, convertQualified)
-        }
-        else -> {
-            FirErrorNamedReference(left, "Unsupported LValue: ${left?.javaClass}")
-        }
-    }
-}
-
-internal fun KtExpression?.generateAssignment(
-    session: FirSession,
-    psi: PsiElement?,
-    value: FirExpression,
-    operation: FirOperation,
-    convert: KtExpression.() -> FirExpression
-): FirStatement {
-    if (this is KtParenthesizedExpression) {
-        return expression.generateAssignment(session, psi, value, operation, convert)
-    }
-    if (this is KtArrayAccessExpression) {
-        val arrayExpression = this.arrayExpression
-        val firArrayExpression = arrayExpression?.convert() ?: FirErrorExpressionImpl(arrayExpression, "No array expression")
-        val arraySet = if (operation != FirOperation.ASSIGN) {
-            FirArraySetCallImpl(psi, value, operation).apply {
-                for (indexExpression in indexExpressions) {
-                    indexes += indexExpression.convert()
-                }
-            }
-        } else {
-            return FirFunctionCallImpl(psi).apply {
-                calleeReference = FirSimpleNamedReference(psi, OperatorNameConventions.SET)
-                explicitReceiver = firArrayExpression
-                for (indexExpression in indexExpressions) {
-                    arguments += indexExpression.convert()
-                }
-                arguments += value
-            }
-        }
-        if (arrayExpression is KtSimpleNameExpression) {
-            return arraySet.apply {
-                lValue = initializeLValue(arrayExpression) { convert() as? FirQualifiedAccess }
-            }
-        }
-        return FirBlockImpl(arrayExpression).apply {
-            val name = Name.special("<array-set>")
-            statements += generateTemporaryVariable(session, this@generateAssignment, name, firArrayExpression)
-            statements += arraySet.apply { lValue = FirSimpleNamedReference(arrayExpression, name) }
-        }
-    }
-    if (operation != FirOperation.ASSIGN &&
-        this !is KtSimpleNameExpression && this !is KtThisExpression &&
-        (this !is KtQualifiedExpression || selectorExpression !is KtSimpleNameExpression)
-    ) {
-        return FirBlockImpl(this).apply {
-            val name = Name.special("<complex-set>")
-            statements += generateTemporaryVariable(
-                session, this@generateAssignment, name,
-                this@generateAssignment?.convert() ?: FirErrorExpressionImpl(this@generateAssignment, "No LValue in assignment")
-            )
-            statements += FirVariableAssignmentImpl(psi, value, operation).apply {
-                lValue = FirSimpleNamedReference(this@generateAssignment, name)
-            }
-        }
-    }
-    return FirVariableAssignmentImpl(psi, value, operation).apply {
-        lValue = initializeLValue(this@generateAssignment) { convert() as? FirQualifiedAccess }
-    }
-}
-
-internal fun FirModifiableAccessorsOwner.generateAccessorsByDelegate(session: FirSession, member: Boolean, stubMode: Boolean) {
+fun FirModifiableAccessorsOwner.generateAccessorsByDelegate(session: FirSession, member: Boolean, stubMode: Boolean) {
     val variable = this as FirVariable<*>
     val delegateFieldSymbol = delegateFieldSymbol ?: return
     val delegate = delegate as? FirWrappedDelegateExpressionImpl ?: return

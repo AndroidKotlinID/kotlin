@@ -3231,6 +3231,66 @@ public inline fun UShortArray.copyOfRange(fromIndex: Int, toIndex: Int): UShortA
 }
 
 /**
+ * Fills this array or its subrange with the specified [element] value.
+ * 
+ * @param fromIndex the start of the range (inclusive), 0 by default.
+ * @param toIndex the end of the range (exclusive), size of this array by default.
+ * 
+ * @throws IndexOutOfBoundsException if [fromIndex] is less than zero or [toIndex] is greater than the size of this array.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ */
+@SinceKotlin("1.3")
+@ExperimentalUnsignedTypes
+public fun UIntArray.fill(element: UInt, fromIndex: Int = 0, toIndex: Int = size): Unit {
+    storage.fill(element.toInt(), fromIndex, toIndex)
+}
+
+/**
+ * Fills this array or its subrange with the specified [element] value.
+ * 
+ * @param fromIndex the start of the range (inclusive), 0 by default.
+ * @param toIndex the end of the range (exclusive), size of this array by default.
+ * 
+ * @throws IndexOutOfBoundsException if [fromIndex] is less than zero or [toIndex] is greater than the size of this array.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ */
+@SinceKotlin("1.3")
+@ExperimentalUnsignedTypes
+public fun ULongArray.fill(element: ULong, fromIndex: Int = 0, toIndex: Int = size): Unit {
+    storage.fill(element.toLong(), fromIndex, toIndex)
+}
+
+/**
+ * Fills this array or its subrange with the specified [element] value.
+ * 
+ * @param fromIndex the start of the range (inclusive), 0 by default.
+ * @param toIndex the end of the range (exclusive), size of this array by default.
+ * 
+ * @throws IndexOutOfBoundsException if [fromIndex] is less than zero or [toIndex] is greater than the size of this array.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ */
+@SinceKotlin("1.3")
+@ExperimentalUnsignedTypes
+public fun UByteArray.fill(element: UByte, fromIndex: Int = 0, toIndex: Int = size): Unit {
+    storage.fill(element.toByte(), fromIndex, toIndex)
+}
+
+/**
+ * Fills this array or its subrange with the specified [element] value.
+ * 
+ * @param fromIndex the start of the range (inclusive), 0 by default.
+ * @param toIndex the end of the range (exclusive), size of this array by default.
+ * 
+ * @throws IndexOutOfBoundsException if [fromIndex] is less than zero or [toIndex] is greater than the size of this array.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ */
+@SinceKotlin("1.3")
+@ExperimentalUnsignedTypes
+public fun UShortArray.fill(element: UShort, fromIndex: Int = 0, toIndex: Int = size): Unit {
+    storage.fill(element.toShort(), fromIndex, toIndex)
+}
+
+/**
  * Returns the range of valid indices for the array.
  */
 @SinceKotlin("1.3")
@@ -4231,7 +4291,8 @@ public inline fun <R, C : MutableCollection<in R>> UShortArray.mapTo(destination
 }
 
 /**
- * Returns a lazy [Iterable] of [IndexedValue] for each element of the original array.
+ * Returns a lazy [Iterable] that wraps each element of the original array
+ * into an [IndexedValue] containing the index of that element and the element itself.
  */
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
@@ -4240,7 +4301,8 @@ public fun UIntArray.withIndex(): Iterable<IndexedValue<UInt>> {
 }
 
 /**
- * Returns a lazy [Iterable] of [IndexedValue] for each element of the original array.
+ * Returns a lazy [Iterable] that wraps each element of the original array
+ * into an [IndexedValue] containing the index of that element and the element itself.
  */
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
@@ -4249,7 +4311,8 @@ public fun ULongArray.withIndex(): Iterable<IndexedValue<ULong>> {
 }
 
 /**
- * Returns a lazy [Iterable] of [IndexedValue] for each element of the original array.
+ * Returns a lazy [Iterable] that wraps each element of the original array
+ * into an [IndexedValue] containing the index of that element and the element itself.
  */
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
@@ -4258,7 +4321,8 @@ public fun UByteArray.withIndex(): Iterable<IndexedValue<UByte>> {
 }
 
 /**
- * Returns a lazy [Iterable] of [IndexedValue] for each element of the original array.
+ * Returns a lazy [Iterable] that wraps each element of the original array
+ * into an [IndexedValue] containing the index of that element and the element itself.
  */
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
