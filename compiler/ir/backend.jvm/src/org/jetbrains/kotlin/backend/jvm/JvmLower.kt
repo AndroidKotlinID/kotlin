@@ -72,7 +72,7 @@ private val propertiesPhase = makeIrFilePhase<CommonBackendContext>(
     stickyPostconditions = setOf((PropertiesLowering)::checkNoProperties)
 )
 
-private val localDeclarationsPhase = makeIrFilePhase<CommonBackendContext>(
+internal val localDeclarationsPhase = makeIrFilePhase<CommonBackendContext>(
     { context ->
         LocalDeclarationsLowering(context, object : LocalNameProvider {
             override fun localName(declaration: IrDeclarationWithName): String =
@@ -89,6 +89,13 @@ private val defaultArgumentStubPhase = makeIrFilePhase<CommonBackendContext>(
     name = "DefaultArgumentsStubGenerator",
     description = "Generate synthetic stubs for functions with default parameter values",
     prerequisite = setOf(localDeclarationsPhase)
+)
+
+private val defaultArgumentInjectorPhase = makeIrFilePhase(
+    ::JvmDefaultParameterInjector,
+    name = "DefaultParameterInjector",
+    description = "Transform calls with default arguments into calls to stubs",
+    prerequisite = setOf(defaultArgumentStubPhase, callableReferencePhase)
 )
 
 private val innerClassesPhase = makeIrFilePhase(
@@ -124,17 +131,28 @@ private val jvmFilePhases =
 
         enumWhenPhase then
         singletonReferencesPhase then
+
         callableReferencePhase then
+        functionNVarargInvokePhase then
         localDeclarationsPhase then
+
+        singleAbstractMethodPhase then
+        addContinuationPhase then
+
+        jvmOverloadsAnnotationPhase then
+        jvmDefaultConstructorPhase then
+
+        flattenStringConcatenationPhase then
+        foldConstantLoweringPhase then
+        computeStringTrimPhase then
+
         defaultArgumentStubPhase then
+        defaultArgumentInjectorPhase then
 
         interfacePhase then
         interfaceDelegationPhase then
         interfaceSuperCallsPhase then
-
-        singleAbstractMethodPhase then
-        addContinuationPhase then
-        functionNVarargInvokePhase then
+        interfaceDefaultCallsPhase then
 
         innerClassesPhase then
         innerClassConstructorCallsPhase then
@@ -145,18 +163,13 @@ private val jvmFilePhases =
         enumClassPhase then
         objectClassPhase then
         makeInitializersPhase(JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER, true) then
-        syntheticAccessorPhase then
         collectionStubMethodLowering then
         bridgePhase then
-        jvmOverloadsAnnotationPhase then
-        jvmDefaultConstructorPhase then
         jvmStaticAnnotationPhase then
         staticDefaultFunctionPhase then
+        syntheticAccessorPhase then
 
         toArrayPhase then
-        flattenStringConcatenationPhase then
-        foldConstantLoweringPhase then
-        computeStringTrimPhase then
         jvmBuiltinOptimizationLoweringPhase then
         additionalClassAnnotationPhase then
 
