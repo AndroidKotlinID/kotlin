@@ -1534,6 +1534,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         public void testMethodHandlerElimination() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/defaultArguments/methodHandlerElimination.kt");
         }
+
+        @TestMetadata("noEmptyArray.kt")
+        public void testNoEmptyArray() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/defaultArguments/noEmptyArray.kt");
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/bytecodeText/directInvoke")
@@ -2418,6 +2423,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/checkOuterInlineFunctionCall.kt");
         }
 
+        @TestMetadata("defaultParametersDontBox.kt")
+        public void testDefaultParametersDontBox() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/inlineClasses/defaultParametersDontBox.kt");
+        }
+
         @TestMetadata("equalsIsCalledByInlineClass.kt")
         public void testEqualsIsCalledByInlineClass() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/equalsIsCalledByInlineClass.kt");
@@ -3078,6 +3088,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
 
         public void testAllFilesPresentInMultifileClasses() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/multifileClasses"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM_IR, true);
+        }
+
+        @TestMetadata("defaultFunctionInMultifileClass.kt")
+        public void testDefaultFunctionInMultifileClass() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/multifileClasses/defaultFunctionInMultifileClass.kt");
         }
 
         @TestMetadata("optimizedMultifileClassFacadeMethods.kt")

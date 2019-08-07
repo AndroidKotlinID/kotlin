@@ -5,18 +5,19 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
-import org.jetbrains.kotlin.backend.common.ir.returnType
 import org.jetbrains.kotlin.backend.common.lower.BOUND_RECEIVER_PARAMETER
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
 import org.jetbrains.kotlin.backend.jvm.intrinsics.JavaClassProperty
 import org.jetbrains.kotlin.backend.jvm.intrinsics.Not
+import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.*
 import org.jetbrains.kotlin.codegen.coroutines.INVOKE_SUSPEND_METHOD_NAME
 import org.jetbrains.kotlin.codegen.inline.*
+import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.Companion.putNeedClassReificationMarker
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.AS
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.SAFE_AS
 import org.jetbrains.kotlin.codegen.pseudoInsns.fakeAlwaysFalseIfeq
@@ -26,7 +27,6 @@ import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ConstructorDescriptor
-import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
@@ -120,6 +120,8 @@ class ExpressionCodegen(
 
     override var lastLineNumber: Int = -1
 
+    private val closureReifiedMarkers = hashMapOf<IrClass, ReifiedTypeParametersUsages>()
+
     private val IrType.asmType: Type
         get() = typeMapper.mapType(this)
 
@@ -141,11 +143,13 @@ class ExpressionCodegen(
         if (offset < 0) {
             return
         }
-        val lineNumber = fileEntry.getLineNumber(offset) + 1
-        assert(lineNumber > 0)
-        if (lastLineNumber != lineNumber) {
-            lastLineNumber = lineNumber
-            mv.visitLineNumber(lineNumber, markNewLabel())
+        if (fileEntry != null) {
+            val lineNumber = fileEntry.getLineNumber(offset) + 1
+            assert(lineNumber > 0)
+            if (lastLineNumber != lineNumber) {
+                lastLineNumber = lineNumber
+                mv.visitLineNumber(lineNumber, markNewLabel())
+            }
         }
     }
 
@@ -189,7 +193,8 @@ class ExpressionCodegen(
                 // Although these are accessible from Java, the functions they bridge to already have the assertions.
                 irFunction.origin == IrDeclarationOrigin.BRIDGE_SPECIAL ||
                 irFunction.origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE ||
-                irFunction.origin == JvmLoweredDeclarationOrigin.JVM_STATIC_WRAPPER
+                irFunction.origin == JvmLoweredDeclarationOrigin.JVM_STATIC_WRAPPER ||
+                irFunction.origin == JvmLoweredDeclarationOrigin.MULTIFILE_BRIDGE
         if (!isInlineLambda && !isSyntheticOrBridge && !Visibilities.isPrivate(irFunction.visibility)) {
             irFunction.extensionReceiverParameter?.let { generateNonNullAssertion(it) }
             irFunction.valueParameters.forEach(::generateNonNullAssertion)
@@ -319,14 +324,28 @@ class ExpressionCodegen(
 
         when {
             expression is IrConstructorCall -> {
+                closureReifiedMarkers[expression.symbol.owner.parentAsClass]?.let {
+                    if (it.wereUsedReifiedParameters()) {
+                        putNeedClassReificationMarker(v)
+                        propagateChildReifiedTypeParametersUsages(it)
+                    }
+                }
+
                 // IR constructors have no receiver and return the new instance, but on JVM they are void-returning
                 // instance methods named <init>.
                 mv.anew(asmType)
                 mv.dup()
             }
-            expression is IrDelegatingConstructorCall ->
+            expression is IrDelegatingConstructorCall -> {
                 // In this case the receiver is `this` (not specified in IR) and the return value is discarded anyway.
                 mv.load(0, OBJECT_TYPE)
+
+                for (argumentIndex in 0 until expression.typeArgumentsCount) {
+                    expression.getTypeArgument(argumentIndex)?.getTypeParameterOrNull()?.takeIf { it.isReified }?.let {
+                        consumeReifiedOperationMarker(it)
+                    }
+                }
+            }
             expression.descriptor is ConstructorDescriptor ->
                 throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
             callee.isSuspend && !irFunction.isInvokeSuspendInContinuation() -> addInlineMarker(mv, isStartNotEnd = true)
@@ -559,7 +578,9 @@ class ExpressionCodegen(
 
     // TODO maybe remove?
     override fun visitClass(declaration: IrClass, data: BlockInfo): PromisedValue {
-        classCodegen.generateLocalClass(declaration)
+        classCodegen.generateLocalClass(declaration).also {
+            closureReifiedMarkers[declaration] = it
+        }
         return immaterialUnitValue
     }
 
@@ -659,7 +680,11 @@ class ExpressionCodegen(
     }
 
     override fun visitReturn(expression: IrReturn, data: BlockInfo): PromisedValue {
-        val owner = expression.returnTargetSymbol.owner
+        val returnTarget = expression.returnTargetSymbol.owner
+        val owner =
+            returnTarget as? IrFunction
+                ?: (returnTarget as? IrReturnableBlock)?.inlineFunctionSymbol?.owner
+                ?: error("Unsupported IrReturnTarget: $returnTarget")
         //TODO: should be owner != irFunction
         val isNonLocalReturn =
             typeMapper.mapFunctionName(owner, OwnerKind.IMPLEMENTATION) != typeMapper.mapFunctionName(irFunction, OwnerKind.IMPLEMENTATION)
@@ -675,7 +700,7 @@ class ExpressionCodegen(
         val target = data.findBlock<ReturnableBlockInfo> { it.returnSymbol == expression.returnTargetSymbol }
         val returnType = typeMapper.mapReturnType(owner)
         val afterReturnLabel = Label()
-        expression.value.accept(this, data).coerce(returnType, owner.returnType(context)).materialize()
+        expression.value.accept(this, data).coerce(returnType, owner.returnType).materialize()
         generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data, target)
         expression.markLineNumber(startOffset = true)
         if (target != null) {
@@ -683,7 +708,7 @@ class ExpressionCodegen(
             mv.fixStackAndJump(target.returnLabel)
         } else {
             if (isNonLocalReturn) {
-                generateGlobalReturnFlag(mv, (owner as IrFunction).name.asString())
+                generateGlobalReturnFlag(mv, owner.name.asString())
             }
             mv.areturn(returnType)
         }
@@ -1083,7 +1108,9 @@ class ExpressionCodegen(
         typeMapper.mapToCallableMethod(irCall.symbol.owner, isSuper)
 
     private fun getOrCreateCallGenerator(element: IrFunctionAccessExpression, data: BlockInfo): IrCallGenerator {
-        if (!element.symbol.owner.isInlineFunctionCall(context)) {
+        if (!element.symbol.owner.isInlineFunctionCall(context) ||
+            classCodegen.irClass.fileParent.fileEntry is MultifileFacadeFileEntry
+        ) {
             return IrCallGenerator.DefaultCallGenerator
         }
 
@@ -1119,12 +1146,16 @@ class ExpressionCodegen(
         return IrInlineCodegen(this, state, original.descriptor, mappings, IrSourceCompilerForInline(state, element, this, data))
     }
 
-    override fun consumeReifiedOperationMarker(typeParameterDescriptor: TypeParameterDescriptor) {
-        //TODO
+    private fun consumeReifiedOperationMarker(typeParameter: IrTypeParameter) {
+        if (typeParameter.parent != irFunction) {
+            classCodegen.reifiedTypeParametersUsages.addUsedReifiedParameter(typeParameter.name.asString())
+        }
     }
 
     override fun propagateChildReifiedTypeParametersUsages(reifiedTypeParametersUsages: ReifiedTypeParametersUsages) {
-        //TODO
+        classCodegen.reifiedTypeParametersUsages.propagateChildUsagesWithinContext(reifiedTypeParametersUsages) {
+            irFunction.typeParameters.filter { it.isReified }.map { it.name.asString() }.toSet()
+        }
     }
 
     override fun pushClosureOnStack(
@@ -1199,12 +1230,12 @@ class ExpressionCodegen(
     /* From ExpressionCodegen.java */
     private fun putReifiedOperationMarkerIfTypeIsReifiedParameter(
         type: IrType, operationKind: ReifiedTypeInliner.OperationKind, v: InstructionAdapter,
-        codegen: BaseExpressionCodegen?
+        codegen: ExpressionCodegen?
     ) {
         val typeParameterAndReificationArgument = extractReificationArgumentWithParameter(type)
         if (typeParameterAndReificationArgument != null && typeParameterAndReificationArgument.first.isReified) {
             val irTypeParameter = typeParameterAndReificationArgument.first
-            codegen?.consumeReifiedOperationMarker(irTypeParameter.descriptor)
+            codegen?.consumeReifiedOperationMarker(irTypeParameter)
             ReifiedTypeInliner.putReifiedOperationMarker(
                 operationKind, typeParameterAndReificationArgument.second.toReificationArgument(), v
             )

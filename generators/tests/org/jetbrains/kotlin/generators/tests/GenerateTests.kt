@@ -53,10 +53,7 @@ import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralKotlinToKotlinCo
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralTextToKotlinCopyPasteTest
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractTextJavaToKotlinCopyPasteConversionTest
 import org.jetbrains.kotlin.idea.coverage.AbstractKotlinCoverageOutputFilesTest
-import org.jetbrains.kotlin.idea.debugger.AbstractFileRankingTest
-import org.jetbrains.kotlin.idea.debugger.AbstractKotlinSteppingTest
-import org.jetbrains.kotlin.idea.debugger.AbstractPositionManagerTest
-import org.jetbrains.kotlin.idea.debugger.AbstractSmartStepIntoTest
+import org.jetbrains.kotlin.idea.debugger.*
 import org.jetbrains.kotlin.idea.debugger.evaluate.*
 import org.jetbrains.kotlin.idea.debugger.sequence.exec.AbstractSequenceTraceTestCase
 import org.jetbrains.kotlin.idea.decompiler.navigation.AbstractNavigateToDecompiledLibraryTest
@@ -156,9 +153,9 @@ import org.jetbrains.kotlin.search.AbstractAnnotatedMembersSearchTest
 import org.jetbrains.kotlin.search.AbstractInheritorsSearchTest
 import org.jetbrains.kotlin.shortenRefs.AbstractShortenRefsTest
 import org.jetbrains.kotlin.test.TargetBackend
+import org.jetbrains.kotlinx.serialization.AbstractSerializationIrBytecodeListingTest
 import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginBytecodeListingTest
 import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginDiagnosticTest
-import org.jetbrains.kotlinx.serialization.AbstractSerializationIrBytecodeListingTest
 
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
@@ -625,6 +622,10 @@ fun main(args: Array<String>) {
             model("debugger/positionManager", recursive = false, extension = null, testClassName = "MultiFile")
         }
 
+        testClass<AbstractBreakpointApplicabilityTest> {
+            model("debugger/breakpointApplicability")
+        }
+
         testClass<AbstractKotlinExceptionFilterTest> {
             model("debugger/exceptionFilter", pattern = """^([^\.]+)$""", recursive = false)
         }
@@ -1066,13 +1067,15 @@ fun main(args: Array<String>) {
     }
 
     testGroup("compiler/incremental-compilation-impl/test", "jps-plugin/testData") {
-        testClass<AbstractIncrementalJvmCompilerRunnerTest> {
-            model("incremental/pureKotlin", extension = null, recursive = false)
-            model("incremental/classHierarchyAffected", extension = null, recursive = false)
-            model("incremental/inlineFunCallSite", extension = null, excludeParentDirs = true)
-            model("incremental/withJava", extension = null, excludeParentDirs = true)
-            model("incremental/incrementalJvmCompilerOnly", extension = null, excludeParentDirs = true)
+        fun incrementalJvmTestData(targetBackend: TargetBackend): TestGroup.TestClass.() -> Unit = {
+            model("incremental/pureKotlin", extension = null, recursive = false, targetBackend = targetBackend)
+            model("incremental/classHierarchyAffected", extension = null, recursive = false, targetBackend = targetBackend)
+            model("incremental/inlineFunCallSite", extension = null, excludeParentDirs = true, targetBackend = targetBackend)
+            model("incremental/withJava", extension = null, excludeParentDirs = true, targetBackend = targetBackend)
+            model("incremental/incrementalJvmCompilerOnly", extension = null, excludeParentDirs = true, targetBackend = targetBackend)
         }
+        testClass<AbstractIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM))
+        testClass<AbstractIrIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
 
         testClass<AbstractIncrementalJsCompilerRunnerTest> {
             model("incremental/pureKotlin", extension = null, recursive = false)

@@ -1477,6 +1477,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCall/explicitLambdaParameter.kt");
             }
 
+            @TestMetadata("filterIsInstanceDisjointHierarchy.kt")
+            public void testFilterIsInstanceDisjointHierarchy() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/simplifiableCall/filterIsInstanceDisjointHierarchy.kt");
+            }
+
             @TestMetadata("filterIsInstanceReceiver.kt")
             public void testFilterIsInstanceReceiver() throws Exception {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCall/filterIsInstanceReceiver.kt");
@@ -1485,6 +1490,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("filterIsInstanceSimple.kt")
             public void testFilterIsInstanceSimple() throws Exception {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCall/filterIsInstanceSimple.kt");
+            }
+
+            @TestMetadata("filterIsInstanceSupertype.kt")
+            public void testFilterIsInstanceSupertype() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/simplifiableCall/filterIsInstanceSupertype.kt");
             }
 
             @TestMetadata("filterIsNotInstance.kt")
@@ -4534,6 +4544,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             public void testGetterReturnsNothing() throws Exception {
                 runTest("idea/testData/inspectionsLocal/functionWithLambdaExpressionBody/removeBraces/getterReturnsNothing.kt");
             }
+
+            @TestMetadata("kt32580.kt")
+            public void testKt32580() throws Exception {
+                runTest("idea/testData/inspectionsLocal/functionWithLambdaExpressionBody/removeBraces/kt32580.kt");
+            }
         }
 
         @TestMetadata("idea/testData/inspectionsLocal/functionWithLambdaExpressionBody/specifyType")
@@ -4589,6 +4604,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("getterReturnsNothing.kt")
             public void testGetterReturnsNothing() throws Exception {
                 runTest("idea/testData/inspectionsLocal/functionWithLambdaExpressionBody/wrapRun/getterReturnsNothing.kt");
+            }
+
+            @TestMetadata("kt32580.kt")
+            public void testKt32580() throws Exception {
+                runTest("idea/testData/inspectionsLocal/functionWithLambdaExpressionBody/wrapRun/kt32580.kt");
             }
         }
     }
@@ -12129,6 +12149,46 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("unusedEnumEntry.kt")
         public void testUnusedEnumEntry() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedSymbol/unusedEnumEntry.kt");
+        }
+
+        @TestMetadata("usedEnumFunction.kt")
+        public void testUsedEnumFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction.kt");
+        }
+
+        @TestMetadata("usedEnumFunction2.kt")
+        public void testUsedEnumFunction2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction2.kt");
+        }
+
+        @TestMetadata("usedEnumFunction3.kt")
+        public void testUsedEnumFunction3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction3.kt");
+        }
+
+        @TestMetadata("usedEnumFunction4.kt")
+        public void testUsedEnumFunction4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction4.kt");
+        }
+
+        @TestMetadata("usedEnumFunction5.kt")
+        public void testUsedEnumFunction5() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction5.kt");
+        }
+
+        @TestMetadata("usedEnumFunction6.kt")
+        public void testUsedEnumFunction6() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction6.kt");
+        }
+
+        @TestMetadata("usedEnumFunction7.kt")
+        public void testUsedEnumFunction7() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction7.kt");
+        }
+
+        @TestMetadata("usedEnumFunction8.kt")
+        public void testUsedEnumFunction8() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/usedEnumFunction8.kt");
         }
 
         @TestMetadata("withJvmNameUsedFromKotlin.kt")

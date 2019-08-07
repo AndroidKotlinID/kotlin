@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker
+import org.jetbrains.kotlin.resolve.inline.INLINE_ONLY_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmClassSignature
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodParameterKind
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
@@ -85,6 +86,7 @@ internal val DeclarationDescriptorWithSource.psiElement: PsiElement?
 fun JvmBackendContext.getSourceMapper(declaration: IrClass): DefaultSourceMapper {
     val sourceManager = this.psiSourceManager
     val fileEntry = sourceManager.getFileEntry(declaration.fileParent)
+    check(fileEntry != null) { "No PSI file entry found for class: ${declaration.dump()}" }
     // NOTE: apparently inliner requires the source range to cover the
     //       whole file the class is declared in rather than the class only.
     // TODO: revise
@@ -313,8 +315,6 @@ private tailrec fun isInlineOrContainedInInline(declaration: IrDeclaration?): Bo
 }
 
 /* Borrowed from inlineOnly.kt */
-
-private val INLINE_ONLY_ANNOTATION_FQ_NAME = FqName("kotlin.internal.InlineOnly")
 
 fun IrDeclarationWithVisibility.isInlineOnlyOrReifiable(): Boolean =
     this is IrFunction && (isReifiable() || isInlineOnly())
