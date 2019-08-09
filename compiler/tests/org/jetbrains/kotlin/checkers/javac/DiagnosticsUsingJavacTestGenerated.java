@@ -1709,6 +1709,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/callableReference/expectedTypeAsSubtypeOfFunctionType.kt");
             }
 
+            @TestMetadata("functionReferenceWithDefaultValueAsOtherFunctionType.kt")
+            public void testFunctionReferenceWithDefaultValueAsOtherFunctionType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/functionReferenceWithDefaultValueAsOtherFunctionType.kt");
+            }
+
+            @TestMetadata("functionReferenceWithDefaultValueAsOtherFunctionType_enabled.kt")
+            public void testFunctionReferenceWithDefaultValueAsOtherFunctionType_enabled() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/functionReferenceWithDefaultValueAsOtherFunctionType_enabled.kt");
+            }
+
             @TestMetadata("kt15439_completeCall.kt")
             public void testKt15439_completeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/kt15439_completeCall.kt");
@@ -10212,6 +10222,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("operationsOnIntegerValueTypes.kt")
                 public void testOperationsOnIntegerValueTypes() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/operationsOnIntegerValueTypes.kt");
+                }
+
+                @TestMetadata("recursiveJavaTypeWithStarProjection.kt")
+                public void testRecursiveJavaTypeWithStarProjection() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/recursiveJavaTypeWithStarProjection.kt");
                 }
 
                 @TestMetadata("returnLambdaFromLambda.kt")

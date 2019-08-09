@@ -127,6 +127,7 @@ private val jvmFilePhases =
         propertiesToFieldsPhase then
         propertiesPhase then
         renameFieldsPhase then
+        assertionPhase then
         annotationPhase then
         tailrecPhase then
 
@@ -140,7 +141,6 @@ private val jvmFilePhases =
         singletonReferencesPhase then
 
         callableReferencePhase then
-        functionNVarargInvokePhase then
         localDeclarationsPhase then
 
         singleAbstractMethodPhase then
@@ -171,6 +171,7 @@ private val jvmFilePhases =
         objectClassPhase then
         makeInitializersPhase(JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER, true) then
         collectionStubMethodLowering then
+        functionNVarargBridgePhase then
         bridgePhase then
         jvmStaticAnnotationPhase then
         staticDefaultFunctionPhase then

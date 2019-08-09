@@ -4082,6 +4082,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
             runTest("nj2k/testData/newJ2k/postProcessing/GetOperator.java");
         }
 
+        @TestMetadata("GuardClause.java")
+        public void testGuardClause() throws Exception {
+            runTest("nj2k/testData/newJ2k/postProcessing/GuardClause.java");
+        }
+
         @TestMetadata("IfNullReturnToElvis.java")
         public void testIfNullReturnToElvis() throws Exception {
             runTest("nj2k/testData/newJ2k/postProcessing/IfNullReturnToElvis.java");
@@ -4100,6 +4105,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("java8MapForEachWithFullJdk.java")
         public void testJava8MapForEachWithFullJdk() throws Exception {
             runTest("nj2k/testData/newJ2k/postProcessing/java8MapForEachWithFullJdk.java");
+        }
+
+        @TestMetadata("MapGetOrDefault.java")
+        public void testMapGetOrDefault() throws Exception {
+            runTest("nj2k/testData/newJ2k/postProcessing/MapGetOrDefault.java");
         }
 
         @TestMetadata("NotIs.java")
@@ -4988,6 +4998,34 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("where.java")
         public void testWhere() throws Exception {
             runTest("nj2k/testData/newJ2k/typeParameters/where.java");
+        }
+    }
+
+    @TestMetadata("nj2k/testData/newJ2k/types")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Types extends AbstractNewJavaToKotlinConverterSingleFileTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInTypes() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("nj2k/testData/newJ2k/types"), Pattern.compile("^([^\\.]+)\\.java$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("capturedTypeInStreamsLambda.java")
+        public void testCapturedTypeInStreamsLambda() throws Exception {
+            runTest("nj2k/testData/newJ2k/types/capturedTypeInStreamsLambda.java");
+        }
+
+        @TestMetadata("capturedWildcardTypeAsLambdaParameter.java")
+        public void testCapturedWildcardTypeAsLambdaParameter() throws Exception {
+            runTest("nj2k/testData/newJ2k/types/capturedWildcardTypeAsLambdaParameter.java");
+        }
+
+        @TestMetadata("unusedCapturedWildcardTypeInSAM.java")
+        public void testUnusedCapturedWildcardTypeInSAM() throws Exception {
+            runTest("nj2k/testData/newJ2k/types/unusedCapturedWildcardTypeInSAM.java");
         }
     }
 
