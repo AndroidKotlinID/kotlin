@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.common.lower.loops.forLoopsPhase
 import org.jetbrains.kotlin.backend.common.phaser.*
 import org.jetbrains.kotlin.backend.jvm.lower.*
+import org.jetbrains.kotlin.codegen.OwnerKind
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrFile
@@ -67,10 +68,13 @@ private val lateinitPhase = makeIrFilePhase(
     description = "Insert checks for lateinit field references"
 )
 
-private val propertiesPhase = makeIrFilePhase<CommonBackendContext>(
+private val propertiesPhase = makeIrFilePhase<JvmBackendContext>(
     { context ->
-        PropertiesLowering(context, JvmLoweredDeclarationOrigin.SYNTHETIC_METHOD_FOR_PROPERTY_ANNOTATIONS) { propertyName ->
-            JvmAbi.getSyntheticMethodNameForAnnotatedProperty(propertyName)
+        PropertiesLowering(context, JvmLoweredDeclarationOrigin.SYNTHETIC_METHOD_FOR_PROPERTY_ANNOTATIONS) { property ->
+            val getterName = property.getter?.let { getter ->
+                context.typeMapper.mapFunctionName(getter, OwnerKind.IMPLEMENTATION)
+            } ?: JvmAbi.getterName(property.name.asString())
+            JvmAbi.getSyntheticMethodNameForAnnotatedProperty(getterName)
         }
     },
     name = "Properties",
@@ -116,6 +120,8 @@ private val jvmFilePhases =
         provisionalFunctionExpressionPhase then
         inventNamesForLocalClassesPhase then
         kCallableNamePropertyPhase then
+        annotationPhase then
+        varargPhase then
         arrayConstructorPhase then
 
         lateinitPhase then
@@ -128,7 +134,6 @@ private val jvmFilePhases =
         propertiesPhase then
         renameFieldsPhase then
         assertionPhase then
-        annotationPhase then
         tailrecPhase then
 
         jvmInlineClassPhase then
