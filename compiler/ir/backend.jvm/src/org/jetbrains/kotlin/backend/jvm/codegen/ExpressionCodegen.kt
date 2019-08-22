@@ -106,9 +106,9 @@ class ExpressionCodegen(
 
     var finallyDepth = 0
 
-    val typeMapper = classCodegen.typeMapper
-
     val context = classCodegen.context
+    val typeMapper = context.typeMapper
+    val methodSignatureMapper = context.methodSignatureMapper
 
     private val state = classCodegen.state
 
@@ -176,7 +176,7 @@ class ExpressionCodegen(
             if (irFunction.origin != JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER) {
                 irFunction.markLineNumber(startOffset = irFunction is IrConstructor && irFunction.isPrimary)
             }
-            val returnType = typeMapper.mapReturnType(irFunction)
+            val returnType = methodSignatureMapper.mapReturnType(irFunction)
             val returnIrType = if (irFunction !is IrConstructor) irFunction.returnType else context.irBuiltIns.unitType
             result.coerce(returnType, returnIrType).materialize()
             mv.areturn(returnType)
@@ -237,7 +237,7 @@ class ExpressionCodegen(
         val name = if (param.origin == BOUND_RECEIVER_PARAMETER || isReceiver) {
             getNameForReceiverParameter(
                 irFunction.descriptor,
-                typeMapper.kotlinTypeMapper.bindingContext,
+                state.bindingContext,
                 context.configuration.languageVersionSettings
             )
         } else {
@@ -321,7 +321,7 @@ class ExpressionCodegen(
             ?.invoke(expression, this, data)?.let { return it.coerce(expression.type) }
 
         val isSuperCall = (expression as? IrCall)?.superQualifier != null
-        val callable = resolveToCallable(expression, isSuperCall)
+        val callable = methodSignatureMapper.mapToCallableMethod(expression, isSuperCall)
         val callee = expression.symbol.owner
         val callGenerator = getOrCreateCallGenerator(expression, data)
         val asmType = if (expression is IrConstructorCall) typeMapper.mapTypeAsDeclaration(expression.type) else expression.asmType
@@ -412,9 +412,9 @@ class ExpressionCodegen(
                 immaterialUnitValue
             expression.type.isUnit() ->
                 // NewInference allows casting `() -> T` to `() -> Unit`. A CHECKCAST here will fail.
-                MaterialValue(this, callable.returnType, returnType).discard().coerce(expression.type)
+                MaterialValue(this, callable.asmMethod.returnType, returnType).discard().coerce(expression.type)
             else ->
-                MaterialValue(this, callable.returnType, returnType).coerce(expression.type)
+                MaterialValue(this, callable.asmMethod.returnType, returnType).coerce(expression.type)
         }
     }
 
@@ -458,7 +458,7 @@ class ExpressionCodegen(
 
         val realField = expression.symbol.owner.resolveFakeOverride()!!
         val fieldType = typeMapper.mapType(realField.type)
-        val ownerType = typeMapper.mapImplementationOwner(expression.symbol.owner).internalName
+        val ownerType = methodSignatureMapper.mapImplementationOwner(expression.symbol.owner).internalName
         val fieldName = realField.name.asString()
         val isStatic = expression.receiver == null
         expression.markLineNumber(startOffset = true)
@@ -567,7 +567,8 @@ class ExpressionCodegen(
                 ?: error("Unsupported IrReturnTarget: $returnTarget")
         //TODO: should be owner != irFunction
         val isNonLocalReturn =
-            typeMapper.mapFunctionName(owner, OwnerKind.IMPLEMENTATION) != typeMapper.mapFunctionName(irFunction, OwnerKind.IMPLEMENTATION)
+            methodSignatureMapper.mapFunctionName(owner, OwnerKind.IMPLEMENTATION) !=
+                    methodSignatureMapper.mapFunctionName(irFunction, OwnerKind.IMPLEMENTATION)
         if (isNonLocalReturn && state.isInlineDisabled) {
             //TODO: state.diagnostics.report(Errors.NON_LOCAL_RETURN_IN_DISABLED_INLINE.on(expression))
             genThrow(
@@ -578,7 +579,7 @@ class ExpressionCodegen(
         }
 
         val target = data.findBlock<ReturnableBlockInfo> { it.returnSymbol == expression.returnTargetSymbol }
-        val returnType = typeMapper.mapReturnType(owner)
+        val returnType = methodSignatureMapper.mapReturnType(owner)
         val afterReturnLabel = Label()
         expression.value.accept(this, data).coerce(returnType, owner.returnType).materialize()
         generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data, target)
@@ -983,8 +984,8 @@ class ExpressionCodegen(
         return classReference.onStack
     }
 
-    private fun resolveToCallable(irCall: IrFunctionAccessExpression, isSuper: Boolean) =
-        typeMapper.mapToCallableMethod(irCall.symbol.owner, isSuper)
+    private fun resolveToCallable(irCall: IrFunctionAccessExpression, isSuper: Boolean): IrCallableMethod =
+        methodSignatureMapper.mapToCallableMethod(irCall, isSuper)
 
     private fun getOrCreateCallGenerator(element: IrFunctionAccessExpression, data: BlockInfo): IrCallGenerator {
         if (!element.symbol.owner.isInlineFunctionCall(context) ||
