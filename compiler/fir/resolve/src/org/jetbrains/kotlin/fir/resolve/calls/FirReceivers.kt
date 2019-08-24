@@ -5,14 +5,23 @@
 
 package org.jetbrains.kotlin.fir.resolve.calls
 
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.classId
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.renderWithType
+import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.resolve.scope
+import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
 
 interface ReceiverValue {
     val type: ConeKotlinType
+
+    fun scope(useSiteSession: FirSession, scopeSession: ScopeSession): FirScope? =
+        type.scope(useSiteSession, scopeSession)
 }
 
 class ClassDispatchReceiverValue(val klassSymbol: FirClassSymbol) : ReceiverValue {
@@ -32,14 +41,30 @@ class ExpressionReceiverValue(
             ?: ConeKotlinErrorType("No type calculated for: ${explicitReceiverExpression.renderWithType()}") // TODO: assert here
 }
 
-interface ImplicitReceiverValue : ReceiverValue {
+abstract class ImplicitReceiverValue(
+    final override val type: ConeKotlinType,
+    useSiteSession: FirSession,
+    scopeSession: ScopeSession
+) : ReceiverValue {
+    val implicitScope: FirScope? = type.scope(useSiteSession, scopeSession)
+
+    override fun scope(useSiteSession: FirSession, scopeSession: ScopeSession): FirScope? = implicitScope
 }
 
 class ImplicitDispatchReceiverValue(
     val boundSymbol: FirClassSymbol,
-    override val type: ConeKotlinType
-) : ImplicitReceiverValue
+    type: ConeKotlinType,
+    symbolProvider: FirSymbolProvider,
+    useSiteSession: FirSession,
+    scopeSession: ScopeSession
+) : ImplicitReceiverValue(type, useSiteSession, scopeSession) {
+    val implicitCompanionScope: FirScope? = boundSymbol.fir.companionObject?.let { companionObject ->
+        symbolProvider.getClassUseSiteMemberScope(companionObject.classId, useSiteSession, scopeSession)
+    }
+}
 
 class ImplicitExtensionReceiverValue(
-    override val type: ConeKotlinType
-) : ImplicitReceiverValue
+    type: ConeKotlinType,
+    useSiteSession: FirSession,
+    scopeSession: ScopeSession
+) : ImplicitReceiverValue(type, useSiteSession, scopeSession)

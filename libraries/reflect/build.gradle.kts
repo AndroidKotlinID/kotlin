@@ -10,12 +10,8 @@ import shadow.org.apache.tools.zip.ZipOutputStream
 description = "Kotlin Full Reflection Library"
 
 buildscript {
-    repositories {
-        maven(url = "https://kotlin.bintray.com/kotlinx/")
-    }
-
     dependencies {
-        classpath("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.0.4")
+        classpath("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.1.0")
     }
 }
 

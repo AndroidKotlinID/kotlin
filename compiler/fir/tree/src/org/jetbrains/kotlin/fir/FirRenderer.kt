@@ -127,7 +127,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             print(callableDeclaration.name)
         }
 
-        if (callableDeclaration is FirFunction) {
+        if (callableDeclaration is FirFunction<*>) {
             callableDeclaration.valueParameters.renderParameters()
         }
         print(": ")
@@ -382,7 +382,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         anonymousFunction.body?.renderBody()
     }
 
-    override fun visitFunction(function: FirFunction) {
+    override fun <F : FirFunction<F>> visitFunction(function: FirFunction<F>) {
         function.valueParameters.renderParameters()
         visitDeclarationWithBody(function)
     }
@@ -724,9 +724,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         if (resolvedTypeRef !is FirImplicitBuiltinTypeRef) {
             print("|")
         }
-        if (coneType !is ConeKotlinErrorType && coneType !is ConeClassErrorType) {
-            print(coneType.nullability.suffix)
-        }
     }
 
     override fun visitUserTypeRef(userTypeRef: FirUserTypeRef) {
@@ -951,5 +948,11 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             print(resolvedQualifier.packageFqName.asString().replace(".", "/"))
         }
         print("|")
+    }
+
+    override fun visitBinaryLogicExpression(binaryLogicExpression: FirBinaryLogicExpression) {
+        binaryLogicExpression.leftOperand.accept(this)
+        print(" ${binaryLogicExpression.kind.token} ")
+        binaryLogicExpression.rightOperand.accept(this)
     }
 }

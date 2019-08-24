@@ -11,11 +11,10 @@ import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirAnonymousFunctionImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirTypeParameterImpl
-import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.expressions.FirBlock
-import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirFunctionCallImpl
+import org.jetbrains.kotlin.fir.expressions.impl.FirTryExpressionImpl
+import org.jetbrains.kotlin.fir.expressions.impl.FirWhenExpressionImpl
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
@@ -53,7 +52,7 @@ fun FirAnonymousFunction.copy(
     typeRef: FirTypeRef = this.typeRef,
     label: FirLabel? = this.label
 ): FirAnonymousFunction {
-    return FirAnonymousFunctionImpl(session, psi, returnTypeRef, receiverTypeRef).apply {
+    return FirAnonymousFunctionImpl(session, psi, returnTypeRef, receiverTypeRef, symbol).apply {
         this.valueParameters.addAll(valueParameters)
         this.body = body
         this.annotations.addAll(annotations)
@@ -79,4 +78,21 @@ fun FirTypeParameter.copy(
         this.bounds += bounds
         this.annotations += annotations
     }
+}
+
+fun FirWhenExpression.copy(
+    resultType: FirTypeRef = this.typeRef,
+    calleeReference: FirReference = this.calleeReference
+): FirWhenExpressionImpl = FirWhenExpressionImpl(psi, subject, subjectVariable, calleeReference).apply {
+    this@apply.branches.addAll(this@copy.branches)
+    this.typeRef = resultType
+    this.calleeReference = calleeReference
+}
+
+fun FirTryExpression.copy(
+    resultType: FirTypeRef = this.typeRef,
+    calleeReference: FirReference = this.calleeReference
+): FirTryExpressionImpl = FirTryExpressionImpl(psi, tryBlock, finallyBlock, calleeReference).apply {
+    this@apply.catches.addAll(this@copy.catches)
+    this.typeRef = resultType
 }

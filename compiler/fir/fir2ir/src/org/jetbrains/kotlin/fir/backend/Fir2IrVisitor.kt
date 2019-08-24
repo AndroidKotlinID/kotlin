@@ -5,11 +5,13 @@
 
 package org.jetbrains.kotlin.fir.backend
 
-import org.jetbrains.kotlin.backend.common.descriptors.*
+import org.jetbrains.kotlin.backend.common.descriptors.WrappedSimpleFunctionDescriptor
+import org.jetbrains.kotlin.backend.common.descriptors.WrappedValueParameterDescriptor
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.impl.*
+import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
+import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
 import org.jetbrains.kotlin.fir.descriptors.FirModuleDescriptor
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
@@ -24,18 +26,17 @@ import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.ConeClassLikeType
-import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.*
-import org.jetbrains.kotlin.fir.types.render
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.builders.primitiveOp1
-import org.jetbrains.kotlin.ir.builders.primitiveOp2
+import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrFieldImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
@@ -60,9 +61,9 @@ internal class Fir2IrVisitor(
     private val moduleDescriptor: FirModuleDescriptor,
     private val symbolTable: SymbolTable,
     private val sourceManager: PsiSourceManager,
-    private val irBuiltIns: IrBuiltIns,
+    override val irBuiltIns: IrBuiltIns,
     private val fakeOverrideMode: FakeOverrideMode
-) : FirVisitor<IrElement, Any?>() {
+) : FirVisitor<IrElement, Any?>(), IrGeneratorContextInterface {
     companion object {
         private val NEGATED_OPERATIONS: Set<FirOperation> = EnumSet.of(FirOperation.NOT_EQ, FirOperation.NOT_IDENTITY)
 
@@ -192,7 +193,7 @@ internal class Fir2IrVisitor(
     }
 
     private fun FirClass.getPrimaryConstructorIfAny(): FirConstructor? =
-        (declarations.firstOrNull() as? FirConstructor)?.takeIf { it.isPrimary }
+        declarations.filterIsInstance<FirConstructor>().firstOrNull()?.takeIf { it.isPrimary }
 
     private fun IrClass.addFakeOverrides(klass: FirClass, processedFunctionNames: MutableList<Name>) {
         if (fakeOverrideMode == FakeOverrideMode.NONE) return
@@ -273,7 +274,7 @@ internal class Fir2IrVisitor(
 
     private fun <T : IrFunction> T.setFunctionContent(
         descriptor: FunctionDescriptor,
-        firFunction: FirFunction,
+        firFunction: FirFunction<*>,
         firOverriddenSymbol: FirNamedFunctionSymbol? = null
     ): T {
         setParentByParentStack()
@@ -686,13 +687,19 @@ internal class Fir2IrVisitor(
     }
 
     private fun FirAnnotationCall.toIrExpression(): IrExpression {
-        val type = (annotationTypeRef as? FirResolvedTypeRef)?.type?.toIrType(this@Fir2IrVisitor.session, declarationStorage)
+        val coneType = (annotationTypeRef as? FirResolvedTypeRef)?.type as? ConeLookupTagBasedType
+        val firSymbol = coneType?.lookupTag?.toSymbol(session) as? FirClassSymbol
+        val type = coneType?.toIrType(this@Fir2IrVisitor.session, declarationStorage)
         val symbol = type?.classifierOrNull
         return convertWithOffsets { startOffset, endOffset ->
             when (symbol) {
                 is IrClassSymbol -> {
                     val irClass = symbol.owner
-                    val irConstructor = irClass.constructors.firstOrNull()
+                    val irConstructor = firSymbol?.fir?.getPrimaryConstructorIfAny()?.let { firConstructor ->
+                        declarationStorage.getIrConstructor(firConstructor, irParent = irClass, shouldLeaveScope = true)
+                    }?.apply {
+                        this.parent = irClass
+                    }
                     if (irConstructor == null) {
                         IrErrorCallExpressionImpl(startOffset, endOffset, type, "No annotation constructor found: ${irClass.name}")
                     } else {
@@ -1015,8 +1022,8 @@ internal class Fir2IrVisitor(
             ).apply {
                 loopMap[doWhileLoop] = this
                 label = doWhileLoop.label?.name
-                condition = doWhileLoop.condition.toIrExpression()
                 body = doWhileLoop.block.convertToIrExpressionOrBlock()
+                condition = doWhileLoop.condition.toIrExpression()
                 loopMap.remove(doWhileLoop)
             }
         }
@@ -1223,5 +1230,26 @@ internal class Fir2IrVisitor(
             }
         }
         return super.visitResolvedQualifier(resolvedQualifier, data)
+    }
+
+    override fun visitBinaryLogicExpression(binaryLogicExpression: FirBinaryLogicExpression, data: Any?): IrElement {
+        return binaryLogicExpression.convertWithOffsets<IrElement> { startOffset, endOffset ->
+            val leftOperand = binaryLogicExpression.leftOperand.accept(this, data) as IrExpression
+            val rightOperand = binaryLogicExpression.rightOperand.accept(this, data) as IrExpression
+            when (binaryLogicExpression.kind) {
+                FirBinaryLogicExpression.OperationKind.AND -> {
+                    IrIfThenElseImpl(startOffset, endOffset, irBuiltIns.booleanType, IrStatementOrigin.ANDAND).apply {
+                        branches.add(IrBranchImpl(leftOperand, rightOperand))
+                        branches.add(elseBranch(constFalse(rightOperand.startOffset, rightOperand.endOffset)))
+                    }
+                }
+                FirBinaryLogicExpression.OperationKind.OR -> {
+                    IrIfThenElseImpl(startOffset, endOffset, irBuiltIns.booleanType, IrStatementOrigin.OROR).apply {
+                        branches.add(IrBranchImpl(leftOperand, constTrue(leftOperand.startOffset, leftOperand.endOffset)))
+                        branches.add(elseBranch(rightOperand))
+                    }
+                }
+            }
+        }
     }
 }
