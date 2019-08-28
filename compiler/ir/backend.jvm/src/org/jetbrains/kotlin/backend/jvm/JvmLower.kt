@@ -191,6 +191,8 @@ private val jvmFilePhases =
         toArrayPhase then
         jvmBuiltinOptimizationLoweringPhase then
         additionalClassAnnotationPhase then
+        typeOperatorLowering then
+        replaceKFunctionInvokeWithFunctionInvokePhase then
 
         recordNamesForKotlinTypeMapperPhase then
 
