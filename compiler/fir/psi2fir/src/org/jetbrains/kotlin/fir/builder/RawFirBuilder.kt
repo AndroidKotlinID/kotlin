@@ -491,7 +491,8 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
                     val zippedParameters = classOrObject.primaryConstructorParameters.zip(
                         firClass.declarations.filterIsInstance<FirProperty>()
                     )
-                    zippedParameters.generateComponentFunctions(session, firClass, context.packageFqName, context.className)
+                    zippedParameters.generateComponentFunctions(
+                        session, firClass, context.packageFqName, context.className, firPrimaryConstructor)
                     zippedParameters.generateCopyFunction(
                         session, classOrObject, firClass, context.packageFqName, context.className, firPrimaryConstructor
                     )
@@ -1182,9 +1183,7 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
 
         override fun visitThisExpression(expression: KtThisExpression, data: Unit): FirElement {
             val labelName = expression.getLabelName()
-            return FirQualifiedAccessExpressionImpl(expression).apply {
-                calleeReference = FirExplicitThisReference(expression, labelName)
-            }
+            return FirThisReceiverExpressionImpl(expression, FirExplicitThisReference(expression, labelName))
         }
 
         override fun visitSuperExpression(expression: KtSuperExpression, data: Unit): FirElement {

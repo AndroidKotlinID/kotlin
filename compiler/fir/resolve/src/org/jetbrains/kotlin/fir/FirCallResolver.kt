@@ -12,11 +12,9 @@ import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedQualifierImpl
-import org.jetbrains.kotlin.fir.references.FirBackingFieldReferenceImpl
-import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
-import org.jetbrains.kotlin.fir.references.FirResolvedCallableReferenceImpl
-import org.jetbrains.kotlin.fir.references.FirSimpleNamedReference
+import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.resolve.BodyResolveComponents
+import org.jetbrains.kotlin.fir.resolve.ImplicitReceiverStack
 import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreNameReference
@@ -39,7 +37,7 @@ class FirCallResolver(
     private val transformer: FirBodyResolveTransformer,
     private val topLevelScopes: List<FirScope>,
     private val localScopes: List<FirLocalScope>,
-    private val implicitReceiverStack: List<ImplicitReceiverValue>,
+    override val implicitReceiverStack: ImplicitReceiverStack,
     private val qualifiedResolver: FirQualifiedNameResolver
 ) : BodyResolveComponents by transformer {
 
@@ -72,7 +70,7 @@ class FirCallResolver(
         )
 
         val consumer = createFunctionConsumer(session, name, info, inferenceComponents, resolver.collector, resolver)
-        val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
+        val result = resolver.runTowerResolver(consumer, implicitReceiverStack.receiversAsReversed())
         val bestCandidates = result.bestCandidates()
         val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {
             bestCandidates.toSet()
@@ -125,6 +123,8 @@ class FirCallResolver(
         val resultFunctionCall = if (candidate != null && candidate.callInfo != info) {
             functionCall.copy(
                 explicitReceiver = candidate.callInfo.explicitReceiver,
+                dispatchReceiver = candidate.dispatchReceiverExpression(),
+                extensionReceiver = candidate.extensionReceiverExpression(),
                 arguments = candidate.callInfo.arguments,
                 safe = candidate.callInfo.isSafeCall
             )
@@ -169,7 +169,7 @@ class FirCallResolver(
             info, inferenceComponents,
             resolver.collector
         )
-        val result = resolver.runTowerResolver(consumer, implicitReceiverStack.asReversed())
+        val result = resolver.runTowerResolver(consumer, implicitReceiverStack.receiversAsReversed())
 
         val candidates = result.bestCandidates()
         val nameReference = createResolvedNamedReference(
@@ -200,7 +200,12 @@ class FirCallResolver(
         }
 
         @Suppress("UNCHECKED_CAST")
-        val resultExpression = qualifiedAccess.transformCalleeReference(StoreNameReference, nameReference) as T
+        var resultExpression = qualifiedAccess.transformCalleeReference(StoreNameReference, nameReference) as T
+        if (candidates.size == 1) {
+            val candidate = candidates.single()
+            resultExpression = resultExpression.transformDispatchReceiver(StoreReceiver, candidate.dispatchReceiverExpression()) as T
+            resultExpression = resultExpression.transformExtensionReceiver(StoreReceiver, candidate.extensionReceiverExpression()) as T
+        }
         if (resultExpression is FirExpression) transformer.storeTypeFromCallee(resultExpression)
         return resultExpression
     }

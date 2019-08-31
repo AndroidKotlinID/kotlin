@@ -5,13 +5,12 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers
 
-import com.google.common.collect.LinkedHashMultimap
-import com.google.common.collect.SetMultimap
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.expressions.*
+import org.jetbrains.kotlin.fir.references.FirExplicitThisReference
 import org.jetbrains.kotlin.fir.references.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.*
@@ -48,7 +47,6 @@ open class FirBodyResolveTransformer(
         private set
 
     final override val returnTypeCalculator: ReturnTypeCalculator = ReturnTypeCalculatorWithJump(session, scopeSession)
-    final override val labels: SetMultimap<Name, ConeKotlinType> = LinkedHashMultimap.create()
     final override val noExpectedType = FirImplicitTypeRefImpl(null)
     private val booleanType = FirImplicitBooleanTypeRef(null)
 
@@ -67,7 +65,7 @@ open class FirBodyResolveTransformer(
 
     private val localScopes = mutableListOf<FirLocalScope>()
     private val topLevelScopes = mutableListOf<FirScope>()
-    private val implicitReceiverStack = mutableListOf<ImplicitReceiverValue>()
+    final override val implicitReceiverStack: ImplicitReceiverStack = ImplicitReceiverStack()
     final override val inferenceComponents = inferenceComponents(session, returnTypeCalculator, scopeSession)
 
     private var primaryConstructorParametersScope: FirLocalScope? = null
@@ -197,18 +195,21 @@ open class FirBodyResolveTransformer(
     ): CompositeTransformResult<FirStatement> {
 
         when (val callee = qualifiedAccessExpression.calleeReference) {
-            is FirThisReference -> {
+            is FirExplicitThisReference -> {
                 val labelName = callee.labelName
-                val types = if (labelName == null) labels.values() else labels[Name.identifier(labelName)]
-                val type = types.lastOrNull() ?: ConeKotlinErrorType("Unresolved this@$labelName")
-                qualifiedAccessExpression.resultType = FirResolvedTypeRefImpl(null, type, emptyList())
+                val implicitReceiver = implicitReceiverStack[labelName]
+                callee.boundSymbol = implicitReceiver?.boundSymbol
+                qualifiedAccessExpression.resultType = FirResolvedTypeRefImpl(
+                    null, implicitReceiver?.type ?: ConeKotlinErrorType("Unresolved this@$labelName"),
+                    emptyList()
+                )
                 return qualifiedAccessExpression.compose()
             }
             is FirSuperReference -> {
                 if (callee.superTypeRef is FirResolvedTypeRef) {
                     qualifiedAccessExpression.resultType = callee.superTypeRef
                 } else {
-                    val superTypeRef = implicitReceiverStack.filterIsInstance<ImplicitDispatchReceiverValue>().lastOrNull()
+                    val superTypeRef = implicitReceiverStack.lastDispatchReceiver()
                         ?.boundSymbol?.phasedFir?.superTypeRefs?.firstOrNull()
                         ?: FirErrorTypeRefImpl(qualifiedAccessExpression.psi, "No super type")
                     qualifiedAccessExpression.resultType = superTypeRef
@@ -366,7 +367,9 @@ open class FirBodyResolveTransformer(
 
         val label = anonymousFunction.label
         return if (label != null && receiverTypeRef != null) {
-            withLabelAndReceiverType(Name.identifier(label.name), anonymousFunction, receiverTypeRef.coneTypeUnsafe()) { transform() }
+            withLabelAndReceiverType(Name.identifier(label.name), anonymousFunction, receiverTypeRef.coneTypeUnsafe()) {
+                transform()
+            }
         } else {
             transform()
         }
@@ -768,22 +771,26 @@ open class FirBodyResolveTransformer(
 
     // ----------------------- Util functions -----------------------
 
-    private inline fun <T> withLabelAndReceiverType(labelName: Name, owner: FirElement, type: ConeKotlinType, block: () -> T): T {
-        labels.put(labelName, type)
-        implicitReceiverStack += when (owner) {
+    private inline fun <T> withLabelAndReceiverType(
+        labelName: Name,
+        owner: FirDeclaration,
+        type: ConeKotlinType,
+        block: () -> T
+    ): T {
+        val implicitReceiverValue = when (owner) {
             is FirRegularClass -> {
                 ImplicitDispatchReceiverValue(owner.symbol, type, symbolProvider, session, scopeSession)
             }
             is FirFunction<*> -> {
-                ImplicitExtensionReceiverValue(type, session, scopeSession)
+                ImplicitExtensionReceiverValue(owner.symbol, type, session, scopeSession)
             }
             else -> {
                 throw IllegalArgumentException("Incorrect label & receiver owner: ${owner.javaClass}")
             }
         }
+        implicitReceiverStack.add(labelName, implicitReceiverValue)
         val result = block()
-        implicitReceiverStack.removeAt(implicitReceiverStack.size - 1)
-        labels.remove(labelName, type)
+        implicitReceiverStack.pop(labelName)
         return result
     }
 

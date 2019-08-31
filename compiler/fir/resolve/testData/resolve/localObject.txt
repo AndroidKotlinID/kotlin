@@ -40,12 +40,12 @@ FILE: localObject.kt
                     }
 
                     public final override fun foo(): R|kotlin/Int| {
-                        ^foo R|/TestProperty.intConst|.R|kotlin/Int.plus|(Int(1))
+                        ^foo this@R|/TestProperty|.R|/TestProperty.intConst|.R|kotlin/Int.plus|(Int(1))
                     }
 
                 }
 
-                F|/TestProperty.x| = R|<local>/value|
+                this@R|/TestProperty|.F|/TestProperty.x| = R|<local>/value|
             }
 
         public final val y: R|kotlin/Int|
@@ -56,7 +56,7 @@ FILE: localObject.kt
                     }
 
                     public final override fun foo(): R|kotlin/Int| {
-                        ^foo R|/TestProperty.intConst|.R|kotlin/Int.plus|(Int(1))
+                        ^foo this@R|/TestProperty|.R|/TestProperty.intConst|.R|kotlin/Int.plus|(Int(1))
                     }
 
                 }
@@ -71,7 +71,7 @@ FILE: localObject.kt
                 }
 
                 public final override fun foo(): R|kotlin/Int| {
-                    ^foo R|/TestProperty.x|.R|kotlin/Int.plus|(Int(1))
+                    ^foo this@R|/TestProperty|.R|/TestProperty.x|.R|kotlin/Int.plus|(Int(1))
                 }
 
             }

@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.*
-import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
@@ -164,9 +163,9 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
         is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag) as T
         is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor) as T
         is ConeIntersectionType -> when (nullability) {
-            ConeNullability.NULLABLE -> ConeIntersectionType(constructor.mapTypes {
+            ConeNullability.NULLABLE -> this.mapTypes {
                 it.withNullability(nullability)
-            })
+            }
             ConeNullability.UNKNOWN -> this // TODO: is that correct?
             ConeNullability.NOT_NULL -> this
         } as T
@@ -274,9 +273,8 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
         }
         is FirThisReference -> {
             val labelName = newCallee.labelName
-            val types = if (labelName == null) labels.values() else labels[Name.identifier(labelName)]
-            val type = types.lastOrNull() ?: ConeKotlinErrorType("Unresolved this@$labelName")
-            FirResolvedTypeRefImpl(null, type, emptyList())
+            val implicitReceiver = implicitReceiverStack[labelName]
+            FirResolvedTypeRefImpl(null, implicitReceiver?.type ?: ConeKotlinErrorType("Unresolved this@$labelName"), emptyList())
         }
         else -> error("Failed to extract type from: $newCallee")
     }

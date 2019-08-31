@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
 import org.jetbrains.kotlin.fir.descriptors.FirModuleDescriptor
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
+import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
 import org.jetbrains.kotlin.fir.references.FirPropertyFromParameterCallableReference
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
@@ -498,7 +499,7 @@ internal class Fir2IrVisitor(
             ) {
                 backingField = createBackingField(
                     property, IrDeclarationOrigin.PROPERTY_BACKING_FIELD, descriptor,
-                    property.visibility, property.name, property.isVal, initializer, type
+                    Visibilities.PRIVATE, property.name, property.isVal, initializer, type
                 )
             } else if (delegate != null) {
                 backingField = createBackingField(
@@ -749,19 +750,25 @@ internal class Fir2IrVisitor(
             is IrCallImpl -> {
                 val ownerFunction = symbol.owner
                 if (ownerFunction.dispatchReceiverParameter != null) {
-                    val explicitReceiver = qualifiedAccess.explicitReceiver?.toIrExpression()
-                    if (explicitReceiver != null) {
-                        dispatchReceiver = explicitReceiver
-                    } else {
-                        // TODO: implicit dispatch receiver
+                    dispatchReceiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression() // NB: this applies to the situation when call is unresolved
+                    if (dispatchReceiver == null) {
+                        throw AssertionError()
                     }
                 } else if (ownerFunction.extensionReceiverParameter != null) {
-                    val explicitReceiver = qualifiedAccess.explicitReceiver?.toIrExpression()
-                    if (explicitReceiver != null) {
-                        extensionReceiver = explicitReceiver
-                    } else {
-                        // TODO: implicit extension receiver
+                    extensionReceiver = qualifiedAccess.extensionReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
+                    if (extensionReceiver == null) {
+                        throw AssertionError()
                     }
+                }
+                this
+            }
+            is IrFieldExpressionBase -> {
+                val ownerField = symbol.owner
+                if (!ownerField.isStatic) {
+                    receiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
                 }
                 this
             }
@@ -823,7 +830,7 @@ internal class Fir2IrVisitor(
             if (symbol != null && symbol.isBound) {
                 when (symbol) {
                     is IrFieldSymbol -> IrSetFieldImpl(
-                        startOffset, endOffset, symbol, symbol.owner.type
+                        startOffset, endOffset, symbol, unitType
                     ).apply {
                         value = variableAssignment.rValue.toIrExpression()
                     }
@@ -832,7 +839,7 @@ internal class Fir2IrVisitor(
                         val backingField = irProperty.backingField
                         if (backingField != null) {
                             IrSetFieldImpl(
-                                startOffset, endOffset, backingField.symbol, backingField.symbol.owner.type
+                                startOffset, endOffset, backingField.symbol, unitType
                             ).apply {
                                 value = variableAssignment.rValue.toIrExpression()
                             }
@@ -850,7 +857,7 @@ internal class Fir2IrVisitor(
             } else {
                 generateErrorCallExpression(startOffset, endOffset, calleeReference)
             }
-        }
+        }.applyReceivers(variableAssignment)
     }
 
     override fun <T> visitConstExpression(constExpression: FirConstExpression<T>, data: Any?): IrElement {
