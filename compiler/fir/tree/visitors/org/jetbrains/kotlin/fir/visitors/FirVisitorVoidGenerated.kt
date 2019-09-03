@@ -6,9 +6,11 @@ package org.jetbrains.kotlin.fir.visitors
 
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.impl.*
+import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableClass
+import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableFunction
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
+import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
 import org.jetbrains.kotlin.fir.types.*
 
 
@@ -150,6 +152,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitReference(reference: FirReference) {
         visitElement(reference, null)
+    }
+
+    open fun visitControlFlowGraphReference(controlFlowGraphReference: FirControlFlowGraphReference) {
+        visitReference(controlFlowGraphReference, null)
     }
 
     open fun visitNamedReference(namedReference: FirNamedReference) {
@@ -306,6 +312,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitErrorExpression(errorExpression: FirErrorExpression) {
         visitUnknownTypeExpression(errorExpression, null)
+    }
+
+    open fun visitExpressionWithSmartcast(expressionWithSmartcast: FirExpressionWithSmartcast) {
+        visitUnknownTypeExpression(expressionWithSmartcast, null)
     }
 
     open fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression) {
@@ -564,6 +574,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitContinueExpression(continueExpression)
     }
 
+    final override fun visitControlFlowGraphReference(controlFlowGraphReference: FirControlFlowGraphReference, data: Nothing?) {
+        visitControlFlowGraphReference(controlFlowGraphReference)
+    }
+
     final override fun visitDeclaration(declaration: FirDeclaration, data: Nothing?) {
         visitDeclaration(declaration)
     }
@@ -618,6 +632,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitExpression(expression: FirExpression, data: Nothing?) {
         visitExpression(expression)
+    }
+
+    final override fun visitExpressionWithSmartcast(expressionWithSmartcast: FirExpressionWithSmartcast, data: Nothing?) {
+        visitExpressionWithSmartcast(expressionWithSmartcast)
     }
 
     final override fun visitField(field: FirField, data: Nothing?) {

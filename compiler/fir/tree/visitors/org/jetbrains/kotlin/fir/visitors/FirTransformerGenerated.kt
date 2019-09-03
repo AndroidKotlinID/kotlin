@@ -6,9 +6,11 @@ package org.jetbrains.kotlin.fir.visitors
 
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.impl.*
+import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableClass
+import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableFunction
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
+import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
 import org.jetbrains.kotlin.fir.types.*
 
 
@@ -150,6 +152,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun <E : FirElement> transformReference(reference: E, data: D): CompositeTransformResult<E> {
         return transformElement(reference, data)
+    }
+
+    open fun transformControlFlowGraphReference(controlFlowGraphReference: FirControlFlowGraphReference, data: D): CompositeTransformResult<FirControlFlowGraphReference> {
+        return transformReference(controlFlowGraphReference, data)
     }
 
     open fun transformNamedReference(namedReference: FirNamedReference, data: D): CompositeTransformResult<FirNamedReference> {
@@ -306,6 +312,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun transformErrorExpression(errorExpression: FirErrorExpression, data: D): CompositeTransformResult<FirStatement> {
         return transformUnknownTypeExpression(errorExpression, data)
+    }
+
+    open fun transformExpressionWithSmartcast(expressionWithSmartcast: FirExpressionWithSmartcast, data: D): CompositeTransformResult<FirStatement> {
+        return transformUnknownTypeExpression(expressionWithSmartcast, data)
     }
 
     open fun transformQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: D): CompositeTransformResult<FirStatement> {
@@ -564,6 +574,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformContinueExpression(continueExpression, data)
     }
 
+    final override fun visitControlFlowGraphReference(controlFlowGraphReference: FirControlFlowGraphReference, data: D): CompositeTransformResult<FirElement> {
+        return transformControlFlowGraphReference(controlFlowGraphReference, data)
+    }
+
     final override fun visitDeclaration(declaration: FirDeclaration, data: D): CompositeTransformResult<FirElement> {
         return transformDeclaration(declaration, data)
     }
@@ -618,6 +632,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitExpression(expression: FirExpression, data: D): CompositeTransformResult<FirElement> {
         return transformExpression(expression, data)
+    }
+
+    final override fun visitExpressionWithSmartcast(expressionWithSmartcast: FirExpressionWithSmartcast, data: D): CompositeTransformResult<FirElement> {
+        return transformExpressionWithSmartcast(expressionWithSmartcast, data)
     }
 
     final override fun visitField(field: FirField, data: D): CompositeTransformResult<FirElement> {
