@@ -3,8 +3,8 @@
 
 package org.jetbrains.kotlin.backend.common.serialization.proto;
 
-public interface StringOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:org.jetbrains.kotlin.backend.common.serialization.proto.String)
+public interface IrDataIndexOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex)
     org.jetbrains.kotlin.protobuf.MessageLiteOrBuilder {
 
   /**

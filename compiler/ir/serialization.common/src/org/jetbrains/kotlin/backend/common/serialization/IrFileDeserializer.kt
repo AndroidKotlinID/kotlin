@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.*
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.ir.util.render
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedTypeParameterDescriptor
 import org.jetbrains.kotlin.types.Variance
@@ -43,6 +44,7 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.ClassKind as Prot
 import org.jetbrains.kotlin.backend.common.serialization.proto.DescriptorReference as ProtoDescriptorReference
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrAnonymousInit as ProtoAnonymousInit
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrBlock as ProtoBlock
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex as ProtoBodyIndex
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrBlockBody as ProtoBlockBody
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrBranch as ProtoBranch
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrBreak as ProtoBreak
@@ -91,7 +93,7 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.IrSpreadElement a
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrStatement as ProtoStatement
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrStatementOrigin as ProtoStatementOrigin
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrStringConcat as ProtoStringConcat
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrSymbol as ProtoSymbol
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex as ProtoSymbolIndex
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrSyntheticBody as ProtoSyntheticBody
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrSyntheticBodyKind as ProtoSyntheticBodyKind
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrThrow as ProtoThrow
@@ -100,7 +102,7 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.IrType as ProtoTy
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeAbbreviation as ProtoTypeAbbreviation
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeAlias as ProtoTypeAlias
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeArgument as ProtoTypeArgument
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex as ProtoTypeIndex
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex as ProtoTypeIndex
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeOp as ProtoTypeOp
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeOperator as ProtoTypeOperator
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeParameter as ProtoTypeParameter
@@ -114,9 +116,10 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.IrWhile as ProtoW
 import org.jetbrains.kotlin.backend.common.serialization.proto.Loop as ProtoLoop
 import org.jetbrains.kotlin.backend.common.serialization.proto.MemberAccessCommon as ProtoMemberAccessCommon
 import org.jetbrains.kotlin.backend.common.serialization.proto.ModalityKind as ProtoModalityKind
-import org.jetbrains.kotlin.backend.common.serialization.proto.String as ProtoString
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex as ProtoStringIndex
 import org.jetbrains.kotlin.backend.common.serialization.proto.TypeArguments as ProtoTypeArguments
 import org.jetbrains.kotlin.backend.common.serialization.proto.Visibility as ProtoVisibility
+import org.jetbrains.kotlin.backend.common.serialization.proto.FqName as ProtoFqName
 
 // TODO: This code still has some uses of descriptors:
 // 1. We use descriptors as keys for symbolTable -- probably symbol table related code should be refactored out from
@@ -124,21 +127,29 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.Visibility as Pro
 // 2. Properties use descriptors but not symbols -- that causes lots of assymmetry all around.
 // 3. Declarations are provided with wrapped descriptors. That is probably a legitimate descriptor use.
 
-abstract class IrModuleDeserializer(
+abstract class IrFileDeserializer(
     val logger: LoggingContext,
     val builtIns: IrBuiltIns,
     val symbolTable: SymbolTable
 ) {
 
-    abstract fun deserializeIrSymbol(proto: ProtoSymbol): IrSymbol
+    abstract fun deserializeIrSymbol(proto: ProtoSymbolIndex): IrSymbol
     abstract fun deserializeIrType(proto: ProtoTypeIndex): IrType
     abstract fun deserializeDescriptorReference(proto: ProtoDescriptorReference): DeclarationDescriptor
-    abstract fun deserializeString(proto: ProtoString): String
+    abstract fun deserializeString(proto: ProtoStringIndex): String
+    abstract fun deserializeExpressionBody(proto: ProtoBodyIndex): IrExpression
+    abstract fun deserializeStatementBody(proto: ProtoBodyIndex): IrElement
     abstract fun deserializeLoopHeader(loopIndex: Int, loopBuilder: () -> IrLoopBase): IrLoopBase
 
     private val parentsStack = mutableListOf<IrDeclarationParent>()
 
-    private fun deserializeName(proto: ProtoString): Name {
+    fun deserializeFqName(proto: ProtoFqName): FqName {
+        return proto.segmentList.run {
+            if (isEmpty()) FqName.ROOT else FqName.fromSegments(map { deserializeString(it) })
+        }
+    }
+
+    private fun deserializeName(proto: ProtoStringIndex): Name {
         val name = deserializeString(proto)
         return Name.guessByFirstCharacter(name)
     }
@@ -154,13 +165,13 @@ abstract class IrModuleDeserializer(
         return result
     }
 
-    fun deserializeIrTypeVariance(variance: ProtoTypeVariance) = when (variance) {
+    private fun deserializeIrTypeVariance(variance: ProtoTypeVariance) = when (variance) {
         ProtoTypeVariance.IN -> Variance.IN_VARIANCE
         ProtoTypeVariance.OUT -> Variance.OUT_VARIANCE
         ProtoTypeVariance.INV -> Variance.INVARIANT
     }
 
-    fun deserializeIrTypeArgument(proto: ProtoTypeArgument) = when (proto.kindCase) {
+    private fun deserializeIrTypeArgument(proto: ProtoTypeArgument) = when (proto.kindCase) {
         STAR -> IrStarProjectionImpl
         TYPE -> makeTypeProjection(
             deserializeIrType(proto.type.type), deserializeIrTypeVariance(proto.type.variance)
@@ -175,31 +186,28 @@ abstract class IrModuleDeserializer(
         }
     }
 
-    open fun getPrimitiveTypeOrNull(symbol: IrClassifierSymbol, hasQuestionMark: Boolean): IrSimpleType? = null
-
-    fun deserializeSimpleType(proto: ProtoSimpleType): IrSimpleType {
+    private fun deserializeSimpleType(proto: ProtoSimpleType): IrSimpleType {
         val symbol = deserializeIrSymbol(proto.classifier) as? IrClassifierSymbol
             ?: error("could not convert sym to ClassifierSymbol")
         logger.log { "deserializeSimpleType: symbol=$symbol" }
 
-        val result = getPrimitiveTypeOrNull(symbol, proto.hasQuestionMark) ?: run {
-            val arguments = proto.argumentList.map { deserializeIrTypeArgument(it) }
-            val annotations = deserializeAnnotations(proto.annotations)
-            IrSimpleTypeImpl(
-                null,
-                symbol,
-                proto.hasQuestionMark,
-                arguments,
-                annotations,
-                if (proto.hasAbbreviation()) deserializeTypeAbbreviation(proto.abbreviation) else null
-            )
-        }
+        val arguments = proto.argumentList.map { deserializeIrTypeArgument(it) }
+        val annotations = deserializeAnnotations(proto.annotations)
+
+        val result: IrSimpleType = IrSimpleTypeImpl(
+            null,
+            symbol,
+            proto.hasQuestionMark,
+            arguments,
+            annotations,
+            if (proto.hasAbbreviation()) deserializeTypeAbbreviation(proto.abbreviation) else null
+        )
         logger.log { "ir_type = $result; render = ${result.render()}" }
         return result
 
     }
 
-    fun deserializeTypeAbbreviation(proto: ProtoTypeAbbreviation): IrTypeAbbreviation =
+    private fun deserializeTypeAbbreviation(proto: ProtoTypeAbbreviation): IrTypeAbbreviation =
         IrTypeAbbreviationImpl(
             deserializeIrSymbol(proto.typeAlias).let {
                 it as? IrTypeAliasSymbol
@@ -210,12 +218,12 @@ abstract class IrModuleDeserializer(
             deserializeAnnotations(proto.annotations)
         )
 
-    fun deserializeDynamicType(proto: ProtoDynamicType): IrDynamicType {
+    private fun deserializeDynamicType(proto: ProtoDynamicType): IrDynamicType {
         val annotations = deserializeAnnotations(proto.annotations)
         return IrDynamicTypeImpl(null, annotations, Variance.INVARIANT)
     }
 
-    fun deserializeErrorType(proto: ProtoErrorType): IrErrorType {
+    private fun deserializeErrorType(proto: ProtoErrorType): IrErrorType {
         val annotations = deserializeAnnotations(proto.annotations)
         return IrErrorTypeImpl(null, annotations, Variance.INVARIANT)
     }
@@ -269,7 +277,7 @@ abstract class IrModuleDeserializer(
         return IrSyntheticBodyImpl(start, end, kind)
     }
 
-    private fun deserializeStatement(proto: ProtoStatement): IrElement {
+    fun deserializeStatement(proto: ProtoStatement): IrElement {
         val start = proto.coordinates.startOffset
         val end = proto.coordinates.endOffset
         val element = when (proto.statementCase) {
@@ -407,7 +415,7 @@ abstract class IrModuleDeserializer(
     }
 
 
-    fun deserializeEnumConstructorCall(
+    private fun deserializeEnumConstructorCall(
         proto: ProtoEnumConstructorCall,
         start: Int,
         end: Int,
@@ -872,7 +880,7 @@ abstract class IrModuleDeserializer(
             OPERATION_NOT_SET -> error("Expression deserialization not implemented: ${proto.operationCase}")
         }
 
-    private fun deserializeExpression(proto: ProtoExpression): IrExpression {
+    fun deserializeExpression(proto: ProtoExpression): IrExpression {
         val start = proto.coordinates.startOffset
         val end = proto.coordinates.endOffset
         val type = deserializeIrType(proto.type)
@@ -951,7 +959,7 @@ abstract class IrModuleDeserializer(
                 proto.isNoinline
             ).apply {
                 if (proto.hasDefaultValue())
-                    defaultValue = IrExpressionBodyImpl(deserializeExpression(proto.defaultValue))
+                    defaultValue = IrExpressionBodyImpl(deserializeExpressionBody(proto.defaultValue))
 
                 (descriptor as? WrappedValueParameterDescriptor)?.bind(this)
                 (descriptor as? WrappedReceiverParameterDescriptor)?.bind(this)
@@ -1024,8 +1032,9 @@ abstract class IrModuleDeserializer(
                 dispatchReceiverParameter = deserializeIrValueParameter(proto.dispatchReceiver)
             if (proto.hasExtensionReceiver())
                 extensionReceiverParameter = deserializeIrValueParameter(proto.extensionReceiver)
-            if (proto.hasBody())
-                body = deserializeStatement(proto.body) as IrBody
+            if (proto.hasBody()) {
+                body = deserializeStatementBody(proto.body) as IrBody
+            }
         }
     }
 
@@ -1087,7 +1096,7 @@ abstract class IrModuleDeserializer(
                 if (proto.hasCorrespondingClass())
                     correspondingClass = deserializeIrClass(proto.correspondingClass)
                 if (proto.hasInitializer())
-                    initializerExpression = deserializeExpression(proto.initializer)
+                    initializerExpression = deserializeExpressionBody(proto.initializer)
 
                 (descriptor as? WrappedEnumEntryDescriptor)?.bind(this)
             }
@@ -1096,7 +1105,8 @@ abstract class IrModuleDeserializer(
     private fun deserializeIrAnonymousInit(proto: ProtoAnonymousInit) =
         withDeserializedIrDeclarationBase(proto.base) { symbol, startOffset, endOffset, origin ->
             IrAnonymousInitializerImpl(startOffset, endOffset, origin, symbol as IrAnonymousInitializerSymbol).apply {
-                body = deserializeBlockBody(proto.body.blockBody, startOffset, endOffset)
+//                body = deserializeBlockBody(proto.body.blockBody, startOffset, endOffset)
+                body = deserializeStatementBody(proto.body) as IrBlockBody
 
                 (descriptor as? WrappedClassDescriptor)?.bind(parentsStack.peek() as IrClass)
             }
@@ -1157,7 +1167,7 @@ abstract class IrModuleDeserializer(
                 )
             }.usingParent {
                 if (proto.hasInitializer())
-                    initializer = IrExpressionBodyImpl(deserializeExpression(proto.initializer))
+                    initializer = IrExpressionBodyImpl(deserializeExpressionBody(proto.initializer))
 
                 (descriptor as? WrappedFieldDescriptor)?.bind(this)
             }
@@ -1236,18 +1246,18 @@ abstract class IrModuleDeserializer(
     private val allKnownDeclarationOrigins =
         IrDeclarationOrigin::class.nestedClasses.toList() + DeclarationFactory.FIELD_FOR_OUTER_THIS::class
 
-    val declarationOriginIndex =
+    private val declarationOriginIndex =
         allKnownDeclarationOrigins.map { it.objectInstance as IrDeclarationOriginImpl }.associateBy { it.name }
 
 
-    fun deserializeIrDeclarationOrigin(proto: ProtoDeclarationOrigin): IrDeclarationOriginImpl {
+    private fun deserializeIrDeclarationOrigin(proto: ProtoDeclarationOrigin): IrDeclarationOriginImpl {
         val originName = deserializeString(proto.custom)
         return declarationOriginIndex[originName] ?: object : IrDeclarationOriginImpl(originName) {}
     }
 
     private val allKnownStatementOrigins =
         IrStatementOrigin::class.nestedClasses.toList()
-    val statementOriginIndex =
+    private val statementOriginIndex =
         allKnownStatementOrigins.map { it.objectInstance as? IrStatementOriginImpl }.filterNotNull().associateBy { it.debugName }
 
     fun deserializeIrStatementOrigin(proto: ProtoStatementOrigin): IrStatementOrigin {

@@ -4,30 +4,30 @@
 package org.jetbrains.kotlin.backend.common.serialization.proto;
 
 /**
- * Protobuf type {@code org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex}
+ * Protobuf type {@code org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex}
  */
-public final class IrTypeIndex extends
+public final class IrDataIndex extends
     org.jetbrains.kotlin.protobuf.GeneratedMessageLite implements
-    // @@protoc_insertion_point(message_implements:org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex)
-    IrTypeIndexOrBuilder {
-  // Use IrTypeIndex.newBuilder() to construct.
-  private IrTypeIndex(org.jetbrains.kotlin.protobuf.GeneratedMessageLite.Builder builder) {
+    // @@protoc_insertion_point(message_implements:org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex)
+    IrDataIndexOrBuilder {
+  // Use IrDataIndex.newBuilder() to construct.
+  private IrDataIndex(org.jetbrains.kotlin.protobuf.GeneratedMessageLite.Builder builder) {
     super(builder);
     this.unknownFields = builder.getUnknownFields();
   }
-  private IrTypeIndex(boolean noInit) { this.unknownFields = org.jetbrains.kotlin.protobuf.ByteString.EMPTY;}
+  private IrDataIndex(boolean noInit) { this.unknownFields = org.jetbrains.kotlin.protobuf.ByteString.EMPTY;}
 
-  private static final IrTypeIndex defaultInstance;
-  public static IrTypeIndex getDefaultInstance() {
+  private static final IrDataIndex defaultInstance;
+  public static IrDataIndex getDefaultInstance() {
     return defaultInstance;
   }
 
-  public IrTypeIndex getDefaultInstanceForType() {
+  public IrDataIndex getDefaultInstanceForType() {
     return defaultInstance;
   }
 
   private final org.jetbrains.kotlin.protobuf.ByteString unknownFields;
-  private IrTypeIndex(
+  private IrDataIndex(
       org.jetbrains.kotlin.protobuf.CodedInputStream input,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
@@ -76,18 +76,18 @@ public final class IrTypeIndex extends
       makeExtensionsImmutable();
     }
   }
-  public static org.jetbrains.kotlin.protobuf.Parser<IrTypeIndex> PARSER =
-      new org.jetbrains.kotlin.protobuf.AbstractParser<IrTypeIndex>() {
-    public IrTypeIndex parsePartialFrom(
+  public static org.jetbrains.kotlin.protobuf.Parser<IrDataIndex> PARSER =
+      new org.jetbrains.kotlin.protobuf.AbstractParser<IrDataIndex>() {
+    public IrDataIndex parsePartialFrom(
         org.jetbrains.kotlin.protobuf.CodedInputStream input,
         org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
         throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
-      return new IrTypeIndex(input, extensionRegistry);
+      return new IrDataIndex(input, extensionRegistry);
     }
   };
 
   @java.lang.Override
-  public org.jetbrains.kotlin.protobuf.Parser<IrTypeIndex> getParserForType() {
+  public org.jetbrains.kotlin.protobuf.Parser<IrDataIndex> getParserForType() {
     return PARSER;
   }
 
@@ -155,53 +155,53 @@ public final class IrTypeIndex extends
     return super.writeReplace();
   }
 
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       org.jetbrains.kotlin.protobuf.ByteString data)
       throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       org.jetbrains.kotlin.protobuf.ByteString data,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(byte[] data)
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(byte[] data)
       throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       byte[] data,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(java.io.InputStream input)
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return PARSER.parseFrom(input);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       java.io.InputStream input,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return PARSER.parseFrom(input, extensionRegistry);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseDelimitedFrom(java.io.InputStream input)
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return PARSER.parseDelimitedFrom(input);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseDelimitedFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseDelimitedFrom(
       java.io.InputStream input,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return PARSER.parseDelimitedFrom(input, extensionRegistry);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       org.jetbrains.kotlin.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return PARSER.parseFrom(input);
   }
-  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parseFrom(
+  public static org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parseFrom(
       org.jetbrains.kotlin.protobuf.CodedInputStream input,
       org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -210,21 +210,21 @@ public final class IrTypeIndex extends
 
   public static Builder newBuilder() { return Builder.create(); }
   public Builder newBuilderForType() { return newBuilder(); }
-  public static Builder newBuilder(org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex prototype) {
+  public static Builder newBuilder(org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex prototype) {
     return newBuilder().mergeFrom(prototype);
   }
   public Builder toBuilder() { return newBuilder(this); }
 
   /**
-   * Protobuf type {@code org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex}
+   * Protobuf type {@code org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex}
    */
   public static final class Builder extends
       org.jetbrains.kotlin.protobuf.GeneratedMessageLite.Builder<
-        org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex, Builder>
+        org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex, Builder>
       implements
-      // @@protoc_insertion_point(builder_implements:org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex)
-      org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndexOrBuilder {
-    // Construct using org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex.newBuilder()
+      // @@protoc_insertion_point(builder_implements:org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex)
+      org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndexOrBuilder {
+    // Construct using org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -246,20 +246,20 @@ public final class IrTypeIndex extends
       return create().mergeFrom(buildPartial());
     }
 
-    public org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex getDefaultInstanceForType() {
-      return org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex.getDefaultInstance();
+    public org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex getDefaultInstanceForType() {
+      return org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex.getDefaultInstance();
     }
 
-    public org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex build() {
-      org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex result = buildPartial();
+    public org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex build() {
+      org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    public org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex buildPartial() {
-      org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex result = new org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex(this);
+    public org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex buildPartial() {
+      org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex result = new org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex(this);
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -270,8 +270,8 @@ public final class IrTypeIndex extends
       return result;
     }
 
-    public Builder mergeFrom(org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex other) {
-      if (other == org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex.getDefaultInstance()) return this;
+    public Builder mergeFrom(org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex other) {
+      if (other == org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex.getDefaultInstance()) return this;
       if (other.hasIndex()) {
         setIndex(other.getIndex());
       }
@@ -292,11 +292,11 @@ public final class IrTypeIndex extends
         org.jetbrains.kotlin.protobuf.CodedInputStream input,
         org.jetbrains.kotlin.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex parsedMessage = null;
+      org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (org.jetbrains.kotlin.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex) e.getUnfinishedMessage();
+        parsedMessage = (org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex) e.getUnfinishedMessage();
         throw e;
       } finally {
         if (parsedMessage != null) {
@@ -339,13 +339,13 @@ public final class IrTypeIndex extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex)
+    // @@protoc_insertion_point(builder_scope:org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex)
   }
 
   static {
-    defaultInstance = new IrTypeIndex(true);
+    defaultInstance = new IrDataIndex(true);
     defaultInstance.initFields();
   }
 
-  // @@protoc_insertion_point(class_scope:org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeIndex)
+  // @@protoc_insertion_point(class_scope:org.jetbrains.kotlin.backend.common.serialization.proto.IrDataIndex)
 }
