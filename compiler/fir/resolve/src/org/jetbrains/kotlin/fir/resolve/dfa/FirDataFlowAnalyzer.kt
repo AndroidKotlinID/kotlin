@@ -17,8 +17,8 @@ import org.jetbrains.kotlin.fir.resolve.ImplicitReceiverStackImpl
 import org.jetbrains.kotlin.fir.resolve.dfa.Condition.*
 import org.jetbrains.kotlin.fir.resolve.dfa.cfg.*
 import org.jetbrains.kotlin.fir.resolve.transformers.FirBodyResolveTransformer
+import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.CallableId
-import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.FirSymbolOwner
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -456,7 +456,7 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
         }
     }
 
-    private val FirElement.resolvedSymbol: FirBasedSymbol<*>?
+    private val FirElement.resolvedSymbol: AbstractFirBasedSymbol<*>?
         get() {
             val expression = (this as? FirWhenSubjectExpression)?.whenSubject?.whenExpression?.let {
                 it.subjectVariable?.symbol?.let { symbol -> return symbol }
@@ -465,11 +465,11 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
             return (expression as? FirResolvable)?.resolvedSymbol
         }
 
-    private val FirResolvable.resolvedSymbol: FirBasedSymbol<*>?
-        get() = (calleeReference as? FirResolvedCallableReference)?.coneSymbol as? FirBasedSymbol<*>
+    private val FirResolvable.resolvedSymbol: AbstractFirBasedSymbol<*>?
+        get() = (calleeReference as? FirResolvedCallableReference)?.resolvedSymbol
 
     private fun FirFunctionCall.isBooleanNot(): Boolean {
-        val symbol = calleeReference.safeAs<FirResolvedCallableReference>()?.coneSymbol as? FirNamedFunctionSymbol ?: return false
+        val symbol = calleeReference.safeAs<FirResolvedCallableReference>()?.resolvedSymbol as? FirNamedFunctionSymbol ?: return false
         return symbol.callableId == KOTLIN_BOOLEAN_NOT
     }
 
@@ -496,7 +496,7 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
             logicSystem.changeVariableForConditionFlow(node.flow, initializerVariable, realVariable)
         }
 
-        initializer.resolvedSymbol?.let { initializerSymbol: FirBasedSymbol<*> ->
+        initializer.resolvedSymbol?.let { initializerSymbol: AbstractFirBasedSymbol<*> ->
             val rhsVariable = getOrCreateRealVariable(initializerSymbol)
             variableStorage.createAliasVariable(variable.symbol, rhsVariable)
         }
@@ -662,11 +662,11 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
         if (fir is FirThisReceiverExpressionImpl) {
             return variableStorage.getOrCreateNewThisRealVariable(fir.calleeReference.boundSymbol ?: return null)
         }
-        val symbol: FirBasedSymbol<*> = fir.resolvedSymbol ?: return null
+        val symbol = fir.resolvedSymbol ?: return null
         return variableStorage.getOrCreateNewRealVariable(symbol)
     }
 
-    private fun getOrCreateRealVariable(symbol: FirBasedSymbol<*>): RealDataFlowVariable =
+    private fun getOrCreateRealVariable(symbol: AbstractFirBasedSymbol<*>): RealDataFlowVariable =
         variableStorage.getOrCreateNewRealVariable(symbol).variableUnderAlias
 
     private fun getOrCreateVariable(fir: FirElement): DataFlowVariable {
@@ -681,7 +681,7 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
 
     private val FirElement.realVariable: RealDataFlowVariable?
         get() {
-            val symbol: FirBasedSymbol<*> = if (this is FirThisReceiverExpressionImpl) {
+            val symbol = if (this is FirThisReceiverExpressionImpl) {
                 calleeReference.boundSymbol
             } else {
                 resolvedSymbol
@@ -700,9 +700,9 @@ class FirDataFlowAnalyzer(transformer: FirBodyResolveTransformer) : BodyResolveC
                         require(explicitReceiver != null)
                         collect(explicitReceiver)
                     }
-                    ((call.calleeReference as? FirResolvedCallableReference)?.coneSymbol)?.let { symbol ->
+                    ((call.calleeReference as? FirResolvedCallableReference)?.resolvedSymbol)?.let { symbol ->
                         if (symbol is FirVariableSymbol<*> || symbol is FirPropertySymbol) {
-                            result += getOrCreateRealVariable(symbol as FirBasedSymbol<*>)
+                            result += getOrCreateRealVariable(symbol)
                         }
                     }
                 }

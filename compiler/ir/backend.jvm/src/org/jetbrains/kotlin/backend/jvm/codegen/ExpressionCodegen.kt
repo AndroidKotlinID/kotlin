@@ -15,9 +15,7 @@ import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.codegen.AsmUtil.*
 import org.jetbrains.kotlin.codegen.BaseExpressionCodegen
 import org.jetbrains.kotlin.codegen.CallGenerator
-import org.jetbrains.kotlin.codegen.OwnerKind
 import org.jetbrains.kotlin.codegen.StackValue
-import org.jetbrains.kotlin.codegen.coroutines.INVOKE_SUSPEND_METHOD_NAME
 import org.jetbrains.kotlin.codegen.extractReificationArgument
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.Companion.putNeedClassReificationMarker
@@ -98,6 +96,7 @@ class VariableInfo(val declaration: IrVariable, val index: Int, val type: Type, 
 
 class ExpressionCodegen(
     val irFunction: IrFunction,
+    val signature: JvmMethodSignature,
     override val frameMap: IrFrameMap,
     val mv: InstructionAdapter,
     val classCodegen: ClassCodegen,
@@ -110,7 +109,7 @@ class ExpressionCodegen(
     val typeMapper = context.typeMapper
     val methodSignatureMapper = context.methodSignatureMapper
 
-    private val state = classCodegen.state
+    val state = classCodegen.state
 
     private val fileEntry = classCodegen.context.psiSourceManager.getFileEntry(irFunction.fileParent)
 
@@ -179,7 +178,7 @@ class ExpressionCodegen(
             if (irFunction.origin != JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER) {
                 irFunction.markLineNumber(startOffset = irFunction is IrConstructor && irFunction.isPrimary)
             }
-            val returnType = methodSignatureMapper.mapReturnType(irFunction)
+            val returnType = signature.returnType
             val returnIrType = if (irFunction !is IrConstructor) irFunction.returnType else context.irBuiltIns.unitType
             result.coerce(returnType, returnIrType).materialize()
             mv.areturn(returnType)
@@ -297,6 +296,10 @@ class ExpressionCodegen(
     override fun visitContainerExpression(expression: IrContainerExpression, data: BlockInfo) =
         visitStatementContainer(expression, data).coerce(expression.type)
 
+    override fun visitCall(expression: IrCall, data: BlockInfo): PromisedValue {
+        return visitFunctionAccess(expression.createSuspendFunctionCallViewIfNeeded(context, irFunction), data)
+    }
+
     override fun visitFunctionAccess(expression: IrFunctionAccessExpression, data: BlockInfo): PromisedValue {
         classCodegen.context.irIntrinsics.getIntrinsic(expression.symbol)
             ?.invoke(expression, this, data)?.let { return it.coerce(expression.type) }
@@ -333,7 +336,7 @@ class ExpressionCodegen(
             }
             expression.descriptor is ConstructorDescriptor ->
                 throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
-            callee.isSuspend && !irFunction.isInvokeSuspendInContinuation() ->
+            callee.isSuspend && !irFunction.isInvokeSuspendOfContinuation(classCodegen.context) ->
                 addInlineMarker(mv, isStartNotEnd = true)
         }
 
@@ -359,13 +362,13 @@ class ExpressionCodegen(
         expression.markLineNumber(true)
 
         // Do not generate redundant markers in continuation class.
-        if (callee.isSuspend && !irFunction.isInvokeSuspendInContinuation()) {
+        if (callee.isSuspend && !irFunction.isInvokeSuspendOfContinuation(classCodegen.context)) {
             addSuspendMarker(mv, isStartNotEnd = true)
         }
 
         callGenerator.genCall(callable, this, expression)
 
-        if (callee.isSuspend && !irFunction.isInvokeSuspendInContinuation()) {
+        if (callee.isSuspend && !irFunction.isInvokeSuspendOfContinuation(classCodegen.context)) {
             addSuspendMarker(mv, isStartNotEnd = false)
             addInlineMarker(mv, isStartNotEnd = false)
         }
@@ -388,9 +391,6 @@ class ExpressionCodegen(
                 MaterialValue(this, callable.asmMethod.returnType, returnType).coerce(expression.type)
         }
     }
-
-    private fun IrFunction.isInvokeSuspendInContinuation(): Boolean =
-        name.asString() == INVOKE_SUSPEND_METHOD_NAME && parentAsClass in classCodegen.context.suspendFunctionContinuations.values
 
     override fun visitVariable(declaration: IrVariable, data: BlockInfo): PromisedValue {
         val varType = typeMapper.mapType(declaration)
@@ -532,13 +532,12 @@ class ExpressionCodegen(
     override fun visitReturn(expression: IrReturn, data: BlockInfo): PromisedValue {
         val returnTarget = expression.returnTargetSymbol.owner
         val owner =
-            returnTarget as? IrFunction
+            (returnTarget as? IrFunction
                 ?: (returnTarget as? IrReturnableBlock)?.inlineFunctionSymbol?.owner
-                ?: error("Unsupported IrReturnTarget: $returnTarget")
+                ?: error("Unsupported IrReturnTarget: $returnTarget")).getOrCreateSuspendFunctionViewIfNeeded(context)
         //TODO: should be owner != irFunction
         val isNonLocalReturn =
-            methodSignatureMapper.mapFunctionName(owner, OwnerKind.IMPLEMENTATION) !=
-                    methodSignatureMapper.mapFunctionName(irFunction, OwnerKind.IMPLEMENTATION)
+            methodSignatureMapper.mapFunctionName(owner) != methodSignatureMapper.mapFunctionName(irFunction)
         if (isNonLocalReturn && state.isInlineDisabled) {
             //TODO: state.diagnostics.report(Errors.NON_LOCAL_RETURN_IN_DISABLED_INLINE.on(expression))
             genThrow(
@@ -548,7 +547,7 @@ class ExpressionCodegen(
             return immaterialUnitValue
         }
 
-        val returnType = methodSignatureMapper.mapReturnType(owner)
+        val returnType = if (owner == irFunction) signature.returnType else methodSignatureMapper.mapReturnType(owner)
         val afterReturnLabel = Label()
         expression.value.accept(this, data).coerce(returnType, owner.returnType).materialize()
         generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data)
