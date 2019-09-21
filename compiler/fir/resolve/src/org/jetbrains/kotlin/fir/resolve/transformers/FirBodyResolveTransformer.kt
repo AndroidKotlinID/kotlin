@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.fir.resolve.inference.FirCallCompleter
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.addImportingScopes
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirTopLevelDeclaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.symbols.*
 import org.jetbrains.kotlin.fir.types.*
@@ -46,7 +45,7 @@ open class FirBodyResolveTransformer(
     final override val session: FirSession,
     phase: FirResolvePhase,
     implicitTypeOnly: Boolean,
-    val scopeSession: ScopeSession = ScopeSession()
+    final override val scopeSession: ScopeSession = ScopeSession()
 ) : FirAbstractPhaseTransformer<Any?>(phase), BodyResolveComponents {
     var implicitTypeOnly: Boolean = implicitTypeOnly
         private set
@@ -72,6 +71,7 @@ open class FirBodyResolveTransformer(
     private val topLevelScopes = mutableListOf<FirScope>()
     final override val implicitReceiverStack: ImplicitReceiverStackImpl = ImplicitReceiverStackImpl()
     final override val inferenceComponents = inferenceComponents(session, returnTypeCalculator, scopeSession)
+    final override val samResolver: FirSamResolver = FirSamResolverImpl(session, scopeSession)
 
     private var primaryConstructorParametersScope: FirLocalScope? = null
 
@@ -100,8 +100,7 @@ open class FirBodyResolveTransformer(
         this.file = file
         return withScopeCleanup(topLevelScopes) {
             topLevelScopes.addImportingScopes(file, session, scopeSession)
-            topLevelScopes += FirTopLevelDeclaredMemberScope(file, session, scopeSession)
-            transformElement(file, data)
+            super.transformFile(file, data)
         }
     }
 
