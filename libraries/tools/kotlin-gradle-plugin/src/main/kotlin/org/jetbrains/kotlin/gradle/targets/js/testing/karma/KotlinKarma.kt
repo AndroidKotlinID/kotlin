@@ -12,7 +12,6 @@ import org.gradle.api.internal.tasks.testing.TestResultProcessor
 import org.gradle.internal.logging.progress.ProgressLogger
 import org.gradle.process.ProcessForkOptions
 import org.jetbrains.kotlin.gradle.internal.operation
-import org.jetbrains.kotlin.gradle.internal.testing.TCServiceMessagesClient
 import org.jetbrains.kotlin.gradle.internal.testing.TCServiceMessagesClientSettings
 import org.jetbrains.kotlin.gradle.internal.testing.TCServiceMessagesTestExecutionSpec
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJsCompilation
@@ -22,9 +21,7 @@ import org.jetbrains.kotlin.gradle.targets.js.appendConfigsFromDir
 import org.jetbrains.kotlin.gradle.targets.js.internal.parseNodeJsStackTraceAsJvm
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.targets.js.npm.npmProject
-import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
-import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTestFramework
-import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinTestRunnerCliArgs
+import org.jetbrains.kotlin.gradle.targets.js.testing.*
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 import org.jetbrains.kotlin.gradle.testing.internal.reportsDir
 import org.slf4j.Logger
@@ -62,6 +59,9 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
         config.autoWatch = false
     }
 
+    // This reporter extends karma-teamcity-reporter
+    //  It is necessary, because karma-teamcity-reporter can't write browser's log
+    //  And additionally it overrides flushLogs, because flushLogs adds redundant spaces after some messages
     private fun useLogReporter() {
         requiredDependencies.add(versions.karmaTeamcityReporter)
         config.reporters.add("karma-browser-log-reporter")
@@ -155,7 +155,16 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
                             log.push(endMessage);
                         
                             this.browserResults[browser.id].consoleCollector = []
-                        }
+                        };
+                        
+                        this.flushLogs = function (browserResult) {
+                            while (browserResult.log.length > 0) {
+                                var line = browserResult.log.shift();
+                                line = line.replace("flowId=''", "flowId='" + browserResult.flowId + "'");
+                            
+                                this.write(line);
+                            }
+  }
                     };
                     
                     LogReporter.${"$"}inject = ['baseReporterDecorator'];
@@ -409,14 +418,13 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
                 nodeModules.map { npmProject.require(it) } +
                 listOf("start", karmaConfJs.absolutePath, "--debug")
 
-        return object : TCServiceMessagesTestExecutionSpec(
+        return object : JSServiceMessagesTestExecutionSpec(
             forkOptions,
             args,
             false,
             clientSettings
         ) {
             lateinit var progressLogger: ProgressLogger
-            val suppressedOutput = StringBuilder()
 
             var isLaunchFailed: Boolean = false
 
@@ -432,12 +440,13 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
                 }
             }
 
-            override fun showSuppressedOutput() {
-                println(suppressedOutput)
-            }
-
             override fun createClient(testResultProcessor: TestResultProcessor, log: Logger) =
-                object : TCServiceMessagesClient(testResultProcessor, clientSettings, log) {
+                object : JSServiceMessagesClient(
+                    testResultProcessor,
+                    clientSettings,
+                    log,
+                    suppressedOutput
+                ) {
                     val baseTestNameSuffix get() = settings.testNameSuffix
                     override var testNameSuffix: String? = baseTestNameSuffix
 
@@ -481,7 +490,7 @@ class KotlinKarma(override val compilation: KotlinJsCompilation) : KotlinJsTestF
                             return
                         }
 
-                        suppressedOutput.appendln(text)
+                        super.printNonTestOutput(text)
                     }
                 }
         }

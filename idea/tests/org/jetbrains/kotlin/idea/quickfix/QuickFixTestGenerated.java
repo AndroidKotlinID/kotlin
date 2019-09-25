@@ -3290,6 +3290,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasComma.kt");
                 }
 
+                @TestMetadata("enumEntryHasNoLineBreak.kt")
+                public void testEnumEntryHasNoLineBreak() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasNoLineBreak.kt");
+                }
+
+                @TestMetadata("enumEntryHasSemicolon.kt")
+                public void testEnumEntryHasSemicolon() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasSemicolon.kt");
+                }
+
                 @TestMetadata("enumEntryNoReceiver.kt")
                 public void testEnumEntryNoReceiver() throws Exception {
                     runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryNoReceiver.kt");
@@ -3780,6 +3790,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("funOnClassObject.kt")
                 public void testFunOnClassObject() throws Exception {
                     runTest("idea/testData/quickfix/createFromUsage/createFunction/call/funOnClassObject.kt");
+                }
+
+                @TestMetadata("funOnEnumClass.kt")
+                public void testFunOnEnumClass() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createFunction/call/funOnEnumClass.kt");
+                }
+
+                @TestMetadata("funOnEnumClass2.kt")
+                public void testFunOnEnumClass2() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createFunction/call/funOnEnumClass2.kt");
                 }
 
                 @TestMetadata("funOnLibObject.kt")
@@ -4693,6 +4713,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
                 }
 
+                @TestMetadata("backticks.kt")
+                public void testBackticks() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/backticks.kt");
+                }
+
                 @TestMetadata("classNoExplication.kt")
                 public void testClassNoExplication() throws Exception {
                     runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/classNoExplication.kt");
@@ -4736,6 +4761,36 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("inAnnotation.kt")
                 public void testInAnnotation() throws Exception {
                     runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inAnnotation.kt");
+                }
+
+                @TestMetadata("inExtensionProperty.kt")
+                public void testInExtensionProperty() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inExtensionProperty.kt");
+                }
+
+                @TestMetadata("inExtensionProperty2.kt")
+                public void testInExtensionProperty2() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inExtensionProperty2.kt");
+                }
+
+                @TestMetadata("inExtensionProperty3.kt")
+                public void testInExtensionProperty3() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inExtensionProperty3.kt");
+                }
+
+                @TestMetadata("inProperty.kt")
+                public void testInProperty() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inProperty.kt");
+                }
+
+                @TestMetadata("inProperty2.kt")
+                public void testInProperty2() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inProperty2.kt");
+                }
+
+                @TestMetadata("inProperty3.kt")
+                public void testInProperty3() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createTypeParameter/inContainingDeclaration/inProperty3.kt");
                 }
 
                 @TestMetadata("inSuperTypeEntry.kt")

@@ -543,6 +543,11 @@ public class QuickFixMultiFileTestGenerated extends AbstractQuickFixMultiFileTes
             runTest("idea/testData/quickfix/autoImports/delegateExtensionGet.test");
         }
 
+        @TestMetadata("delegateExtensionProvideDelegate.test")
+        public void testDelegateExtensionProvideDelegate() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/delegateExtensionProvideDelegate.test");
+        }
+
         @TestMetadata("delegateExtensionSet.test")
         public void testDelegateExtensionSet() throws Exception {
             runTest("idea/testData/quickfix/autoImports/delegateExtensionSet.test");
@@ -761,6 +766,11 @@ public class QuickFixMultiFileTestGenerated extends AbstractQuickFixMultiFileTes
         @TestMetadata("invokeExtension.test")
         public void testInvokeExtension() throws Exception {
             runTest("idea/testData/quickfix/autoImports/invokeExtension.test");
+        }
+
+        @TestMetadata("invokeExtension2.test")
+        public void testInvokeExtension2() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/invokeExtension2.test");
         }
 
         @TestMetadata("invokeExtensionNoOperator.test")

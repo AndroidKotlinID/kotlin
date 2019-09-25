@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.gradle.targets.js.KotlinGradleNpmPackage
 import org.jetbrains.kotlin.gradle.targets.js.RequiredKotlinJsDependency
 import org.jetbrains.kotlin.gradle.targets.js.internal.parseNodeJsStackTraceAsJvm
 import org.jetbrains.kotlin.gradle.targets.js.npm.npmProject
+import org.jetbrains.kotlin.gradle.targets.js.testing.JSServiceMessagesTestExecutionSpec
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTestFramework
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinTestRunnerCliArgs
@@ -63,7 +64,7 @@ class KotlinNodeJsTestRunner(override val compilation: KotlinJsCompilation) : Ko
                 } +
                 cliArgs.toList()
 
-        return TCServiceMessagesTestExecutionSpec(
+        return JSServiceMessagesTestExecutionSpec(
             forkOptions,
             args,
             true,
