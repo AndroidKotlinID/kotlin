@@ -1097,6 +1097,34 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         }
     }
 
+    @TestMetadata("idea/testData/quickfix/addSemicolonBeforeLambdaExpression")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class AddSemicolonBeforeLambdaExpression extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInAddSemicolonBeforeLambdaExpression() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/addSemicolonBeforeLambdaExpression"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("basic.kt")
+        public void testBasic() throws Exception {
+            runTest("idea/testData/quickfix/addSemicolonBeforeLambdaExpression/basic.kt");
+        }
+
+        @TestMetadata("multipleLambdas.kt")
+        public void testMultipleLambdas() throws Exception {
+            runTest("idea/testData/quickfix/addSemicolonBeforeLambdaExpression/multipleLambdas.kt");
+        }
+
+        @TestMetadata("withComments.kt")
+        public void testWithComments() throws Exception {
+            runTest("idea/testData/quickfix/addSemicolonBeforeLambdaExpression/withComments.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/quickfix/addStarProjections")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -10883,9 +10911,19 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/replaceWithDotCall"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("comment.kt")
+        public void testComment() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithDotCall/comment.kt");
+        }
+
         @TestMetadata("functionCall.kt")
         public void testFunctionCall() throws Exception {
             runTest("idea/testData/quickfix/replaceWithDotCall/functionCall.kt");
+        }
+
+        @TestMetadata("lineBreak.kt")
+        public void testLineBreak() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithDotCall/lineBreak.kt");
         }
 
         @TestMetadata("normal.kt")
@@ -10941,6 +10979,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/replaceWithSafeCall/assignmentToProperty.kt");
         }
 
+        @TestMetadata("comment.kt")
+        public void testComment() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithSafeCall/comment.kt");
+        }
+
         @TestMetadata("expression.kt")
         public void testExpression() throws Exception {
             runTest("idea/testData/quickfix/replaceWithSafeCall/expression.kt");
@@ -10969,6 +11012,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("letWithParameter.kt")
         public void testLetWithParameter() throws Exception {
             runTest("idea/testData/quickfix/replaceWithSafeCall/letWithParameter.kt");
+        }
+
+        @TestMetadata("lineBreak.kt")
+        public void testLineBreak() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithSafeCall/lineBreak.kt");
         }
 
         @TestMetadata("noReplaceWithSafeCallForImplicitReceiver.kt")
@@ -11039,6 +11087,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/replaceWithSafeCallForScopeFunction/assignment.kt");
         }
 
+        @TestMetadata("comment.kt")
+        public void testComment() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithSafeCallForScopeFunction/comment.kt");
+        }
+
         @TestMetadata("let.kt")
         public void testLet() throws Exception {
             runTest("idea/testData/quickfix/replaceWithSafeCallForScopeFunction/let.kt");
@@ -11057,6 +11110,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("letWithWrongParam.kt")
         public void testLetWithWrongParam() throws Exception {
             runTest("idea/testData/quickfix/replaceWithSafeCallForScopeFunction/letWithWrongParam.kt");
+        }
+
+        @TestMetadata("lineBreak.kt")
+        public void testLineBreak() throws Exception {
+            runTest("idea/testData/quickfix/replaceWithSafeCallForScopeFunction/lineBreak.kt");
         }
 
         @TestMetadata("notInsideScope.kt")
