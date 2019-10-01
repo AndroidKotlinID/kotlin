@@ -85,8 +85,9 @@ object CreateTypeParameterByUnresolvedRefActionFactory : KotlinIntentionActionFa
         val name = ktUserType.referencedName ?: return emptyList()
         return getPossibleTypeParameterContainers(ktUserType)
             .asSequence()
-            .filter { it.typeParameters.all { it.name != name } }
-            .map {
+            .filter { declaration ->
+                declaration.isWritable && declaration.typeParameters.all { it.name != name }
+            }.map {
                 QuickFixWithDelegateFactory factory@{
                     val originalElement = originalElementPointer.element ?: return@factory null
                     val data = quickFixDataFactory()?.copy(declaration = it) ?: return@factory null

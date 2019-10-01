@@ -10126,6 +10126,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/commonSystem/lessSpecificTypeForArgumentCallWithExactAnnotation_ni.kt");
                 }
 
+                @TestMetadata("manyArgumentsForVararg.kt")
+                public void testManyArgumentsForVararg() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/commonSystem/manyArgumentsForVararg.kt");
+                }
+
                 @TestMetadata("nestedLambdas.kt")
                 public void testNestedLambdas() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/commonSystem/nestedLambdas.kt");
@@ -18083,6 +18088,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("extensionReceiverAndVarargs.kt")
                 public void testExtensionReceiverAndVarargs() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/resolve/overloadConflicts/extensionReceiverAndVarargs.kt");
+                }
+
+                @TestMetadata("genericClash.kt")
+                public void testGenericClash() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/resolve/overloadConflicts/genericClash.kt");
                 }
 
                 @TestMetadata("genericWithProjection.kt")

@@ -8,10 +8,10 @@
 package org.jetbrains.kotlin.gradle.targets.js.webpack
 
 import com.google.gson.GsonBuilder
-import com.google.gson.stream.JsonWriter
 import org.jetbrains.kotlin.gradle.targets.js.NpmPackageVersion
 import org.jetbrains.kotlin.gradle.targets.js.NpmVersions
 import org.jetbrains.kotlin.gradle.targets.js.appendConfigsFromDir
+import org.jetbrains.kotlin.gradle.targets.js.jsQuoted
 import java.io.File
 import java.io.Serializable
 import java.io.StringWriter
@@ -25,7 +25,8 @@ data class KotlinWebpackConfig(
     val configDirectory: File? = null,
     val bundleAnalyzerReportDir: File? = null,
     val reportEvaluatedConfigFile: File? = null,
-    var devServer: DevServer? = null,
+    val devServer: DevServer? = null,
+    val devtool: Devtool = Devtool.EVAL_SOURCE_MAP,
     val showProgress: Boolean = false,
     val sourceMaps: Boolean = false,
     val export: Boolean = true,
@@ -75,6 +76,12 @@ data class KotlinWebpackConfig(
         val contentBase: List<String>
     ) : Serializable
 
+    enum class Devtool(val code: String) {
+        EVAL_SOURCE_MAP("eval-source-map"),
+        SOURCE_MAP("source-map"),
+        INLINE_SOURCE_MAP("inline-source-map")
+    }
+
     fun save(configFile: File) {
         configFile.writer().use {
             appendTo(it)
@@ -120,7 +127,7 @@ data class KotlinWebpackConfig(
     private fun Appendable.appendEvaluatedFileReport() {
         if (reportEvaluatedConfigFile == null) return
 
-        val filePath = jsQuotedString(reportEvaluatedConfigFile.canonicalPath)
+        val filePath = reportEvaluatedConfigFile.canonicalPath.jsQuoted()
 
         //language=JavaScript 1.8
         appendln(
@@ -173,7 +180,7 @@ data class KotlinWebpackConfig(
         if (devServer == null) return
 
         appendln("// dev server")
-        appendln("config.devServer = ${json(devServer!!)};")
+        appendln("config.devServer = ${json(devServer)};")
         appendln()
     }
 
@@ -189,7 +196,7 @@ data class KotlinWebpackConfig(
                         use: ["source-map-loader"],
                         enforce: "pre"
                 });
-                config.devtool = 'eval-source-map';
+                config.devtool = '${devtool.code}';
                 
             """.trimIndent()
         )
@@ -203,10 +210,10 @@ data class KotlinWebpackConfig(
             """
                 // entry
                 if (!config.entry) config.entry = [];
-                config.entry.push(${jsQuotedString(entry.canonicalPath)});
+                config.entry.push(${entry.canonicalPath.jsQuoted()});
                 config.output = {
-                    path: ${jsQuotedString(outputPath.canonicalPath)},
-                    filename: ${jsQuotedString(outputFileName!!)}
+                    path: ${outputPath.canonicalPath.jsQuoted()},
+                    filename: ${outputFileName!!.jsQuoted()}
                 };
                 
             """.trimIndent()
@@ -216,17 +223,24 @@ data class KotlinWebpackConfig(
     private fun Appendable.appendProgressReporter() {
         if (!progressReporter) return
 
+        //language=ES6
         appendln(
             """
                 // Report progress to console
                 (function(config) {
                     const webpack = require('webpack');
                     const handler = (percentage, message, ...args) => {
-                        const p = percentage*100;
-                        let msg = Math.trunc(p/100) + Math.trunc(p%100) + '% ' + message + ' ' + args.join(' ');
+                        let p = percentage * 100;
+                        let leadingValue;
+                        if (p < 10) {
+                            leadingValue = "0"
+                        } else {
+                            leadingValue = ""
+                        }
+                        let msg = leadingValue + Math.trunc(p) + '% ' + message + ' ' + args.join(' ');
                         ${if (progressReporterPathFilter == null) "" else """
-                            msg = msg.replace(new RegExp(${jsQuotedString(progressReporterPathFilter)}, 'g'), '');
-                        """.trimIndent()}
+                            msg = msg.replace(new RegExp(${progressReporterPathFilter.jsQuoted()}, 'g'), '');
+                        """.trimIndent()};
                         console.log(msg);
                     };
             
@@ -239,9 +253,5 @@ data class KotlinWebpackConfig(
 
     private fun json(obj: Any) = StringWriter().also {
         GsonBuilder().setPrettyPrinting().create().toJson(obj, it)
-    }.toString()
-
-    private fun jsQuotedString(str: String) = StringWriter().also {
-        JsonWriter(it).value(str)
     }.toString()
 }

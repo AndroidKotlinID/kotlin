@@ -48,7 +48,7 @@ class SwitchStatementConversion(context: NewJ2kConverterContext) : RecursiveAppl
                                 statement.block.statements
                                     .takeWhile { !isSwitchBreak(it) }
                                     .map { it.copyTreeAndDetach() }
-                            ).withNonCodeElementsFrom(statement)
+                            ).withFormattingFrom(statement)
                         isSwitchBreak(statement) -> null
                         else -> statement.copyTreeAndDetach()
                     }
@@ -115,7 +115,7 @@ class SwitchStatementConversion(context: NewJ2kConverterContext) : RecursiveAppl
             this is JKIfElseStatement ||
                     this is JKJavaSwitchStatement ||
                     this is JKKtWhenStatement ->
-                this.psi!!.canCompleteNormally()
+                psi?.canCompleteNormally() == true
             else -> true
         }
 

@@ -103,6 +103,9 @@ internal open class TCServiceMessagesClient(
         print(text)
     }
 
+    protected open fun processStackTrace(stackTrace: String): String =
+        stackTrace
+
     protected open val testNameSuffix: String?
         get() = settings.testNameSuffix
 
@@ -147,16 +150,17 @@ internal open class TCServiceMessagesClient(
                 append(stackTraceOutput)
                 stackTraceOutput.setLength(0)
             }
-        }
+        }.let { processStackTrace(it) }
 
         val parsedStackTrace = settings.stackTraceParser(stacktrace)
 
+        val failMessage = parsedStackTrace?.message ?: message.failureMessage
         results.failure(
             descriptor.id,
             KotlinTestFailure(
-                (parsedStackTrace?.message ?: message.failureMessage)?.let { extractExceptionClassName(it) }
+                failMessage?.let { extractExceptionClassName(it) }
                     ?: "Unknown",
-                message.failureMessage,
+                failMessage,
                 stacktrace,
                 patchStackTrace(this, parsedStackTrace?.stackTrace),
                 message.expected,

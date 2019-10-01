@@ -77,6 +77,9 @@ export function runWithTeamCityReporter(
             } else {
                 const startTime = timer ? timer.start() : null;
                 teamCity.sendMessage('testStarted', withName(name));
+
+                let revertLogMethods: CallableFunction[] = [];
+
                 try {
                     runner.test(name, isIgnored, () => {
                         const log = (type: string) => function (message?: any, ...optionalParams: any[]) {
@@ -97,13 +100,13 @@ export function runWithTeamCityReporter(
                             [method: string]: (message?: any, ...optionalParams: any[]) => void
                         };
 
-                        const revertLogMethods = logMethods.map(method => {
-                            const realMethod = globalConsole[method];
-                            globalConsole[method] = log(method);
-                            return () => globalConsole[method] = realMethod
-                        });
+                        revertLogMethods = logMethods
+                            .map(method => {
+                                const realMethod = globalConsole[method];
+                                globalConsole[method] = log(method);
+                                return () => globalConsole[method] = realMethod
+                            });
                         fn();
-                        revertLogMethods.forEach(revert => revert());
                     });
                 } catch (e) {
                     const data: TeamCityMessageData = withName(name, {
@@ -118,6 +121,7 @@ export function runWithTeamCityReporter(
                     }
                     teamCity.sendMessage('testFailed', data);
                 } finally {
+                    revertLogMethods.forEach(revert => revert());
                     currentAssertionResult = null;
                     const data: TeamCityMessageData = withName(name);
                     if (startTime) {

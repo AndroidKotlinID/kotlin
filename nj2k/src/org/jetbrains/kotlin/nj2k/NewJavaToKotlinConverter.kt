@@ -31,6 +31,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jetbrains.kotlin.idea.core.util.EDT
 import org.jetbrains.kotlin.j2k.*
+import org.jetbrains.kotlin.nj2k.printing.JKCodeBuilder
 import org.jetbrains.kotlin.nj2k.types.JKTypeFactory
 import org.jetbrains.kotlin.psi.KtPsiFactory
 
@@ -96,13 +97,12 @@ class NewJavaToKotlinConverter(
 
     override fun elementsToKotlin(inputElements: List<PsiElement>, processor: WithProgressProcessor): Result {
         val phaseDescription = "Converting Java code to Kotlin code"
-        val module = targetModule ?: error("Module should not be null for new J2K")
         val contextElement = inputElements.firstOrNull() ?: return Result(emptyList(), null, null)
-        val symbolProvider = JKSymbolProvider(project, module, contextElement)
+        val symbolProvider = JKSymbolProvider(project, targetModule, contextElement)
         val typeFactory = JKTypeFactory(symbolProvider)
         symbolProvider.typeFactory = typeFactory
         symbolProvider.preBuildTree(inputElements)
-        val importStorage = ImportStorage()
+        val importStorage = JKImportStorage()
         val treeBuilder = JavaToJKTreeBuilder(symbolProvider, typeFactory, converterServices, importStorage)
 
 
@@ -135,7 +135,7 @@ class NewJavaToKotlinConverter(
             processor.updateState(i, 1, phaseDescription)
             val (element, ast) = elementWithAst
             if (ast == null) return@mapIndexed null
-            val code = NewCodeBuilder(context).run { printCodeOut(ast) }
+            val code = JKCodeBuilder(context).run { printCodeOut(ast) }
             val parseContext = when (element) {
                 is PsiStatement, is PsiExpression -> ParseContext.CODE_BLOCK
                 else -> ParseContext.TOP_LEVEL

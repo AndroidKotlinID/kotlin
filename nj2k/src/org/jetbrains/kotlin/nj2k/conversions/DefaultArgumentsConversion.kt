@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.nj2k.conversions
 
+import com.intellij.psi.PsiMethod
 import org.jetbrains.kotlin.nj2k.*
 import org.jetbrains.kotlin.nj2k.symbols.JKUniverseMethodSymbol
 import org.jetbrains.kotlin.nj2k.tree.*
@@ -22,7 +23,7 @@ class DefaultArgumentsConversion(context: NewJ2kConverterContext) : RecursiveApp
                 || hasOtherModifier(OtherModifier.OVERRIDE)
                 || hasOtherModifier(OtherModifier.NATIVE)
                 || hasOtherModifier(OtherModifier.SYNCHRONIZED)
-                || context.converter.converterServices.oldServices.referenceSearcher.hasOverrides(psi()!!)
+                || psi<PsiMethod>()?.let { context.converter.converterServices.oldServices.referenceSearcher.hasOverrides(it) } == true
                 || annotationList.annotations.isNotEmpty()
                 || canBeGetterOrSetter()
 
@@ -107,7 +108,7 @@ class DefaultArgumentsConversion(context: NewJ2kConverterContext) : RecursiveApp
                 parameter.initializer = remapParameterSymbol(defaultValue) as JKExpression
             }
             element.declarations -= method
-            calledMethod.withNonCodeElementsFrom(method)
+            calledMethod.withFormattingFrom(method)
         }
         if (element.parentOfType<JKClass>()?.classKind != JKClass.ClassKind.ANNOTATION) {
             for (method in element.declarations) {
