@@ -341,8 +341,14 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
             if (testRuns != null) {
                 val testReports = testRuns.mapNotNull { (it.javaClass.getMethodOrNull("getExecutionTask")?.invoke(it) as? TaskProvider<Task>)?.get() }
                 val testTasks = testReports.flatMap {
-                    ((it.javaClass.getMethodOrNull("getTestTasks")?.invoke(it) as? Collection<Provider<Task>>)?.map { it.get() })
-                        ?: listOf(it)
+                    ((it.javaClass.getMethodOrNull("getTestTasks")?.invoke(it) as? Collection<Any>)?.mapNotNull {
+                        when {
+                            //TODO(auskov): getTestTasks should return collection of TaskProviders without mixing with Tasks
+                            it is Provider<*> -> it.get() as? Task
+                            it is Task -> it
+                            else -> null
+                        }
+                    }) ?: listOf(it)
                 }
                 return testTasks.mapNotNull {
                     val name = it.name
@@ -614,11 +620,10 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
                 val platforms = compilations.map { it.platform }
                 sourceSet.actualPlatforms.addSimplePlatforms(platforms)
 
-                if (isHMPPEnabled) {
-                    sourceSet.dependsOnSourceSets.mapNotNull { sourceSets[it] }.forEach {
-                        it?.actualPlatforms?.addSimplePlatforms(platforms)
-                    }
+                sourceSet.dependsOnSourceSets.mapNotNull { sourceSets[it] }.forEach {
+                    it?.actualPlatforms?.addSimplePlatforms(platforms)
                 }
+
 
                 sourceSet.isTestModule = compilations.all { it.isTestModule }
             } else {
@@ -632,6 +637,10 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
                     sourceSet.isTestModule = true
                     continue
                 }
+            }
+
+            if ((! isHMPPEnabled) && sourceSet.actualPlatforms.platforms.size > 1) {
+                sourceSet.actualPlatforms.addSimplePlatforms(listOf(KotlinPlatform.COMMON))
             }
         }
     }

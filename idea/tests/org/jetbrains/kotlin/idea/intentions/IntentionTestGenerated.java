@@ -1216,6 +1216,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/addNameToArgument/linkedList.kt");
         }
 
+        @TestMetadata("mixingPositionedAndNamed.kt")
+        public void testMixingPositionedAndNamed() throws Exception {
+            runTest("idea/testData/intentions/addNameToArgument/mixingPositionedAndNamed.kt");
+        }
+
         @TestMetadata("notInsideIndices.kt")
         public void testNotInsideIndices() throws Exception {
             runTest("idea/testData/intentions/addNameToArgument/notInsideIndices.kt");
@@ -14645,6 +14650,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("labeledReturn_ni.kt")
         public void testLabeledReturn_ni() throws Exception {
             runTest("idea/testData/intentions/samConversionToAnonymousObject/labeledReturn_ni.kt");
+        }
+
+        @TestMetadata("nestedClass.kt")
+        public void testNestedClass() throws Exception {
+            runTest("idea/testData/intentions/samConversionToAnonymousObject/nestedClass.kt");
         }
 
         @TestMetadata("notJavaInterface.kt")

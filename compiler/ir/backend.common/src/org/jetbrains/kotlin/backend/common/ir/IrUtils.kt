@@ -38,6 +38,7 @@ import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DescriptorWithContainerSource
 import java.io.StringWriter
 
 
@@ -504,10 +505,11 @@ fun createStaticFunctionWithReceivers(
     oldFunction: IrFunction,
     dispatchReceiverType: IrType? = oldFunction.dispatchReceiverParameter?.type,
     origin: IrDeclarationOrigin = oldFunction.origin,
-    modality: Modality = Modality.FINAL,
-    copyBody: Boolean = true
+    modality: Modality = Modality.FINAL
 ): IrSimpleFunction {
-    val descriptor = WrappedSimpleFunctionDescriptor(Annotations.EMPTY, oldFunction.descriptor.source)
+    val descriptor = (oldFunction.descriptor as? DescriptorWithContainerSource)?.let {
+        WrappedFunctionDescriptorWithContainerSource(it.containerSource)
+    } ?: WrappedSimpleFunctionDescriptor(Annotations.EMPTY, oldFunction.descriptor.source)
     return IrFunctionImpl(
         oldFunction.startOffset, oldFunction.endOffset,
         origin,
@@ -541,10 +543,6 @@ fun createStaticFunctionWithReceivers(
         valueParameters.addAll(listOfNotNull(dispatchReceiver, extensionReceiver) +
                                        oldFunction.valueParameters.map { it.copyTo(this, index = it.index + offset) }
         )
-
-        if (copyBody) {
-            copyBodyToStatic(oldFunction, this)
-        }
 
         metadata = oldFunction.metadata
     }

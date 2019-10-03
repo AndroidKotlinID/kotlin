@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.idea.configuration.GradlePropertiesFileFacade.Companion.KOTLIN_NOT_IMPORTED_COMMON_SOURCE_SETS_SETTING
 import org.jetbrains.kotlin.idea.platform.IdePlatformKindTooling
-import org.jetbrains.kotlin.konan.util.removeSuffixIfPresent
+import org.jetbrains.kotlin.util.removeSuffixIfPresent
 import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 import org.jetbrains.plugins.gradle.model.*
 import org.jetbrains.plugins.gradle.model.data.BuildScriptClasspathData
@@ -852,7 +852,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtension() {
             gradleModule: IdeaModule,
             resolverCtx: ProjectResolverContext
         ): KotlinSourceSetInfo? {
-            if (sourceSet.actualPlatforms.platforms.filter { !it.isNotSupported() }.isEmpty()) return null
+            if (sourceSet.actualPlatforms.platforms.none { !it.isNotSupported() }) return null
             return KotlinSourceSetInfo(sourceSet).also { info ->
                 val languageSettings = sourceSet.languageSettings
                 info.moduleId = getKotlinModuleId(gradleModule, sourceSet, resolverCtx)

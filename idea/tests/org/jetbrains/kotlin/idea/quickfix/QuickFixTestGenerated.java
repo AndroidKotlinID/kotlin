@@ -1766,6 +1766,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/autoImports/checkNoStackOverflowInImportInnerClassInCurrentFile.kt");
         }
 
+        @TestMetadata("companionObjectMemberExtensionFunctionImportWhenExplicitReceiverPresent.kt")
+        public void testCompanionObjectMemberExtensionFunctionImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/companionObjectMemberExtensionFunctionImportWhenExplicitReceiverPresent.kt");
+        }
+
+        @TestMetadata("companionObjectMemberExtensionPropertyImportWhenExplicitReceiverPresent.kt")
+        public void testCompanionObjectMemberExtensionPropertyImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/companionObjectMemberExtensionPropertyImportWhenExplicitReceiverPresent.kt");
+        }
+
         @TestMetadata("conflictWithClassIdentifier.kt")
         public void testConflictWithClassIdentifier() throws Exception {
             runTest("idea/testData/quickfix/autoImports/conflictWithClassIdentifier.kt");
@@ -1884,6 +1894,26 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("notForThisLabel.kt")
         public void testNotForThisLabel() throws Exception {
             runTest("idea/testData/quickfix/autoImports/notForThisLabel.kt");
+        }
+
+        @TestMetadata("objectMemberExtensionFunctionImportWhenExplicitReceiverPresent.kt")
+        public void testObjectMemberExtensionFunctionImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/objectMemberExtensionFunctionImportWhenExplicitReceiverPresent.kt");
+        }
+
+        @TestMetadata("objectMemberExtensionFunctionWithGenericImportWhenExplicitReceiverPresent.kt")
+        public void testObjectMemberExtensionFunctionWithGenericImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/objectMemberExtensionFunctionWithGenericImportWhenExplicitReceiverPresent.kt");
+        }
+
+        @TestMetadata("objectMemberExtensionPropertyImportWhenExplicitReceiverPresent.kt")
+        public void testObjectMemberExtensionPropertyImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/objectMemberExtensionPropertyImportWhenExplicitReceiverPresent.kt");
+        }
+
+        @TestMetadata("objectMemberExtensionPropertyWithGenericImportWhenExplicitReceiverPresent.kt")
+        public void testObjectMemberExtensionPropertyWithGenericImportWhenExplicitReceiverPresent() throws Exception {
+            runTest("idea/testData/quickfix/autoImports/objectMemberExtensionPropertyWithGenericImportWhenExplicitReceiverPresent.kt");
         }
 
         @TestMetadata("sAMConstructorFromLambda.kt")
@@ -2024,6 +2054,29 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("inlineClass.kt")
         public void testInlineClass() throws Exception {
             runTest("idea/testData/quickfix/changeFeatureSupport/inlineClass.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/quickfix/changeObjectToClass")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ChangeObjectToClass extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInChangeObjectToClass() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/changeObjectToClass"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("primaryConstructor.kt")
+        public void testPrimaryConstructor() throws Exception {
+            runTest("idea/testData/quickfix/changeObjectToClass/primaryConstructor.kt");
+        }
+
+        @TestMetadata("secondaryConstructor.kt")
+        public void testSecondaryConstructor() throws Exception {
+            runTest("idea/testData/quickfix/changeObjectToClass/secondaryConstructor.kt");
         }
     }
 
@@ -10300,6 +10353,29 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("idea/testData/quickfix/removeRedundantInitializer/simple.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/quickfix/removeRedundantLabel")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RemoveRedundantLabel extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRemoveRedundantLabel() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/removeRedundantLabel"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("idea/testData/quickfix/removeRedundantLabel/simple.kt");
+        }
+
+        @TestMetadata("simple2.kt")
+        public void testSimple2() throws Exception {
+            runTest("idea/testData/quickfix/removeRedundantLabel/simple2.kt");
         }
     }
 
