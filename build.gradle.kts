@@ -502,6 +502,13 @@ tasks {
         dependsOn(":plugins:jvm-abi-gen:test")
     }
 
+    register("jvmCompilerIntegrationTest") {
+        dependsOn(
+            ":kotlin-compiler-embeddable:test",
+            ":kotlin-compiler-client-embeddable:test"
+        )
+    }
+
     register("jsCompilerTest") {
         dependsOn(":js:js.tests:test")
         dependsOn(":js:js.tests:runMocha")
@@ -544,6 +551,8 @@ tasks {
         dependsOn(":kotlin-build-common:test")
         dependsOn(":compiler:incremental-compilation-impl:test")
         dependsOn(":core:descriptors.runtime:test")
+
+        dependsOn("jvmCompilerIntegrationTest")
     }
 
     register("toolsTest") {
@@ -602,7 +611,8 @@ tasks {
             ":idea:jvm-debugger:jvm-debugger-core:test",
             ":idea:jvm-debugger:jvm-debugger-evaluation:test",
             ":idea:jvm-debugger:jvm-debugger-sequence:test",
-            ":idea:jvm-debugger:eval4j:test"
+            ":idea:jvm-debugger:eval4j:test",
+            ":idea:scripting-support:test"
         )
     }
 
@@ -634,7 +644,8 @@ tasks {
             ":plugins:uast-kotlin:test",
             ":kotlin-annotation-processing-gradle:test",
             ":kotlinx-serialization-compiler-plugin:test",
-            ":kotlinx-serialization-ide-plugin:test"
+            ":kotlinx-serialization-ide-plugin:test",
+            ":idea:jvm-debugger:jvm-debugger-test:test"
         )
     }
 

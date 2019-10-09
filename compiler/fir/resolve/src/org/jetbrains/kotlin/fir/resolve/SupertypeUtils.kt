@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassUseSiteScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirSuperTypeScope
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
-import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassifierSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
@@ -49,12 +48,11 @@ inline fun <reified T : FirScope> scopeSessionKey(): ScopeSessionKey<T> {
 }
 
 val USE_SITE = scopeSessionKey<FirScope>()
-val DECLARED = scopeSessionKey<FirScope>()
 
-data class SubstitutionScopeKey<T : FirClassSubstitutionScope>(val type: ConeClassLikeType) : ScopeSessionKey<T>() {}
+data class SubstitutionScopeKey(val type: ConeClassLikeType) : ScopeSessionKey<FirClassSubstitutionScope>() {}
 
 fun FirRegularClass.buildUseSiteScope(useSiteSession: FirSession, builder: ScopeSession): FirScope? {
-    val symbolProvider = useSiteSession.service<FirSymbolProvider>()
+    val symbolProvider = useSiteSession.firSymbolProvider
     return symbolProvider.getClassUseSiteMemberScope(this.classId, useSiteSession, builder)
 }
 
@@ -68,7 +66,7 @@ fun FirTypeAlias.buildUseSiteScope(useSiteSession: FirSession, builder: ScopeSes
 fun FirRegularClass.buildDefaultUseSiteScope(useSiteSession: FirSession, builder: ScopeSession): FirScope {
     return builder.getOrBuild(symbol, USE_SITE) {
 
-        val declaredScope = builder.getOrBuild(this.symbol, DECLARED) { declaredMemberScope(this) }
+        val declaredScope = declaredMemberScope(this)
         val scopes = lookupSuperTypes(this, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
             .mapNotNull { useSiteSuperType ->
                 if (useSiteSuperType is ConeClassErrorType) return@mapNotNull null
@@ -84,7 +82,7 @@ fun FirRegularClass.buildDefaultUseSiteScope(useSiteSession: FirSession, builder
     }
 }
 
-private fun ConeClassLikeType.wrapSubstitutionScopeIfNeed(
+fun ConeClassLikeType.wrapSubstitutionScopeIfNeed(
     session: FirSession,
     useSiteScope: FirScope,
     declaration: FirClassLikeDeclaration<*>,

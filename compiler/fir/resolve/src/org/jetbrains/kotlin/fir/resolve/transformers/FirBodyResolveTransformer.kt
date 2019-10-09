@@ -54,7 +54,7 @@ open class FirBodyResolveTransformer(
     final override val noExpectedType = FirImplicitTypeRefImpl(null)
     private inline val builtinTypes: BuiltinTypes get() = session.builtinTypes
 
-    final override val symbolProvider = session.service<FirSymbolProvider>()
+    final override val symbolProvider = session.firSymbolProvider
 
     private var packageFqName = FqName.ROOT
     final override lateinit var file: FirFile
@@ -173,7 +173,7 @@ open class FirBodyResolveTransformer(
     }
 
     override fun transformTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: Any?): CompositeTransformResult<FirStatement> {
-        val symbolProvider = session.service<FirSymbolProvider>()
+        val symbolProvider = session.firSymbolProvider
         val resolved = transformExpression(typeOperatorCall, data).single
         when ((resolved as FirTypeOperatorCall).operation) {
             FirOperation.IS, FirOperation.NOT_IS -> {
@@ -826,7 +826,7 @@ open class FirBodyResolveTransformer(
 
     override fun transformGetClassCall(getClassCall: FirGetClassCall, data: Any?): CompositeTransformResult<FirStatement> {
         val transformedGetClassCall = transformExpression(getClassCall, data).single as FirGetClassCall
-        val kClassSymbol = ClassId.fromString("kotlin/reflect/KClass")(session.service())
+        val kClassSymbol = ClassId.fromString("kotlin/reflect/KClass")(session.firSymbolProvider)
 
         val typeOfExpression = when (val lhs = transformedGetClassCall.argument) {
             is FirResolvedQualifier -> {
@@ -1020,12 +1020,19 @@ class FirDesignatedBodyResolveTransformer(
 
 @Deprecated("It is temp", level = DeprecationLevel.WARNING, replaceWith = ReplaceWith("TODO(\"что-то нормальное\")"))
 class FirImplicitTypeBodyResolveTransformerAdapter : FirTransformer<Nothing?>() {
+    private val scopeSession = ScopeSession()
+
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         return element.compose()
     }
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
-        val transformer = FirBodyResolveTransformer(file.fileSession, phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE, implicitTypeOnly = true)
+        val transformer = FirBodyResolveTransformer(
+            file.fileSession,
+            phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE,
+            implicitTypeOnly = true,
+            scopeSession = scopeSession
+        )
         return file.transform(transformer, null)
     }
 }
@@ -1033,13 +1040,20 @@ class FirImplicitTypeBodyResolveTransformerAdapter : FirTransformer<Nothing?>() 
 
 @Deprecated("It is temp", level = DeprecationLevel.WARNING, replaceWith = ReplaceWith("TODO(\"что-то нормальное\")"))
 class FirBodyResolveTransformerAdapter : FirTransformer<Nothing?>() {
+    private val scopeSession = ScopeSession()
+
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         return element.compose()
     }
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
         // Despite of real phase is EXPRESSIONS, we state IMPLICIT_TYPES here, because DECLARATIONS previous phase is OK for us
-        val transformer = FirBodyResolveTransformer(file.fileSession, phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE, implicitTypeOnly = false)
+        val transformer = FirBodyResolveTransformer(
+            file.fileSession,
+            phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE,
+            implicitTypeOnly = false,
+            scopeSession = scopeSession
+        )
         return file.transform(transformer, null)
     }
 }

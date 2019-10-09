@@ -90,7 +90,7 @@ class JavaSymbolProvider(
         visitedSymbols: MutableSet<FirClassLikeSymbol<*>>
     ): JavaClassUseSiteScope {
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
-            val declaredScope = scopeSession.getOrBuild(regularClass.symbol, DECLARED) { declaredMemberScope(regularClass) }
+            val declaredScope = declaredMemberScope(regularClass)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
                     .mapNotNull { useSiteSuperType ->
@@ -99,12 +99,16 @@ class JavaSymbolProvider(
                         if (symbol is FirClassSymbol && visitedSymbols.add(symbol)) {
                             // We need JavaClassEnhancementScope here to have already enhanced signatures from supertypes
                             val scope = buildJavaEnhancementScope(useSiteSession, symbol, scopeSession, visitedSymbols)
-                            useSiteSuperType.wrapSubstitutionScopeIfNeed(useSiteSession, scope, scopeSession)
+                            visitedSymbols.remove(symbol)
+                            useSiteSuperType.wrapSubstitutionScopeIfNeed(useSiteSession, scope, symbol.fir, scopeSession)
                         } else {
                             null
                         }
                     }
-            JavaClassUseSiteScope(regularClass, useSiteSession, FirSuperTypeScope(session, superTypeEnhancementScopes), declaredScope)
+            JavaClassUseSiteScope(
+                regularClass, useSiteSession,
+                FirSuperTypeScope(useSiteSession, superTypeEnhancementScopes), declaredScope
+            )
         }
     }
 

@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.library.impl.buildKoltinLibrary
 import org.jetbrains.kotlin.library.impl.createKotlinLibrary
 import org.jetbrains.kotlin.library.resolver.KotlinLibraryResolveResult
 import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
+import org.jetbrains.kotlin.library.resolver.impl.libraryResolver
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.progress.ProgressIndicatorAndCompilationCanceledStatus
 import org.jetbrains.kotlin.psi.KtFile
@@ -51,6 +52,7 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.BindingContextUtils
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
 import org.jetbrains.kotlin.storage.StorageManager
+import org.jetbrains.kotlin.util.Logger
 import org.jetbrains.kotlin.utils.DFS
 import java.io.File
 import org.jetbrains.kotlin.konan.file.File as KFile
@@ -79,6 +81,29 @@ private val CompilerConfiguration.metadataVersion
     get() = get(CommonConfigurationKeys.METADATA_VERSION) as? JsKlibMetadataVersion ?: JsKlibMetadataVersion.INSTANCE
 
 class KotlinFileSerializedData(val metadata: ByteArray, val irData: SerializedIrFile)
+
+// TODO: This is a temporary set of library resolver policies for js compiler.
+fun jsResolveLibraries(libraries: List<String>, logger: Logger): KotlinLibraryResolveResult {
+    val unresolvedLibraries = libraries.map { UnresolvedLibrary(it ,null) }
+    val libraryAbsolutePaths = libraries.map{ File(it).absolutePath }
+    // Configure the resolver to only work with absolute paths for now.
+    val libraryResolver = KotlinLibrarySearchPathResolver<KotlinLibrary>(
+        repositories = emptyList(),
+        directLibs = libraryAbsolutePaths,
+        distributionKlib = null,
+        localKotlinDir = null,
+        skipCurrentDir = false,
+        logger = logger
+    ).libraryResolver()
+    val resolvedLibraries =
+        libraryResolver.resolveWithDependencies(
+            unresolvedLibraries = unresolvedLibraries,
+            noStdLib = true,
+            noDefaultLibs = true,
+            noEndorsedLibs = true
+        )
+    return resolvedLibraries
+}
 
 fun generateKLib(
     project: Project,
