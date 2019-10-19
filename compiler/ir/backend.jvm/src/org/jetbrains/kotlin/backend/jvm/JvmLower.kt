@@ -207,9 +207,9 @@ private val jvmFilePhases =
         singletonReferencesPhase then
 
         callableReferencePhase then
+        singleAbstractMethodPhase then
         localDeclarationsPhase then
 
-        singleAbstractMethodPhase then
         addContinuationPhase then
 
         jvmOverloadsAnnotationPhase then
@@ -218,6 +218,7 @@ private val jvmFilePhases =
         flattenStringConcatenationPhase then
         foldConstantLoweringPhase then
         computeStringTrimPhase then
+        jvmStringConcatenationLowering then
 
         defaultArgumentStubPhase then
         defaultArgumentInjectorPhase then

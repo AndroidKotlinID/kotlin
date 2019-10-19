@@ -2730,6 +2730,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/controlFlowWithEmptyBody/if/blockHasComment.kt");
             }
 
+            @TestMetadata("blockHasCommentWithElse.kt")
+            public void testBlockHasCommentWithElse() throws Exception {
+                runTest("idea/testData/inspectionsLocal/controlFlowWithEmptyBody/if/blockHasCommentWithElse.kt");
+            }
+
             @TestMetadata("blockHasElse.kt")
             public void testBlockHasElse() throws Exception {
                 runTest("idea/testData/inspectionsLocal/controlFlowWithEmptyBody/if/blockHasElse.kt");
@@ -6561,6 +6566,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/inEnumEntry3.kt");
         }
 
+        @TestMetadata("javaFakeGetter.kt")
+        public void testJavaFakeGetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/javaFakeGetter.kt");
+        }
+
+        @TestMetadata("javaFakeSetter.kt")
+        public void testJavaFakeSetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/javaFakeSetter.kt");
+        }
+
+        @TestMetadata("javaGetter.kt")
+        public void testJavaGetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/javaGetter.kt");
+        }
+
+        @TestMetadata("javaSetter.kt")
+        public void testJavaSetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantCompanionReference/javaSetter.kt");
+        }
+
         @TestMetadata("methodArgument.kt")
         public void testMethodArgument() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantCompanionReference/methodArgument.kt");
@@ -8229,6 +8254,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/companionWithOuterName.kt");
         }
 
+        @TestMetadata("enumEntry.kt")
+        public void testEnumEntry() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/enumEntry.kt");
+        }
+
+        @TestMetadata("enumInEnum.kt")
+        public void testEnumInEnum() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/enumInEnum.kt");
+        }
+
+        @TestMetadata("enumInEnum2.kt")
+        public void testEnumInEnum2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/enumInEnum2.kt");
+        }
+
         @TestMetadata("expression.kt")
         public void testExpression() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/expression.kt");
@@ -8344,6 +8384,31 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableCompanionType2.kt");
         }
 
+        @TestMetadata("notApplicableEnumEntry.kt")
+        public void testNotApplicableEnumEntry() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableEnumEntry.kt");
+        }
+
+        @TestMetadata("notApplicableEnumEntryInEnumEntry.kt")
+        public void testNotApplicableEnumEntryInEnumEntry() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableEnumEntryInEnumEntry.kt");
+        }
+
+        @TestMetadata("notApplicableEnumEntryInEnumEntry2.kt")
+        public void testNotApplicableEnumEntryInEnumEntry2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableEnumEntryInEnumEntry2.kt");
+        }
+
+        @TestMetadata("notApplicableEnumInEnum.kt")
+        public void testNotApplicableEnumInEnum() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableEnumInEnum.kt");
+        }
+
+        @TestMetadata("notApplicableEnumInEnum2.kt")
+        public void testNotApplicableEnumInEnum2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableEnumInEnum2.kt");
+        }
+
         @TestMetadata("notApplicableExpression.kt")
         public void testNotApplicableExpression() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableExpression.kt");
@@ -8377,6 +8442,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("notApplicableLocalVariable2.kt")
         public void testNotApplicableLocalVariable2() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableLocalVariable2.kt");
+        }
+
+        @TestMetadata("notApplicableObject.kt")
+        public void testNotApplicableObject() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableObject.kt");
+        }
+
+        @TestMetadata("notApplicableObject2.kt")
+        public void testNotApplicableObject2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableObject2.kt");
+        }
+
+        @TestMetadata("notApplicableObject3.kt")
+        public void testNotApplicableObject3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableObject3.kt");
         }
 
         @TestMetadata("notApplicableOuterClass.kt")
@@ -12329,6 +12409,44 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("withJvmNameUsedFromKotlin.kt")
         public void testWithJvmNameUsedFromKotlin() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedSymbol/withJvmNameUsedFromKotlin.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/inspectionsLocal/unusedUnaryOperator")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class UnusedUnaryOperator extends AbstractLocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInUnusedUnaryOperator() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/unusedUnaryOperator"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("basic.kt")
+        public void testBasic() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/basic.kt");
+        }
+
+        @TestMetadata("basic2.kt")
+        public void testBasic2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/basic2.kt");
+        }
+
+        @TestMetadata("usedAsExpression.kt")
+        public void testUsedAsExpression() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/usedAsExpression.kt");
+        }
+
+        @TestMetadata("usedAsExpression2.kt")
+        public void testUsedAsExpression2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/usedAsExpression2.kt");
+        }
+
+        @TestMetadata("userOperator.kt")
+        public void testUserOperator() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/userOperator.kt");
         }
     }
 

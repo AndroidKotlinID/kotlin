@@ -220,15 +220,21 @@ class ControlFlowGraphBuilder {
         return node
     }
 
-    fun exitWhenExpression(whenExpression: FirWhenExpression): WhenExitNode {
-        levelCounter--
+    fun exitWhenExpression(whenExpression: FirWhenExpression): Pair<WhenExitNode, WhenSyntheticElseBranchNode?> {
+        val whenExitNode = whenExitNodes.pop()
         // exit from last condition node still on stack
         // we should remove it
-        require(lastNodes.pop() is WhenBranchConditionExitNode)
-        val whenExitNode = whenExitNodes.pop()
+        val lastWhenConditionExit = lastNodes.pop()
+        val syntheticElseBranchNode = if (!whenExpression.isExhaustive) {
+            createWhenSyntheticElseBranchNode(whenExpression).apply {
+                addEdge(lastWhenConditionExit, this)
+                addEdge(this, whenExitNode)
+            }
+        } else null
         whenExitNode.markAsDeadIfNecessary()
         lastNodes.push(whenExitNode)
-        return whenExitNode
+        levelCounter--
+        return whenExitNode to syntheticElseBranchNode
     }
 
     // ----------------------------------- While Loop -----------------------------------

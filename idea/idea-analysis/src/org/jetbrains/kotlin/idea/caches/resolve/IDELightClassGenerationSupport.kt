@@ -16,8 +16,6 @@
 
 package org.jetbrains.kotlin.idea.caches.resolve
 
-import com.intellij.openapi.diagnostic.debug
-import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiManager
@@ -40,11 +38,8 @@ import org.jetbrains.kotlin.config.JvmTarget
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
-import org.jetbrains.kotlin.extensions.LightClassApplicabilityCheckExtension
-import org.jetbrains.kotlin.extensions.LightClassApplicabilityType
 import org.jetbrains.kotlin.idea.caches.lightClasses.IDELightClassContexts
 import org.jetbrains.kotlin.idea.caches.lightClasses.LazyLightClassDataHolder
-import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.project.languageVersionSettings
 import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.idea.stubindex.KotlinTypeAliasShortNameIndex
@@ -68,36 +63,6 @@ class IDELightClassGenerationSupport(private val project: Project) : LightClassG
 
         override val isReleasedCoroutine
             get() = module?.languageVersionSettings?.supportsFeature(LanguageFeature.ReleaseCoroutines) ?: true
-
-        private fun KtDeclaration.mayBeModifiedByCompilerPlugins(): Boolean {
-
-            module?.let {
-                val facet = KotlinFacet.get(it)
-                val pluginClasspaths = facet?.configuration?.settings?.compilerArguments?.pluginClasspaths
-                if (pluginClasspaths.isNullOrEmpty()) return false
-            }
-
-            val resolvedDescriptor = lazy(LazyThreadSafetyMode.NONE) {
-                resolveToDescriptorIfAny(
-                    getResolutionFacade(),
-                    bodyResolveMode = BodyResolveMode.PARTIAL
-                )
-            }
-
-            return LightClassApplicabilityCheckExtension.getInstances(project).any {
-                it.checkApplicabilityType(this, resolvedDescriptor) == LightClassApplicabilityType.LightClass
-            }
-        }
-
-        override fun isTooComplexForUltraLightGeneration(element: KtDeclaration): Boolean {
-
-            val codegenExtensionsEnabled = element.mayBeModifiedByCompilerPlugins()
-            if (codegenExtensionsEnabled) {
-                LOG.debug { "Using heavy light classes because of compiler plugins" }
-                return true
-            }
-            return false
-        }
 
         override val moduleDescriptor by lazyPub {
             element.getResolutionFacade().moduleDescriptor

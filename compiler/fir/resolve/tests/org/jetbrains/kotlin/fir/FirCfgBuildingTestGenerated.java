@@ -46,6 +46,11 @@ public class FirCfgBuildingTestGenerated extends AbstractFirCfgBuildingTest {
             runTest("compiler/fir/resolve/testData/resolve/cfg/complex.kt");
         }
 
+        @TestMetadata("emptyWhen.kt")
+        public void testEmptyWhen() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/cfg/emptyWhen.kt");
+        }
+
         @TestMetadata("initBlock.kt")
         public void testInitBlock() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/cfg/initBlock.kt");
@@ -137,6 +142,11 @@ public class FirCfgBuildingTestGenerated extends AbstractFirCfgBuildingTest {
         @TestMetadata("equalsToBoolean.kt")
         public void testEqualsToBoolean() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/equalsToBoolean.kt");
+        }
+
+        @TestMetadata("implicitReceiverAsWhenSubject.kt")
+        public void testImplicitReceiverAsWhenSubject() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/implicitReceiverAsWhenSubject.kt");
         }
 
         @TestMetadata("implicitReceivers.kt")
