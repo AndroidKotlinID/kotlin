@@ -4458,6 +4458,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/collections/removeAtInt.kt");
         }
 
+        @TestMetadata("removeClash.kt")
+        public void testRemoveClash() throws Exception {
+            runTest("compiler/testData/codegen/box/collections/removeClash.kt");
+        }
+
         @TestMetadata("strList.kt")
         public void testStrList() throws Exception {
             runTest("compiler/testData/codegen/box/collections/strList.kt");
@@ -4836,6 +4841,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("ifConst2.kt")
         public void testIfConst2() throws Exception {
             runTest("compiler/testData/codegen/box/controlStructures/ifConst2.kt");
+        }
+
+        @TestMetadata("ifIncompatibleBranches.kt")
+        public void testIfIncompatibleBranches() throws Exception {
+            runTest("compiler/testData/codegen/box/controlStructures/ifIncompatibleBranches.kt");
         }
 
         @TestMetadata("inRangeConditionsInWhen.kt")
@@ -6654,6 +6664,16 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             public void testLambdaWithMultipleParameters_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/lambdaWithMultipleParameters.kt", "kotlin.coroutines");
             }
+
+            @TestMetadata("lambdaWithMultipleParameters_ir.kt")
+            public void testLambdaWithMultipleParameters_ir_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/lambdaWithMultipleParameters_ir.kt", "kotlin.coroutines.experimental");
+            }
+
+            @TestMetadata("lambdaWithMultipleParameters_ir.kt")
+            public void testLambdaWithMultipleParameters_ir_1_3() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/lambdaWithMultipleParameters_ir.kt", "kotlin.coroutines");
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/coroutines/controlFlow")
@@ -6878,6 +6898,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("debuggerMetadata.kt")
             public void testDebuggerMetadata() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/debug/debuggerMetadata.kt");
+            }
+
+            @TestMetadata("debuggerMetadata_ir.kt")
+            public void testDebuggerMetadata_ir() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/debug/debuggerMetadata_ir.kt");
             }
 
             @TestMetadata("elvisLineNumber.kt")
@@ -18434,6 +18459,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/properties/genericPropertyMultiModule.kt");
         }
 
+        @TestMetadata("initOrderMultiModule.kt")
+        public void testInitOrderMultiModule() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/initOrderMultiModule.kt");
+        }
+
         @TestMetadata("javaPropertyBoxedGetter.kt")
         public void testJavaPropertyBoxedGetter() throws Exception {
             runTest("compiler/testData/codegen/box/properties/javaPropertyBoxedGetter.kt");
@@ -18642,6 +18672,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("protectedJavaPropertyInCompanion.kt")
         public void testProtectedJavaPropertyInCompanion() throws Exception {
             runTest("compiler/testData/codegen/box/properties/protectedJavaPropertyInCompanion.kt");
+        }
+
+        @TestMetadata("sideEffectInTopLevelInitializerMultiModule.kt")
+        public void testSideEffectInTopLevelInitializerMultiModule() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/sideEffectInTopLevelInitializerMultiModule.kt");
         }
 
         @TestMetadata("substituteJavaSuperField.kt")

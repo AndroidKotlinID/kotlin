@@ -7863,6 +7863,36 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         public void testOverridePropertySetter() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/overridePropertySetter.kt");
         }
+
+        @TestMetadata("publicOverrideProtectedSetter.kt")
+        public void testPublicOverrideProtectedSetter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter.kt");
+        }
+
+        @TestMetadata("publicOverrideProtectedSetter2.kt")
+        public void testPublicOverrideProtectedSetter2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter2.kt");
+        }
+
+        @TestMetadata("publicOverrideProtectedSetter3.kt")
+        public void testPublicOverrideProtectedSetter3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter3.kt");
+        }
+
+        @TestMetadata("publicOverrideProtectedSetter4.kt")
+        public void testPublicOverrideProtectedSetter4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter4.kt");
+        }
+
+        @TestMetadata("publicOverrideProtectedSetter5.kt")
+        public void testPublicOverrideProtectedSetter5() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter5.kt");
+        }
+
+        @TestMetadata("publicOverrideProtectedSetter6.kt")
+        public void testPublicOverrideProtectedSetter6() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantVisibilityModifier/publicOverrideProtectedSetter6.kt");
+        }
     }
 
     @TestMetadata("idea/testData/inspectionsLocal/redundantWith")
@@ -8367,6 +8397,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("notApplicableCompanion.kt")
         public void testNotApplicableCompanion() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableCompanion.kt");
+        }
+
+        @TestMetadata("notApplicableCompanionInEnumEntry.kt")
+        public void testNotApplicableCompanionInEnumEntry() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantQualifierName/notApplicableCompanionInEnumEntry.kt");
         }
 
         @TestMetadata("notApplicableCompanionOtherName.kt")
