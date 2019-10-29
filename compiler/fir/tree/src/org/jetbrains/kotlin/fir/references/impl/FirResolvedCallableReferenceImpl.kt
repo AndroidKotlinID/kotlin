@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.references.impl
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.fir.visitors.*
 
@@ -22,6 +23,7 @@ class FirResolvedCallableReferenceImpl(
     override val resolvedSymbol: AbstractFirBasedSymbol<*>
 ) : FirResolvedCallableReference() {
     override val candidateSymbol: AbstractFirBasedSymbol<*>? get() = null
+    override val inferredTypeArguments: MutableList<ConeKotlinType> = mutableListOf()
 
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {}
 

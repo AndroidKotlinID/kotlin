@@ -100,9 +100,10 @@ import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
-import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
 import org.jetbrains.kotlin.fir.references.FirBackingFieldReference
+import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.FirErrorTypeRef
 import org.jetbrains.kotlin.fir.types.FirDelegatedTypeRef
@@ -497,8 +498,8 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(controlFlowGraphReference)
     }
 
-    open fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference) {
-        visitElement(resolvedCallableReference)
+    open fun visitResolvedNamedReference(resolvedNamedReference: FirResolvedNamedReference) {
+        visitElement(resolvedNamedReference)
     }
 
     open fun visitDelegateFieldReference(delegateFieldReference: FirDelegateFieldReference) {
@@ -507,6 +508,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference) {
         visitElement(backingFieldReference)
+    }
+
+    open fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference) {
+        visitElement(resolvedCallableReference)
     }
 
     open fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef) {
@@ -925,8 +930,8 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitControlFlowGraphReference(controlFlowGraphReference)
     }
 
-    final override fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: Nothing?) {
-        visitResolvedCallableReference(resolvedCallableReference)
+    final override fun visitResolvedNamedReference(resolvedNamedReference: FirResolvedNamedReference, data: Nothing?) {
+        visitResolvedNamedReference(resolvedNamedReference)
     }
 
     final override fun visitDelegateFieldReference(delegateFieldReference: FirDelegateFieldReference, data: Nothing?) {
@@ -935,6 +940,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: Nothing?) {
         visitBackingFieldReference(backingFieldReference)
+    }
+
+    final override fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: Nothing?) {
+        visitResolvedCallableReference(resolvedCallableReference)
     }
 
     final override fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: Nothing?) {

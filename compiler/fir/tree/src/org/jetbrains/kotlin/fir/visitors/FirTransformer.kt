@@ -100,9 +100,10 @@ import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
-import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
 import org.jetbrains.kotlin.fir.references.FirBackingFieldReference
+import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.FirErrorTypeRef
 import org.jetbrains.kotlin.fir.types.FirDelegatedTypeRef
@@ -499,8 +500,8 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformElement(controlFlowGraphReference, data)
     }
 
-    open fun transformResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: D): CompositeTransformResult<FirReference> {
-        return transformElement(resolvedCallableReference, data)
+    open fun transformResolvedNamedReference(resolvedNamedReference: FirResolvedNamedReference, data: D): CompositeTransformResult<FirReference> {
+        return transformElement(resolvedNamedReference, data)
     }
 
     open fun transformDelegateFieldReference(delegateFieldReference: FirDelegateFieldReference, data: D): CompositeTransformResult<FirReference> {
@@ -509,6 +510,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun transformBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: D): CompositeTransformResult<FirReference> {
         return transformElement(backingFieldReference, data)
+    }
+
+    open fun transformResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: D): CompositeTransformResult<FirReference> {
+        return transformElement(resolvedCallableReference, data)
     }
 
     open fun transformResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: D): CompositeTransformResult<FirTypeRef> {
@@ -927,8 +932,8 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformControlFlowGraphReference(controlFlowGraphReference, data)
     }
 
-    final override fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: D): CompositeTransformResult<FirReference> {
-        return transformResolvedCallableReference(resolvedCallableReference, data)
+    final override fun visitResolvedNamedReference(resolvedNamedReference: FirResolvedNamedReference, data: D): CompositeTransformResult<FirReference> {
+        return transformResolvedNamedReference(resolvedNamedReference, data)
     }
 
     final override fun visitDelegateFieldReference(delegateFieldReference: FirDelegateFieldReference, data: D): CompositeTransformResult<FirReference> {
@@ -937,6 +942,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitBackingFieldReference(backingFieldReference: FirBackingFieldReference, data: D): CompositeTransformResult<FirReference> {
         return transformBackingFieldReference(backingFieldReference, data)
+    }
+
+    final override fun visitResolvedCallableReference(resolvedCallableReference: FirResolvedCallableReference, data: D): CompositeTransformResult<FirReference> {
+        return transformResolvedCallableReference(resolvedCallableReference, data)
     }
 
     final override fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef, data: D): CompositeTransformResult<FirTypeRef> {

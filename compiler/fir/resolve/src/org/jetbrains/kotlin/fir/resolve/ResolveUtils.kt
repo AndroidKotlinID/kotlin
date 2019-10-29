@@ -6,17 +6,20 @@
 package org.jetbrains.kotlin.fir.resolve
 
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.fir.*
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.componentArrayAccessor
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
-import org.jetbrains.kotlin.fir.references.FirResolvedCallableReference
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.resultType
+import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
 import org.jetbrains.kotlin.fir.scopes.impl.FirMemberScopeProvider
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.symbols.*
@@ -205,29 +208,39 @@ fun FirFunction<*>.constructFunctionalTypeRef(session: FirSession): FirResolvedT
     }
     val rawReturnType = (this as FirTypedDeclaration).returnTypeRef.coneTypeUnsafe<ConeKotlinType>()
 
-    val functionalType = createFunctionalType(session, parameters, receiverTypeRef?.coneTypeUnsafe(), rawReturnType)
+    val functionalType = createFunctionalType(parameters, receiverTypeRef?.coneTypeUnsafe(), rawReturnType)
 
     return FirResolvedTypeRefImpl(psi, functionalType)
 }
 
 fun createFunctionalType(
-    session: FirSession,
     parameters: List<ConeKotlinType>,
     receiverType: ConeKotlinType?,
-    rawReturnType: ConeKotlinType
+    rawReturnType: ConeKotlinType,
+    isKFunctionType: Boolean = false
 ): ConeLookupTagBasedType {
     val receiverAndParameterTypes = listOfNotNull(receiverType) + parameters + listOf(rawReturnType)
 
-    val functionalTypeId = StandardClassIds.byName("Function${receiverAndParameterTypes.size - 1}")
-    val functionalType = functionalTypeId(session.firSymbolProvider).constructType(receiverAndParameterTypes.toTypedArray(), isNullable = false)
-    return functionalType
+    val postfix = "Function${receiverAndParameterTypes.size - 1}"
+    val functionalTypeId = if (isKFunctionType) StandardClassIds.reflectByName("K$postfix") else StandardClassIds.byName(postfix)
+    return ConeClassTypeImpl(ConeClassLikeLookupTagImpl(functionalTypeId), receiverAndParameterTypes.toTypedArray(), isNullable = false)
+}
+
+fun createKPropertyType(
+    receiverType: ConeKotlinType?,
+    rawReturnType: ConeKotlinType,
+    isMutable: Boolean
+): ConeLookupTagBasedType {
+    val arguments = if (receiverType != null) listOf(receiverType, rawReturnType) else listOf(rawReturnType)
+    val classId = StandardClassIds.reflectByName("K${if (isMutable) "Mutable" else ""}Property${arguments.size - 1}")
+    return ConeClassTypeImpl(ConeClassLikeLookupTagImpl(classId), arguments.toTypedArray(), isNullable = false)
 }
 
 fun BodyResolveComponents.typeForQualifier(resolvedQualifier: FirResolvedQualifier): FirTypeRef {
     val classId = resolvedQualifier.classId
     val resultType = resolvedQualifier.resultType
     if (classId != null) {
-        val classSymbol: FirClassLikeSymbol<*> = symbolProvider.getClassLikeSymbolByFqName(classId)!!
+        val classSymbol = symbolProvider.getClassLikeSymbolByFqName(classId)!!
         val declaration = classSymbol.phasedFir
         if (declaration is FirClass) {
             if (declaration.classKind == ClassKind.OBJECT) {
@@ -278,7 +291,7 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
         is FirNamedReferenceWithCandidate -> {
             typeFromSymbol(newCallee.candidateSymbol, makeNullable)
         }
-        is FirResolvedCallableReference -> {
+        is FirResolvedNamedReference -> {
             typeFromSymbol(newCallee.resolvedSymbol, makeNullable)
         }
         is FirThisReference -> {
@@ -311,7 +324,9 @@ private fun BodyResolveComponents.typeFromSymbol(symbol: AbstractFirBasedSymbol<
                     "no enum item supertype"
                 )
             } else
-                FirResolvedTypeRefImpl(null, symbol.constructType(emptyArray(), isNullable = false))
+                FirResolvedTypeRefImpl(
+                    null, symbol.constructType(emptyArray(), isNullable = false)
+                )
         }
         else -> error("WTF ! $symbol")
     }
