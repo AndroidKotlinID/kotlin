@@ -18,44 +18,19 @@ package org.jetbrains.kotlin.js.resolve.diagnostics
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.builtins.ReflectionTypes
-import org.jetbrains.kotlin.descriptors.CallableDescriptor
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ModuleDescriptor
-import org.jetbrains.kotlin.descriptors.NotFoundClasses
 import org.jetbrains.kotlin.diagnostics.Errors.UNSUPPORTED
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.calls.checkers.AbstractReflectionApiCallChecker
 import org.jetbrains.kotlin.resolve.calls.checkers.CallCheckerContext
-import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.storage.StorageManager
-import org.jetbrains.kotlin.storage.getValue
-
-private val ALLOWED_KCLASS_MEMBERS = setOf("simpleName", "isInstance")
-private val ALLOWED_CLASSES = setOf(
-    FqName("kotlin.reflect.KType"),
-    FqName("kotlin.reflect.KTypeProjection"),
-    FqName("kotlin.reflect.KTypeProjection.Companion"),
-    FqName("kotlin.reflect.KVariance")
-)
 
 class JsReflectionAPICallChecker(
-    module: ModuleDescriptor,
-    private val reflectionTypes: ReflectionTypes,
-    notFoundClasses: NotFoundClasses,
+    reflectionTypes: ReflectionTypes,
     storageManager: StorageManager
-) : AbstractReflectionApiCallChecker(module, notFoundClasses, storageManager) {
+) : AbstractReflectionApiCallChecker(reflectionTypes, storageManager) {
     override val isWholeReflectionApiAvailable: Boolean
         get() = false
 
     override fun report(element: PsiElement, context: CallCheckerContext) {
         context.trace.report(UNSUPPORTED.on(element, "This reflection API is not supported yet in JavaScript"))
     }
-
-    private val kClass by storageManager.createLazyValue { reflectionTypes.kClass }
-
-    override fun isAllowedReflectionApi(descriptor: CallableDescriptor, containingClass: ClassDescriptor): Boolean =
-        super.isAllowedReflectionApi(descriptor, containingClass) ||
-                DescriptorUtils.isSubclass(containingClass, kClass) && descriptor.name.asString() in ALLOWED_KCLASS_MEMBERS ||
-                containingClass.fqNameSafe in ALLOWED_CLASSES
 }

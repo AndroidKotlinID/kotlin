@@ -39,19 +39,20 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val variable = element("Variable", Declaration, callableDeclaration, namedDeclaration, statement)
     val valueParameter = element("ValueParameter", Declaration, variable)
     val property = element("Property", Declaration, variable, controlFlowGraphOwner, typeParametersOwner, callableMemberDeclaration)
-    val field = element("Field", Declaration, variable, callableMemberDeclaration) // TODO: add noImpl
-    val klass = element("Class", Declaration, declaration, statement, annotationContainer)
-    val classLikeDeclaration = element("ClassLikeDeclaration", Declaration, statement, memberDeclaration, symbolOwner, typeParametersOwner)
-    val regularClass = element("RegularClass", Declaration, namedDeclaration, classLikeDeclaration, klass)
+    val field = element("Field", Declaration, variable, callableMemberDeclaration)
+    val classLikeDeclaration = element("ClassLikeDeclaration", Declaration, declaration, statement, symbolOwner)
+    val klass = element("Class", Declaration, classLikeDeclaration, statement, annotationContainer)
+    val regularClass = element("RegularClass", Declaration, memberDeclaration, typeParametersOwner, klass)
     val sealedClass = element("SealedClass", Declaration, regularClass)
-    val typeAlias = element("TypeAlias", Declaration, classLikeDeclaration)
+    val typeAlias = element("TypeAlias", Declaration, classLikeDeclaration, memberDeclaration, typeParametersOwner)
     val enumEntry = element("EnumEntry", Declaration, regularClass)
 
     val function = element("Function", Declaration, callableDeclaration, controlFlowGraphOwner, targetElement, annotationContainer, typeParametersOwner, statement)
 
+    val contractDescriptionOwner = element("ContractDescriptionOwner", Declaration)
     val memberFunction = element("MemberFunction", Declaration, function, callableMemberDeclaration)
-    val simpleFunction = element("SimpleFunction", Declaration, memberFunction)
-    val propertyAccessor = element("PropertyAccessor", Declaration, function)
+    val simpleFunction = element("SimpleFunction", Declaration, memberFunction, contractDescriptionOwner)
+    val propertyAccessor = element("PropertyAccessor", Declaration, function, contractDescriptionOwner)
     val constructor = element("Constructor", Declaration, memberFunction)
     val file = element("File", Declaration, annotationContainer, declaration)
 
@@ -132,4 +133,6 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val functionTypeRef = element("FunctionTypeRef", TypeRef, typeRefWithNullability)
     val resolvedFunctionTypeRef = element("ResolvedFunctionTypeRef", TypeRef, resolvedTypeRef, functionTypeRef)
     val implicitTypeRef = element("ImplicitTypeRef", TypeRef, typeRef)
+
+    val contractDescription = element("ContractDescription", Contracts)
 }

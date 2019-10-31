@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.resolve.BodyResolveComponents
 import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.FirCallCompletionResultsWriterTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.InvocationKindTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.MapArguments
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreType
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirAbstractBodyResolveTransformer
@@ -76,6 +77,7 @@ class FirCallCompleter(
                 transformer.components.callResolver
             )
 
+        call.transformSingle(InvocationKindTransformer, null)
         completer.complete(candidate.system.asConstraintSystemCompleterContext(), completionMode, listOf(call), initialType) {
             analyzer.analyze(candidate.system.asPostponedArgumentsAnalyzerContext(), it)
         }
@@ -106,13 +108,16 @@ class FirCallCompleter(
             stubsForPostponedVariables: Map<TypeVariableMarker, StubTypeMarker>
         ): Pair<List<FirExpression>, InferenceSession> {
 
+            val needItParam = lambdaArgument.valueParameters.isEmpty() && parameters.size == (if (receiverType != null) 2 else 1)
+
             val itParam = when {
-                lambdaArgument.valueParameters.isEmpty() && parameters.size == 1 -> {
+                needItParam -> {
                     val name = Name.identifier("it")
+                    val itType = if (receiverType != null) parameters[1] else parameters.single()
                     FirValueParameterImpl(
                         null,
                         session,
-                        FirResolvedTypeRefImpl(null, parameters.single()),
+                        FirResolvedTypeRefImpl(null, itType),
                         name,
                         FirVariableSymbol(name),
                         defaultValue = null,
@@ -127,7 +132,7 @@ class FirCallCompleter(
             val expectedReturnTypeRef = expectedReturnType?.let { lambdaArgument.returnTypeRef.resolvedTypeFromPrototype(it) }
 
             val newLambdaExpression = lambdaArgument.copy(
-                receiverTypeRef = receiverType?.let { lambdaArgument.receiverTypeRef!!.resolvedTypeFromPrototype(it) },
+                receiverTypeRef = receiverType?.let { lambdaArgument.receiverTypeRef?.resolvedTypeFromPrototype(it) },
                 valueParameters = lambdaArgument.valueParameters.mapIndexed { index, parameter ->
                     parameter.transformReturnTypeRef(StoreType, parameter.returnTypeRef.resolvedTypeFromPrototype(parameters[index]))
                     parameter

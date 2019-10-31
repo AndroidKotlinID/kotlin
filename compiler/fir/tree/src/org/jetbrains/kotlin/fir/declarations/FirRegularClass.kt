@@ -5,11 +5,11 @@
 
 package org.jetbrains.kotlin.fir.declarations
 
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.fir.visitors.*
@@ -19,8 +19,8 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-interface FirRegularClass : FirNamedDeclaration, FirClassLikeDeclaration<FirRegularClass>, FirClass {
-    override val psi: PsiElement?
+interface FirRegularClass : FirMemberDeclaration, FirTypeParametersOwner, FirClass<FirRegularClass> {
+    override val source: FirSourceElement?
     override val session: FirSession
     override val resolvePhase: FirResolvePhase
     override val name: Name
@@ -30,7 +30,7 @@ interface FirRegularClass : FirNamedDeclaration, FirClassLikeDeclaration<FirRegu
     override val supertypesComputationStatus: SupertypesComputationStatus
     override val classKind: ClassKind
     override val declarations: List<FirDeclaration>
-    override val symbol: FirClassSymbol
+    override val symbol: FirRegularClassSymbol
     val companionObject: FirRegularClass?
     override val superTypeRefs: List<FirTypeRef>
 

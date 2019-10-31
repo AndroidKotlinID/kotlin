@@ -47,6 +47,9 @@ val FirSession.correspondingSupertypesCache: FirCorrespondingSupertypesCache by 
 val FirSession.memberScopeProvider: FirMemberScopeProvider by componentArrayAccessor()
 
 fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): FirClassLikeSymbol<*>? {
+    if (this is ConeClassLookupTagWithFixedSymbol) {
+        return this.symbol
+    }
     val firSymbolProvider = useSiteSession.firSymbolProvider
     return firSymbolProvider.getSymbolByLookupTag(this)
 }
@@ -96,7 +99,7 @@ fun ConeClassifierLookupTag.toSymbol(useSiteSession: FirSession): FirClassifierS
 
 fun ConeTypeParameterLookupTag.toSymbol(): FirTypeParameterSymbol = this.symbol as FirTypeParameterSymbol
 
-fun ConeClassLikeLookupTag.constructClassType(typeArguments: Array<ConeKotlinTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
+fun ConeClassLikeLookupTag.constructClassType(typeArguments: Array<out ConeKotlinTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
     return ConeClassTypeImpl(this, typeArguments, isNullable)
 }
 
@@ -210,7 +213,7 @@ fun FirFunction<*>.constructFunctionalTypeRef(session: FirSession): FirResolvedT
 
     val functionalType = createFunctionalType(parameters, receiverTypeRef?.coneTypeUnsafe(), rawReturnType)
 
-    return FirResolvedTypeRefImpl(psi, functionalType)
+    return FirResolvedTypeRefImpl(source, functionalType)
 }
 
 fun createFunctionalType(
@@ -242,32 +245,36 @@ fun BodyResolveComponents.typeForQualifier(resolvedQualifier: FirResolvedQualifi
     if (classId != null) {
         val classSymbol = symbolProvider.getClassLikeSymbolByFqName(classId)!!
         val declaration = classSymbol.phasedFir
-        if (declaration is FirClass) {
-            if (declaration.classKind == ClassKind.OBJECT) {
-                return resultType.resolvedTypeFromPrototype(
-                    classSymbol.constructType(emptyArray(), false)
-                )
-            } else if (declaration.classKind == ClassKind.ENUM_ENTRY) {
-                val enumClassSymbol = symbolProvider.getClassLikeSymbolByFqName(classSymbol.classId.outerClassId!!)!!
-                return resultType.resolvedTypeFromPrototype(
-                    enumClassSymbol.constructType(emptyArray(), false)
-                )
-            } else {
-                if (declaration is FirRegularClass) {
-                    val companionObject = declaration.companionObject
-                    if (companionObject != null) {
-                        return resultType.resolvedTypeFromPrototype(
-                            companionObject.symbol.constructType(emptyArray(), false)
-                        )
-                    }
-                }
-            }
+        typeForQualifierByDeclaration(declaration, resultType)?.let { return it }
+        if (declaration is FirRegularClass && declaration.classKind == ClassKind.ENUM_ENTRY) {
+            val enumClassSymbol = symbolProvider.getClassLikeSymbolByFqName(classSymbol.classId.outerClassId!!)!!
+            return resultType.resolvedTypeFromPrototype(
+                enumClassSymbol.constructType(emptyArray(), false)
+            )
         }
     }
     // TODO: Handle no value type here
     return resultType.resolvedTypeFromPrototype(
         StandardClassIds.Unit(symbolProvider).constructType(emptyArray(), isNullable = false)
     )
+}
+
+internal fun typeForQualifierByDeclaration(declaration: FirDeclaration, resultType: FirTypeRef): FirTypeRef? {
+    if (declaration is FirRegularClass) {
+        if (declaration.classKind == ClassKind.OBJECT) {
+            return resultType.resolvedTypeFromPrototype(
+                declaration.symbol.constructType(emptyArray(), false)
+            )
+        } else {
+            val companionObject = declaration.companionObject
+            if (companionObject != null) {
+                return resultType.resolvedTypeFromPrototype(
+                    companionObject.symbol.constructType(emptyArray(), false)
+                )
+            }
+        }
+    }
+    return null
 }
 
 fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirResolvedTypeRef {
@@ -287,7 +294,7 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
 
     return when (val newCallee = access.calleeReference) {
         is FirErrorNamedReference ->
-            FirErrorTypeRefImpl(access.psi, newCallee.errorReason)
+            FirErrorTypeRefImpl(access.source, newCallee.errorReason)
         is FirNamedReferenceWithCandidate -> {
             typeFromSymbol(newCallee.candidateSymbol, makeNullable)
         }

@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.backend
 import com.intellij.psi.PsiCompiledElement
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
@@ -132,7 +133,7 @@ private fun AbstractFirBasedSymbol<*>.toSymbol(declarationStorage: Fir2IrDeclara
     else -> null
 }
 
-fun FirClassSymbol.toClassSymbol(declarationStorage: Fir2IrDeclarationStorage): IrClassSymbol {
+fun FirClassSymbol<*>.toClassSymbol(declarationStorage: Fir2IrDeclarationStorage): IrClassSymbol {
     return declarationStorage.getIrClassSymbol(this)
 }
 

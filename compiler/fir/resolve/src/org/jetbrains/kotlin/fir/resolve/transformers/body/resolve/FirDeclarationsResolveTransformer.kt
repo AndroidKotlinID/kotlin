@@ -134,6 +134,7 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
     }
 
     override fun transformRegularClass(regularClass: FirRegularClass, data: Any?): CompositeTransformResult<FirStatement> {
+        localScopes.lastOrNull()?.storeDeclaration(regularClass)
         val oldConstructorScope = primaryConstructorParametersScope
         primaryConstructorParametersScope = null
         val type = regularClass.defaultType()
@@ -147,6 +148,15 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
             transformDeclaration(regularClass, data)
         }
         primaryConstructorParametersScope = oldConstructorScope
+        return result as CompositeTransformResult<FirStatement>
+    }
+
+    override fun transformAnonymousObject(anonymousObject: FirAnonymousObject, data: Any?): CompositeTransformResult<FirStatement> {
+        val type = anonymousObject.defaultType()
+        anonymousObject.resultType = FirResolvedTypeRefImpl(anonymousObject.source, type)
+        val result = withLabelAndReceiverType(null, anonymousObject, type) {
+            transformDeclaration(anonymousObject, data)
+        }
         return result as CompositeTransformResult<FirStatement>
     }
 
@@ -326,7 +336,7 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
                 val bodyExpectedType = returnTypeRefFromResolvedAtom ?: data
                 af = transformFunction(af, bodyExpectedType).single as FirAnonymousFunction
                 af = af.copy(
-                    returnTypeRef = af.body?.resultType ?: FirErrorTypeRefImpl(af.psi, "No result type for lambda")
+                    returnTypeRef = af.body?.resultType ?: FirErrorTypeRefImpl(af.source, "No result type for lambda")
                 )
                 af.replaceTypeRef(af.constructFunctionalTypeRef(session))
                 af.compose()
@@ -338,14 +348,14 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
     }
 
     private inline fun <T> withLabelAndReceiverType(
-        labelName: Name,
+        labelName: Name?,
         owner: FirDeclaration,
         type: ConeKotlinType,
         block: () -> T
     ): T {
         val implicitReceiverValue = when (owner) {
-            is FirRegularClass -> {
-                ImplicitDispatchReceiverValue(owner.symbol, type, symbolProvider, session, scopeSession)
+            is FirClass<*> -> {
+                ImplicitDispatchReceiverValue(owner.symbol, type, session, scopeSession)
             }
             is FirFunction<*> -> {
                 ImplicitExtensionReceiverValue(owner.symbol, type, session, scopeSession)

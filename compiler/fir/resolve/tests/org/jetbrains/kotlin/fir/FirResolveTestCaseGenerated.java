@@ -326,6 +326,16 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/lambda.kt");
         }
 
+        @TestMetadata("lambdaWithReceiver.kt")
+        public void testLambdaWithReceiver() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/lambdaWithReceiver.kt");
+        }
+
+        @TestMetadata("localConstructor.kt")
+        public void testLocalConstructor() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localConstructor.kt");
+        }
+
         @TestMetadata("localExtension.kt")
         public void testLocalExtension() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localExtension.kt");
@@ -334,6 +344,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
         @TestMetadata("localImplicitBodies.kt")
         public void testLocalImplicitBodies() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localImplicitBodies.kt");
+        }
+
+        @TestMetadata("localScopes.kt")
+        public void testLocalScopes() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localScopes.kt");
         }
 
         @TestMetadata("memberExtension.kt")
@@ -474,6 +489,34 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
             @TestMetadata("threeReceivers.kt")
             public void testThreeReceivers() throws Exception {
                 runTest("compiler/fir/resolve/testData/resolve/expresssions/invoke/threeReceivers.kt");
+            }
+        }
+
+        @TestMetadata("compiler/fir/resolve/testData/resolve/expresssions/operators")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Operators extends AbstractFirResolveTestCase {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInOperators() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/expresssions/operators"), Pattern.compile("^([^.]+)\\.kt$"), true);
+            }
+
+            @TestMetadata("plus.kt")
+            public void testPlus() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/operators/plus.kt");
+            }
+
+            @TestMetadata("plusAndPlusAssign.kt")
+            public void testPlusAndPlusAssign() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/operators/plusAndPlusAssign.kt");
+            }
+
+            @TestMetadata("plusAssign.kt")
+            public void testPlusAssign() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/expresssions/operators/plusAssign.kt");
             }
         }
     }

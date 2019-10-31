@@ -9,6 +9,9 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.declarations.impl.FirEnumEntryImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirModifiableRegularClass
 import org.jetbrains.kotlin.fir.declarations.impl.FirTypeParameterImpl
+import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousObjectSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.coneTypeSafe
 
@@ -58,9 +61,15 @@ fun FirEnumEntryImpl.addDeclaration(declaration: FirDeclaration) {
 
 val FirTypeAlias.expandedConeType: ConeClassLikeType? get() = expandedTypeRef.coneTypeSafe()
 
-val FirRegularClass.classId get() = symbol.classId
+val FirClass<*>.classId get() = symbol.classId
 
-val FirClass.superConeTypes get() = superTypeRefs.mapNotNull { it.coneTypeSafe<ConeClassLikeType>() }
+val FirClassSymbol<*>.superConeTypes
+    get() = when (this) {
+        is FirRegularClassSymbol -> fir.superConeTypes
+        is FirAnonymousObjectSymbol -> fir.superConeTypes
+    }
+
+val FirClass<*>.superConeTypes get() = superTypeRefs.mapNotNull { it.coneTypeSafe<ConeClassLikeType>() }
 
 fun FirRegularClass.collectEnumEntries(): Collection<FirEnumEntry> {
     assert(classKind == ClassKind.ENUM_CLASS)

@@ -6,14 +6,13 @@
 package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.declarations.classId
+import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.FirThisReceiverExpressionImpl
 import org.jetbrains.kotlin.fir.references.impl.FirImplicitThisReference
 import org.jetbrains.kotlin.fir.renderWithType
-import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.scope
+import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
@@ -36,10 +35,10 @@ private fun receiverExpression(symbol: AbstractFirBasedSymbol<*>, type: ConeKotl
         typeRef = FirResolvedTypeRefImpl(null, type)
     }
 
-class ClassDispatchReceiverValue(val klassSymbol: FirClassSymbol) : ReceiverValue {
+class ClassDispatchReceiverValue(val klassSymbol: FirClassSymbol<*>) : ReceiverValue {
     override val type: ConeKotlinType = ConeClassTypeImpl(
         klassSymbol.toLookupTag(),
-        klassSymbol.fir.typeParameters.map { ConeStarProjection }.toTypedArray(),
+        (klassSymbol.fir as? FirTypeParametersOwner)?.typeParameters?.map { ConeStarProjection }?.toTypedArray().orEmpty(),
         isNullable = false
     )
 
@@ -85,15 +84,13 @@ abstract class ImplicitReceiverValue<S : AbstractFirBasedSymbol<*>>(
 }
 
 class ImplicitDispatchReceiverValue(
-    boundSymbol: FirClassSymbol,
+    boundSymbol: FirClassSymbol<*>,
     type: ConeKotlinType,
-    symbolProvider: FirSymbolProvider,
     useSiteSession: FirSession,
     scopeSession: ScopeSession
-) : ImplicitReceiverValue<FirClassSymbol>(boundSymbol, type, useSiteSession, scopeSession) {
-    val implicitCompanionScope: FirScope? = boundSymbol.fir.companionObject?.let { companionObject ->
-        symbolProvider.getClassUseSiteMemberScope(companionObject.classId, useSiteSession, scopeSession)
-    }
+) : ImplicitReceiverValue<FirClassSymbol<*>>(boundSymbol, type, useSiteSession, scopeSession) {
+    val implicitCompanionScope: FirScope? =
+        (boundSymbol.fir as? FirRegularClass)?.companionObject?.buildUseSiteMemberScope(useSiteSession, scopeSession)
 }
 
 class ImplicitExtensionReceiverValue(

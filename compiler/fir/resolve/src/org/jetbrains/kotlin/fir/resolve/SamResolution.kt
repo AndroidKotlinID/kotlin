@@ -20,10 +20,7 @@ import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
@@ -114,7 +111,7 @@ class FirSamResolverImpl(
 
         val newTypeParameters = firRegularClass.typeParameters.map { typeParameter ->
             FirTypeParameterImpl(
-                typeParameter.psi,
+                typeParameter.source,
                 firSession,
                 typeParameter.name,
                 FirTypeParameterSymbol(),
@@ -137,7 +134,10 @@ class FirSamResolverImpl(
 
         for ((newTypeParameter, oldTypeParameter) in newTypeParameters.zip(firRegularClass.typeParameters)) {
             newTypeParameter.bounds += oldTypeParameter.bounds.mapNotNull { typeRef ->
-                FirResolvedTypeRefImpl(typeRef.psi, substitutor.substituteOrSelf(typeRef.coneTypeSafe() ?: return@mapNotNull null))
+                FirResolvedTypeRefImpl(
+                    typeRef.source,
+                    substitutor.substituteOrSelf(typeRef.coneTypeSafe<ConeKotlinType>() ?: return@mapNotNull null)
+                )
             }
         }
 
@@ -170,9 +170,9 @@ class FirSamResolverImpl(
         ).apply {
             valueParameters += listOf(
                 FirValueParameterImpl(
-                    psi,
+                    source,
                     session,
-                    FirResolvedTypeRefImpl(firRegularClass.psi, substitutedFunctionType),
+                    FirResolvedTypeRefImpl(firRegularClass.source, substitutedFunctionType),
                     SAM_PARAMETER_NAME,
                     FirVariableSymbol(SAM_PARAMETER_NAME),
                     defaultValue = null,
@@ -217,7 +217,7 @@ private fun FirRegularClass.computeSamCandidateNames(session: FirSession): Set<N
     val classes =
         lookupSuperTypes(this, lookupInterfaces = true, deep = true, useSiteSession = session)
             .mapNotNullTo(mutableListOf(this)) {
-                (session.firSymbolProvider.getSymbolByLookupTag(it.lookupTag) as? FirClassSymbol)?.fir
+                (session.firSymbolProvider.getSymbolByLookupTag(it.lookupTag) as? FirRegularClassSymbol)?.fir
             }
 
     val samCandidateNames = mutableSetOf<Name>()

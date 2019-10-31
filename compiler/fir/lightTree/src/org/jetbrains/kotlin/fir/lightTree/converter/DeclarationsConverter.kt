@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.fir.types.FirUserTypeRef
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.lexer.KtTokens.*
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
@@ -379,7 +380,7 @@ class DeclarationsConverter(
                     className,
                     status,
                     classKind,
-                    FirClassSymbol(context.currentClassId)
+                    FirRegularClassSymbol(context.currentClassId)
                 )
             } else {
                 FirClassImpl(
@@ -388,7 +389,7 @@ class DeclarationsConverter(
                     className,
                     status,
                     classKind,
-                    FirClassSymbol(context.currentClassId)
+                    FirRegularClassSymbol(context.currentClassId)
                 )
             }
             firClass.annotations += modifiers.annotations
@@ -464,7 +465,7 @@ class DeclarationsConverter(
         superTypeRefs.ifEmpty { superTypeRefs += implicitAnyType }
         val delegatedType = delegatedSuperTypeRef ?: implicitAnyType
 
-        return FirAnonymousObjectImpl(null, session).apply {
+        return FirAnonymousObjectImpl(null, session, FirAnonymousObjectSymbol()).apply {
             annotations += modifiers.annotations
             this.superTypeRefs += superTypeRefs
             this.typeRef = superTypeRefs.first()
@@ -514,7 +515,7 @@ class DeclarationsConverter(
                 null,
                 session,
                 enumEntryName,
-                FirClassSymbol(context.currentClassId)
+                FirRegularClassSymbol(context.currentClassId)
             )
             firEnumEntry.annotations += modifiers.annotations
 
@@ -1393,7 +1394,12 @@ class DeclarationsConverter(
             isNullable,
             receiverTypeReference,
             returnTypeReference
-        ).apply { valueParameters += valueParametersList.map { it.firValueParameter } }
+        ).apply {
+            valueParameters += valueParametersList.map { it.firValueParameter }
+            if (receiverTypeReference != null) {
+                annotations += extensionFunctionAnnotation
+            }
+        }
     }
 
     /**
@@ -1444,4 +1450,17 @@ class DeclarationsConverter(
         ).apply { annotations += modifiers.annotations }
         return ValueParameter(isVal, isVar, modifiers, firValueParameter, destructuringDeclaration)
     }
+
+    private val extensionFunctionAnnotation = FirAnnotationCallImpl(
+        null,
+        null,
+        FirResolvedTypeRefImpl(
+            null,
+            ConeClassTypeImpl(
+                ConeClassLikeLookupTagImpl(ClassId.fromString("kotlin/ExtensionFunctionType")),
+                emptyArray(),
+                false
+            )
+        )
+    )
 }

@@ -14,7 +14,9 @@ import org.jetbrains.kotlin.checkers.*
 import org.jetbrains.kotlin.checkers.javac.*
 import org.jetbrains.kotlin.cli.AbstractCliTest
 import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.debugInformation.AbstractIrLocalVariableTest
 import org.jetbrains.kotlin.codegen.debugInformation.AbstractIrSteppingTest
+import org.jetbrains.kotlin.codegen.debugInformation.AbstractLocalVariableTest
 import org.jetbrains.kotlin.codegen.debugInformation.AbstractSteppingTest
 import org.jetbrains.kotlin.codegen.defaultConstructor.AbstractDefaultArgumentsReflectionTest
 import org.jetbrains.kotlin.codegen.flags.AbstractWriteFlagsTest
@@ -373,6 +375,10 @@ fun main(args: Array<String>) {
             model("debug/stepping", targetBackend = TargetBackend.JVM)
         }
 
+        testClass<AbstractLocalVariableTest>(useJunit4 = true) {
+            model("debug/localVariables", targetBackend = TargetBackend.JVM)
+        }
+
         testClass<AbstractLocalClassProtoTest> {
             model("serialization/local")
         }
@@ -466,6 +472,10 @@ fun main(args: Array<String>) {
             model("debug/stepping", targetBackend = TargetBackend.JVM_IR)
         }
 
+        testClass<AbstractIrLocalVariableTest>(useJunit4 = true) {
+            model("debug/localVariables", targetBackend = TargetBackend.JVM_IR)
+        }
+
         testClass<AbstractIrBlackBoxInlineCodegenTest> {
             model("codegen/boxInline", targetBackend = TargetBackend.JVM_IR)
         }
@@ -506,13 +516,17 @@ fun main(args: Array<String>) {
             model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("stdlib", "cfg", "smartcasts"))
         }
 
-        testClass<AbstractFirResolveTestCaseWithStdlib> {
-            model("resolve/stdlib", pattern = KT_WITHOUT_DOTS_IN_NAME)
-        }
-
         testClass<AbstractFirCfgBuildingTest> {
             model("resolve/cfg", pattern = KT_WITHOUT_DOTS_IN_NAME)
             model("resolve/smartcasts", pattern = KT_WITHOUT_DOTS_IN_NAME)
+        }
+
+        testClass<AbstractFirResolveTestCaseWithStdlib> {
+            model("resolve/stdlib", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("contracts"))
+        }
+
+        testClass<AbstractFirCfgBuildingWithStdlibTest> {
+            model("resolve/stdlib/contracts", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
     }
 

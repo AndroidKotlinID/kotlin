@@ -5,10 +5,10 @@
 
 package org.jetbrains.kotlin.fir.declarations.impl
 
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirPureAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.declarations.SupertypesComputationStatus
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.impl.FirAbstractAnnotatedElement
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.fir.visitors.*
@@ -28,12 +28,12 @@ import org.jetbrains.kotlin.fir.visitors.*
  */
 
 class FirClassImpl(
-    override val psi: PsiElement?,
+    override val source: FirSourceElement?,
     override val session: FirSession,
     override val name: Name,
     override var status: FirDeclarationStatus,
     override val classKind: ClassKind,
-    override val symbol: FirClassSymbol
+    override val symbol: FirRegularClassSymbol
 ) : FirPureAbstractElement(), FirRegularClass, FirModifiableRegularClass, FirAbstractAnnotatedElement {
     override var resolvePhase: FirResolvePhase = FirResolvePhase.RAW_FIR
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()

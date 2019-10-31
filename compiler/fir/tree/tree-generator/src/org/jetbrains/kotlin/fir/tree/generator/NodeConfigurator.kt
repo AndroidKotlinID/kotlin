@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.serialization.deserialization.descriptors.Deserializ
 object NodeConfigurator : AbstractFieldConfigurator() {
     fun configureFields() = with(FirTreeBuilder) {
         AbstractFirTreeBuilder.baseFirElement.configure {
-            +field("psi", psiElementType, nullable = true)
+            +field("source", sourceElementType, nullable = true)
         }
 
         annotationContainer.configure {
@@ -199,13 +199,6 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             needTransformOtherChildren()
         }
 
-        klass.configure {
-            +classKind
-            +superTypeRefs(withReplace = true)
-            +declarations
-            +annotations
-        }
-
         classLikeDeclaration.configure {
             withArg("F", "FirClassLikeDeclaration<F>")
             parentArg(symbolOwner, "F", "F")
@@ -213,11 +206,26 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +symbol("FirClassLikeSymbol", "F")
         }
 
+        klass.configure {
+            withArg("F", "FirClass<F>")
+            parentArg(classLikeDeclaration, "F", "F")
+            +symbol("FirClassSymbol", "F")
+            +classKind
+            +superTypeRefs(withReplace = true)
+            +declarations
+            +annotations
+        }
+
         regularClass.configure {
-            parentArg(classLikeDeclaration, "F", regularClass)
-            +symbol("FirClassSymbol")
+            parentArg(klass, "F", regularClass)
+            +symbol("FirRegularClassSymbol")
             +field("companionObject", regularClass, nullable = true)
             +superTypeRefs(withReplace = true)
+        }
+
+        anonymousObject.configure {
+            parentArg(klass, "F", anonymousObject)
+            +symbol("FirAnonymousObjectSymbol")
         }
 
         sealedClass.configure {
@@ -264,6 +272,10 @@ object NodeConfigurator : AbstractFieldConfigurator() {
 
         simpleFunction.configure {
             parentArg(memberFunction, "F", simpleFunction)
+        }
+
+        contractDescriptionOwner.configure {
+            +field(contractDescription).withTransform()
         }
 
         property.configure {
@@ -523,6 +535,10 @@ object NodeConfigurator : AbstractFieldConfigurator() {
 
         errorNamedReference.configure {
             +stringField("errorReason")
+        }
+
+        contractDescription.configure {
+            +fieldList("effects", effectDeclarationType)
         }
     }
 }
