@@ -2072,9 +2072,24 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/emptyVarargAndDefault.kt");
             }
 
-            @TestMetadata("inline.kt")
-            public void testInline() throws Exception {
-                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/inline.kt");
+            @TestMetadata("inlineDefault.kt")
+            public void testInlineDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/inlineDefault.kt");
+            }
+
+            @TestMetadata("inlineVararg.kt")
+            public void testInlineVararg() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/inlineVararg.kt");
+            }
+
+            @TestMetadata("inlineVarargAndDefault.kt")
+            public void testInlineVarargAndDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/inlineVarargAndDefault.kt");
+            }
+
+            @TestMetadata("inlineVarargInts.kt")
+            public void testInlineVarargInts() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/inlineVarargInts.kt");
             }
 
             @TestMetadata("innerConstructorWithVararg.kt")
@@ -7937,6 +7952,16 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
 
         public void testAllFilesPresentInElvis() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/elvis"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+        }
+
+        @TestMetadata("genericElvisWithMoreSpecificLHS.kt")
+        public void testGenericElvisWithMoreSpecificLHS() throws Exception {
+            runTest("compiler/testData/codegen/box/elvis/genericElvisWithMoreSpecificLHS.kt");
+        }
+
+        @TestMetadata("genericElvisWithNullLHS.kt")
+        public void testGenericElvisWithNullLHS() throws Exception {
+            runTest("compiler/testData/codegen/box/elvis/genericElvisWithNullLHS.kt");
         }
 
         @TestMetadata("genericNull.kt")
@@ -14662,6 +14687,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                     runTest("compiler/testData/codegen/box/properties/lateinit/isInitializedAndDeinitialize/innerSubclass.kt");
                 }
 
+                @TestMetadata("isInitializedMultiFile.kt")
+                public void testIsInitializedMultiFile() throws Exception {
+                    runTest("compiler/testData/codegen/box/properties/lateinit/isInitializedAndDeinitialize/isInitializedMultiFile.kt");
+                }
+
                 @TestMetadata("nonInlineLambda.kt")
                 public void testNonInlineLambda() throws Exception {
                     runTest("compiler/testData/codegen/box/properties/lateinit/isInitializedAndDeinitialize/nonInlineLambda.kt");
@@ -20557,6 +20587,24 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("syntheticAccessor.kt")
         public void testSyntheticAccessor() throws Exception {
             runTest("compiler/testData/codegen/box/topLevelPrivate/syntheticAccessor.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/trailingComma")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class TrailingComma extends AbstractIrJsCodegenBoxTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInTrailingComma() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/trailingComma"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+        }
+
+        @TestMetadata("noDisambiguation.kt")
+        public void testNoDisambiguation() throws Exception {
+            runTest("compiler/testData/codegen/box/trailingComma/noDisambiguation.kt");
         }
     }
 

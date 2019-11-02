@@ -7,6 +7,8 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
+import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
@@ -164,7 +166,7 @@ class FirSupertypeResolverTransformer : FirAbstractTreeTransformer(phase = FirRe
                 val coneType = (superTypeRef as FirResolvedTypeRef).type
                 if (coneType is ConeTypeParameterType) {
                     resultingTypeRefs.add(
-                        FirErrorTypeRefImpl(superTypeRef.source, "Type parameter cannot be a super-type: ${coneType.render()}")
+                        FirErrorTypeRefImpl(superTypeRef.source, FirSimpleDiagnostic("Type parameter cannot be a super-type: ${coneType.render()}", DiagnosticKind.TypeParameterAsSupertype))
                     )
                     continue
                 }
@@ -173,7 +175,7 @@ class FirSupertypeResolverTransformer : FirAbstractTreeTransformer(phase = FirRe
 
                 if (superTypeClassId.outerClasses().any { it.areSupertypesComputing() }) {
                     resultingTypeRefs.add(
-                        FirErrorTypeRefImpl(superTypeRef.source, "Recursion detected: ${superTypeRef.render()}")
+                        FirErrorTypeRefImpl(superTypeRef.source, FirSimpleDiagnostic("Recursion detected: ${superTypeRef.render()}", DiagnosticKind.RecursionInSupertypes))
                     )
 
                     continue

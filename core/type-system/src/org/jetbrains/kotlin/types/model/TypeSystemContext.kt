@@ -26,6 +26,8 @@ interface TypeArgumentListMarker
 interface TypeVariableMarker
 interface TypeVariableTypeConstructorMarker : TypeConstructorMarker
 
+interface CapturedTypeConstructorMarker : TypeConstructorMarker
+
 interface TypeSubstitutorMarker
 
 
@@ -63,7 +65,10 @@ interface TypeSystemTypeFactoryContext {
 
 
 interface TypeCheckerProviderContext {
-    fun newBaseTypeCheckerContext(errorTypesEqualToAnything: Boolean): AbstractTypeCheckerContext
+    fun newBaseTypeCheckerContext(
+        errorTypesEqualToAnything: Boolean,
+        stubTypesEqualToAnything: Boolean
+    ): AbstractTypeCheckerContext
 }
 
 interface TypeSystemCommonSuperTypesContext : TypeSystemContext, TypeSystemTypeFactoryContext, TypeCheckerProviderContext {
@@ -74,9 +79,12 @@ interface TypeSystemCommonSuperTypesContext : TypeSystemContext, TypeSystemTypeF
     val isErrorTypeAllowed: Boolean
 
     fun KotlinTypeMarker.anySuperTypeConstructor(predicate: (TypeConstructorMarker) -> Boolean) =
-        newBaseTypeCheckerContext(false).anySupertype(lowerBoundIfFlexible(), {
-            predicate(it.typeConstructor())
-        }, { AbstractTypeCheckerContext.SupertypesPolicy.LowerIfFlexible })
+        newBaseTypeCheckerContext(errorTypesEqualToAnything = false, stubTypesEqualToAnything = true)
+            .anySupertype(
+                lowerBoundIfFlexible(),
+                { predicate(it.typeConstructor()) },
+                { AbstractTypeCheckerContext.SupertypesPolicy.LowerIfFlexible }
+            )
 
     fun KotlinTypeMarker.canHaveUndefinedNullability(): Boolean
 
@@ -141,7 +149,6 @@ interface TypeSystemInferenceExtensionContext : TypeSystemContext, TypeSystemBui
     fun KotlinTypeMarker.mayBeTypeVariable(): Boolean
 
     fun CapturedTypeMarker.typeConstructorProjection(): TypeArgumentMarker
-    fun CapturedTypeMarker.captureStatus(): CaptureStatus
 
     fun DefinitelyNotNullTypeMarker.original(): SimpleTypeMarker
 
@@ -180,6 +187,10 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     fun SimpleTypeMarker.isMarkedNullable(): Boolean
     fun SimpleTypeMarker.withNullability(nullable: Boolean): SimpleTypeMarker
     fun SimpleTypeMarker.typeConstructor(): TypeConstructorMarker
+
+    fun CapturedTypeMarker.typeConstructor(): CapturedTypeConstructorMarker
+    fun CapturedTypeMarker.captureStatus(): CaptureStatus
+    fun CapturedTypeConstructorMarker.projection(): TypeArgumentMarker
 
     fun KotlinTypeMarker.argumentsCount(): Int
     fun KotlinTypeMarker.getArgument(index: Int): TypeArgumentMarker

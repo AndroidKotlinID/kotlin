@@ -9,6 +9,9 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.componentArrayAccessor
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
+import org.jetbrains.kotlin.fir.diagnostics.FirEmptyDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
@@ -178,6 +181,7 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
             ConeNullability.UNKNOWN -> this // TODO: is that correct?
             ConeNullability.NOT_NULL -> this
         } as T
+        is ConeStubType -> ConeStubType(variable, nullability) as T
         else -> error("sealed: ${this::class}")
     }
 }
@@ -294,7 +298,7 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
 
     return when (val newCallee = access.calleeReference) {
         is FirErrorNamedReference ->
-            FirErrorTypeRefImpl(access.source, newCallee.errorReason)
+            FirErrorTypeRefImpl(access.source, FirEmptyDiagnostic)
         is FirNamedReferenceWithCandidate -> {
             typeFromSymbol(newCallee.candidateSymbol, makeNullable)
         }
@@ -328,7 +332,7 @@ private fun BodyResolveComponents.typeFromSymbol(symbol: AbstractFirBasedSymbol<
             if (fir is FirEnumEntry) {
                 (fir.superTypeRefs.firstOrNull() as? FirResolvedTypeRef) ?: FirErrorTypeRefImpl(
                     null,
-                    "no enum item supertype"
+                    FirSimpleDiagnostic("No enum item supertype", DiagnosticKind.EnumAsSupertype)
                 )
             } else
                 FirResolvedTypeRefImpl(

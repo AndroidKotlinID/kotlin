@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.ConeInferenceContext
-import org.jetbrains.kotlin.fir.resolve.calls.ConeTypeVariableTypeConstructor
 import org.jetbrains.kotlin.fir.resolve.calls.hasNullableSuperType
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
@@ -64,6 +63,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
             is ConeDefinitelyNotNullType -> this
             is ConeIntersectionType -> this
             is ConeFlexibleType -> null
+            is ConeStubType -> this
             else -> error("Unknown simpleType: $this")
         }
     }
@@ -131,6 +131,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
                 ?: ErrorTypeConstructor("Failed to expand alias: ${this}")
             is ConeLookupTagBasedType -> this.lookupTag.toSymbol(session) ?: ErrorTypeConstructor("Unresolved: ${this.lookupTag}")
             is ConeIntersectionType -> this
+            is ConeStubType -> variable.typeConstructor
             else -> error("?: ${this}")
         }
 
@@ -140,6 +141,21 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
                 ?: ErrorTypeConstructor("Failed to expand alias: ${this}")
         }
         return typeConstructor
+    }
+
+    override fun CapturedTypeMarker.typeConstructor(): CapturedTypeConstructorMarker {
+        require(this is ConeCapturedType)
+        return this.constructor
+    }
+
+    override fun CapturedTypeMarker.captureStatus(): CaptureStatus {
+        require(this is ConeCapturedType)
+        return this.captureStatus
+    }
+
+    override fun CapturedTypeConstructorMarker.projection(): TypeArgumentMarker {
+        require(this is ConeCapturedTypeConstructor)
+        return this.projection
     }
 
     override fun KotlinTypeMarker.argumentsCount(): Int {
@@ -352,6 +368,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         if (this is ConeCapturedType) return true
         if (this is ConeTypeVariableType) return false
         if (this is ConeIntersectionType) return false
+        if (this is ConeStubType) return true
         require(this is ConeLookupTagBasedType)
         val typeConstructor = this.typeConstructor()
         return typeConstructor is FirClassSymbol<*> ||
@@ -367,7 +384,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
     }
 
     override fun SimpleTypeMarker.isStubType(): Boolean {
-        return false // TODO
+        return this is StubTypeMarker
     }
 
     override fun intersectTypes(types: List<SimpleTypeMarker>): SimpleTypeMarker {
@@ -498,8 +515,11 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
     }
 }
 
-class ConeTypeCheckerContext(override val isErrorTypeEqualsToAnything: Boolean, override val session: FirSession) :
-    AbstractTypeCheckerContext(), ConeTypeContext {
+class ConeTypeCheckerContext(
+    override val isErrorTypeEqualsToAnything: Boolean,
+    override val isStubTypeEqualsToAnything: Boolean,
+    override val session: FirSession
+) : AbstractTypeCheckerContext(), ConeTypeContext {
     override fun substitutionSupertypePolicy(type: SimpleTypeMarker): SupertypesPolicy {
         if (type.argumentsCount() == 0) return SupertypesPolicy.LowerIfFlexible
         require(type is ConeKotlinType)
@@ -539,10 +559,13 @@ class ConeTypeCheckerContext(override val isErrorTypeEqualsToAnything: Boolean, 
     override val KotlinTypeMarker.isAllowedTypeVariable: Boolean
         get() = this is ConeKotlinType && this is ConeTypeVariableType
 
-    override fun newBaseTypeCheckerContext(errorTypesEqualToAnything: Boolean): AbstractTypeCheckerContext =
+    override fun newBaseTypeCheckerContext(
+        errorTypesEqualToAnything: Boolean,
+        stubTypesEqualToAnything: Boolean
+    ): AbstractTypeCheckerContext =
         if (this.isErrorTypeEqualsToAnything == errorTypesEqualToAnything)
             this
         else
-            ConeTypeCheckerContext(errorTypesEqualToAnything, session)
+            ConeTypeCheckerContext(errorTypesEqualToAnything, stubTypesEqualToAnything, session)
 
 }

@@ -370,7 +370,8 @@ class Fir2IrDeclarationStorage(
                         isExternal = function.isExternal,
                         isTailrec = function.isTailRec,
                         isSuspend = function.isSuspend,
-                        isExpect = function.isExpect
+                        isExpect = function.isExpect,
+                        isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
                     )
                 }
                 leaveScope(descriptor)
@@ -410,7 +411,8 @@ class Fir2IrDeclarationStorage(
                     isInline = false, isExternal = false, isTailrec = false,
                     // TODO: suspend lambda
                     isSuspend = false,
-                    isExpect = false
+                    isExpect = false,
+                    isFakeOverride = false
                 )
             }.bindAndDeclareParameters(
                 function, descriptor, irParent = null, isStatic = false, shouldLeaveScope = false
@@ -468,7 +470,8 @@ class Fir2IrDeclarationStorage(
                 Name.special("<$prefix-${correspondingProperty.name}>"),
                 propertyAccessor?.visibility ?: correspondingProperty.visibility,
                 correspondingProperty.modality, accessorReturnType,
-                isInline = false, isExternal = false, isTailrec = false, isSuspend = false, isExpect = false
+                isInline = false, isExternal = false, isTailrec = false, isSuspend = false, isExpect = false,
+                isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
             ).apply {
                 if (propertyAccessor == null && isSetter) {
                     declareDefaultSetterParameter(propertyType)
@@ -507,7 +510,8 @@ class Fir2IrDeclarationStorage(
                         isDelegated = property.delegate != null,
                         // TODO
                         isExternal = false,
-                        isExpect = property.isExpect
+                        isExpect = property.isExpect,
+                        isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
                     ).apply {
                         descriptor.bind(this)
                         val type = property.returnTypeRef.toIrType(session, this@Fir2IrDeclarationStorage)
@@ -554,7 +558,8 @@ class Fir2IrDeclarationStorage(
                         field.name, type, field.visibility,
                         isFinal = field.modality == Modality.FINAL,
                         isExternal = false,
-                        isStatic = field.isStatic
+                        isStatic = field.isStatic,
+                        isFakeOverride = false
                     ).apply {
                         descriptor.bind(this)
                     }

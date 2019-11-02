@@ -371,7 +371,8 @@ class RenderIrElementVisitor : IrElementVisitor<String, Nothing?> {
             "inline".takeIf { isInline },
             "external".takeIf { isExternal },
             "suspend".takeIf { isSuspend },
-            "expect".takeIf { isExpect }
+            "expect".takeIf { isExpect },
+            "fake_override".takeIf { isFakeOverride }
         )
 
     private fun IrFunction.renderTypeParameters(): String =
@@ -416,6 +417,7 @@ class RenderIrElementVisitor : IrElementVisitor<String, Nothing?> {
             "lateinit".takeIf { isLateinit },
             "delegated".takeIf { isDelegated },
             "expect".takeIf { isExpect },
+            "fake_override".takeIf { isFakeOverride },
             if (isVar) "var" else "val"
         )
 
@@ -429,7 +431,8 @@ class RenderIrElementVisitor : IrElementVisitor<String, Nothing?> {
         renderFlagsList(
             "final".takeIf { isFinal },
             "external".takeIf { isExternal },
-            "static".takeIf { isStatic }
+            "static".takeIf { isStatic },
+            "fake_override".takeIf { isFakeOverride }
         )
 
     override fun visitClass(declaration: IrClass, data: Nothing?): String =

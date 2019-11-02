@@ -510,7 +510,8 @@ class Fir2IrVisitor(
                 startOffset, endOffset, origin, symbol,
                 name, inferredType,
                 visibility, isFinal = isFinal, isExternal = false,
-                isStatic = property.isStatic || parent !is IrClass
+                isStatic = property.isStatic || parent !is IrClass,
+                isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
             )
         }.setParentByParentStack().withParent {
             declarationStorage.enterScope(descriptor)
@@ -969,7 +970,7 @@ class Fir2IrVisitor(
             IrErrorExpressionImpl(
                 startOffset, endOffset,
                 errorExpression.typeRef.toIrType(session, declarationStorage),
-                errorExpression.reason
+                errorExpression.diagnostic.reason
             )
         }
     }

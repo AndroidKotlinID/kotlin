@@ -16,10 +16,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
 import org.gradle.workers.WorkerExecutor
 import org.jetbrains.kotlin.build.DEFAULT_KOTLIN_SOURCE_FILES_EXTENSIONS
-import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
+import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.*
 import org.jetbrains.kotlin.daemon.common.MultiModuleICSettings
 import org.jetbrains.kotlin.gradle.dsl.*
@@ -49,6 +46,7 @@ import javax.inject.Inject
 const val KOTLIN_BUILD_DIR_NAME = "kotlin"
 const val USING_JVM_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin/JVM incremental compilation"
 const val USING_JS_INCREMENTAL_COMPILATION_MESSAGE = "Using Kotlin/JS incremental compilation"
+const val USING_JS_IR_BACKEND_MESSAGE = "Using Kotlin/JS IR backend"
 
 abstract class AbstractKotlinCompileTool<T : CommonToolArguments>
     : AbstractCompile(),
@@ -553,9 +551,34 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
             return friendPaths.filter { filter(File(it)) }
         }
 
+    private fun isHybridKotlinJsLibrary(file: File): Boolean =
+        LibraryUtils.isKotlinJavascriptLibrary(file) && LibraryUtils.isKotlinJavascriptIrLibrary(file)
+
+    private fun KotlinJsOptions.isPreIrBackendDisabled(): Boolean =
+        listOf(
+            "-Xir-only",
+            "-Xir-produce-js",
+            "-Xir-produce-klib-file"
+        ).any(freeCompilerArgs::contains)
+
+    private fun KotlinJsOptions.isIrBackendEnabled(): Boolean =
+        listOf(
+            "-Xir-produce-klib-dir",
+            "-Xir-produce-js",
+            "-Xir-produce-klib-file"
+        ).any(freeCompilerArgs::contains)
+
+    // Kotlin/JS can operate in 3 modes:
+    //  1) purely pre-IR backend
+    //  2) purely IR backend
+    //  3) hybrid pre-IR and IR backend. Can only accept libraries with both JS and IR parts.
     private val libraryFilter: (File) -> Boolean
-        get() = if ("-Xir" in kotlinOptions.freeCompilerArgs) {
-            LibraryUtils::isKotlinJavascriptIrLibrary
+        get() = if (kotlinOptions.isIrBackendEnabled()) {
+            if (kotlinOptions.isPreIrBackendDisabled()) {
+                LibraryUtils::isKotlinJavascriptIrLibrary
+            } else {
+                ::isHybridKotlinJsLibrary
+            }
         } else {
             LibraryUtils::isKotlinJavascriptLibrary
         }
@@ -566,10 +589,9 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         logger.debug("Calling compiler")
         destinationDir.mkdirs()
 
-        if ("-Xir" in args.freeArgs) {
-            logger.kotlinDebug("Using JS IR backend")
+        if (kotlinOptions.isIrBackendEnabled()) {
+            logger.info(USING_JS_IR_BACKEND_MESSAGE)
             incremental = false
-            args.freeArgs += "-Xir-legacy-gradle-plugin-compatibility"
         }
 
         val dependencies = compileClasspath

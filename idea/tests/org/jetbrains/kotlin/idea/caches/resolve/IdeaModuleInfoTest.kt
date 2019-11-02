@@ -18,7 +18,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.ModuleTestCase
-import com.intellij.testFramework.PlatformTestCase
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.UsefulTestCase
 import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
@@ -40,7 +39,6 @@ import org.junit.runner.RunWith
 
 @RunWith(JUnit3WithIdeaConfigurationRunner::class)
 class IdeaModuleInfoTest : ModuleTestCase() {
-
     fun testSimpleModuleDependency() {
         val (a, b) = modules()
         b.addDependency(a)
@@ -347,13 +345,18 @@ class IdeaModuleInfoTest : ModuleTestCase() {
     }
 
     fun testSdkForScript() {
+        // The first known jdk will be used for scripting if there is no jdk in the project
         runWriteAction {
             ProjectJdkTable.getInstance().addJdk(mockJdk6())
             ProjectJdkTable.getInstance().addJdk(mockJdk9())
+
+            ProjectRootManager.getInstance(project).projectSdk = null
         }
 
+        val firstSDK = ProjectJdkTable.getInstance().allJdks.first()
+
         with(createFileInProject("script.kts").moduleInfo) {
-            dependencies().filterIsInstance<SdkInfo>().single { it.sdk == mockJdk6() }
+            dependencies().filterIsInstance<SdkInfo>().single { it.sdk == firstSDK }
         }
     }
 
@@ -396,7 +399,7 @@ class IdeaModuleInfoTest : ModuleTestCase() {
             for (sourceFolder in contentEntry.sourceFolders) {
                 if (((!inTests && !sourceFolder.isTestSource) || (inTests && sourceFolder.isTestSource)) && sourceFolder.file != null) {
                     return runWriteAction {
-                        PlatformTestCase.getVirtualFile(fileToCopyIO).copy(this, sourceFolder.file!!, fileName)
+                        getVirtualFile(fileToCopyIO).copy(this, sourceFolder.file!!, fileName)
                     }
                 }
             }
@@ -407,7 +410,7 @@ class IdeaModuleInfoTest : ModuleTestCase() {
 
     private fun createFileInProject(fileName: String): VirtualFile {
         return runWriteAction {
-            PlatformTestCase.getVirtualFile(createTempFile(fileName, "")).copy(this, project.baseDir, fileName)
+            getVirtualFile(createTempFile(fileName, "")).copy(this, project.baseDir, fileName)
         }
     }
 

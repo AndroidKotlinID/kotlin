@@ -43,7 +43,8 @@ fun IrFieldBuilder.buildField(): IrField {
     return IrFieldImpl(
         startOffset, endOffset, origin,
         IrFieldSymbolImpl(wrappedDescriptor),
-        name, type, visibility, isFinal, isExternal, isStatic
+        name, type, visibility, isFinal, isExternal, isStatic,
+        origin == IrDeclarationOrigin.FAKE_OVERRIDE
     ).also {
         wrappedDescriptor.bind(it)
     }
@@ -74,7 +75,8 @@ fun IrPropertyBuilder.buildProperty(): IrProperty {
         startOffset, endOffset, origin,
         IrPropertySymbolImpl(wrappedDescriptor),
         name, visibility, modality,
-        isVar = isVar, isConst = isConst, isLateinit = isLateinit, isDelegated = isDelegated, isExpect = isExpect, isExternal = isExternal
+        isVar = isVar, isConst = isConst, isLateinit = isLateinit, isDelegated = isDelegated, isExpect = isExpect, isExternal = isExternal,
+        isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
     ).also {
         wrappedDescriptor.bind(it)
     }
@@ -123,7 +125,8 @@ fun IrFunctionBuilder.buildFun(originalDescriptor: FunctionDescriptor? = null): 
         startOffset, endOffset, origin,
         IrSimpleFunctionSymbolImpl(wrappedDescriptor),
         name, visibility, modality, returnType,
-        isInline = isInline, isExternal = isExternal, isTailrec = isTailrec, isSuspend = isSuspend, isExpect = isExpect
+        isInline = isInline, isExternal = isExternal, isTailrec = isTailrec, isSuspend = isSuspend, isExpect = isExpect,
+        isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
     ).also {
         wrappedDescriptor.bind(it)
     }

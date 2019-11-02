@@ -488,7 +488,8 @@ abstract class AbstractSuspendFunctionsLowering<C : CommonBackendContext>(val co
                 isExternal = false,
                 isTailrec = false,
                 isSuspend = false,
-                isExpect = false
+                isExpect = false,
+                isFakeOverride = false
             ).apply {
                 d.bind(this)
                 parent = coroutineClass
@@ -554,7 +555,8 @@ abstract class AbstractSuspendFunctionsLowering<C : CommonBackendContext>(val co
                 isExternal = false,
                 isTailrec = false,
                 isSuspend = true,
-                isExpect = false
+                isExpect = false,
+                isFakeOverride = false
             ).apply {
                 d.bind(this)
                 parent = coroutineClass
@@ -612,7 +614,8 @@ abstract class AbstractSuspendFunctionsLowering<C : CommonBackendContext>(val co
                     isExternal = stateMachineFunction.isExternal,
                     isTailrec = stateMachineFunction.isTailrec,
                     isSuspend = stateMachineFunction.isSuspend,
-                    isExpect = stateMachineFunction.isExpect
+                    isExpect = stateMachineFunction.isExpect,
+                    isFakeOverride = false
                 ).apply {
                     d.bind(this)
                     parent = coroutineClass
@@ -677,9 +680,10 @@ abstract class AbstractSuspendFunctionsLowering<C : CommonBackendContext>(val co
             name,
             type,
             Visibilities.PRIVATE,
-            !isMutable,
+            isFinal = !isMutable,
             isExternal = false,
-            isStatic = false
+            isStatic = false,
+            isFakeOverride = false
         ).also {
             descriptor.bind(it)
             it.parent = this
