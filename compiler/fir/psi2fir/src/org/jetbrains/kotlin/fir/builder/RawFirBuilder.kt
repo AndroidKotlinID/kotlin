@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.fir.impl.FirLabelImpl
 import org.jetbrains.kotlin.fir.references.impl.*
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.types.EXTENSION_FUNCTION_ANNOTATION
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.types.impl.*
@@ -535,22 +536,29 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
                     // TODO: equals, hashCode, toString
                 }
 
+                if (classOrObject.hasModifier(ENUM_KEYWORD)) {
+                    firClass.generateValuesFunction(session, context.packageFqName, context.className)
+                    firClass.generateValueOfFunction(session, context.packageFqName, context.className)
+                }
+
                 firClass
             }
         }
 
         override fun visitObjectLiteralExpression(expression: KtObjectLiteralExpression, data: Unit): FirElement {
             val objectDeclaration = expression.objectDeclaration
-            return FirAnonymousObjectImpl(expression.toFirSourceElement(), session, FirAnonymousObjectSymbol()).apply {
-                objectDeclaration.extractAnnotationsTo(this)
-                objectDeclaration.extractSuperTypeListEntriesTo(this, null)
-                this.typeRef = superTypeRefs.first() // TODO
+            return withChildClassName(ANONYMOUS_OBJECT_NAME) {
+                FirAnonymousObjectImpl(expression.toFirSourceElement(), session, FirAnonymousObjectSymbol()).apply {
+                    objectDeclaration.extractAnnotationsTo(this)
+                    objectDeclaration.extractSuperTypeListEntriesTo(this, null)
+                    this.typeRef = superTypeRefs.first() // TODO
 
-                for (declaration in objectDeclaration.declarations) {
-                    declarations += declaration.toFirDeclaration(
-                        delegatedSuperType = null, delegatedSelfType = null,
-                        owner = objectDeclaration, hasPrimaryConstructor = false
-                    )
+                    for (declaration in objectDeclaration.declarations) {
+                        declarations += declaration.toFirDeclaration(
+                            delegatedSuperType = null, delegatedSelfType = null,
+                            owner = objectDeclaration, hasPrimaryConstructor = false
+                        )
+                    }
                 }
             }
         }
@@ -1235,7 +1243,7 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
                         null, FirSimpleDiagnostic("Call has no callee", DiagnosticKind.Syntax)
                     )
                     else -> {
-                        arguments += calleeExpression.toFirExpression("Incorrect invoke receiver")
+                        explicitReceiver = calleeExpression.toFirExpression("Incorrect invoke receiver")
                         FirSimpleNamedReference(
                             source, OperatorNameConventions.INVOKE, null
                         )
@@ -1369,7 +1377,7 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
         FirResolvedTypeRefImpl(
             null,
             ConeClassTypeImpl(
-                ConeClassLikeLookupTagImpl(ClassId.fromString("kotlin/ExtensionFunctionType")),
+                ConeClassLikeLookupTagImpl(ClassId.fromString(EXTENSION_FUNCTION_ANNOTATION)),
                 emptyArray(),
                 false
             )

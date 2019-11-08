@@ -75,7 +75,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         callableDeclaration.configure {
             withArg("F", "FirCallableDeclaration<F>")
             parentArg(symbolOwner, "E", "F")
-            +field("receiverTypeRef", typeRef, nullable = true)
+            +field("receiverTypeRef", typeRef, nullable = true).withTransform()
             +symbol("FirCallableSymbol", "F")
         }
 
@@ -104,7 +104,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
 
         memberDeclaration.configure {
             +typeParameters
-            +status
+            +status.withTransform()
         }
 
         expression.configure {
@@ -183,7 +183,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         }
 
         functionCall.configure {
-            +typeArguments
+            +typeArguments.withTransform()
             +field("calleeReference", namedReference)
         }
 
@@ -296,7 +296,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +symbol("FirPropertyAccessorSymbol")
             +booleanField("isGetter")
             +booleanField("isSetter")
-            +status
+            +status.withTransform()
             +annotations
         }
 
@@ -439,7 +439,6 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         variableAssignment.configure {
             +field("lValue", reference)
             +field("rValue", expression).withTransform()
-            +field("operation", operationType)
         }
 
         whenSubjectExpression.configure {

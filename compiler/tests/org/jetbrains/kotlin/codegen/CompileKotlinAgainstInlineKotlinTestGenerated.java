@@ -271,6 +271,11 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
             runTest("compiler/testData/codegen/boxInline/anonymousObject/sam.kt");
         }
 
+        @TestMetadata("superConstructorWithObjectParameter.kt")
+        public void testSuperConstructorWithObjectParameter() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/anonymousObject/superConstructorWithObjectParameter.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/boxInline/anonymousObject/enumWhen")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -430,6 +435,11 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
 
             public void testAllFilesPresentInSam() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/boxInline/anonymousObject/sam"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("anonymousObjectToSam.kt")
+            public void testAnonymousObjectToSam() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/anonymousObject/sam/anonymousObjectToSam.kt");
             }
 
             @TestMetadata("kt17091.kt")

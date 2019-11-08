@@ -307,8 +307,22 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
     )
     var useFir: Boolean by FreezableVar(false)
 
+    @Argument(
+        value = "-Xuse-mixed-named-arguments",
+        description = "Enable Support named arguments in their own position even if the result appears as mixed"
+    )
+    var useMixedNamedArguments: Boolean by FreezableVar(false)
+
     @Argument(value = "-Xdisable-default-scripting-plugin", description = "Do not enable scripting plugin by default")
     var disableDefaultScriptingPlugin: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xexplicit-api",
+        valueDescription = "{strict|warning|disable}",
+        description = "Force compiler to report errors on all public API declarations without explicit visibility or return type.\n" +
+                "Use 'warning' level to issue warnings instead of errors."
+    )
+    var explicitApi: String by FreezableVar(ExplicitApiMode.DISABLED.state)
 
     open fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> {
         return HashMap<AnalysisFlag<*>, Any>().apply {
@@ -318,6 +332,10 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
             put(AnalysisFlags.useExperimental, useExperimental?.toList().orEmpty())
             put(AnalysisFlags.explicitApiVersion, apiVersion != null)
             put(AnalysisFlags.allowResultReturnType, allowResultReturnType)
+            ExplicitApiMode.fromString(explicitApi)?.also { put(AnalysisFlags.explicitApiMode, it) } ?: collector.report(
+                CompilerMessageSeverity.ERROR,
+                "Unknown value for parameter -Xexplicit-api: '$explicitApi'. Value should be one of ${ExplicitApiMode.availableValues()}"
+            )
         }
     }
 
@@ -367,6 +385,10 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
 
             if (properIeee754Comparisons) {
                 put(LanguageFeature.ProperIeee754Comparisons, LanguageFeature.State.ENABLED)
+            }
+
+            if (useMixedNamedArguments) {
+                put(LanguageFeature.MixedNamedArgumentsInTheirOwnPosition, LanguageFeature.State.ENABLED)
             }
 
             if (progressiveMode) {

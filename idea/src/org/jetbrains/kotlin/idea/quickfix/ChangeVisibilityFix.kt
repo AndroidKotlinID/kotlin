@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.idea.quickfix
@@ -20,9 +9,12 @@ import com.intellij.codeInsight.intention.HighPriorityAction
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptorWithVisibility
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.diagnostics.Diagnostic
+import org.jetbrains.kotlin.diagnostics.DiagnosticFactory1
 import org.jetbrains.kotlin.idea.core.canBeInternal
 import org.jetbrains.kotlin.idea.core.canBePrivate
 import org.jetbrains.kotlin.idea.core.canBeProtected
@@ -41,8 +33,9 @@ import org.jetbrains.kotlin.resolve.ExposedVisibilityChecker
 
 open class ChangeVisibilityFix(
     element: KtModifierListOwner,
-    private val elementName: String,
-    private val visibilityModifier: KtModifierKeywordToken
+    protected val elementName: String,
+    protected val visibilityModifier: KtModifierKeywordToken,
+    private val addImplicitVisibilityModifier: Boolean = false
 ) : KotlinQuickFixAction<KtModifierListOwner>(element) {
 
     override fun getText() = "Make '$elementName' $visibilityModifier"
@@ -52,9 +45,9 @@ open class ChangeVisibilityFix(
         val pointer = element?.createSmartPointer()
         val originalElement = pointer?.element
         if (originalElement is KtDeclaration) {
-            originalElement.runOnExpectAndAllActuals(useOnSelf = true) { it.setVisibility(visibilityModifier) }
+            originalElement.runOnExpectAndAllActuals(useOnSelf = true) { it.setVisibility(visibilityModifier, addImplicitVisibilityModifier) }
         } else {
-            originalElement?.setVisibility(visibilityModifier)
+            originalElement?.setVisibility(visibilityModifier, addImplicitVisibilityModifier)
         }
 
         val propertyAccessor = pointer?.element as? KtPropertyAccessor
@@ -93,6 +86,16 @@ open class ChangeVisibilityFix(
         }
     }
 
+    protected class ChangeToPublicExplicitlyFix(element: KtModifierListOwner, elementName: String) : ChangeVisibilityFix(
+        element,
+        elementName,
+        KtTokens.PUBLIC_KEYWORD,
+        addImplicitVisibilityModifier = true
+    ), HighPriorityAction {
+        override fun getText() = "Make '$elementName' $visibilityModifier explicitly"
+        override fun getFamilyName() = "Make $visibilityModifier explicitly"
+    }
+
     companion object {
         fun create(
             declaration: KtModifierListOwner,
@@ -110,6 +113,21 @@ open class ChangeVisibilityFix(
                 Visibilities.PUBLIC -> ChangeToPublicFix(declaration, name)
                 else -> null
             }
+        }
+    }
+
+    object SetExplicitVisibilityFactory : KotlinIntentionActionsFactory() {
+        @Suppress("UNCHECKED_CAST")
+        override fun doCreateActions(diagnostic: Diagnostic): List<IntentionAction> {
+            val factory = diagnostic.factory as DiagnosticFactory1<*, DeclarationDescriptor>
+            val descriptor = factory.cast(diagnostic).a as? DeclarationDescriptorWithVisibility ?: return emptyList()
+            val element = diagnostic.psiElement as? KtModifierListOwner ?: return emptyList()
+            return listOf(
+                ChangeToPublicExplicitlyFix(
+                    element,
+                    descriptor.name.asString()
+                )
+            )
         }
     }
 }

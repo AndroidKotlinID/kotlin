@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.resolve.BodyResolveComponents
+import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.FirCallCompletionResultsWriterTransformer
@@ -108,12 +109,12 @@ class FirCallCompleter(
             stubsForPostponedVariables: Map<TypeVariableMarker, StubTypeMarker>
         ): Pair<List<FirExpression>, InferenceSession> {
 
-            val needItParam = lambdaArgument.valueParameters.isEmpty() && parameters.size == (if (receiverType != null) 2 else 1)
+            val needItParam = lambdaArgument.valueParameters.isEmpty() && parameters.size == 1
 
             val itParam = when {
                 needItParam -> {
                     val name = Name.identifier("it")
-                    val itType = if (receiverType != null) parameters[1] else parameters.single()
+                    val itType = parameters.single()
                     FirValueParameterImpl(
                         null,
                         session,
@@ -141,7 +142,7 @@ class FirCallCompleter(
             )
 
             replacements[lambdaArgument] =
-                newLambdaExpression.transformSingle(transformer, FirDeclarationsResolveTransformer.LambdaResolution(expectedReturnTypeRef))
+                newLambdaExpression.transformSingle(transformer, ResolutionMode.LambdaResolution(expectedReturnTypeRef))
 
             return (newLambdaExpression.body?.returnExpressions() ?: emptyList()) to InferenceSession.default
         }

@@ -7,26 +7,29 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.scopes.addImportingScopes
-import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinTypeRef
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 
-open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
+class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
     phase = FirResolvePhase.TYPES,
     reversedScopePriority = true
 ) {
     override lateinit var session: FirSession
+
+    private lateinit var typeResolverTransformer: FirSpecificTypeResolverTransformer
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
         session = file.session
         val scopeSession = ScopeSession()
         return withScopeCleanup {
             towerScope.addImportingScopes(file, session, scopeSession)
+            typeResolverTransformer = FirSpecificTypeResolverTransformer(towerScope, session)
             transformElement(file, data)
         }
     }
@@ -77,22 +80,16 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
     }
 
     override fun transformTypeRef(typeRef: FirTypeRef, data: Nothing?): CompositeTransformResult<FirTypeRef> {
-        return FirSpecificTypeResolverTransformer(towerScope, session).transformTypeRef(typeRef, data)
+        return typeResolverTransformer.transformTypeRef(typeRef, data)
     }
 
     override fun transformValueParameter(valueParameter: FirValueParameter, data: Nothing?): CompositeTransformResult<FirStatement> {
         val result = transformDeclaration(valueParameter, data).single as FirValueParameter
-        if (result.isVararg) {
-            val returnTypeRef = result.returnTypeRef
-            val returnType = returnTypeRef.coneTypeUnsafe<ConeKotlinType>()
-            result.transformReturnTypeRef(
-                StoreType,
-                result.returnTypeRef.withReplacedConeType(
-                    returnType.createArrayOf(session)
-                )
-            )
-        }
+        result.transformVarargTypeToArrayType()
         return result.compose()
     }
 
+    override fun transformBlock(block: FirBlock, data: Nothing?): CompositeTransformResult<FirStatement> {
+        return block.compose()
+    }
 }

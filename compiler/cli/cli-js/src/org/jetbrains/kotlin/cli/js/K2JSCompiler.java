@@ -46,7 +46,6 @@ import org.jetbrains.kotlin.cli.common.messages.MessageUtil;
 import org.jetbrains.kotlin.cli.common.output.OutputUtilsKt;
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles;
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment;
-import org.jetbrains.kotlin.cli.jvm.plugins.PluginCliParser;
 import org.jetbrains.kotlin.config.*;
 import org.jetbrains.kotlin.incremental.components.ExpectActualTracker;
 import org.jetbrains.kotlin.incremental.components.LookupTracker;

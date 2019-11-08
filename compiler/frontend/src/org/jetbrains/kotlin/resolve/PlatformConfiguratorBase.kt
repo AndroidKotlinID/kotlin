@@ -32,6 +32,7 @@ private val DEFAULT_DECLARATION_CHECKERS = listOf(
     ReservedMembersAndConstructsForInlineClass(),
     ResultClassInReturnTypeChecker(),
     LocalVariableTypeParametersChecker(),
+    ExplicitApiDeclarationChecker(),
     TailrecFunctionChecker,
     TrailingCommaDeclarationChecker
 )

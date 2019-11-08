@@ -9765,6 +9765,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/inference/functionPlaceholderError.kt");
             }
 
+            @TestMetadata("genericAssignmentOperator.kt")
+            public void testGenericAssignmentOperator() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/genericAssignmentOperator.kt");
+            }
+
             @TestMetadata("hasErrorInConstrainingTypes.kt")
             public void testHasErrorInConstrainingTypes() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/hasErrorInConstrainingTypes.kt");
@@ -10316,6 +10321,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/constraintOnFunctionLiteral.kt");
                 }
 
+                @TestMetadata("definitelyNotNullTypeInvariantPosition.kt")
+                public void testDefinitelyNotNullTypeInvariantPosition() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/definitelyNotNullTypeInvariantPosition.kt");
+                }
+
                 @TestMetadata("earlyCompletionForCalls.kt")
                 public void testEarlyCompletionForCalls() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/earlyCompletionForCalls.kt");
@@ -10329,6 +10339,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("errorUpperBoundConstraint.kt")
                 public void testErrorUpperBoundConstraint() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/errorUpperBoundConstraint.kt");
+                }
+
+                @TestMetadata("fixTypeVariableWithNothingConstraintEarlierThanComplexVariable.kt")
+                public void testFixTypeVariableWithNothingConstraintEarlierThanComplexVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/fixTypeVariableWithNothingConstraintEarlierThanComplexVariable.kt");
                 }
 
                 @TestMetadata("ignoreConstraintFromImplicitInNothing.kt")
@@ -10399,6 +10414,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("supertypeConstraintOnNullableType.kt")
                 public void testSupertypeConstraintOnNullableType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/constraints/supertypeConstraintOnNullableType.kt");
+                }
+
+                @TestMetadata("wrongApproximationWithDefNotNullTypesAndDelegates.kt")
+                public void testWrongApproximationWithDefNotNullTypesAndDelegates() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/wrongApproximationWithDefNotNullTypesAndDelegates.kt");
                 }
             }
 

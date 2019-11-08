@@ -63,8 +63,8 @@ internal sealed class ForLoopHeader(
     /** Statement used to increment the induction variable. */
     fun incrementInductionVariable(builder: DeclarationIrBuilder): IrStatement = with(builder) {
         // inductionVariable = inductionVariable + step
-        val plusFun = inductionVariable.type.getClass()!!.functions.first {
-            it.name.asString() == "plus" &&
+        val plusFun = inductionVariable.type.getClass()!!.functions.single {
+            it.name == OperatorNameConventions.PLUS &&
                     it.valueParameters.size == 1 &&
                     it.valueParameters[0].type == step.type
         }
@@ -329,15 +329,18 @@ internal class HeaderProcessor(
                 )
             } else null
 
-            val stepVariable = scope.createTemporaryVariable(
-                ensureNotNullable(
-                    headerInfo.step.castIfNecessary(
-                        headerInfo.progressionType.stepType(context.irBuiltIns),
-                        headerInfo.progressionType.stepCastFunctionName
-                    )
-                ),
-                nameHint = "step"
-            )
+            val stepVariable = headerInfo.progressionType.stepType(context.irBuiltIns).let {
+                scope.createTemporaryVariable(
+                    ensureNotNullable(
+                        headerInfo.step.castIfNecessary(
+                            it,
+                            headerInfo.progressionType.stepCastFunctionName
+                        )
+                    ),
+                    nameHint = "step",
+                    irType = it
+                )
+            }
 
             return when (headerInfo) {
                 is IndexedGetHeaderInfo -> IndexedGetLoopHeader(

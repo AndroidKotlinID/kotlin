@@ -111,6 +111,10 @@ fun main(args: Array<String>) {
             model("diagnostics/testsWithUnsignedTypes")
         }
 
+        testClass<AbstractDiagnosticsWithExplicitApi> {
+            model("diagnostics/testsWithExplicitApi")
+        }
+
         testClass<AbstractMultiPlatformIntegrationTest> {
             model("multiplatform", extension = null, recursive = true, excludeParentDirs = true)
         }
@@ -392,14 +396,7 @@ fun main(args: Array<String>) {
         }
 
         testClass<AbstractIrBlackBoxCodegenTest> {
-            model(
-                "codegen/box",
-                targetBackend = TargetBackend.JVM_IR,
-                excludeDirs = listOf(
-                    "ieee754/oldLanguageVersions",
-                    "operatorConventions/oldLanguageVersions"
-                )
-            )
+            model("codegen/box", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
         }
 
         testClass<AbstractIrBlackBoxAgainstJavaCodegenTest> {
@@ -481,13 +478,7 @@ fun main(args: Array<String>) {
         }
 
         testClass<AbstractIrBytecodeTextTest> {
-            model(
-                "codegen/bytecodeText",
-                targetBackend = TargetBackend.JVM_IR,
-                excludeDirs = listOf(
-                    "ieee754/oldLanguageVersions"
-                )
-            )
+            model("codegen/bytecodeText", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
         }
     }
 
@@ -512,20 +503,20 @@ fun main(args: Array<String>) {
     }
 
     testGroup("compiler/fir/resolve/tests", "compiler/fir/resolve/testData") {
-        testClass<AbstractFirResolveTestCase> {
+        testClass<AbstractFirDiagnosticsTest> {
             model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("stdlib", "cfg", "smartcasts"))
         }
 
-        testClass<AbstractFirCfgBuildingTest> {
+        testClass<AbstractFirDiagnosticsWithCfgTest> {
             model("resolve/cfg", pattern = KT_WITHOUT_DOTS_IN_NAME)
             model("resolve/smartcasts", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
 
-        testClass<AbstractFirResolveTestCaseWithStdlib> {
+        testClass<AbstractFirDiagnosticsWithStdlibTest> {
             model("resolve/stdlib", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("contracts"))
         }
 
-        testClass<AbstractFirCfgBuildingWithStdlibTest> {
+        testClass<AbstractFirDiagnosticsWithCfgAndStdlibTest> {
             model("resolve/stdlib/contracts", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
     }
@@ -552,13 +543,6 @@ fun main(args: Array<String>) {
 
         testClass<AbstractFirDiagnosticsSmokeTest> {
             model("diagnostics/tests")
-        }
-    }
-
-    testGroup("compiler/fir/resolve/tests", "compiler/fir/resolve/testData") {
-
-        testClass<AbstractFirDiagnosticsTest> {
-            model("diagnostics")
         }
     }
 

@@ -8,7 +8,7 @@ buildscript {
     extra["defaultSnapshotVersion"] = "1.3-SNAPSHOT"
     val cacheRedirectorEnabled = findProperty("cacheRedirectorEnabled")?.toString()?.toBoolean() == true
 
-    kotlinBootstrapFrom(BootstrapOption.BintrayBootstrap("1.3.70-dev-1140", cacheRedirectorEnabled))
+    kotlinBootstrapFrom(BootstrapOption.BintrayBootstrap("1.3.70-dev-1360", cacheRedirectorEnabled))
 
     repositories {
         bootstrapKotlinRepo?.let(::maven)
@@ -170,7 +170,7 @@ extra["versions.completion-ranking-kotlin"] = "0.0.2"
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.3.60-eap-12915"
+    extra["versions.kotlin-native"] = "1.3.70-dev-13235"
 }
 
 val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild
@@ -324,6 +324,7 @@ allprojects {
         maven(intellijRepo)
         maven("https://dl.bintray.com/kotlin/ktor")
         maven("https://kotlin.bintray.com/kotlin-dependencies")
+        maven("https://jetbrains.bintray.com/intellij-third-party-dependencies")
         bootstrapKotlinRepo?.let(::maven)
         internalKotlinRepo?.let(::maven)
     }

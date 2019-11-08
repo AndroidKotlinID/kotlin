@@ -9,7 +9,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.cli.common.*
-import org.jetbrains.kotlin.cli.common.ExitCode.*
+import org.jetbrains.kotlin.cli.common.ExitCode.COMPILATION_ERROR
+import org.jetbrains.kotlin.cli.common.ExitCode.OK
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JsArgumentConstants
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot

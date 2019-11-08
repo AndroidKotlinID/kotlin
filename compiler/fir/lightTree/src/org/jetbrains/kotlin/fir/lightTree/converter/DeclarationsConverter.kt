@@ -16,10 +16,7 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.NAME_FOR_DEFAULT_VALUE_PARAMETER
-import org.jetbrains.kotlin.fir.builder.Context
-import org.jetbrains.kotlin.fir.builder.generateAccessorsByDelegate
-import org.jetbrains.kotlin.fir.builder.generateComponentFunctions
-import org.jetbrains.kotlin.fir.builder.generateCopyFunction
+import org.jetbrains.kotlin.fir.builder.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
@@ -34,10 +31,7 @@ import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeParameterModifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeProjectionModifier
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.FirDelegatedTypeRef
-import org.jetbrains.kotlin.fir.types.FirTypeProjection
-import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.FirUserTypeRef
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.lexer.KtTokens.*
@@ -436,6 +430,11 @@ class DeclarationsConverter(
                 // TODO: equals, hashCode, toString
             }
 
+            if (modifiers.isEnum()) {
+                firClass.generateValuesFunction(session, context.packageFqName, context.className)
+                firClass.generateValueOfFunction(session, context.packageFqName, context.className)
+            }
+
             return@withChildClassName firClass
         }
     }
@@ -467,24 +466,26 @@ class DeclarationsConverter(
         superTypeRefs.ifEmpty { superTypeRefs += implicitAnyType }
         val delegatedType = delegatedSuperTypeRef ?: implicitAnyType
 
-        return FirAnonymousObjectImpl(null, session, FirAnonymousObjectSymbol()).apply {
-            annotations += modifiers.annotations
-            this.superTypeRefs += superTypeRefs
-            this.typeRef = superTypeRefs.first()
+        return withChildClassName(ANONYMOUS_OBJECT_NAME) {
+            FirAnonymousObjectImpl(null, session, FirAnonymousObjectSymbol()).apply {
+                annotations += modifiers.annotations
+                this.superTypeRefs += superTypeRefs
+                this.typeRef = superTypeRefs.first()
 
-            val classWrapper = ClassWrapper(
-                SpecialNames.NO_NAME_PROVIDED, modifiers, ClassKind.OBJECT, hasPrimaryConstructor = false,
-                hasSecondaryConstructor = classBody.getChildNodesByType(SECONDARY_CONSTRUCTOR).isNotEmpty(),
-                delegatedSelfTypeRef = delegatedType,
-                delegatedSuperTypeRef = delegatedType,
-                superTypeCallEntry = superTypeCallEntry
-            )
-            //parse primary constructor
-            convertPrimaryConstructor(primaryConstructor, classWrapper)?.let { this.declarations += it.firConstructor }
+                val classWrapper = ClassWrapper(
+                    SpecialNames.NO_NAME_PROVIDED, modifiers, ClassKind.OBJECT, hasPrimaryConstructor = false,
+                    hasSecondaryConstructor = classBody.getChildNodesByType(SECONDARY_CONSTRUCTOR).isNotEmpty(),
+                    delegatedSelfTypeRef = delegatedType,
+                    delegatedSuperTypeRef = delegatedType,
+                    superTypeCallEntry = superTypeCallEntry
+                )
+                //parse primary constructor
+                convertPrimaryConstructor(primaryConstructor, classWrapper)?.let { this.declarations += it.firConstructor }
 
-            //parse declarations
-            classBody?.let {
-                this.declarations += convertClassBody(it, classWrapper)
+                //parse declarations
+                classBody?.let {
+                    this.declarations += convertClassBody(it, classWrapper)
+                }
             }
         }
     }
@@ -1459,7 +1460,7 @@ class DeclarationsConverter(
         FirResolvedTypeRefImpl(
             null,
             ConeClassTypeImpl(
-                ConeClassLikeLookupTagImpl(ClassId.fromString("kotlin/ExtensionFunctionType")),
+                ConeClassLikeLookupTagImpl(ClassId.fromString(EXTENSION_FUNCTION_ANNOTATION)),
                 emptyArray(),
                 false
             )

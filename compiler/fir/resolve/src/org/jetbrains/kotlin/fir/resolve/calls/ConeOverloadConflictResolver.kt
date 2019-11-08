@@ -33,19 +33,19 @@ class ConeOverloadConflictResolver(
     fun chooseMaximallySpecificCandidates(
         candidates: Collection<Candidate>,
         //checkArgumentsMode: CheckArgumentTypesMode,
-        discriminateGenerics: Boolean//,
-        //isDebuggerContext: Boolean
+        discriminateGenerics: Boolean
     ): Set<Candidate> {
+        candidates.setIfOneOrEmpty()?.let { return it }
 
         val candidatesSet = candidates.toSet()
 
-        val maximallySpecific = findMaximallySpecificCall(candidatesSet, false/*, isDebuggerContext*/)
-        if (maximallySpecific != null) {
-            return setOf(maximallySpecific)
+        findMaximallySpecificCall(candidatesSet, false)?.let { return setOf(it) }
+
+        if (discriminateGenerics) {
+            findMaximallySpecificCall(candidatesSet, true)?.let { return setOf(it) }
         }
 
         return candidatesSet
-
     }
 
     private fun createFlatSignature(call: Candidate): FlatSignature<Candidate> {
@@ -53,6 +53,7 @@ class ConeOverloadConflictResolver(
             is FirSimpleFunction -> createFlatSignature(call, declaration)
             is FirConstructor -> createFlatSignature(call, declaration)
             is FirVariable<*> -> createFlatSignature(call, declaration)
+            is FirClass<*> -> createFlatSignature(call, declaration)
             else -> error("Not supported: $declaration")
         }
     }
@@ -109,6 +110,19 @@ class ConeOverloadConflictResolver(
             0,
             (variable as? FirProperty)?.isExpect == true,
             false // TODO
+        )
+    }
+
+    private fun createFlatSignature(call: Candidate, klass: FirClass<*>): FlatSignature<Candidate> {
+        return FlatSignature(
+            call,
+            (klass as? FirRegularClass)?.typeParameters?.map { it.symbol }.orEmpty(),
+            valueParameterTypes = emptyList(),
+            hasExtensionReceiver = false,
+            hasVarargs = false,
+            numDefaults = 0,
+            isExpect = (klass as? FirRegularClass)?.isExpect == true,
+            isSyntheticMember = false
         )
     }
 
@@ -224,6 +238,11 @@ class ConeOverloadConflictResolver(
         return true
     }
 
+    private fun <C> Collection<C>.setIfOneOrEmpty(): Set<C>? = when (size) {
+        0 -> emptySet()
+        1 -> setOf(single())
+        else -> null
+    }
 }
 
 object NoSubstitutor : TypeSubstitutorMarker

@@ -94,11 +94,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         runTest("compiler/testData/codegen/bytecodeText/constClosureOptimization.kt");
     }
 
-    @TestMetadata("constCoroutine.kt")
-    public void testConstCoroutine() throws Exception {
-        runTest("compiler/testData/codegen/bytecodeText/constCoroutine.kt");
-    }
-
     @TestMetadata("defaultMethodBody.kt")
     public void testDefaultMethodBody() throws Exception {
         runTest("compiler/testData/codegen/bytecodeText/defaultMethodBody.kt");
@@ -262,11 +257,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
     @TestMetadata("noFlagAnnotations.kt")
     public void testNoFlagAnnotations() throws Exception {
         runTest("compiler/testData/codegen/bytecodeText/noFlagAnnotations.kt");
-    }
-
-    @TestMetadata("noInlineJavaProtectedConstants.kt")
-    public void testNoInlineJavaProtectedConstants() throws Exception {
-        runTest("compiler/testData/codegen/bytecodeText/noInlineJavaProtectedConstants.kt");
     }
 
     @TestMetadata("noNumberCheckCast.kt")
@@ -777,6 +767,16 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/capturedVarsOptimization/capturedInNoInlneInsideChainOfInlineFuns.kt");
         }
 
+        @TestMetadata("capturedValInLambdaInitializedInside.kt")
+        public void testCapturedValInLambdaInitializedInside() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/capturedVarsOptimization/capturedValInLambdaInitializedInside.kt");
+        }
+
+        @TestMetadata("capturedValInLambdaInitializedOutside.kt")
+        public void testCapturedValInLambdaInitializedOutside() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/capturedVarsOptimization/capturedValInLambdaInitializedOutside.kt");
+        }
+
         @TestMetadata("capturedVarsOfSize2.kt")
         public void testCapturedVarsOfSize2() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/capturedVarsOptimization/capturedVarsOfSize2.kt");
@@ -1083,11 +1083,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
         }
 
-        @TestMetadata("accessorsForPrivateConstants.kt")
-        public void testAccessorsForPrivateConstants() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/constProperty/accessorsForPrivateConstants.kt");
-        }
-
         public void testAllFilesPresentInConstProperty() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/constProperty"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
         }
@@ -1263,11 +1258,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/coroutines"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
         }
 
-        @TestMetadata("crossinlineSuspendContinuation_1_2.kt")
-        public void testCrossinlineSuspendContinuation_1_2() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/coroutines/crossinlineSuspendContinuation_1_2.kt");
-        }
-
         @TestMetadata("crossinlineSuspendContinuation_1_3.kt")
         public void testCrossinlineSuspendContinuation_1_3() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/crossinlineSuspendContinuation_1_3.kt");
@@ -1276,11 +1266,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("doNotReassignContinuation.kt")
         public void testDoNotReassignContinuation() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/doNotReassignContinuation.kt");
-        }
-
-        @TestMetadata("doNotReassignContinuation_1_2.kt")
-        public void testDoNotReassignContinuation_1_2() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/coroutines/doNotReassignContinuation_1_2.kt");
         }
 
         @TestMetadata("returnUnitInLambda.kt")
@@ -1306,16 +1291,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("varValueConflictsWithTableSameSort.kt")
         public void testVarValueConflictsWithTableSameSort() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/varValueConflictsWithTableSameSort.kt");
-        }
-
-        @TestMetadata("varValueConflictsWithTableSameSort_1_2.kt")
-        public void testVarValueConflictsWithTableSameSort_1_2() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/coroutines/varValueConflictsWithTableSameSort_1_2.kt");
-        }
-
-        @TestMetadata("varValueConflictsWithTable_1_2.kt")
-        public void testVarValueConflictsWithTable_1_2() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/coroutines/varValueConflictsWithTable_1_2.kt");
         }
 
         @TestMetadata("compiler/testData/codegen/bytecodeText/coroutines/debug")
@@ -1925,6 +1900,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/forInIndices/forInCollectionIndices.kt");
             }
 
+            @TestMetadata("forInCollectionTypeParameterIndices.kt")
+            public void testForInCollectionTypeParameterIndices() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInIndices/forInCollectionTypeParameterIndices.kt");
+            }
+
             @TestMetadata("forInNonOptimizedIndices.kt")
             public void testForInNonOptimizedIndices() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/forInIndices/forInNonOptimizedIndices.kt");
@@ -2240,59 +2220,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("whenNullableSmartCast.kt")
         public void testWhenNullableSmartCast() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/ieee754/whenNullableSmartCast.kt");
-        }
-
-        @TestMetadata("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions")
-        @TestDataPath("$PROJECT_ROOT")
-        @RunWith(JUnit3RunnerWithInners.class)
-        public static class OldLanguageVersions extends AbstractBytecodeTextTest {
-            private void runTest(String testDataFilePath) throws Exception {
-                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
-            }
-
-            public void testAllFilesPresentInOldLanguageVersions() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
-            }
-
-            @TestMetadata("nullableDoubleEquals10.kt")
-            public void testNullableDoubleEquals10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/nullableDoubleEquals10.kt");
-            }
-
-            @TestMetadata("nullableDoubleNotEquals10.kt")
-            public void testNullableDoubleNotEquals10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/nullableDoubleNotEquals10.kt");
-            }
-
-            @TestMetadata("nullableFloatEquals10.kt")
-            public void testNullableFloatEquals10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/nullableFloatEquals10.kt");
-            }
-
-            @TestMetadata("nullableFloatNotEquals10.kt")
-            public void testNullableFloatNotEquals10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/nullableFloatNotEquals10.kt");
-            }
-
-            @TestMetadata("smartCastsForDouble10.kt")
-            public void testSmartCastsForDouble10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/smartCastsForDouble10.kt");
-            }
-
-            @TestMetadata("smartCastsForFloat10.kt")
-            public void testSmartCastsForFloat10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/smartCastsForFloat10.kt");
-            }
-
-            @TestMetadata("when10.kt")
-            public void testWhen10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/when10.kt");
-            }
-
-            @TestMetadata("whenNullableSmartCast10.kt")
-            public void testWhenNullableSmartCast10() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/ieee754/oldLanguageVersions/whenNullableSmartCast10.kt");
-            }
         }
     }
 
@@ -3437,6 +3364,133 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             @TestMetadata("initialized.kt")
             public void testInitialized() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/localLateinit/initialized.kt");
+            }
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/bytecodeText/oldLanguageVersions")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class OldLanguageVersions extends AbstractBytecodeTextTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInOldLanguageVersions() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/oldLanguageVersions"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("constCoroutine.kt")
+        public void testConstCoroutine() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/constCoroutine.kt");
+        }
+
+        @TestMetadata("noInlineJavaProtectedConstants.kt")
+        public void testNoInlineJavaProtectedConstants() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/noInlineJavaProtectedConstants.kt");
+        }
+
+        @TestMetadata("compiler/testData/codegen/bytecodeText/oldLanguageVersions/constProperty")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ConstProperty extends AbstractBytecodeTextTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            @TestMetadata("accessorsForPrivateConstants.kt")
+            public void testAccessorsForPrivateConstants() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/constProperty/accessorsForPrivateConstants.kt");
+            }
+
+            public void testAllFilesPresentInConstProperty() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/oldLanguageVersions/constProperty"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Coroutines extends AbstractBytecodeTextTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInCoroutines() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("crossinlineSuspendContinuation_1_2.kt")
+            public void testCrossinlineSuspendContinuation_1_2() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines/crossinlineSuspendContinuation_1_2.kt");
+            }
+
+            @TestMetadata("doNotReassignContinuation_1_2.kt")
+            public void testDoNotReassignContinuation_1_2() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines/doNotReassignContinuation_1_2.kt");
+            }
+
+            @TestMetadata("varValueConflictsWithTableSameSort_1_2.kt")
+            public void testVarValueConflictsWithTableSameSort_1_2() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines/varValueConflictsWithTableSameSort_1_2.kt");
+            }
+
+            @TestMetadata("varValueConflictsWithTable_1_2.kt")
+            public void testVarValueConflictsWithTable_1_2() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/coroutines/varValueConflictsWithTable_1_2.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Ieee754 extends AbstractBytecodeTextTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInIeee754() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("nullableDoubleEquals10.kt")
+            public void testNullableDoubleEquals10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/nullableDoubleEquals10.kt");
+            }
+
+            @TestMetadata("nullableDoubleNotEquals10.kt")
+            public void testNullableDoubleNotEquals10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/nullableDoubleNotEquals10.kt");
+            }
+
+            @TestMetadata("nullableFloatEquals10.kt")
+            public void testNullableFloatEquals10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/nullableFloatEquals10.kt");
+            }
+
+            @TestMetadata("nullableFloatNotEquals10.kt")
+            public void testNullableFloatNotEquals10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/nullableFloatNotEquals10.kt");
+            }
+
+            @TestMetadata("smartCastsForDouble10.kt")
+            public void testSmartCastsForDouble10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/smartCastsForDouble10.kt");
+            }
+
+            @TestMetadata("smartCastsForFloat10.kt")
+            public void testSmartCastsForFloat10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/smartCastsForFloat10.kt");
+            }
+
+            @TestMetadata("when10.kt")
+            public void testWhen10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/when10.kt");
+            }
+
+            @TestMetadata("whenNullableSmartCast10.kt")
+            public void testWhenNullableSmartCast10() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/oldLanguageVersions/ieee754/whenNullableSmartCast10.kt");
             }
         }
     }

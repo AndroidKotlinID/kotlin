@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.util.OperatorNameConventions
 import kotlin.math.absoluteValue
 
 /** Builds a [HeaderInfo] for progressions built using the `rangeTo` function. */
@@ -31,7 +32,7 @@ internal class RangeToHandler(private val context: CommonBackendContext, private
 
     override val matcher = SimpleCalleeMatcher {
         dispatchReceiver { it != null && it.type in progressionElementTypes }
-        fqName { it.pathSegments().last() == Name.identifier("rangeTo") }
+        fqName { it.pathSegments().last() == OperatorNameConventions.RANGE_TO }
         parameterCount { it == 1 }
         parameter(0) { it.type in progressionElementTypes }
     }
@@ -261,7 +262,7 @@ internal class StepHandler(
             val stepGreaterFun = context.irBuiltIns.greaterFunByOperandType[stepType.toKotlinType()]!!
             val zeroStep = if (data == ProgressionType.LONG_PROGRESSION) irLong(0) else irInt(0)
             val throwIllegalStepExceptionCall = {
-                irCall(context.irBuiltIns.illegalArgumentExceptionSymbol, stepType).apply {
+                irCall(context.irBuiltIns.illegalArgumentExceptionSymbol).apply {
                     val exceptionMessage = irConcat()
                     exceptionMessage.addArgument(irString("Step must be positive, was: "))
                     exceptionMessage.addArgument(stepArgExpression.deepCopyWithSymbols())
@@ -518,8 +519,11 @@ internal class CollectionIndicesHandler(context: CommonBackendContext) : Indices
         parameterCount { it == 0 }
     }
 
+    // The lowering operates on subtypes of Collection. Therefore, the IrType could be
+    // a type parameter bounded by Collection. When that is the case, we cannot get
+    // the class from the type and instead uses the Collection getter.
     override val IrType.sizePropertyGetter
-        get() = getClass()!!.getPropertyGetter("size")!!.owner
+        get() = getClass()?.getPropertyGetter("size")?.owner ?: context.ir.symbols.collection.getPropertyGetter("size")!!.owner
 }
 
 internal class CharSequenceIndicesHandler(context: CommonBackendContext) : IndicesHandler(context) {
@@ -646,7 +650,11 @@ internal class ArrayIterationHandler(context: CommonBackendContext) : IndexedGet
         get() = getClass()!!.getPropertyGetter("size")!!.owner
 
     override val IrType.getFunction
-        get() = getClass()!!.functions.first { it.name.asString() == "get" }
+        get() = getClass()!!.functions.single {
+            it.name == OperatorNameConventions.GET &&
+                    it.valueParameters.size == 1 &&
+                    it.valueParameters[0].type.isInt()
+        }
 }
 
 /** Builds a [HeaderInfo] for iteration over characters in a [String]. */
@@ -657,7 +665,11 @@ internal class StringIterationHandler(context: CommonBackendContext) : IndexedGe
         get() = getClass()!!.getPropertyGetter("length")!!.owner
 
     override val IrType.getFunction
-        get() = getClass()!!.functions.first { it.name.asString() == "get" }
+        get() = getClass()!!.functions.single {
+            it.name == OperatorNameConventions.GET &&
+                    it.valueParameters.size == 1 &&
+                    it.valueParameters[0].type.isInt()
+        }
 }
 
 /**
@@ -676,6 +688,9 @@ internal class CharSequenceIterationHandler(context: CommonBackendContext) : Ind
         get() = getClass()?.getPropertyGetter("length")?.owner ?: context.ir.symbols.charSequence.getPropertyGetter("length")!!.owner
 
     override val IrType.getFunction
-        get() = getClass()?.functions?.first { it.name.asString() == "get" }
-            ?: context.ir.symbols.charSequence.getSimpleFunction("get")!!.owner
+        get() = getClass()?.functions?.single {
+            it.name == OperatorNameConventions.GET &&
+                    it.valueParameters.size == 1 &&
+                    it.valueParameters[0].type.isInt()
+        } ?: context.ir.symbols.charSequence.getSimpleFunction(OperatorNameConventions.GET.asString())!!.owner
 }

@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 abstract class FirAbstractTreeTransformerWithSuperTypes(
     phase: FirResolvePhase,
     reversedScopePriority: Boolean
-) : FirAbstractTreeTransformer(phase) {
+) : FirAbstractTreeTransformer<Nothing?>(phase) {
     protected val towerScope = FirCompositeScope(mutableListOf(), reversedPriority = reversedScopePriority)
 
     protected inline fun <T> withScopeCleanup(crossinline l: () -> T): T {
@@ -41,8 +41,8 @@ abstract class FirAbstractTreeTransformerWithSuperTypes(
                     nestedClassifierScope(it.lookupTag.classId, session)
                 }
             regularClass.addTypeParametersScope()
-            val companionObjects = regularClass.declarations.filterIsInstance<FirRegularClass>().filter { it.isCompanion }
-            for (companionObject in companionObjects) {
+            val companionObject = regularClass.companionObject
+            if (companionObject != null) {
                 towerScope.scopes += nestedClassifierScope(companionObject)
             }
             towerScope.scopes += nestedClassifierScope(regularClass)
