@@ -136,7 +136,7 @@ class JavaSymbolProvider(
     ) {
         require(this is FirTypeParameterImpl)
         for (upperBound in javaTypeParameter.upperBounds) {
-            bounds += upperBound.toFirResolvedTypeRef(this@JavaSymbolProvider.session, stack)
+            bounds += upperBound.toFirResolvedTypeRef(this@JavaSymbolProvider.session, stack, isNullable = true)
         }
         addDefaultBoundIfNecessary()
     }
@@ -146,7 +146,9 @@ class JavaSymbolProvider(
             .map { it.toFirTypeParameter(stack) }
             .also {
                 it.forEachIndexed { index, typeParameter ->
-                    typeParameter.addBounds(this[index], stack)
+                    if (typeParameter.bounds.isEmpty()) {
+                        typeParameter.addBounds(this[index], stack)
+                    }
                 }
             }
     }
@@ -221,9 +223,9 @@ class JavaSymbolProvider(
                         ).apply {
                             this.typeParameters += javaMethod.typeParameters.convertTypeParameters(javaTypeParameterStack)
                             addAnnotationsFrom(this@JavaSymbolProvider.session, javaMethod, javaTypeParameterStack)
-                            for (valueParameter in javaMethod.valueParameters) {
-                                valueParameters += valueParameter.toFirValueParameters(
-                                    this@JavaSymbolProvider.session, javaTypeParameterStack
+                            for ((index, valueParameter) in javaMethod.valueParameters.withIndex()) {
+                                valueParameters += valueParameter.toFirValueParameter(
+                                    this@JavaSymbolProvider.session, index, javaTypeParameterStack
                                 )
                             }
                         }
@@ -269,9 +271,9 @@ class JavaSymbolProvider(
                         ).apply {
                             this.typeParameters += javaConstructor.typeParameters.convertTypeParameters(javaTypeParameterStack)
                             addAnnotationsFrom(this@JavaSymbolProvider.session, javaConstructor, javaTypeParameterStack)
-                            for (valueParameter in javaConstructor.valueParameters) {
-                                valueParameters += valueParameter.toFirValueParameters(
-                                    this@JavaSymbolProvider.session, javaTypeParameterStack
+                            for ((index, valueParameter) in javaConstructor.valueParameters.withIndex()) {
+                                valueParameters += valueParameter.toFirValueParameter(
+                                    this@JavaSymbolProvider.session, index, javaTypeParameterStack
                                 )
                             }
                         }

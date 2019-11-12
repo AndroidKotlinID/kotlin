@@ -93,9 +93,9 @@ internal fun JavaType.toFirJavaTypeRef(session: FirSession, javaTypeParameterSta
 }
 
 internal fun JavaClassifierType.toFirResolvedTypeRef(
-    session: FirSession, javaTypeParameterStack: JavaTypeParameterStack
+    session: FirSession, javaTypeParameterStack: JavaTypeParameterStack, isNullable: Boolean = false
 ): FirResolvedTypeRef {
-    val coneType = this.toConeKotlinTypeWithNullability(session, javaTypeParameterStack, isNullable = false)
+    val coneType = this.toConeKotlinTypeWithNullability(session, javaTypeParameterStack, isNullable)
     return FirResolvedTypeRefImpl(
         source = null, type = coneType
     ).apply {
@@ -197,15 +197,15 @@ internal fun FirAbstractAnnotatedElement.addAnnotationsFrom(
     }
 }
 
-internal fun JavaValueParameter.toFirValueParameters(
-    session: FirSession, javaTypeParameterStack: JavaTypeParameterStack
+internal fun JavaValueParameter.toFirValueParameter(
+    session: FirSession, index: Int, javaTypeParameterStack: JavaTypeParameterStack
 ): FirValueParameter {
     return FirJavaValueParameter(
-        session, (this as? JavaElementImpl<*>)?.psi?.toFirSourceElement(), name ?: Name.special("<anonymous Java parameter>"),
+        session, (this as? JavaElementImpl<*>)?.psi?.toFirSourceElement(), name ?: Name.identifier("p$index"),
         returnTypeRef = type.toFirJavaTypeRef(session, javaTypeParameterStack),
         isVararg = isVararg
     ).apply {
-        addAnnotationsFrom(session, this@toFirValueParameters, javaTypeParameterStack)
+        addAnnotationsFrom(session, this@toFirValueParameter, javaTypeParameterStack)
     }
 }
 
