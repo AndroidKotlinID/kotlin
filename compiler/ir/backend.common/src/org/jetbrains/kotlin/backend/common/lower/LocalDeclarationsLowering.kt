@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.constructedClass
 import org.jetbrains.kotlin.ir.util.dump
+import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
@@ -283,7 +284,6 @@ class LocalDeclarationsLowering(
                     expression.startOffset, expression.endOffset,
                     context.irBuiltIns.unitType,
                     newCallee.symbol,
-                    newCallee.descriptor,
                     expression.typeArgumentsCount
                 ).also {
                     it.fillArguments2(expression, newCallee)
@@ -341,7 +341,6 @@ class LocalDeclarationsLowering(
                     expression.startOffset, expression.endOffset,
                     expression.type, // TODO functional type for transformed descriptor
                     newCallee.symbol,
-                    newCallee.descriptor,
                     expression.typeArgumentsCount,
                     expression.origin
                 ).also {
@@ -440,9 +439,9 @@ class LocalDeclarationsLowering(
                 oldCall.startOffset, oldCall.endOffset,
                 newCallee.returnType,
                 newCallee.symbol,
-                newCallee.descriptor,
                 oldCall.typeArgumentsCount,
-                oldCall.origin, oldCall.superQualifierSymbol
+                oldCall.origin,
+                oldCall.superQualifierSymbol
             ).also {
                 it.copyTypeArgumentsFrom(oldCall)
             }
@@ -452,6 +451,7 @@ class LocalDeclarationsLowering(
                 oldCall.startOffset, oldCall.endOffset,
                 newCallee.returnType,
                 newCallee.symbol,
+                newCallee.parentAsClass.typeParameters.size,
                 oldCall.origin
             ).also {
                 it.copyTypeArgumentsFrom(oldCall)

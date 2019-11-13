@@ -133,6 +133,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         runTest("compiler/fir/resolve/testData/resolve/nestedClass.kt");
     }
 
+    @TestMetadata("nestedClassContructor.kt")
+    public void testNestedClassContructor() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/nestedClassContructor.kt");
+    }
+
     @TestMetadata("NestedOfAliasedType.kt")
     public void testNestedOfAliasedType() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/NestedOfAliasedType.kt");
@@ -238,6 +243,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("fieldPlusAssign.kt")
         public void testFieldPlusAssign() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/arguments/fieldPlusAssign.kt");
+        }
+
+        @TestMetadata("incorrectFunctionalType.kt")
+        public void testIncorrectFunctionalType() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/incorrectFunctionalType.kt");
         }
 
         @TestMetadata("invoke.kt")
@@ -414,6 +424,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localTypes.kt");
         }
 
+        @TestMetadata("localWithBooleanNot.kt")
+        public void testLocalWithBooleanNot() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localWithBooleanNot.kt");
+        }
+
         @TestMetadata("memberExtension.kt")
         public void testMemberExtension() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/memberExtension.kt");
@@ -437,6 +452,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("privateObjectLiteral.kt")
         public void testPrivateObjectLiteral() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/privateObjectLiteral.kt");
+        }
+
+        @TestMetadata("privateVisibility.kt")
+        public void testPrivateVisibility() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/privateVisibility.kt");
         }
 
         @TestMetadata("qualifiedExpressions.kt")

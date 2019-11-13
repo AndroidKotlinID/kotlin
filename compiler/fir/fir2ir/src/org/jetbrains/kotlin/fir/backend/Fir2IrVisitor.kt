@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
 import org.jetbrains.kotlin.ir.types.makeNullable
@@ -680,8 +681,7 @@ class Fir2IrVisitor(
             when {
                 symbol is IrConstructorSymbol -> IrConstructorCallImpl.fromSymbolOwner(startOffset, endOffset, type, symbol)
                 symbol is IrSimpleFunctionSymbol -> IrCallImpl(
-                    startOffset, endOffset, type, symbol, symbol.descriptor,
-                    origin = calleeReference.statementOrigin()
+                    startOffset, endOffset, type, symbol, origin = calleeReference.statementOrigin()
                 )
                 symbol is IrPropertySymbol && symbol.isBound -> {
                     val getter = symbol.owner.getter
@@ -827,7 +827,7 @@ class Fir2IrVisitor(
                 is IrFunctionSymbol -> {
                     IrFunctionReferenceImpl(
                         startOffset, endOffset, type, symbol,
-                        symbol.descriptor, 0
+                        0
                     )
                 }
                 else -> {
@@ -904,7 +904,7 @@ class Fir2IrVisitor(
                 listOf(
                     anonymousClass,
                     IrConstructorCallImpl.fromSymbolOwner(
-                        startOffset, endOffset, anonymousClassType, anonymousClass.constructors.first().symbol
+                        startOffset, endOffset, anonymousClassType, anonymousClass.constructors.first().symbol, anonymousClass.typeParameters.size
                     )
                 )
             )
@@ -1145,21 +1145,22 @@ class Fir2IrVisitor(
         }
         // TODO: it's temporary hack which should be refactored
         val simpleType = when (val classId = (firstType.type as? ConeClassLikeType)?.lookupTag?.classId) {
-            ClassId(FqName("kotlin"), FqName("Long"), false) -> irBuiltIns.builtIns.longType
-            ClassId(FqName("kotlin"), FqName("Int"), false) -> irBuiltIns.builtIns.intType
-            ClassId(FqName("kotlin"), FqName("Float"), false) -> irBuiltIns.builtIns.floatType
-            ClassId(FqName("kotlin"), FqName("Double"), false) -> irBuiltIns.builtIns.doubleType
+            ClassId(FqName("kotlin"), FqName("Long"), false) -> irBuiltIns.longType
+            ClassId(FqName("kotlin"), FqName("Int"), false) -> irBuiltIns.intType
+            ClassId(FqName("kotlin"), FqName("Float"), false) -> irBuiltIns.floatType
+            ClassId(FqName("kotlin"), FqName("Double"), false) -> irBuiltIns.doubleType
             else -> {
                 return IrErrorCallExpressionImpl(
                     startOffset, endOffset, booleanType, "Comparison of arguments with unsupported type: $classId"
                 )
             }
         }
+        val classifier = simpleType.classifierOrFail
         val (symbol, origin) = when (operation) {
-            FirOperation.LT -> irBuiltIns.lessFunByOperandType[simpleType] to IrStatementOrigin.LT
-            FirOperation.GT -> irBuiltIns.greaterFunByOperandType[simpleType] to IrStatementOrigin.GT
-            FirOperation.LT_EQ -> irBuiltIns.lessOrEqualFunByOperandType[simpleType] to IrStatementOrigin.LTEQ
-            FirOperation.GT_EQ -> irBuiltIns.greaterOrEqualFunByOperandType[simpleType] to IrStatementOrigin.GTEQ
+            FirOperation.LT -> irBuiltIns.lessFunByOperandType[classifier] to IrStatementOrigin.LT
+            FirOperation.GT -> irBuiltIns.greaterFunByOperandType[classifier] to IrStatementOrigin.GT
+            FirOperation.LT_EQ -> irBuiltIns.lessOrEqualFunByOperandType[classifier] to IrStatementOrigin.LTEQ
+            FirOperation.GT_EQ -> irBuiltIns.greaterOrEqualFunByOperandType[classifier] to IrStatementOrigin.GTEQ
             else -> throw AssertionError("Unexpected comparison operation: $operation")
         }
         return primitiveOp2(startOffset, endOffset, symbol!!, booleanType, origin, first.toIrExpression(), second.toIrExpression())

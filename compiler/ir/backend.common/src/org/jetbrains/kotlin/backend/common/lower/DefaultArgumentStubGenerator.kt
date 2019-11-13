@@ -129,7 +129,7 @@ open class DefaultArgumentStubGenerator(
                     startOffset = irFunction.startOffset,
                     endOffset = irFunction.endOffset,
                     type = context.irBuiltIns.unitType,
-                    symbol = irFunction.symbol, descriptor = irFunction.symbol.descriptor,
+                    symbol = irFunction.symbol,
                     typeArgumentsCount = newIrFunction.parentAsClass.typeParameters.size + newIrFunction.typeParameters.size
                 ).apply {
                     passTypeArgumentsFrom(newIrFunction.parentAsClass)
@@ -269,7 +269,6 @@ open class DefaultParameterInjector(
                 endOffset = expression.endOffset,
                 type = context.irBuiltIns.unitType,
                 symbol = it as IrConstructorSymbol,
-                descriptor = it.descriptor,
                 typeArgumentsCount = expression.typeArgumentsCount
             )
         }
@@ -284,6 +283,7 @@ open class DefaultParameterInjector(
                 expression.endOffset,
                 expression.type,
                 it as IrConstructorSymbol,
+                it.owner.parentAsClass.typeParameters.size,
                 DEFAULT_DISPATCH_CALL
             )
         }
@@ -311,7 +311,6 @@ open class DefaultParameterInjector(
                 endOffset = expression.endOffset,
                 type = expression.type,
                 symbol = it,
-                descriptor = it.descriptor,
                 typeArgumentsCount = expression.typeArgumentsCount,
                 origin = DEFAULT_DISPATCH_CALL,
                 superQualifierSymbol = expression.superQualifierSymbol

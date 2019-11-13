@@ -361,14 +361,14 @@ class ExpressionCodegen(
                     }
                 }
             }
-            expression.descriptor is ConstructorDescriptor ->
+            expression.symbol.descriptor is ConstructorDescriptor ->
                 throw AssertionError("IrCall with ConstructorDescriptor: ${expression.javaClass.simpleName}")
             callee.isSuspend && !irFunction.shouldNotContainSuspendMarkers(classCodegen.context) ->
                 addInlineMarker(mv, isStartNotEnd = true)
         }
 
         expression.dispatchReceiver?.let { receiver ->
-            val type = if ((expression as? IrCall)?.superQualifier != null) receiver.asmType else callable.owner
+            val type = if ((expression as? IrCall)?.superQualifierSymbol != null) receiver.asmType else callable.owner
             callGenerator.genValueAndPut(callee.dispatchReceiverParameter!!, receiver, type, this, data)
         }
 
@@ -556,7 +556,7 @@ class ExpressionCodegen(
         )
 
     override fun visitClass(declaration: IrClass, data: BlockInfo): PromisedValue {
-        classCodegen.generateLocalClass(declaration, generateSequence(this) { it.inlinedInto }.any { it.irFunction.isInline }).also {
+        classCodegen.generateLocalClass(declaration, generateSequence(this) { it.inlinedInto }.last().irFunction).also {
             closureReifiedMarkers[declaration] = it
         }
         return immaterialUnitValue

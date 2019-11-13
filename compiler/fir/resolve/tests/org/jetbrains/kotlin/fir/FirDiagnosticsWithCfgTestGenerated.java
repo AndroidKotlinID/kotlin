@@ -108,6 +108,11 @@ public class FirDiagnosticsWithCfgTestGenerated extends AbstractFirDiagnosticsWi
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/smartcasts"), Pattern.compile("^([^.]+)\\.kt$"), true);
         }
 
+        @TestMetadata("bangbang.kt")
+        public void testBangbang() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/bangbang.kt");
+        }
+
         @TestMetadata("booleanOperators.kt")
         public void testBooleanOperators() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/booleanOperators.kt");
@@ -121,6 +126,11 @@ public class FirDiagnosticsWithCfgTestGenerated extends AbstractFirDiagnosticsWi
         @TestMetadata("casts.kt")
         public void testCasts() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/casts.kt");
+        }
+
+        @TestMetadata("dataFlowInfoFromWhileCondition.kt")
+        public void testDataFlowInfoFromWhileCondition() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/dataFlowInfoFromWhileCondition.kt");
         }
 
         @TestMetadata("elvis.kt")
