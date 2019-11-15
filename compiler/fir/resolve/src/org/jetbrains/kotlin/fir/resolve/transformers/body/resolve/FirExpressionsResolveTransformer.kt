@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirErrorExpressionImpl
-import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionWithSmartcastImpl
 import org.jetbrains.kotlin.fir.expressions.impl.FirFunctionCallImpl
 import org.jetbrains.kotlin.fir.expressions.impl.FirVariableAssignmentImpl
 import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
@@ -23,13 +22,11 @@ import org.jetbrains.kotlin.fir.references.impl.FirExplicitThisReference
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.*
-import org.jetbrains.kotlin.fir.resolve.calls.ConeInferenceContext
 import org.jetbrains.kotlin.fir.resolve.calls.candidate
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirOperatorAmbiguityError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirVariableExpectedError
 import org.jetbrains.kotlin.fir.resolve.transformers.InvocationKindTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreReceiver
-import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
@@ -122,30 +119,17 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
             }
         }
         if (result is FirQualifiedAccessExpression) {
-            result = transformQualifiedAccessUsingSmartcastInfo(result)
+            dataFlowAnalyzer.enterQualifiedAccessExpression(result)
+            result = components.transformQualifiedAccessUsingSmartcastInfo(result)
             dataFlowAnalyzer.exitQualifiedAccessExpression(result)
         }
         return result.compose()
-    }
-
-    private fun transformQualifiedAccessUsingSmartcastInfo(qualifiedAccessExpression: FirQualifiedAccessExpression): FirQualifiedAccessExpression {
-        val typesFromSmartCast = dataFlowAnalyzer.getTypeUsingSmartcastInfo(qualifiedAccessExpression) ?: return qualifiedAccessExpression
-        val allTypes = typesFromSmartCast.toMutableList().also {
-            it += qualifiedAccessExpression.resultType.coneTypeUnsafe<ConeKotlinType>()
-        }
-        val intersectedType = ConeTypeIntersector.intersectTypes(inferenceComponents.ctx as ConeInferenceContext, allTypes)
-        // TODO: add check that intersectedType is not equal to original type
-        val intersectedTypeRef = FirResolvedTypeRefImpl(qualifiedAccessExpression.resultType.source, intersectedType).apply {
-            annotations += qualifiedAccessExpression.resultType.annotations
-        }
-        return FirExpressionWithSmartcastImpl(qualifiedAccessExpression, intersectedTypeRef, typesFromSmartCast)
     }
 
     override fun transformFunctionCall(functionCall: FirFunctionCall, data: ResolutionMode): CompositeTransformResult<FirStatement> {
         if (functionCall.calleeReference is FirResolvedNamedReference && functionCall.resultType is FirImplicitTypeRef) {
             storeTypeFromCallee(functionCall)
         }
-        dataFlowAnalyzer.enterFunctionCall(functionCall)
         if (functionCall.calleeReference !is FirSimpleNamedReference) return functionCall.compose()
         functionCall.transform<FirFunctionCall, Nothing?>(InvocationKindTransformer, null)
         functionCall.transformTypeArguments(transformer, ResolutionMode.ContextIndependent)
@@ -398,42 +382,28 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
     }
 
     override fun <T> transformConstExpression(constExpression: FirConstExpression<T>, data: ResolutionMode): CompositeTransformResult<FirStatement> {
-        val expectedType = data.expectedType
+        // TODO: add support of IntegerLiteralType
 
         val kind = constExpression.kind
-        if (expectedType == null || expectedType is FirImplicitTypeRef ||
-            kind == IrConstKind.Null || kind == IrConstKind.Boolean || kind == IrConstKind.Char
-        ) {
-            val symbol = when (kind) {
-                IrConstKind.Null -> StandardClassIds.Nothing(symbolProvider)
-                IrConstKind.Boolean -> StandardClassIds.Boolean(symbolProvider)
-                IrConstKind.Char -> StandardClassIds.Char(symbolProvider)
-                IrConstKind.Byte -> StandardClassIds.Byte(symbolProvider)
-                IrConstKind.Short -> StandardClassIds.Short(symbolProvider)
-                IrConstKind.Int -> StandardClassIds.Int(symbolProvider)
-                IrConstKind.Long -> StandardClassIds.Long(symbolProvider)
-                IrConstKind.String -> StandardClassIds.String(symbolProvider)
-                IrConstKind.Float -> StandardClassIds.Float(symbolProvider)
-                IrConstKind.Double -> StandardClassIds.Double(symbolProvider)
-            }
-
-            val type = ConeClassTypeImpl(symbol.toLookupTag(), emptyArray(), isNullable = kind == IrConstKind.Null)
-
-            constExpression.resultType = FirResolvedTypeRefImpl(null, type)
-        } else {
-            constExpression.resultType = if (kind != IrConstKind.Null) {
-                expectedType.resolvedTypeFromPrototype(
-                    expectedType.coneTypeUnsafe<ConeKotlinType>().withNullability(ConeNullability.NOT_NULL)
-                )
-            } else {
-                expectedType
-            }
+        val symbol = when (kind) {
+            IrConstKind.Null -> StandardClassIds.Nothing(symbolProvider)
+            IrConstKind.Boolean -> StandardClassIds.Boolean(symbolProvider)
+            IrConstKind.Char -> StandardClassIds.Char(symbolProvider)
+            IrConstKind.Byte -> StandardClassIds.Byte(symbolProvider)
+            IrConstKind.Short -> StandardClassIds.Short(symbolProvider)
+            IrConstKind.Int -> StandardClassIds.Int(symbolProvider)
+            IrConstKind.Long -> StandardClassIds.Long(symbolProvider)
+            IrConstKind.String -> StandardClassIds.String(symbolProvider)
+            IrConstKind.Float -> StandardClassIds.Float(symbolProvider)
+            IrConstKind.Double -> StandardClassIds.Double(symbolProvider)
         }
 
+        val type = ConeClassTypeImpl(symbol.toLookupTag(), emptyArray(), isNullable = kind == IrConstKind.Null)
 
-        return transformExpression(constExpression, data).also {
-            dataFlowAnalyzer.exitConstExpresion(it.single as FirConstExpression<*>)
-        }
+        constExpression.resultType = FirResolvedTypeRefImpl(null, type)
+        dataFlowAnalyzer.exitConstExpresion(constExpression as FirConstExpression<*>)
+
+        return constExpression.compose()
     }
 
     override fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: ResolutionMode): CompositeTransformResult<FirStatement> {

@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
-import org.jetbrains.kotlin.backend.common.descriptors.WrappedClassDescriptor
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.buildAssertionsDisabledField
@@ -24,6 +23,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.descriptors.WrappedClassDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
@@ -122,7 +122,7 @@ open class ClassCodegen protected constructor(
 
         val nestedClasses = irClass.declarations.mapNotNull { declaration ->
             if (declaration is IrClass) {
-                ClassCodegen(declaration, context, this)
+                ClassCodegen(declaration, context, this, withinInline = withinInline)
             } else null
         }
 
@@ -411,9 +411,9 @@ open class ClassCodegen protected constructor(
         // or constructor, the name and type of the function is recorded as well.
         if (parentClassCodegen != null) {
             val outerClassName = parentClassCodegen.type.internalName
-            // TODO: LocalDeclarationsLowering could have moved this class out of its enclosing method.
-            if (parentFunction != null) {
-                val method = methodSignatureMapper.mapAsmMethod(parentFunction)
+            val enclosingFunction = context.customEnclosingFunction[irClass.attributeOwnerId] ?: parentFunction
+            if (enclosingFunction != null) {
+                val method = methodSignatureMapper.mapAsmMethod(enclosingFunction)
                 visitor.visitOuterClass(outerClassName, method.name, method.descriptor)
             } else if (irClass.isAnonymousObject) {
                 visitor.visitOuterClass(outerClassName, null, null)

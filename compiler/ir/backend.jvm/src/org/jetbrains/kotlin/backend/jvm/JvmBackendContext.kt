@@ -27,18 +27,15 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
-import org.jetbrains.kotlin.ir.symbols.IrLocalDelegatedPropertySymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
 import org.jetbrains.kotlin.resolve.jvm.JvmClassName
+import org.jetbrains.org.objectweb.asm.Type
 
 class JvmBackendContext(
     val state: GenerationState,
@@ -65,17 +62,16 @@ class JvmBackendContext(
 
     val irIntrinsics = IrIntrinsicMethods(irBuiltIns, ir.symbols)
 
-    // TODO: also store info for EnclosingMethod
-    internal class LocalClassInfo(val internalName: String)
+    private val localClassType = mutableMapOf<IrAttributeContainer, Type>()
 
-    private val localClassInfo = mutableMapOf<IrAttributeContainer, LocalClassInfo>()
+    internal fun getLocalClassType(container: IrAttributeContainer): Type? =
+        localClassType[container.attributeOwnerId]
 
-    internal fun getLocalClassInfo(container: IrAttributeContainer): LocalClassInfo? =
-        localClassInfo[container.attributeOwnerId]
-
-    internal fun putLocalClassInfo(container: IrAttributeContainer, value: LocalClassInfo) {
-        localClassInfo[container.attributeOwnerId] = value
+    internal fun putLocalClassType(container: IrAttributeContainer, value: Type) {
+        localClassType[container.attributeOwnerId] = value
     }
+
+    internal val customEnclosingFunction = mutableMapOf<IrAttributeContainer, IrFunction>()
 
     // TODO cache these at ClassCodegen level. Currently, sharing this map between classes in a module is required
     //      because IrSourceCompilerForInline constructs a new (Fake)ClassCodegen for every call to

@@ -80,6 +80,11 @@ public class FirDiagnosticsWithCfgTestGenerated extends AbstractFirDiagnosticsWi
             runTest("compiler/fir/resolve/testData/resolve/cfg/propertiesAndInitBlocks.kt");
         }
 
+        @TestMetadata("safeCalls.kt")
+        public void testSafeCalls() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/cfg/safeCalls.kt");
+        }
+
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/cfg/simple.kt");
@@ -133,6 +138,11 @@ public class FirDiagnosticsWithCfgTestGenerated extends AbstractFirDiagnosticsWi
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/dataFlowInfoFromWhileCondition.kt");
         }
 
+        @TestMetadata("delayedAssignment.kt")
+        public void testDelayedAssignment() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/delayedAssignment.kt");
+        }
+
         @TestMetadata("elvis.kt")
         public void testElvis() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/elvis.kt");
@@ -178,9 +188,24 @@ public class FirDiagnosticsWithCfgTestGenerated extends AbstractFirDiagnosticsWi
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/returns.kt");
         }
 
+        @TestMetadata("safeCalls.kt")
+        public void testSafeCalls() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/safeCalls.kt");
+        }
+
         @TestMetadata("simpleIf.kt")
         public void testSimpleIf() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/simpleIf.kt");
+        }
+
+        @TestMetadata("smartcastAfterReassignment.kt")
+        public void testSmartcastAfterReassignment() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/smartcastAfterReassignment.kt");
+        }
+
+        @TestMetadata("smartcastOnLambda.kt")
+        public void testSmartcastOnLambda() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/smartcastOnLambda.kt");
         }
 
         @TestMetadata("when.kt")

@@ -10,15 +10,18 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.componentArrayAccessor
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
-import org.jetbrains.kotlin.fir.diagnostics.FirEmptyDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.FirStubDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
+import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
+import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionWithSmartcastImpl
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.fir.resolve.calls.ConeInferenceContext
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.resultType
@@ -57,12 +60,15 @@ fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): FirClassLikeSym
     return firSymbolProvider.getSymbolByLookupTag(this)
 }
 
-fun ConeAbbreviatedType.directExpansionType(useSiteSession: FirSession): ConeClassLikeType? {
+fun ConeAbbreviatedType.directExpansionType(
+    useSiteSession: FirSession,
+    expandedConeType: (FirTypeAlias) -> ConeClassLikeType? = FirTypeAlias::expandedConeType
+): ConeClassLikeType? {
     val typeAlias = abbreviationLookupTag
         .toSymbol(useSiteSession)
         ?.safeAs<FirTypeAliasSymbol>()?.fir ?: return null
 
-    val resultType = typeAlias.expandedConeType ?: return null
+    val resultType = expandedConeType(typeAlias) ?: return null
     if (resultType.typeArguments.isEmpty()) return resultType
     return mapTypeAliasArguments(typeAlias, this, resultType) as? ConeClassLikeType
 }
@@ -182,6 +188,11 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
             ConeNullability.NOT_NULL -> this
         } as T
         is ConeStubType -> ConeStubType(variable, nullability) as T
+        is ConeDefinitelyNotNullType -> when (nullability) {
+            ConeNullability.NOT_NULL -> this
+            ConeNullability.NULLABLE -> original.withNullability(nullability)
+            ConeNullability.UNKNOWN -> original.withNullability(nullability)
+        } as T
         else -> error("sealed: ${this::class}")
     }
 }
@@ -200,6 +211,7 @@ fun <T : ConeKotlinType> T.withArguments(arguments: Array<out ConeKotlinTypeProj
             arguments,
             nullability.isNullable
         ) as T
+        is ConeDefinitelyNotNullType -> ConeDefinitelyNotNullType.create(original.withArguments(arguments)) as T
         else -> error("Not supported: $this: ${this.render()}")
     }
 }
@@ -298,7 +310,7 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
 
     return when (val newCallee = access.calleeReference) {
         is FirErrorNamedReference ->
-            FirErrorTypeRefImpl(access.source, FirEmptyDiagnostic)
+            FirErrorTypeRefImpl(access.source, FirStubDiagnostic(newCallee.diagnostic))
         is FirNamedReferenceWithCandidate -> {
             typeFromSymbol(newCallee.candidateSymbol, makeNullable)
         }
@@ -341,4 +353,17 @@ private fun BodyResolveComponents.typeFromSymbol(symbol: AbstractFirBasedSymbol<
         }
         else -> error("WTF ! $symbol")
     }
+}
+
+fun BodyResolveComponents.transformQualifiedAccessUsingSmartcastInfo(qualifiedAccessExpression: FirQualifiedAccessExpression): FirQualifiedAccessExpression {
+    val typesFromSmartCast = dataFlowAnalyzer.getTypeUsingSmartcastInfo(qualifiedAccessExpression) ?: return qualifiedAccessExpression
+    val allTypes = typesFromSmartCast.toMutableList().also {
+        it += qualifiedAccessExpression.resultType.coneTypeUnsafe<ConeKotlinType>()
+    }
+    val intersectedType = ConeTypeIntersector.intersectTypes(inferenceComponents.ctx as ConeInferenceContext, allTypes)
+    // TODO: add check that intersectedType is not equal to original type
+    val intersectedTypeRef = FirResolvedTypeRefImpl(qualifiedAccessExpression.resultType.source, intersectedType).apply {
+        annotations += qualifiedAccessExpression.resultType.annotations
+    }
+    return FirExpressionWithSmartcastImpl(qualifiedAccessExpression, intersectedTypeRef, typesFromSmartCast)
 }
