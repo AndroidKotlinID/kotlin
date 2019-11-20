@@ -67,7 +67,16 @@ internal enum class ProgressionDirection {
 }
 
 /** Information about a loop that is required by [HeaderProcessor] to build a [ForLoopHeader]. */
-internal sealed class HeaderInfo(
+internal sealed class HeaderInfo {
+    /**
+     * Returns a copy of this [HeaderInfo] with the values reversed.
+     * I.e., first and last are swapped, step is negated.
+     * Returns null if the iterable cannot be iterated in reverse.
+     */
+    abstract fun asReversed(): HeaderInfo?
+}
+
+internal sealed class NumericHeaderInfo(
     val progressionType: ProgressionType,
     val first: IrExpression,
     val last: IrExpression,
@@ -76,14 +85,7 @@ internal sealed class HeaderInfo(
     val isReversed: Boolean,
     val direction: ProgressionDirection,
     val additionalNotEmptyCondition: IrExpression?
-) {
-    /**
-     * Returns a copy of this [HeaderInfo] with the values reversed.
-     * I.e., first and last are swapped, step is negated.
-     * Returns null if the iterable cannot be iterated in reverse.
-     */
-    abstract fun asReversed(): HeaderInfo?
-}
+) : HeaderInfo()
 
 /** Information about a for-loop over a progression. */
 internal class ProgressionHeaderInfo(
@@ -96,7 +98,7 @@ internal class ProgressionHeaderInfo(
     direction: ProgressionDirection,
     additionalNotEmptyCondition: IrExpression? = null,
     val additionalVariables: List<IrVariable> = listOf()
-) : HeaderInfo(
+) : NumericHeaderInfo(
     progressionType, first, last, step,
     canCacheLast = true,
     isReversed = isReversed,
@@ -175,7 +177,7 @@ internal class IndexedGetHeaderInfo(
     canCacheLast: Boolean = true,
     val objectVariable: IrVariable,
     val expressionHandler: IndexedGetIterationHandler
-) : HeaderInfo(
+) : NumericHeaderInfo(
     ProgressionType.INT_PROGRESSION,
     first,
     last,
@@ -198,6 +200,22 @@ internal class IndexedGetHeaderInfo(
     //
     // If we simply iterated over `arr` in reverse, then we would get "4320" which is not the right
     // output. Hence we return null to indicate that we cannot loop over arrays in reverse.
+    override fun asReversed(): HeaderInfo? = null
+}
+
+/**
+ * Information about a for-loop over an iterable returned by `withIndex()`.
+ */
+internal class WithIndexHeaderInfo(val nestedInfo: HeaderInfo) : HeaderInfo() {
+    // We cannot easily reverse `withIndex()` so we do not attempt to handle it. We would have to start from the last value of the index,
+    // easily calculable (or even impossible) in most cases.
+    override fun asReversed(): HeaderInfo? = null
+}
+
+/**
+ * Information about a for-loop over an Iterable or Sequence.
+ */
+internal class IterableHeaderInfo(val iteratorVariable: IrVariable) : HeaderInfo() {
     override fun asReversed(): HeaderInfo? = null
 }
 
@@ -238,7 +256,7 @@ internal interface HeaderInfoFromCallHandler<D> : HeaderInfoHandler<IrCall, D> {
 
 internal typealias ProgressionHandler = HeaderInfoFromCallHandler<ProgressionType>
 
-internal class HeaderInfoBuilder(context: CommonBackendContext, private val scopeOwnerSymbol: () -> IrSymbol) :
+internal abstract class HeaderInfoBuilder(context: CommonBackendContext, private val scopeOwnerSymbol: () -> IrSymbol) :
     IrElementVisitor<HeaderInfo?, IrCall?> {
 
     private val symbols = context.ir.symbols
@@ -261,25 +279,18 @@ internal class HeaderInfoBuilder(context: CommonBackendContext, private val scop
         StepHandler(context, this)
     )
 
-    private val reversedHandler = ReversedHandler(context, this)
-
-    // NOTE: StringIterationHandler MUST come before CharSequenceIterationHandler.
-    // String is subtype of CharSequence and therefore its handler is more specialized.
-    private val expressionHandlers = listOf(
-        ArrayIterationHandler(context),
-        DefaultProgressionHandler(context),
-        StringIterationHandler(context),
-        CharSequenceIterationHandler(context)
-    )
+    protected abstract val callHandlers: List<HeaderInfoFromCallHandler<Nothing?>>
+    protected abstract val expressionHandlers: List<ExpressionHandler>
 
     override fun visitElement(element: IrElement, data: IrCall?): HeaderInfo? = null
 
     /** Builds a [HeaderInfo] for iterable expressions that are calls (e.g., `.reversed()`, `.indices`. */
     override fun visitCall(iterable: IrCall, iteratorCall: IrCall?): HeaderInfo? {
-        // Return the HeaderInfo from the first successful match. First, try to match a `reversed()` call.
-        val reversedHeaderInfo = reversedHandler.handle(iterable, iteratorCall, null, scopeOwnerSymbol())
-        if (reversedHeaderInfo != null)
-            return reversedHeaderInfo
+        // Return the HeaderInfo from the first successful match.
+        // First, try to match a `reversed()` or `withIndex()` call.
+        val callHeaderInfo = callHandlers.firstNotNullResult { it.handle(iterable, iteratorCall, null, scopeOwnerSymbol()) }
+        if (callHeaderInfo != null)
+            return callHeaderInfo
 
         // Try to match a call to build a progression (e.g., `.indices`, `downTo`).
         val progressionType = ProgressionType.fromIrType(iterable.type, symbols)
@@ -294,4 +305,45 @@ internal class HeaderInfoBuilder(context: CommonBackendContext, private val scop
         return expressionHandlers.firstNotNullResult { it.handle(iterable, iteratorCall, null, scopeOwnerSymbol()) }
             ?: super.visitExpression(iterable, iteratorCall)
     }
+}
+
+internal class DefaultHeaderInfoBuilder(context: CommonBackendContext, scopeOwnerSymbol: () -> IrSymbol) :
+    HeaderInfoBuilder(context, scopeOwnerSymbol) {
+    override val callHandlers = listOf(
+        ReversedHandler(context, this),
+        WithIndexHandler(context, NestedHeaderInfoBuilderForWithIndex(context, scopeOwnerSymbol))
+    )
+
+    // NOTE: StringIterationHandler MUST come before CharSequenceIterationHandler.
+    // String is subtype of CharSequence and therefore its handler is more specialized.
+    override val expressionHandlers = listOf(
+        ArrayIterationHandler(context),
+        DefaultProgressionHandler(context),
+        StringIterationHandler(context),
+        CharSequenceIterationHandler(context)
+    )
+}
+
+// WithIndexHandler attempts to retrieve the HeaderInfo from the underlying index, using NestedHeaderInfoBuilderForWithIndex instead of
+// DefaultHeaderInfoBuilder. The differences between the two are that NestedHeaderInfoBuilderForWithIndex:
+//
+//   - Has NO WithIndexHandler. We do not attempt to optimize `*.withIndex().withIndex()`.
+//   - Has DefaultIterableHandler. This allows us to optimize `Iterable<*>.withIndex()` and `Sequence<*>.withIndex()`.
+internal class NestedHeaderInfoBuilderForWithIndex(context: CommonBackendContext, scopeOwnerSymbol: () -> IrSymbol) :
+    HeaderInfoBuilder(context, scopeOwnerSymbol) {
+    // NOTE: No WithIndexHandler; we cannot lower `iterable.withIndex().withIndex()`.
+    override val callHandlers = listOf(
+        ReversedHandler(context, this)
+    )
+
+    // NOTE: StringIterationHandler MUST come before CharSequenceIterationHandler.
+    // String is subtype of CharSequence and therefore its handler is more specialized.
+    // DefaultIterableHandler must come last as it is handles iterables not handled by more specialized handlers.
+    override val expressionHandlers = listOf(
+        ArrayIterationHandler(context),
+        DefaultProgressionHandler(context),
+        StringIterationHandler(context),
+        CharSequenceIterationHandler(context),
+        DefaultIterableHandler(context)
+    )
 }

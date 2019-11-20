@@ -255,9 +255,29 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/arguments/invoke.kt");
         }
 
+        @TestMetadata("javaArrayVariance.kt")
+        public void testJavaArrayVariance() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/javaArrayVariance.kt");
+        }
+
         @TestMetadata("lambda.kt")
         public void testLambda() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/arguments/lambda.kt");
+        }
+
+        @TestMetadata("lambdaInLambda.kt")
+        public void testLambdaInLambda() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/lambdaInLambda.kt");
+        }
+
+        @TestMetadata("lambdaInLambda2.kt")
+        public void testLambdaInLambda2() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/lambdaInLambda2.kt");
+        }
+
+        @TestMetadata("lambdaInUnresolvedCall.kt")
+        public void testLambdaInUnresolvedCall() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/lambdaInUnresolvedCall.kt");
         }
 
         @TestMetadata("overloadByReceiver.kt")
@@ -273,6 +293,16 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/arguments/simple.kt");
+        }
+
+        @TestMetadata("stringTemplates.kt")
+        public void testStringTemplates() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/stringTemplates.kt");
+        }
+
+        @TestMetadata("tryInLambda.kt")
+        public void testTryInLambda() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/arguments/tryInLambda.kt");
         }
 
         @TestMetadata("vararg.kt")
@@ -449,6 +479,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/memberExtension.kt");
         }
 
+        @TestMetadata("nestedVisibility.kt")
+        public void testNestedVisibility() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/nestedVisibility.kt");
+        }
+
         @TestMetadata("objectVsProperty.kt")
         public void testObjectVsProperty() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/objectVsProperty.kt");
@@ -472,6 +507,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("privateVisibility.kt")
         public void testPrivateVisibility() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/privateVisibility.kt");
+        }
+
+        @TestMetadata("protectedVisibility.kt")
+        public void testProtectedVisibility() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/protectedVisibility.kt");
         }
 
         @TestMetadata("qualifiedExpressions.kt")

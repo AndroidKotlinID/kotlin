@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.backend.common.DescriptorsToIrRemapper
 import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
+import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.builtins.CompanionObjectMapping.isMappedIntrinsicCompanionObject
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -33,6 +34,7 @@ class JvmDeclarationFactory(
     private val methodSignatureMapper: MethodSignatureMapper
 ) : DeclarationFactory {
     private val singletonFieldDeclarations = HashMap<IrSymbolOwner, IrField>()
+    private val interfaceCompanionFieldDeclarations = HashMap<IrSymbolOwner, IrField>()
     private val outerThisDeclarations = HashMap<IrClass, IrField>()
     private val innerClassConstructors = HashMap<IrConstructor, IrConstructor>()
 
@@ -133,9 +135,26 @@ class JvmDeclarationFactory(
             }
         }
 
+    fun getPrivateFieldForObjectInstance(singleton: IrClass): IrField =
+        if (singleton.isCompanion && singleton.parentAsClass.isJvmInterface)
+            interfaceCompanionFieldDeclarations.getOrPut(singleton) {
+                buildField {
+                    name = Name.identifier("\$\$INSTANCE")
+                    type = singleton.defaultType
+                    origin = JvmLoweredDeclarationOrigin.INTERFACE_COMPANION_PRIVATE_INSTANCE
+                    isFinal = true
+                    isStatic = true
+                    visibility = JavaVisibilities.PACKAGE_VISIBILITY
+                }.apply {
+                    parent = singleton
+                }
+            }
+        else
+            getFieldForObjectInstance(singleton)
+
     fun getDefaultImplsFunction(interfaceFun: IrSimpleFunction): IrSimpleFunction {
         val parent = interfaceFun.parentAsClass
-        assert(parent.isInterface) { "Parent of ${interfaceFun.dump()} should be interface" }
+        assert(parent.isJvmInterface) { "Parent of ${interfaceFun.dump()} should be interface" }
         return defaultImplsMethods.getOrPut(interfaceFun) {
             val defaultImpls = getDefaultImplsClass(interfaceFun.parentAsClass)
 

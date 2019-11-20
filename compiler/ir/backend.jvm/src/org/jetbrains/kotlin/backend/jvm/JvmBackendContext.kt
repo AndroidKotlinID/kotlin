@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.jvm
 
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.ir.Ir
+import org.jetbrains.kotlin.backend.common.lower.irThrow
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.jvm.codegen.IrTypeMapper
 import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
@@ -24,6 +25,9 @@ import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.irBlock
+import org.jetbrains.kotlin.ir.builders.irNull
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -88,7 +92,7 @@ class JvmBackendContext(
 
     internal val multifileFacadesToAdd = mutableMapOf<JvmClassName, MutableList<IrClass>>()
     internal val multifileFacadeForPart = mutableMapOf<IrClass, JvmClassName>()
-    internal val multifileFacadeMemberToPartMember = mutableMapOf<IrFunctionSymbol, IrFunctionSymbol>()
+    internal val multifileFacadeMemberToPartMember = mutableMapOf<IrFunction, IrFunction>()
 
     override var inVerbosePhase: Boolean = false
 
@@ -99,12 +103,18 @@ class JvmBackendContext(
     val suspendFunctionContinuations = mutableMapOf<IrFunction, IrClass>()
     val suspendLambdaToOriginalFunctionMap = mutableMapOf<IrClass, IrFunction>()
     val continuationClassBuilders = mutableMapOf<IrClass, ClassBuilder>()
-    val suspendFunctionViews = mutableMapOf<IrFunction, IrFunction>()
+    val suspendFunctionOriginalToView = mutableMapOf<IrFunction, IrFunction>()
+    val suspendFunctionViewToOriginal = mutableMapOf<IrFunction, IrFunction>()
     val fakeContinuation: IrExpression = createFakeContinuation(this)
 
     val staticDefaultStubs = mutableMapOf<IrFunctionSymbol, IrFunction>()
 
     val inlineClassReplacements = MemoizedInlineClassReplacements()
+
+    internal fun recordSuspendFunctionView(function: IrFunction, view: IrFunction) {
+        suspendFunctionOriginalToView[function] = view
+        suspendFunctionViewToOriginal[view] = function
+    }
 
     internal fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol =
         symbolTable.referenceClass(descriptor)
@@ -129,6 +139,12 @@ class JvmBackendContext(
         /*TODO*/
         print(message)
     }
+
+    override fun throwUninitializedPropertyAccessException(builder: IrBuilderWithScope, name: String): IrExpression =
+        builder.irBlock {
+            +super.throwUninitializedPropertyAccessException(builder, name)
+            +irThrow(irNull())
+        }
 
     inner class JvmIr(
         irModuleFragment: IrModuleFragment,

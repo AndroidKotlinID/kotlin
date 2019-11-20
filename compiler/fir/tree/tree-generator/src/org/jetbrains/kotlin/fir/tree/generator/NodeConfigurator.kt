@@ -253,6 +253,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +field(invocationKindType, nullable = true, withReplace = true).apply {
                 isMutable = true
             }
+            +booleanField("isLambda")
         }
 
         typeParameter.configure {
@@ -316,6 +317,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             parentArg(memberFunction, "F", constructor)
             +symbol("FirConstructorSymbol")
             +field("delegatedConstructor", delegatedConstructorCall, nullable = true)
+            +body(nullable = true)
             +booleanField("isPrimary")
         }
 

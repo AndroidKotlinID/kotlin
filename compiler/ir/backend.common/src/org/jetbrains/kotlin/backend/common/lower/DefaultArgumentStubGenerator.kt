@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -9,6 +9,8 @@ import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.descriptors.*
 import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
@@ -84,7 +86,7 @@ open class DefaultArgumentStubGenerator(
                 val remapped = if (valueParameter.defaultValue != null) {
                     val mask = irGet(newIrFunction.valueParameters[irFunction.valueParameters.size + valueParameter.index / 32])
                     val bit = irInt(1 shl (valueParameter.index % 32))
-                    val test = irCallOp(this@DefaultArgumentStubGenerator.context.ir.symbols.intAnd, context.irBuiltIns.intType, mask, bit)
+                    val defaultFlag = irCallOp(this@DefaultArgumentStubGenerator.context.ir.symbols.intAnd, context.irBuiltIns.intType, mask, bit)
 
                     val expressionBody = valueParameter.defaultValue!!
                     expressionBody.patchDeclarationParents(newIrFunction)
@@ -96,7 +98,7 @@ open class DefaultArgumentStubGenerator(
                         }
                     })
 
-                    selectArgumentOrDefault(irNotEquals(test, irInt(0)), parameter, expressionBody.expression)
+                    selectArgumentOrDefault(defaultFlag, parameter, expressionBody.expression)
                 } else {
                     parameter
                 }
@@ -128,11 +130,11 @@ open class DefaultArgumentStubGenerator(
     }
 
     protected open fun IrBlockBodyBuilder.selectArgumentOrDefault(
-        shouldUseDefault: IrExpression,
+        defaultFlag: IrExpression,
         parameter: IrValueParameter,
         default: IrExpression
     ): IrValueDeclaration {
-        val value = irIfThenElse(parameter.type, shouldUseDefault, default, irGet(parameter))
+        val value = irIfThenElse(parameter.type, irNotEquals(defaultFlag, irInt(0)), default, irGet(parameter))
         return createTmpVariable(value, nameHint = parameter.name.asString())
     }
 
@@ -146,7 +148,16 @@ open class DefaultArgumentStubGenerator(
             dispatchReceiver = newIrFunction.dispatchReceiverParameter?.let { irGet(it) }
             extensionReceiver = newIrFunction.extensionReceiverParameter?.let { irGet(it) }
 
-            params.forEachIndexed { i, variable -> putValueArgument(i, irGet(variable)) }
+            for ((i, variable) in params.withIndex()) {
+                val paramType = irFunction.valueParameters[i].type
+                // The JVM backend doesn't introduce new variables, and hence may have incompatible types here.
+                val value = if (!paramType.isNullable() && variable.type.isNullable()) {
+                    irImplicitCast(irGet(variable), paramType)
+                } else {
+                    irGet(variable)
+                }
+                putValueArgument(i, value)
+            }
         }
         return if (needSpecialDispatch(irFunction)) {
             val handlerDeclaration = newIrFunction.valueParameters.last()
@@ -281,7 +292,15 @@ open class DefaultParameterInjector(
                     if (valueArgument == null) {
                         maskValues[i / 32] = maskValues[i / 32] or (1 shl (i % 32))
                     }
-                    valueArgument ?: nullConst(startOffset, endOffset, parameter)
+                    valueArgument ?: nullConst(startOffset, endOffset, parameter)?.let {
+                        IrCompositeImpl(
+                            expression.startOffset,
+                            expression.endOffset,
+                            parameter.type,
+                            IrStatementOrigin.DEFAULT_VALUE,
+                            listOf(it)
+                        )
+                    }
                 }
             }
         }
@@ -344,6 +363,7 @@ private fun IrFunction.generateDefaultsFunctionImpl(context: CommonBackendContex
                 isExternal = false
                 isPrimary = false
                 isExpect = false
+                visibility = Visibilities.PUBLIC
             }
         is IrSimpleFunction ->
             buildFunWithDescriptorForInlining(descriptor) {
@@ -353,6 +373,7 @@ private fun IrFunction.generateDefaultsFunctionImpl(context: CommonBackendContex
                 modality = Modality.FINAL
                 isExternal = false
                 isTailrec = false
+                visibility = Visibilities.PUBLIC
             }
         else -> throw IllegalStateException("Unknown function type")
     }
@@ -366,17 +387,24 @@ private fun IrFunction.generateDefaultsFunctionImpl(context: CommonBackendContex
         val newType = it.type.remapTypeParameters(classIfConstructor, newFunction.classIfConstructor)
         val makeNullable = it.defaultValue != null &&
                 (context.ir.unfoldInlineClassType(it.type) ?: it.type) !in context.irBuiltIns.primitiveIrTypes
-        it.copyTo(newFunction, type = if (makeNullable) newType.makeNullable() else newType, defaultValue = null)
+        it.copyTo(
+            newFunction,
+            type = if (makeNullable) newType.makeNullable() else newType,
+            defaultValue = if (it.defaultValue != null) {
+                IrExpressionBodyImpl(IrErrorExpressionImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, it.type, "Default Stub"))
+            } else null
+        )
+
     }
 
     for (i in 0 until (valueParameters.size + 31) / 32) {
-        newFunction.addValueParameter("mask$i".synthesizedString, context.irBuiltIns.intType)
+        newFunction.addValueParameter("mask$i".synthesizedString, context.irBuiltIns.intType, IrDeclarationOrigin.MASK_FOR_DEFAULT_FUNCTION)
     }
     if (this is IrConstructor) {
-        val markerType = context.ir.symbols.defaultConstructorMarker.owner.defaultType.makeNullable()
-        newFunction.addValueParameter("marker".synthesizedString, markerType)
+        val markerType = context.ir.symbols.defaultConstructorMarker.defaultType.makeNullable()
+        newFunction.addValueParameter("marker".synthesizedString, markerType, IrDeclarationOrigin.DEFAULT_CONSTRUCTOR_MARKER)
     } else if (context.ir.shouldGenerateHandlerParameterForDefaultBodyFun()) {
-        newFunction.addValueParameter("handler".synthesizedString, context.irBuiltIns.anyNType)
+        newFunction.addValueParameter("handler".synthesizedString, context.irBuiltIns.anyNType, IrDeclarationOrigin.METHOD_HANDLER_IN_DEFAULT_FUNCTION)
     }
 
     // TODO some annotations are needed (e.g. @JvmStatic), others need different values (e.g. @JvmName), the rest are redundant.

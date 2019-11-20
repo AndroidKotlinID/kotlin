@@ -26,6 +26,20 @@ export default [
         plugins: plugins()
     },
     {
+        input: './karma-debug-runner.js',
+        output: {
+            file: 'lib/karma-debug-runner.js',
+            format: 'cjs'
+        }
+    },
+    {
+        input: './karma-debug-framework.js',
+        output: {
+            file: 'lib/karma-debug-framework.js',
+            format: 'cjs'
+        }
+    },
+    {
         input: './karma-kotlin-reporter.js',
         external: ['path', 'util'],
         output: {

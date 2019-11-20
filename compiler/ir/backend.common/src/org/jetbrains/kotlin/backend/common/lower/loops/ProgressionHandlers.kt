@@ -228,7 +228,7 @@ internal class StepHandler(
     private val symbols = context.ir.symbols
 
     override val matcher = SimpleCalleeMatcher {
-        singleArgumentExtension(FqName("kotlin.ranges.step"), symbols.progressionClasses.map { it.typeWith() })
+        singleArgumentExtension(FqName("kotlin.ranges.step"), symbols.progressionClasses.map { it.defaultType })
         parameter(0) { it.type.isInt() || it.type.isLong() }
     }
 
@@ -694,4 +694,60 @@ internal open class CharSequenceIterationHandler(context: CommonBackendContext, 
  */
 internal class StringIterationHandler(context: CommonBackendContext) : CharSequenceIterationHandler(context, canCacheLast = true) {
     override fun matchIterable(expression: IrExpression) = expression.type.isString()
+}
+
+/** Builds a [HeaderInfo] for calls to `withIndex()`. */
+internal class WithIndexHandler(context: CommonBackendContext, private val visitor: NestedHeaderInfoBuilderForWithIndex) :
+    HeaderInfoFromCallHandler<Nothing?> {
+
+    // Use Quantifier.ANY so we can handle all `withIndex()` calls in the same manner.
+    override val matcher = createIrCallMatcher(Quantifier.ANY) {
+        callee {
+            fqName { it == FqName("kotlin.collections.withIndex") }
+            extensionReceiver { it != null && it.type.run { isArray() || isPrimitiveArray() || isIterable() } }
+            parameterCount { it == 0 }
+        }
+        callee {
+            fqName { it == FqName("kotlin.text.withIndex") }
+            extensionReceiver { it != null && it.type.isSubtypeOfClass(context.ir.symbols.charSequence) }
+            parameterCount { it == 0 }
+        }
+        callee {
+            fqName { it == FqName("kotlin.sequences.withIndex") }
+            extensionReceiver { it != null && it.type.run { isSequence() } }
+            parameterCount { it == 0 }
+        }
+    }
+
+    override fun build(expression: IrCall, data: Nothing?, scopeOwner: IrSymbol): HeaderInfo? {
+        // WithIndexHeaderInfo is a composite that contains the HeaderInfo for the underlying iterable (if any).
+        val nestedInfo = expression.extensionReceiver!!.accept(visitor, null) ?: return null
+
+        // We cannot lower `iterable.withIndex().withIndex()`.
+        // NestedHeaderInfoBuilderForWithIndex should not be yielding a WithIndexHeaderInfo, hence the assert.
+        assert(nestedInfo !is WithIndexHeaderInfo)
+
+        return WithIndexHeaderInfo(nestedInfo)
+    }
+}
+
+/** Builds a [HeaderInfo] for iterables not handled by more specialized handlers. */
+internal class DefaultIterableHandler(private val context: CommonBackendContext) : ExpressionHandler {
+
+    override fun matchIterable(expression: IrExpression) = true
+
+    override fun build(expression: IrExpression, scopeOwner: IrSymbol): HeaderInfo? =
+        with(context.createIrBuilder(scopeOwner, expression.startOffset, expression.endOffset)) {
+            val iterableClass = expression.type.getClass()!!
+            val iterator =
+                irCall(iterableClass.functions.single {
+                    it.name == OperatorNameConventions.ITERATOR &&
+                            it.valueParameters.isEmpty()
+                }).apply {
+                    dispatchReceiver = expression
+                }
+            IterableHeaderInfo(
+                scope.createTemporaryVariable(iterator, nameHint = "iterator")
+            )
+        }
 }

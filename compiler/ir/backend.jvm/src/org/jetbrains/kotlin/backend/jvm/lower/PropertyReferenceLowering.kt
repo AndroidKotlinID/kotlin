@@ -16,12 +16,11 @@ import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.ir.createJvmIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.irArrayOf
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
-import org.jetbrains.kotlin.ir.builders.declarations.addFunction
-import org.jetbrains.kotlin.ir.builders.declarations.buildClass
-import org.jetbrains.kotlin.ir.builders.declarations.buildField
+import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.*
@@ -102,7 +101,8 @@ internal class PropertyReferenceLowering(val context: JvmBackendContext) : Class
             name = method.name
             returnType = method.returnType
             visibility = method.visibility
-            origin = this@addOverride.origin
+            modality = Modality.OPEN
+            origin = JvmLoweredDeclarationOrigin.GENERATED_MEMBER_IN_CALLABLE_REFERENCE
         }.apply {
             overriddenSymbols.add(method.symbol)
             dispatchReceiverParameter = thisReceiver!!.copyTo(this)
@@ -253,7 +253,7 @@ internal class PropertyReferenceLowering(val context: JvmBackendContext) : Class
                 // See propertyReferenceKindFor -- only one of them could ever be present.
                 val numOfSuperArgs = if (expression.dispatchReceiver != null || expression.extensionReceiver != null) 1 else 0
                 val superConstructor = superClass.constructors.single { it.valueParameters.size == numOfSuperArgs }
-                val receiverField = superClass.properties.single { it.name.asString() == "receiver" }.backingField!!
+                val backingFieldFromSuper = superClass.properties.single { it.name.asString() == "receiver" }.backingField!!
                 val getName = superClass.functions.single { it.name.asString() == "getName" }
                 val getOwner = superClass.functions.single { it.name.asString() == "getOwner" }
                 val getSignature = superClass.functions.single { it.name.asString() == "getSignature" }
@@ -265,6 +265,15 @@ internal class PropertyReferenceLowering(val context: JvmBackendContext) : Class
                 referenceClass.addOverride(getName) { irString(expression.symbol.descriptor.name.asString()) }
                 referenceClass.addOverride(getOwner) { buildReflectedContainerReference(expression) }
                 referenceClass.addOverride(getSignature) { irString(expression.signature) }
+
+                val receiverField = referenceClass.addField {
+                    name = backingFieldFromSuper.name
+                    origin = IrDeclarationOrigin.FAKE_OVERRIDE
+                    type = backingFieldFromSuper.type
+                    isFinal = backingFieldFromSuper.isFinal
+                    isStatic = backingFieldFromSuper.isStatic
+                    visibility = backingFieldFromSuper.visibility
+                }
 
                 val field = expression.field?.owner
                 if (field == null) {

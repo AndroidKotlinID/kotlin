@@ -118,6 +118,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/resolve/testData/resolve/stdlib/multipleImplicitReceivers.kt");
     }
 
+    @TestMetadata("nullableTypeParameter.kt")
+    public void testNullableTypeParameter() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/nullableTypeParameter.kt");
+    }
+
     @TestMetadata("problems.kt")
     public void testProblems() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/problems.kt");
@@ -391,6 +396,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/FunctionTypeInJava.kt");
         }
 
+        @TestMetadata("JavaVisibility2.kt")
+        public void testJavaVisibility2() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/JavaVisibility2.kt");
+        }
+
         @TestMetadata("KJKComplexHierarchy.kt")
         public void testKJKComplexHierarchy() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/KJKComplexHierarchy.kt");
@@ -454,6 +464,16 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         @TestMetadata("RawType.kt")
         public void testRawType() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/RawType.kt");
+        }
+
+        @TestMetadata("StaticClassConstructorFromBaseClass.kt")
+        public void testStaticClassConstructorFromBaseClass() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/StaticClassConstructorFromBaseClass.kt");
+        }
+
+        @TestMetadata("StaticFromBaseClass.kt")
+        public void testStaticFromBaseClass() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/StaticFromBaseClass.kt");
         }
 
         @TestMetadata("StaticGenericMethod.kt")

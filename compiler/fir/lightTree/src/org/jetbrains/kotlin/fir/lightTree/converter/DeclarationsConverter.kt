@@ -1037,7 +1037,7 @@ class DeclarationsConverter(
         val parentNode = functionDeclaration.getParent()
         val isLocal = !(parentNode?.tokenType == KT_FILE || parentNode?.tokenType == CLASS_BODY)
         val firFunction = if (identifier == null) {
-            FirAnonymousFunctionImpl(null, session, returnType!!, receiverType, FirAnonymousFunctionSymbol())
+            FirAnonymousFunctionImpl(null, session, returnType!!, receiverType, FirAnonymousFunctionSymbol(), isLambda = false)
         } else {
             val functionName = identifier.nameAsSafeName()
             val status = FirDeclarationStatusImpl(
@@ -1459,7 +1459,7 @@ class DeclarationsConverter(
         null,
         FirResolvedTypeRefImpl(
             null,
-            ConeClassTypeImpl(
+            ConeClassLikeTypeImpl(
                 ConeClassLikeLookupTagImpl(ClassId.fromString(EXTENSION_FUNCTION_ANNOTATION)),
                 emptyArray(),
                 false
