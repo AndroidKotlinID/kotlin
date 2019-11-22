@@ -411,6 +411,7 @@ class Fir2IrVisitor(
             symbolTable.declareAnonymousInitializer(
                 startOffset, endOffset, origin, parent.descriptor
             ).apply {
+                setParentByParentStack()
                 declarationStorage.enterScope(descriptor)
                 body = anonymousInitializer.body!!.convertToIrBlockBody()
                 declarationStorage.leaveScope(descriptor)
@@ -516,7 +517,8 @@ class Fir2IrVisitor(
         }.setParentByParentStack().withParent {
             declarationStorage.enterScope(descriptor)
             val initializerExpression = firInitializerExpression?.toIrExpression()
-            this.initializer = initializerExpression?.let { IrExpressionBodyImpl(it) }
+            initializer = initializerExpression?.let { IrExpressionBodyImpl(it) }
+            correspondingPropertySymbol = this@createBackingField.symbol
             declarationStorage.leaveScope(descriptor)
         }
     }

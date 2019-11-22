@@ -2677,6 +2677,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                 runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/varargViewedAsArray.kt");
             }
 
+            @TestMetadata("varargViewedAsPrimitiveArray.kt")
+            public void testVarargViewedAsPrimitiveArray() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/varargViewedAsPrimitiveArray.kt");
+            }
+
             @TestMetadata("varargWithDefaultValue.kt")
             public void testVarargWithDefaultValue() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/varargAndDefaults/varargWithDefaultValue.kt");
@@ -13171,24 +13176,14 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                 runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/functionWithBigArity.kt");
             }
 
-            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv11.kt")
-            public void testIncWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv11() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv11.kt");
+            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiver.kt")
+            public void testIncWithNullabilityAssertionOnExtensionReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiver.kt");
             }
 
-            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv12.kt")
-            public void testIncWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator_lv12.kt");
-            }
-
-            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiver_lv11.kt")
-            public void testIncWithNullabilityAssertionOnExtensionReceiver_lv11() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiver_lv11.kt");
-            }
-
-            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiver_lv12.kt")
-            public void testIncWithNullabilityAssertionOnExtensionReceiver_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiver_lv12.kt");
+            @TestMetadata("incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator.kt")
+            public void testIncWithNullabilityAssertionOnExtensionReceiverInPrivateOperator() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/incWithNullabilityAssertionOnExtensionReceiverInPrivateOperator.kt");
             }
 
             @TestMetadata("localEntities.kt")
@@ -13201,34 +13196,24 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                 runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/mapPut.kt");
             }
 
-            @TestMetadata("nullabilityAssertionOnExtensionReceiver_lv11.kt")
-            public void testNullabilityAssertionOnExtensionReceiver_lv11() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnExtensionReceiver_lv11.kt");
+            @TestMetadata("nullabilityAssertionOnExtensionReceiver.kt")
+            public void testNullabilityAssertionOnExtensionReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnExtensionReceiver.kt");
             }
 
-            @TestMetadata("nullabilityAssertionOnExtensionReceiver_lv12.kt")
-            public void testNullabilityAssertionOnExtensionReceiver_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnExtensionReceiver_lv12.kt");
+            @TestMetadata("nullabilityAssertionOnInlineFunExtensionReceiver.kt")
+            public void testNullabilityAssertionOnInlineFunExtensionReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnInlineFunExtensionReceiver.kt");
             }
 
-            @TestMetadata("nullabilityAssertionOnInlineFunExtensionReceiver_lv11.kt")
-            public void testNullabilityAssertionOnInlineFunExtensionReceiver_lv11() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnInlineFunExtensionReceiver_lv11.kt");
+            @TestMetadata("nullabilityAssertionOnMemberExtensionReceiver.kt")
+            public void testNullabilityAssertionOnMemberExtensionReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnMemberExtensionReceiver.kt");
             }
 
-            @TestMetadata("nullabilityAssertionOnInlineFunExtensionReceiver_lv12.kt")
-            public void testNullabilityAssertionOnInlineFunExtensionReceiver_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnInlineFunExtensionReceiver_lv12.kt");
-            }
-
-            @TestMetadata("nullabilityAssertionOnMemberExtensionReceiver_lv12.kt")
-            public void testNullabilityAssertionOnMemberExtensionReceiver_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnMemberExtensionReceiver_lv12.kt");
-            }
-
-            @TestMetadata("nullabilityAssertionOnPrivateMemberExtensionReceiver_lv12.kt")
-            public void testNullabilityAssertionOnPrivateMemberExtensionReceiver_lv12() throws Exception {
-                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnPrivateMemberExtensionReceiver_lv12.kt");
+            @TestMetadata("nullabilityAssertionOnPrivateMemberExtensionReceiver.kt")
+            public void testNullabilityAssertionOnPrivateMemberExtensionReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/nullabilityAssertionOnPrivateMemberExtensionReceiver.kt");
             }
 
             @TestMetadata("paramAssertionMessage.kt")
@@ -13931,6 +13916,16 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
         @TestMetadata("constructorProperty.kt")
         public void testConstructorProperty() throws Exception {
             runTest("compiler/testData/codegen/box/jvmField/constructorProperty.kt");
+        }
+
+        @TestMetadata("fileOrder.kt")
+        public void testFileOrder() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmField/fileOrder.kt");
+        }
+
+        @TestMetadata("fileOrderWithCopying.kt")
+        public void testFileOrderWithCopying() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmField/fileOrderWithCopying.kt");
         }
 
         @TestMetadata("initializersOrder.kt")
@@ -20531,6 +20526,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             @TestMetadata("inMixedUnsignedRange.kt")
             public void testInMixedUnsignedRange() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/unsigned/inMixedUnsignedRange.kt");
+            }
+
+            @TestMetadata("kt35004.kt")
+            public void testKt35004() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/unsigned/kt35004.kt");
             }
 
             @TestMetadata("compiler/testData/codegen/box/ranges/unsigned/expression")
