@@ -19316,6 +19316,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 public void testMultipleModules() throws Exception {
                     runTest("compiler/testData/codegen/box/reflection/typeOf/js/multipleModules.kt");
                 }
+
+                @TestMetadata("typeOfReifiedUnit.kt")
+                public void testTypeOfReifiedUnit() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/typeOf/js/typeOfReifiedUnit.kt");
+                }
             }
 
             @TestMetadata("compiler/testData/codegen/box/reflection/typeOf/noReflect")
@@ -21639,6 +21644,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("unsignedRangeIterator.kt")
         public void testUnsignedRangeIterator() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/unsignedRangeIterator.kt");
+        }
+
+        @TestMetadata("unsignedToSignedConversion.kt")
+        public void testUnsignedToSignedConversion() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/unsignedToSignedConversion.kt");
         }
 
         @TestMetadata("unsignedTypePrefixIncrementDecrementBoxing.kt")
