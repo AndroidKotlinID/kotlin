@@ -13,6 +13,8 @@ import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirTypeParameterImpl
+import org.jetbrains.kotlin.fir.generateValueOfFunction
+import org.jetbrains.kotlin.fir.generateValuesFunction
 import org.jetbrains.kotlin.fir.java.declarations.FirJavaClass
 import org.jetbrains.kotlin.fir.java.declarations.FirJavaConstructor
 import org.jetbrains.kotlin.fir.java.declarations.FirJavaField
@@ -98,6 +100,7 @@ class JavaSymbolProvider(
                 useLazyNestedClassifierScope = regularClass is FirJavaClass,
                 existingNames = (regularClass as? FirJavaClass)?.existingNestedClassifierNames
             )
+            val wrappedDeclaredScope = wrapScopeWithJvmMapped(regularClass, declaredScope, useSiteSession, scopeSession)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
                     .mapNotNull { useSiteSuperType ->
@@ -114,7 +117,7 @@ class JavaSymbolProvider(
                     }
             JavaClassUseSiteMemberScope(
                 regularClass, useSiteSession,
-                JavaSuperTypeScope(regularClass, useSiteSession, superTypeEnhancementScopes), declaredScope
+                JavaSuperTypeScope(regularClass, useSiteSession, superTypeEnhancementScopes), wrappedDeclaredScope
             )
         }
     }
@@ -283,6 +286,11 @@ class JavaSymbolProvider(
                                 )
                             }
                         }
+                    }
+
+                    if (classKind == ClassKind.ENUM_CLASS) {
+                        generateValuesFunction(session, classId.packageFqName, classId.relativeClassName)
+                        generateValueOfFunction(session, classId.packageFqName, classId.relativeClassName)
                     }
                 }
             }

@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
+import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
@@ -649,9 +650,13 @@ class Fir2IrVisitor(
         }
         return returnExpression.convertWithOffsets { startOffset, endOffset ->
             val result = returnExpression.result
+            val descriptor = irTarget.descriptor
             IrReturnImpl(
                 startOffset, endOffset, nothingType,
-                symbolTable.referenceSimpleFunction(irTarget.descriptor),
+                when (descriptor) {
+                    is ClassConstructorDescriptor -> symbolTable.referenceConstructor(descriptor)
+                    else -> symbolTable.referenceSimpleFunction(descriptor)
+                },
                 result.toIrExpression()
             )
         }
@@ -666,7 +671,7 @@ class Fir2IrVisitor(
         return when (this) {
             is FirPropertyFromParameterResolvedNamedReference -> IrStatementOrigin.INITIALIZE_PROPERTY_FROM_PARAMETER
             is FirResolvedNamedReference -> when (resolvedSymbol) {
-                is FirAccessorSymbol, is SyntheticPropertySymbol -> IrStatementOrigin.GET_PROPERTY
+                is AccessorSymbol, is SyntheticPropertySymbol -> IrStatementOrigin.GET_PROPERTY
                 else -> null
             }
             else -> null

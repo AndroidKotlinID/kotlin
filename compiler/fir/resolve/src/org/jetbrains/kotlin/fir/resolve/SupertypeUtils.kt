@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.resolve
 
+import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
@@ -58,49 +59,40 @@ val USE_SITE = scopeSessionKey<FirScope>()
 data class SubstitutionScopeKey(val type: ConeClassLikeType) : ScopeSessionKey<FirClassSubstitutionScope>() {}
 
 fun FirClassSymbol<*>.buildUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope? {
-    when (this) {
-        is FirAnonymousObjectSymbol -> return fir.buildDefaultUseSiteMemberScope(useSiteSession, builder)
-        is FirRegularClassSymbol -> return fir.buildUseSiteMemberScope(useSiteSession, builder)
+    return when (this) {
+        is FirAnonymousObjectSymbol -> useSiteSession.firSymbolProvider.buildDefaultUseSiteMemberScope(fir, useSiteSession, builder)
+        is FirRegularClassSymbol -> fir.buildUseSiteMemberScope(useSiteSession, builder)
     }
 }
 
 fun FirClass<*>.buildUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope? {
     if (classId.isLocal) {
         // It's not possible to find local class by symbol
-        return buildDefaultUseSiteMemberScope(useSiteSession, builder)
+        return useSiteSession.firSymbolProvider.buildDefaultUseSiteMemberScope(this, useSiteSession, builder)
     }
     val symbolProvider = useSiteSession.firSymbolProvider
     return symbolProvider.getClassUseSiteMemberScope(classId, useSiteSession, builder)
 }
 
-fun FirTypeAlias.buildUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope? {
-    val type = expandedTypeRef.coneTypeUnsafe<ConeClassLikeType>()
-    return type.scope(useSiteSession, builder)?.let {
-        type.wrapSubstitutionScopeIfNeed(useSiteSession, it, this, builder)
-    }
-}
-
-fun FirClass<*>.buildDefaultUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope {
-    return builder.getOrBuild(symbol, USE_SITE) {
-
-        val declaredScope = declaredMemberScope(this)
-        val scopes = lookupSuperTypes(this, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
-            .mapNotNull { useSiteSuperType ->
-                if (useSiteSuperType is ConeClassErrorType) return@mapNotNull null
-                val symbol = useSiteSuperType.lookupTag.toSymbol(useSiteSession)
-                if (symbol is FirRegularClassSymbol) {
-                    val useSiteMemberScope = symbol.fir.buildUseSiteMemberScope(useSiteSession, builder)!!
-                    useSiteSuperType.wrapSubstitutionScopeIfNeed(useSiteSession, useSiteMemberScope, symbol.fir, builder)
-                } else {
-                    null
-                }
+private fun createSubstitution(
+    typeParameters: List<FirTypeParameter>,
+    typeArguments: Array<out ConeKotlinTypeProjection>,
+    session: FirSession
+): Map<FirTypeParameterSymbol, ConeKotlinType> {
+    return typeParameters.zip(typeArguments) { typeParameter, typeArgument ->
+        val typeParameterSymbol = typeParameter.symbol
+        typeParameterSymbol to when (typeArgument) {
+            is ConeTypedProjection -> {
+                typeArgument.type
             }
-        FirClassUseSiteMemberScope(
-            useSiteSession,
-            FirSuperTypeScope(useSiteSession, FirStandardOverrideChecker(useSiteSession), scopes),
-            declaredScope
-        )
-    }
+            else /* StarProjection */ -> {
+                ConeTypeIntersector.intersectTypes(
+                    session.inferenceContext(),
+                    typeParameterSymbol.fir.bounds.map { it.coneTypeUnsafe() }
+                )
+            }
+        }
+    }.toMap()
 }
 
 fun ConeClassLikeType.wrapSubstitutionScopeIfNeed(
@@ -112,23 +104,19 @@ fun ConeClassLikeType.wrapSubstitutionScopeIfNeed(
     if (this.typeArguments.isEmpty()) return useSiteMemberScope
     return builder.getOrBuild(declaration.symbol, SubstitutionScopeKey(this)) {
         val typeParameters = (declaration as? FirTypeParametersOwner)?.typeParameters.orEmpty()
-        @Suppress("UNCHECKED_CAST")
-        val substitution = typeParameters.zip(this.typeArguments) { typeParameter, typeArgument ->
-            val typeParameterSymbol = typeParameter.symbol
-            typeParameterSymbol to when (typeArgument) {
-                is ConeTypedProjection -> {
-                    typeArgument.type
-                }
-                else /* StarProjection */ -> {
-                    ConeTypeIntersector.intersectTypes(
-                        session.inferenceContext(),
-                        typeParameterSymbol.fir.bounds.map { it.coneTypeUnsafe() }
-                    )
-                }
-            }
-        }.toMap()
-
-        FirClassSubstitutionScope(session, useSiteMemberScope, builder, substitution)
+        val originalSubstitution = createSubstitution(typeParameters, typeArguments, session)
+        val javaClassId = JavaToKotlinClassMap.mapKotlinToJava(declaration.symbol.classId.asSingleFqName().toUnsafe())
+        val javaClass = javaClassId?.let { session.firSymbolProvider.getClassLikeSymbolByFqName(it)?.fir } as? FirRegularClass
+        if (javaClass != null) {
+            // This kind of substitution is necessary when method which is mapped from Java (e.g. Java Map.forEach)
+            // is called on an external type, like MyMap<String, String>,
+            // to determine parameter types properly (e.g. String, String instead of K, V)
+            val javaTypeParameters = javaClass.typeParameters
+            val javaSubstitution = createSubstitution(javaTypeParameters, typeArguments, session)
+            FirClassSubstitutionScope(session, useSiteMemberScope, builder, originalSubstitution + javaSubstitution)
+        } else {
+            FirClassSubstitutionScope(session, useSiteMemberScope, builder, originalSubstitution)
+        }
     }
 }
 

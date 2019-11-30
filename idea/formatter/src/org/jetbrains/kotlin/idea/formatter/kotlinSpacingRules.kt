@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.idea.formatter.KotlinSpacingBuilder.CustomSpacingBui
 import org.jetbrains.kotlin.idea.util.requireNode
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.isObjectLiteral
 import org.jetbrains.kotlin.psi.psiUtil.siblings
 import org.jetbrains.kotlin.psi.psiUtil.textRangeWithoutComments
@@ -52,9 +53,6 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
     return rules(kotlinCommonSettings, builderUtil) {
         simple {
             before(FILE_ANNOTATION_LIST).lineBreakInCode()
-            after(FILE_ANNOTATION_LIST).blankLines(1)
-
-            after(PACKAGE_DIRECTIVE).blankLines(1)
             between(IMPORT_DIRECTIVE, IMPORT_DIRECTIVE).lineBreakInCode()
             after(IMPORT_LIST).blankLines(1)
         }
@@ -90,6 +88,21 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
 
             inPosition(right = BLOCK_COMMENT).spacing(commentSpacing(0))
             inPosition(right = EOL_COMMENT).spacing(commentSpacing(1))
+            inPosition(parent = FUNCTION_LITERAL, right = BLOCK).customRule { _, _, right ->
+                when (right.node?.children()?.firstOrNull()?.elementType) {
+                    BLOCK_COMMENT -> commentSpacing(0)
+                    EOL_COMMENT -> commentSpacing(1)
+                    else -> null
+                }
+            }
+        }
+
+        simple {
+            after(FILE_ANNOTATION_LIST).blankLines(1)
+            after(PACKAGE_DIRECTIVE).blankLines(1)
+        }
+
+        custom {
             inPosition(leftSet = DECLARATIONS, rightSet = DECLARATIONS).customRule(fun(
                 _: ASTBlock,
                 _: ASTBlock,
@@ -97,9 +110,12 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
             ): Spacing? {
                 val node = right.node ?: return null
                 val elementStart = node.startOfDeclaration() ?: return null
-                return if (StringUtil.containsLineBreak(node.text.subSequence(0, elementStart.startOffset - node.startOffset).trimStart())) {
+                return if (StringUtil.containsLineBreak(
+                        node.text.subSequence(0, elementStart.startOffset - node.startOffset).trimStart()
+                    )
+                )
                     createSpacing(0, minLineFeeds = 2)
-                } else
+                else
                     null
             })
 
@@ -600,7 +616,9 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
                 val prevSibling = rightParenthesis?.prevSibling
                 val spaces = if (kotlinCustomSettings.SPACE_BEFORE_EXTEND_COLON) 1 else 0
                 // TODO This should use DependentSpacingRule, but it doesn't set keepLineBreaks to false if max LFs is 0
-                if ((prevSibling as? PsiWhiteSpace)?.textContains('\n') == true || kotlinCommonSettings.METHOD_PARAMETERS_RPAREN_ON_NEXT_LINE) {
+                if ((prevSibling as? PsiWhiteSpace)?.textContains('\n') == true || kotlinCommonSettings
+                        .METHOD_PARAMETERS_RPAREN_ON_NEXT_LINE
+                ) {
                     createSpacing(spaces, keepLineBreaks = false)
                 } else {
                     createSpacing(spaces)

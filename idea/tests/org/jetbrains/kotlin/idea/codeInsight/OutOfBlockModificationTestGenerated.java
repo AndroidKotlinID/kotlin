@@ -28,6 +28,11 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/codeInsight/outOfBlock"), Pattern.compile("^(.+)\\.(kt|kts)$"), true);
     }
 
+    @TestMetadata("Comment.kt")
+    public void testComment() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/Comment.kt");
+    }
+
     @TestMetadata("FunBlock.kt")
     public void testFunBlock() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/FunBlock.kt");
@@ -68,9 +73,9 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         runTest("idea/testData/codeInsight/outOfBlock/FunWithType_Initializer_Expression.kt");
     }
 
-    @TestMetadata("InAntonymsObjectDeclaration.kt")
-    public void testInAntonymsObjectDeclaration() throws Exception {
-        runTest("idea/testData/codeInsight/outOfBlock/InAntonymsObjectDeclaration.kt");
+    @TestMetadata("InAnonymousObjectDeclaration.kt")
+    public void testInAnonymousObjectDeclaration() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InAnonymousObjectDeclaration.kt");
     }
 
     @TestMetadata("InClass.kt")
@@ -83,9 +88,29 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         runTest("idea/testData/codeInsight/outOfBlock/InClassFunctionWithoutInference.kt");
     }
 
+    @TestMetadata("InClassInUninitializedPropertyAccessor.kt")
+    public void testInClassInUninitializedPropertyAccessor() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InClassInUninitializedPropertyAccessor.kt");
+    }
+
     @TestMetadata("InClassPropertyAccessor.kt")
     public void testInClassPropertyAccessor() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/InClassPropertyAccessor.kt");
+    }
+
+    @TestMetadata("InComment.kt")
+    public void testInComment() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InComment.kt");
+    }
+
+    @TestMetadata("InDelegateCallOfSecondaryConstructor.kt")
+    public void testInDelegateCallOfSecondaryConstructor() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InDelegateCallOfSecondaryConstructor.kt");
+    }
+
+    @TestMetadata("InDelegateCallOfSecondaryConstructorInLocalClass.kt")
+    public void testInDelegateCallOfSecondaryConstructorInLocalClass() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InDelegateCallOfSecondaryConstructorInLocalClass.kt");
     }
 
     @TestMetadata("InExtensionFunction.kt")
@@ -138,6 +163,11 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         runTest("idea/testData/codeInsight/outOfBlock/InGlobalPropertyWithGetter.kt");
     }
 
+    @TestMetadata("InKDocComment.kt")
+    public void testInKDocComment() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InKDocComment.kt");
+    }
+
     @TestMetadata("InLambdaFunction.kt")
     public void testInLambdaFunction() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/InLambdaFunction.kt");
@@ -161,6 +191,11 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
     @TestMetadata("InNestedClassFunNoTypeBlockExpression.kt")
     public void testInNestedClassFunNoTypeBlockExpression() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/InNestedClassFunNoTypeBlockExpression.kt");
+    }
+
+    @TestMetadata("InPrimaryConstructor.kt")
+    public void testInPrimaryConstructor() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InPrimaryConstructor.kt");
     }
 
     @TestMetadata("InPropertyAccessorSpecifyType.kt")
@@ -198,6 +233,21 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         runTest("idea/testData/codeInsight/outOfBlock/InPropertyWithInference.kt");
     }
 
+    @TestMetadata("InPropertyWithoutInference.kt")
+    public void testInPropertyWithoutInference() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InPropertyWithoutInference.kt");
+    }
+
+    @TestMetadata("InSecondaryConstructorBody.kt")
+    public void testInSecondaryConstructorBody() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InSecondaryConstructorBody.kt");
+    }
+
+    @TestMetadata("InSecondaryConstructorParameter.kt")
+    public void testInSecondaryConstructorParameter() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InSecondaryConstructorParameter.kt");
+    }
+
     @TestMetadata("InSuperTypeCallCallInLambdaInCall.kt")
     public void testInSuperTypeCallCallInLambdaInCall() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/InSuperTypeCallCallInLambdaInCall.kt");
@@ -218,9 +268,19 @@ public class OutOfBlockModificationTestGenerated extends AbstractOutOfBlockModif
         runTest("idea/testData/codeInsight/outOfBlock/InTopFun.kt");
     }
 
+    @TestMetadata("InUninitializedPropertyAccessor.kt")
+    public void testInUninitializedPropertyAccessor() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InUninitializedPropertyAccessor.kt");
+    }
+
     @TestMetadata("InitBlock.kt")
     public void testInitBlock() throws Exception {
         runTest("idea/testData/codeInsight/outOfBlock/InitBlock.kt");
+    }
+
+    @TestMetadata("InitBlockInLocalClass.kt")
+    public void testInitBlockInLocalClass() throws Exception {
+        runTest("idea/testData/codeInsight/outOfBlock/InitBlockInLocalClass.kt");
     }
 
     @TestMetadata("LocalFunWithBody.kt")

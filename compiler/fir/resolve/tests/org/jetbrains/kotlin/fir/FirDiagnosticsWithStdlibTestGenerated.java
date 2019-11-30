@@ -88,9 +88,19 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/resolve/testData/resolve/stdlib/functionX.kt");
     }
 
+    @TestMetadata("hashMapTypeAlias.kt")
+    public void testHashMapTypeAlias() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/hashMapTypeAlias.kt");
+    }
+
     @TestMetadata("hashSet.kt")
     public void testHashSet() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/hashSet.kt");
+    }
+
+    @TestMetadata("hashTableWithForEach.kt")
+    public void testHashTableWithForEach() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/hashTableWithForEach.kt");
     }
 
     @TestMetadata("helloWorld.kt")
@@ -101,6 +111,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("implicitReceiverOrder.kt")
     public void testImplicitReceiverOrder() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/implicitReceiverOrder.kt");
+    }
+
+    @TestMetadata("javaEnumSynthetic.kt")
+    public void testJavaEnumSynthetic() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/javaEnumSynthetic.kt");
     }
 
     @TestMetadata("listPlusAssign.kt")
@@ -116,6 +131,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("multipleImplicitReceivers.kt")
     public void testMultipleImplicitReceivers() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/multipleImplicitReceivers.kt");
+    }
+
+    @TestMetadata("noneWithForEach.kt")
+    public void testNoneWithForEach() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/noneWithForEach.kt");
     }
 
     @TestMetadata("nullableTypeParameter.kt")
@@ -163,6 +183,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/resolve/testData/resolve/stdlib/typeAliasDeserialization.kt");
     }
 
+    @TestMetadata("typeAliasWithForEach.kt")
+    public void testTypeAliasWithForEach() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/typeAliasWithForEach.kt");
+    }
+
     @TestMetadata("typeParameterDerived.kt")
     public void testTypeParameterDerived() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/typeParameterDerived.kt");
@@ -171,6 +196,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("unaryOperators.kt")
     public void testUnaryOperators() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/unaryOperators.kt");
+    }
+
+    @TestMetadata("whenAsLambdaReturnStatement.kt")
+    public void testWhenAsLambdaReturnStatement() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/whenAsLambdaReturnStatement.kt");
     }
 
     @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib/callableReferences")
@@ -364,6 +394,24 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         }
     }
 
+    @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib/inference")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Inference extends AbstractFirDiagnosticsWithStdlibTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInInference() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib/inference"), Pattern.compile("^([^.]+)\\.kt$"), true);
+        }
+
+        @TestMetadata("complexConstraintSystem.kt")
+        public void testComplexConstraintSystem() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/inference/complexConstraintSystem.kt");
+        }
+    }
+
     @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib/j+k")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -441,6 +489,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/LoggerInstance.kt");
         }
 
+        @TestMetadata("MapEntry.kt")
+        public void testMapEntry() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/MapEntry.kt");
+        }
+
         @TestMetadata("MyException.kt")
         public void testMyException() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/MyException.kt");
@@ -480,6 +533,21 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         public void testStaticGenericMethod() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/StaticGenericMethod.kt");
         }
+
+        @TestMetadata("SyntheticAfterFiltering.kt")
+        public void testSyntheticAfterFiltering() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/SyntheticAfterFiltering.kt");
+        }
+
+        @TestMetadata("SyntheticWithForEach.kt")
+        public void testSyntheticWithForEach() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/SyntheticWithForEach.kt");
+        }
+
+        @TestMetadata("typeParameterUse.kt")
+        public void testTypeParameterUse() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/typeParameterUse.kt");
+        }
     }
 
     @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib/problems")
@@ -492,6 +560,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
 
         public void testAllFilesPresentInProblems() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib/problems"), Pattern.compile("^([^.]+)\\.kt$"), true);
+        }
+
+        @TestMetadata("cloneArray.kt")
+        public void testCloneArray() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/cloneArray.kt");
         }
 
         @TestMetadata("unresolvedComparator.kt")

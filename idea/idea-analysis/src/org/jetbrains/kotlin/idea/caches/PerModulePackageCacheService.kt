@@ -47,10 +47,10 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-class KotlinPackageContentModificationListener(private val project: Project) {
-    init {
-        val connection = project.messageBus.connect()
+class KotlinPackageContentModificationListener(private val project: Project): Disposable {
+    val connection = project.messageBus.connect()
 
+    init {
         connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun before(events: MutableList<out VFileEvent>) = onEvents(events)
             override fun after(events: List<VFileEvent>) = onEvents(events)
@@ -71,6 +71,13 @@ class KotlinPackageContentModificationListener(private val project: Project) {
                             val vFile = it.file!!
                             vFile.isDirectory || FileTypeRegistry.getInstance().getFileTypeByFileName(vFile.nameSequence) == KotlinFileType.INSTANCE
                         }
+                        .filter {
+                            when (val origin = it.requestor) {
+                                is Project -> origin == project
+                                is PsiManager -> origin.project == project
+                                else -> true
+                            }
+                        }
                         .forEach { event -> service.notifyPackageChange(event) }
                 }
             }
@@ -81,6 +88,10 @@ class KotlinPackageContentModificationListener(private val project: Project) {
                 PerModulePackageCacheService.getInstance(project).onTooComplexChange()
             }
         })
+    }
+
+    override fun dispose() {
+        connection.disconnect()
     }
 }
 

@@ -8,19 +8,22 @@ package org.jetbrains.kotlin.fir.resolve.calls
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.impl.FirConstructorImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirImportImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedImportImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.resolve.*
-import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculatorWithJump
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
+import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirAbstractImportingScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirExplicitSimpleImportingScope
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.ConeClassLikeType
-import org.jetbrains.kotlin.fir.types.coneTypeUnsafe
+import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.cast
@@ -110,7 +113,7 @@ class MemberScopeTowerLevel(
                 }
             }.stop()
         ) return ProcessorAction.STOP
-        val withSynthetic = FirSyntheticPropertiesScope(session, scope, ReturnTypeCalculatorWithJump(session, scopeSession))
+        val withSynthetic = FirSyntheticPropertiesScope(session, scope)
         return withSynthetic.processScopeMembers { symbol ->
             output.consumeCandidate(symbol, symbol.dispatchReceiverValue(), implicitExtensionReceiver)
         }
@@ -146,12 +149,14 @@ class MemberScopeTowerLevel(
 // (if explicit receiver exists, it always *should* be an extension receiver)
 class ScopeTowerLevel(
     session: FirSession,
-    val bodyResolveComponents: BodyResolveComponents,
+    private val bodyResolveComponents: BodyResolveComponents,
     val scope: FirScope,
-    val implicitExtensionReceiver: ImplicitReceiverValue<*>? = null
+    val implicitExtensionReceiver: ImplicitReceiverValue<*>? = null,
+    private val extensionsOnly: Boolean = false
 ) : SessionBasedTowerLevel(session) {
     private fun FirCallableSymbol<*>.hasConsistentReceivers(extensionReceiver: ReceiverValue?): Boolean =
         when {
+            extensionsOnly && !hasExtensionReceiver() -> false
             !hasConsistentExtensionReceiver(extensionReceiver) -> false
             scope is FirAbstractImportingScope -> true
             else -> dispatchReceiverValue().let { it == null || it.klassSymbol.fir.classKind == ClassKind.OBJECT }
@@ -357,10 +362,18 @@ private fun processConstructors(
     try {
         if (matchedSymbol != null) {
             val scope = when (matchedSymbol) {
-                is FirTypeAliasSymbol -> matchedSymbol.fir.buildUseSiteMemberScope(session, scopeSession)
+                is FirTypeAliasSymbol -> {
+                    val type = matchedSymbol.fir.expandedTypeRef.coneTypeUnsafe<ConeClassLikeType>().fullyExpandedType(session)
+                    val basicScope = type.scope(session, scopeSession)
+
+                    if (basicScope != null && type.typeArguments.isNotEmpty()) {
+                        prepareSubstitutingScopeForTypeAliasConstructors(
+                            matchedSymbol, type, session, basicScope
+                        ) ?: return ProcessorAction.STOP
+                    } else basicScope
+                }
                 is FirClassSymbol -> matchedSymbol.buildUseSiteMemberScope(session, scopeSession)
             }
-
 
             val constructorName = when (matchedSymbol) {
                 is FirTypeAliasSymbol -> finalExpansionName(matchedSymbol, session) ?: return ProcessorAction.NEXT
@@ -381,3 +394,85 @@ private fun processConstructors(
         throw RuntimeException("While processing constructors", e)
     }
 }
+
+private class TypeAliasConstructorsSubstitutingScope(
+    private val typeAliasSymbol: FirTypeAliasSymbol,
+    private val substitutor: ConeSubstitutor,
+    private val delegatingScope: FirScope
+) : FirScope() {
+    override fun processFunctionsByName(name: Name, processor: (FirFunctionSymbol<*>) -> ProcessorAction): ProcessorAction {
+        return delegatingScope.processFunctionsByName(name) {
+            val toProcess = if (it is FirConstructorSymbol) {
+                it.fir.createTypeAliasConstructor(substitutor, typeAliasSymbol.fir.typeParameters).symbol
+            } else {
+                it
+            }
+
+            processor(toProcess)
+        }
+    }
+}
+
+private fun prepareSubstitutingScopeForTypeAliasConstructors(
+    typeAliasSymbol: FirTypeAliasSymbol,
+    expandedType: ConeClassLikeType,
+    session: FirSession,
+    delegatingScope: FirScope
+): FirScope? {
+    val expandedClass = expandedType.lookupTag.toSymbol(session)?.fir as? FirRegularClass ?: return null
+
+    val resultingTypeArguments = expandedType.typeArguments.map {
+        // We don't know how to handle cases like yet
+        // typealias A = ArrayList<*>()
+        it as? ConeKotlinType ?: return null
+    }
+
+    val substitutor = substitutorByMap(
+        expandedClass.typeParameters.map { it.symbol }.zip(resultingTypeArguments).toMap()
+    );
+
+    return TypeAliasConstructorsSubstitutingScope(typeAliasSymbol, substitutor, delegatingScope)
+}
+
+private fun FirConstructor.createTypeAliasConstructor(
+    substitutor: ConeSubstitutor,
+    typeParameters: List<FirTypeParameter>
+): FirConstructor {
+    val newReturnTypeRef = returnTypeRef.substitute(substitutor)
+
+    val newParameterTypeRefs = valueParameters.map { valueParameter ->
+        valueParameter.returnTypeRef.substitute(substitutor)
+    }
+
+    if (newReturnTypeRef == null && newParameterTypeRefs.all { it == null }) return this
+
+    return FirConstructorImpl(
+        source, session, newReturnTypeRef ?: returnTypeRef, receiverTypeRef, status,
+        FirConstructorSymbol(symbol.callableId, overriddenSymbol = symbol)
+    ).apply {
+        resolvePhase = this@createTypeAliasConstructor.resolvePhase
+        valueParameters += this@createTypeAliasConstructor.valueParameters.zip(
+            newParameterTypeRefs
+        ) { valueParameter, newTypeRef ->
+            with(valueParameter) {
+                FirValueParameterImpl(
+                    source,
+                    session,
+                    newTypeRef ?: returnTypeRef,
+                    name,
+                    FirVariableSymbol(valueParameter.symbol.callableId),
+                    defaultValue,
+                    isCrossinline,
+                    isNoinline,
+                    isVararg
+                )
+            }
+        }
+        this.typeParameters += typeParameters
+    }
+}
+
+private fun FirTypeRef.substitute(substitutor: ConeSubstitutor): FirResolvedTypeRef? =
+    coneTypeUnsafe<ConeKotlinType>()
+        .let(substitutor::substituteOrNull)
+        ?.let { FirResolvedTypeRefImpl(source, it) }

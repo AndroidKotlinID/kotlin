@@ -1,5 +1,5 @@
 plugins {
-    id "com.moowork.node" version "1.2.0"
+    id "com.github.node-gradle.node"
 }
 
 description = 'Kotlin Standard Library for JS IR'
@@ -21,7 +21,6 @@ task prepareNativeBuiltinsSources(type: Sync) {
         include "Array.kt"
         include "Boolean.kt"
         include "CharSequence.kt"
-        include "Collections.kt"
         include "Comparable.kt"
         include "Coroutines.kt"
         include "Iterator.kt"

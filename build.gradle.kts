@@ -36,7 +36,6 @@ buildscript {
 }
 
 plugins {
-    `build-scan`
     idea
     id("jps-compatible")
     id("org.jetbrains.gradle.plugin.idea-ext")
@@ -49,11 +48,6 @@ pill {
         "buildSrc/prepare-deps/android-dx/build",
         "buildSrc/prepare-deps/intellij-sdk/build"
     )
-}
-
-buildScan {
-    setTermsOfServiceUrl("https://gradle.com/terms-of-service")
-    setTermsOfServiceAgree("yes")
 }
 
 val configuredJdks: List<JdkId> =
@@ -142,7 +136,7 @@ rootProject.apply {
     from(rootProject.file("gradle/jps.gradle.kts"))
 }
 
-IdeVersionConfigurator.setCurrentIde(this)
+IdeVersionConfigurator.setCurrentIde(project)
 
 extra["versions.protobuf"] = "2.6.1"
 extra["versions.javax.inject"] = "1"
@@ -214,6 +208,7 @@ extra["compilerModules"] = arrayOf(
     ":compiler:backend.wasm",
     ":compiler:ir.serialization.common",
     ":compiler:ir.serialization.js",
+    ":compiler:ir.serialization.jvm",
     ":kotlin-util-io",
     ":kotlin-util-klib",
     ":kotlin-util-klib-metadata",

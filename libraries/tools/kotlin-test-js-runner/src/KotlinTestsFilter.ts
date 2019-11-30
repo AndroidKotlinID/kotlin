@@ -13,13 +13,36 @@ export function runWithFilter(
 ): KotlinTestRunner {
     let path: string[] = [];
 
-    function pathString() {
+    function jsClassName() {
         // skip root
         if (!path[0]) {
             return path.slice(1).join('.')
-        } else {
-            return path.join('.')
         }
+
+        return path.join('.')
+    }
+
+    // In Java (Gradle, IDEA) inner classes uses `$` as separator
+    function javaClassName() {
+        const javaClassName = `${path.slice(1).join('$')}`;
+
+        // skip root
+        if (!path[0]) {
+            return javaClassName
+        }
+
+        if (!javaClassName) {
+            return path[0]
+        }
+
+        return `${path[0]}.${javaClassName}`
+    }
+
+    function everyOfJsOrJavaNames(
+        predicate: (value: string) => boolean
+    ): boolean {
+        return [jsClassName(), javaClassName()]
+            .every(value => predicate(value))
     }
 
     return {
@@ -27,7 +50,8 @@ export function runWithFilter(
             path.push(name);
 
             try {
-                if (path.length > 1 && !filter.mayContainTestsFromSuite(pathString())) return;
+                if (path.length > 0 && everyOfJsOrJavaNames((value) => !filter.mayContainTestsFromSuite(value)))
+                    return;
 
                 runner.suite(name, isIgnored, fn);
             } finally {
@@ -36,14 +60,12 @@ export function runWithFilter(
         },
 
         test: function (name: string, isIgnored: boolean, fn: () => void) {
-            path.push(name);
-
             try {
-                if (!filter.containsTest(pathString())) return;
+                if (everyOfJsOrJavaNames(value => !filter.containsTest(`${value}.${name}`)))
+                    return;
 
                 runner.test(name, isIgnored, fn);
             } finally {
-                path.pop()
             }
         }
     };
@@ -84,7 +106,8 @@ export class StartsWithFilter implements KotlinTestsFilter {
     }
 
     isPrefixMatched(fqn: string): boolean {
-        return startsWith(fqn + ".", this.prefix);
+        return startsWith(this.prefix, fqn)
+            || startsWith(fqn, this.prefix);
     }
 
     mayContainTestsFromSuite(fqn: string): boolean {
@@ -102,7 +125,11 @@ export class StartsWithFilter implements KotlinTestsFilter {
 }
 
 export class ExactFilter implements KotlinTestsFilter {
+    private readonly classNameOnlyRegExp: RegExp;
+
     constructor(public fqn: string) {
+        // Exact filter by class name only
+        this.classNameOnlyRegExp = RegExp(`^${escapeRegExp(this.fqn + ".")}[^\.]+$`);
     }
 
     mayContainTestsFromSuite(fqn: string): boolean {
@@ -110,7 +137,11 @@ export class ExactFilter implements KotlinTestsFilter {
     }
 
     containsTest(fqn: string): boolean {
-        return fqn === this.fqn;
+        if (fqn === this.fqn) {
+            return true
+        }
+
+        return this.classNameOnlyRegExp.test(fqn)
     }
 }
 

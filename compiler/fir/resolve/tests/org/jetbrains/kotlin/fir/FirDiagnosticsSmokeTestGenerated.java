@@ -8017,6 +8017,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             runTest("compiler/testData/diagnostics/tests/functionLiterals/LabeledFunctionLiterals.kt");
         }
 
+        @TestMetadata("prematurelyAnalyzingLambdaWhileFixingTypeVariableForAnotherArgument.kt")
+        public void testPrematurelyAnalyzingLambdaWhileFixingTypeVariableForAnotherArgument() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/functionLiterals/prematurelyAnalyzingLambdaWhileFixingTypeVariableForAnotherArgument.kt");
+        }
+
         @TestMetadata("returnNull.kt")
         public void testReturnNull() throws Exception {
             runTest("compiler/testData/diagnostics/tests/functionLiterals/returnNull.kt");
@@ -11023,6 +11028,16 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
             @TestMetadata("delegationAndInference.kt")
             public void testDelegationAndInference() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/substitutions/delegationAndInference.kt");
+            }
+
+            @TestMetadata("kt32189returnTypeWithTypealiasSubtitution.kt")
+            public void testKt32189returnTypeWithTypealiasSubtitution() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/substitutions/kt32189returnTypeWithTypealiasSubtitution.kt");
+            }
+
+            @TestMetadata("kt32189returnTypeWithTypealiasSubtitutionOldInference.kt")
+            public void testKt32189returnTypeWithTypealiasSubtitutionOldInference() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/substitutions/kt32189returnTypeWithTypealiasSubtitutionOldInference.kt");
             }
 
             @TestMetadata("kt6081SubstituteIntoClassCorrectly.kt")
@@ -17378,6 +17393,11 @@ public class FirDiagnosticsSmokeTestGenerated extends AbstractFirDiagnosticsSmok
         @TestMetadata("kt316.kt")
         public void testKt316() throws Exception {
             runTest("compiler/testData/diagnostics/tests/regressions/kt316.kt");
+        }
+
+        @TestMetadata("kt31975.kt")
+        public void testKt31975() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/regressions/kt31975.kt");
         }
 
         @TestMetadata("kt32205.kt")

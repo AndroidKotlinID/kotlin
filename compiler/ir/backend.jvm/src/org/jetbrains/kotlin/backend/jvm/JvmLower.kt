@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.jvm
 
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
+import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.common.lower.loops.forLoopsPhase
 import org.jetbrains.kotlin.backend.common.phaser.*
@@ -139,6 +140,17 @@ private val jvmLocalClassExtractionPhase = makeIrFilePhase(
     description = "Move local classes from field initializers and anonymous init blocks into the containing class"
 )
 
+private val computeStringTrimPhase = makeIrFilePhase<JvmBackendContext>(
+    { context ->
+        if (context.state.canReplaceStdlibRuntimeApiBehavior)
+            StringTrimLowering(context)
+        else
+            FileLoweringPass.Empty
+    },
+    name = "StringTrimLowering",
+    description = "Compute trimIndent and trimMargin operations on constant strings"
+)
+
 private val defaultArgumentStubPhase = makeIrFilePhase(
     ::JvmDefaultArgumentStubGenerator,
     name = "DefaultArgumentsStubGenerator",
@@ -173,8 +185,13 @@ private val staticInitializersPhase = makeIrFilePhase(
     description = "Move code from object init blocks and static field initializers to a new <clinit> function"
 )
 
-private val initializersPhase = makeIrFilePhase(
-    ::InitializersLowering,
+private val initializersPhase = makeIrFilePhase<JvmBackendContext>(
+    { context ->
+        object : InitializersLowering(context) {
+            override fun shouldEraseFieldInitializer(irField: IrField): Boolean =
+                irField.constantValue(context) == null
+        }
+    },
     name = "Initializers",
     description = "Merge init blocks and field initializers into constructors",
     stickyPostconditions = setOf(fun(irFile: IrFile) {
@@ -291,6 +308,7 @@ private val jvmFilePhases =
         checkLocalNamesWithOldBackendPhase then
 
         mainMethodGenerationPhase then
+        fakeInliningLocalVariablesLowering then
 
         makePatchParentsPhase(3)
 
