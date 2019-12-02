@@ -2622,6 +2622,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/constructorBridge.kt");
         }
 
+        @TestMetadata("constructorWithDefaultArguments.kt")
+        public void testConstructorWithDefaultArguments() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/inlineClasses/constructorWithDefaultArguments.kt");
+        }
+
         @TestMetadata("defaultParametersDontBox.kt")
         public void testDefaultParametersDontBox() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/defaultParametersDontBox.kt");
@@ -3045,6 +3050,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
                 @TestMetadata("defaultArgs.kt")
                 public void testDefaultArgs() throws Exception {
                     runTest("compiler/testData/codegen/bytecodeText/jvm8/jvmDefault/compatibility/defaultArgs.kt");
+                }
+
+                @TestMetadata("simpleDiamond.kt")
+                public void testSimpleDiamond() throws Exception {
+                    runTest("compiler/testData/codegen/bytecodeText/jvm8/jvmDefault/compatibility/simpleDiamond.kt");
                 }
 
                 @TestMetadata("simpleFunction.kt")

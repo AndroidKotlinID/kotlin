@@ -29,6 +29,16 @@ public class IrWriteFlagsTestGenerated extends AbstractIrWriteFlagsTest {
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/writeFlags"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM_IR, true);
     }
 
+    @TestMetadata("protectedAccessToBaseMethod.kt")
+    public void testProtectedAccessToBaseMethod() throws Exception {
+        runTest("compiler/testData/writeFlags/protectedAccessToBaseMethod.kt");
+    }
+
+    @TestMetadata("protectedAccessToBaseMethodDifferentPackage.kt")
+    public void testProtectedAccessToBaseMethodDifferentPackage() throws Exception {
+        runTest("compiler/testData/writeFlags/protectedAccessToBaseMethodDifferentPackage.kt");
+    }
+
     @TestMetadata("compiler/testData/writeFlags/callableReference")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -764,6 +774,11 @@ public class IrWriteFlagsTestGenerated extends AbstractIrWriteFlagsTest {
             @TestMetadata("onlyJvmDefaultsOnInterface.kt")
             public void testOnlyJvmDefaultsOnInterface() throws Exception {
                 runTest("compiler/testData/writeFlags/jvm8/defaults/onlyJvmDefaultsOnInterface.kt");
+            }
+
+            @TestMetadata("privateAccessorNaming.kt")
+            public void testPrivateAccessorNaming() throws Exception {
+                runTest("compiler/testData/writeFlags/jvm8/defaults/privateAccessorNaming.kt");
             }
 
             @TestMetadata("propertyAnnotation.kt")
