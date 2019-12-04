@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirSimpleFunctionImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirTypeParameterImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.resolve.calls.FirSyntheticFunctionSymbol
-import org.jetbrains.kotlin.fir.resolve.calls.SAM_PARAMETER_NAME
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.CallableId
@@ -38,6 +37,7 @@ interface FirSamResolver : FirSessionComponent {
 }
 
 private val NULL_STUB = Any()
+val SAM_PARAMETER_NAME = Name.identifier("block")
 
 class FirSamResolverImpl(
     private val firSession: FirSession,
@@ -265,7 +265,7 @@ private fun FirRegularClass.findSingleAbstractMethodByNames(
                 "${functionSymbol.callableId.callableName} is expected to be _root_ide_package_.org.jetbrains.kotlin.fir.declarations.FirSimpleFunction, but ${functionSymbol::class} was found"
             }
 
-            if (firFunction.modality != Modality.ABSTRACT) return@processFunctionsByName ProcessorAction.NEXT
+            if (firFunction.modality != Modality.ABSTRACT || firFunction.isPublicInObject()) return@processFunctionsByName ProcessorAction.NEXT
 
             if (resultMethod != null) {
                 metIncorrectMember = true
@@ -286,7 +286,7 @@ private fun FirRegularClass.hasMoreThenOneAbstractFunctionOrHasAbstractProperty(
     var wasAbstractFunction = false
     for (declaration in declarations) {
         if (declaration is FirProperty && declaration.modality == Modality.ABSTRACT) return true
-        if (declaration is FirSimpleFunction && declaration.modality == Modality.ABSTRACT) {
+        if (declaration is FirSimpleFunction && declaration.modality == Modality.ABSTRACT && !declaration.isPublicInObject()) {
             if (wasAbstractFunction) return true
             wasAbstractFunction = true
         }
@@ -294,6 +294,17 @@ private fun FirRegularClass.hasMoreThenOneAbstractFunctionOrHasAbstractProperty(
 
     return false
 }
+
+// From the definition of function interfaces in the Java specification (pt. 9.8):
+// "methods that are members of I that do not have the same signature as any public instance method of the class Object"
+// It means that if an interface declares `int hashCode()` then the method won't be taken into account when
+// checking if the interface is SAM.
+private fun FirSimpleFunction.isPublicInObject(): Boolean {
+    // TODO: We make here a conservative check just filtering out methods by name, check the signature as well
+    return name.asString() in PUBLIC_METHOD_NAMES_IN_OBJECT
+}
+
+private val PUBLIC_METHOD_NAMES_IN_OBJECT = setOf("equals", "hashCode", "getClass", "wait", "notify", "notifyAll", "toString")
 
 private fun FirSimpleFunction.getFunctionTypeForAbstractMethod(): ConeLookupTagBasedType {
     val parameterTypes = valueParameters.map {

@@ -1,17 +1,16 @@
 plugins {
-    kotlin("jvm") version "1.3.50"
+    kotlin("jvm") version embeddedKotlinVersion
     `maven-publish`
 }
 
 group = "org.jetbrains.kotlin"
-version = "0.0.1"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
     implementation(gradleApi())
 }
 

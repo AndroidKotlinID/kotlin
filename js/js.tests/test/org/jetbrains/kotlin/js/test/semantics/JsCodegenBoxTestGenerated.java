@@ -9187,6 +9187,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/enum/companionObjectInEnum.kt");
         }
 
+        @TestMetadata("constructorWithReordering.kt")
+        public void testConstructorWithReordering() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/constructorWithReordering.kt");
+        }
+
         @TestMetadata("deepInnerClassInEnumEntryClass.kt")
         public void testDeepInnerClassInEnumEntryClass() throws Exception {
             runTest("compiler/testData/codegen/box/enum/deepInnerClassInEnumEntryClass.kt");
@@ -10876,6 +10881,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
 
         public void testAllFilesPresentInInlineClasses() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+        }
+
+        @TestMetadata("annotatedMemberExtensionProperty.kt")
+        public void testAnnotatedMemberExtensionProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/annotatedMemberExtensionProperty.kt");
         }
 
         @TestMetadata("boundCallableReferencePassedToInlineFunction.kt")
