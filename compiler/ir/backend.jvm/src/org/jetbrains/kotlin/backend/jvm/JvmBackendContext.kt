@@ -33,7 +33,6 @@ import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -46,7 +45,7 @@ class JvmBackendContext(
     val psiSourceManager: PsiSourceManager,
     override val irBuiltIns: IrBuiltIns,
     irModuleFragment: IrModuleFragment,
-    symbolTable: SymbolTable,
+    private val symbolTable: SymbolTable,
     val phaseConfig: PhaseConfig,
     // If the JVM fqname of a class differs from what is implied by its parent, e.g. if it's a file class
     // annotated with @JvmPackageName, the correct name is recorded here.
@@ -64,10 +63,9 @@ class JvmBackendContext(
     override val declarationFactory: JvmDeclarationFactory = JvmDeclarationFactory(methodSignatureMapper)
     override val sharedVariablesManager = JvmSharedVariablesManager(state.module, builtIns, irBuiltIns)
 
-    private val symbolTable = symbolTable.lazyWrapper
     override val ir = JvmIr(irModuleFragment, this.symbolTable)
 
-    val irIntrinsics = IrIntrinsicMethods(irBuiltIns, ir.symbols)
+    val irIntrinsics by lazy { IrIntrinsicMethods(irBuiltIns, ir.symbols) }
 
     private val localClassType = mutableMapOf<IrAttributeContainer, Type>()
 
@@ -116,16 +114,16 @@ class JvmBackendContext(
     }
 
     internal fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol =
-        symbolTable.referenceClass(descriptor)
+        symbolTable.lazyWrapper.referenceClass(descriptor)
 
     internal fun referenceTypeParameter(descriptor: TypeParameterDescriptor): IrTypeParameterSymbol =
-        symbolTable.referenceTypeParameter(descriptor)
+        symbolTable.lazyWrapper.referenceTypeParameter(descriptor)
 
     internal fun referenceFunction(descriptor: FunctionDescriptor): IrFunctionSymbol =
         if (descriptor is ClassConstructorDescriptor)
-            symbolTable.referenceConstructor(descriptor)
+            symbolTable.lazyWrapper.referenceConstructor(descriptor)
         else
-            symbolTable.referenceSimpleFunction(descriptor)
+            symbolTable.lazyWrapper.referenceSimpleFunction(descriptor)
 
     override fun log(message: () -> String) {
         /*TODO*/
@@ -147,7 +145,7 @@ class JvmBackendContext(
 
     inner class JvmIr(
         irModuleFragment: IrModuleFragment,
-        symbolTable: ReferenceSymbolTable
+        symbolTable: SymbolTable
     ) : Ir<JvmBackendContext>(this, irModuleFragment) {
         override val symbols = JvmSymbols(this@JvmBackendContext, symbolTable)
 
