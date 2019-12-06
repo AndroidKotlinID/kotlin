@@ -41,8 +41,7 @@ open class FirBodyResolveTransformer(
         components.file = file
         return withScopeCleanup(components.topLevelScopes) {
             components.topLevelScopes.addImportingScopes(file, session, components.scopeSession)
-            @Suppress("UNCHECKED_CAST")
-            super.transformFile(file, data) as CompositeTransformResult<FirFile>
+            super.transformFile(file, data)
         }
     }
 
@@ -145,6 +144,13 @@ open class FirBodyResolveTransformer(
 
     override fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: ResolutionMode): CompositeTransformResult<FirStatement> {
         return expressionsTransformer.transformAnnotationCall(annotationCall, data)
+    }
+
+    override fun transformDelegatedConstructorCall(
+        delegatedConstructorCall: FirDelegatedConstructorCall,
+        data: ResolutionMode
+    ): CompositeTransformResult<FirStatement> {
+        return expressionsTransformer.transformDelegatedConstructorCall(delegatedConstructorCall, data)
     }
 
     // ------------------------------------- Declarations -------------------------------------

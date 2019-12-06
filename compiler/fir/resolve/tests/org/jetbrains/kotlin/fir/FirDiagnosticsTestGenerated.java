@@ -53,6 +53,16 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         runTest("compiler/fir/resolve/testData/resolve/delegatedSuperType.kt");
     }
 
+    @TestMetadata("delegatingConstructorCall.kt")
+    public void testDelegatingConstructorCall() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/delegatingConstructorCall.kt");
+    }
+
+    @TestMetadata("delegatingConstructorsAndTypeAliases.kt")
+    public void testDelegatingConstructorsAndTypeAliases() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/delegatingConstructorsAndTypeAliases.kt");
+    }
+
     @TestMetadata("derivedClass.kt")
     public void testDerivedClass() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/derivedClass.kt");
@@ -111,6 +121,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
     @TestMetadata("functionTypes.kt")
     public void testFunctionTypes() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/functionTypes.kt");
+    }
+
+    @TestMetadata("genericConstructors.kt")
+    public void testGenericConstructors() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/genericConstructors.kt");
     }
 
     @TestMetadata("genericFunctions.kt")
@@ -374,6 +389,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/resolve/testData/resolve/expresssions"), Pattern.compile("^([^.]+)\\.kt$"), true);
         }
 
+        @TestMetadata("annotationWithReturn.kt")
+        public void testAnnotationWithReturn() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/annotationWithReturn.kt");
+        }
+
         @TestMetadata("annotations.kt")
         public void testAnnotations() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/annotations.kt");
@@ -472,6 +492,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("localInnerClass.kt")
         public void testLocalInnerClass() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localInnerClass.kt");
+        }
+
+        @TestMetadata("localObjects.kt")
+        public void testLocalObjects() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localObjects.kt");
         }
 
         @TestMetadata("localScopes.kt")
@@ -866,6 +891,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("simpleFakeOverride.kt")
         public void testSimpleFakeOverride() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/overrides/simpleFakeOverride.kt");
+        }
+
+        @TestMetadata("simpleMostSpecific.kt")
+        public void testSimpleMostSpecific() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/overrides/simpleMostSpecific.kt");
         }
 
         @TestMetadata("supertypeGenerics.kt")

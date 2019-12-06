@@ -324,7 +324,6 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         delegatedConstructorCall.configure {
             +field("constructedTypeRef", typeRef)
             generateBooleanFields("this", "super")
-            +calleeReference.withTransform()
         }
 
         valueParameter.configure {
@@ -491,6 +490,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
 
         resolvedTypeRef.configure {
             +field("type", coneKotlinTypeType)
+            +field("delegatedTypeRef", typeRef, nullable = true)
         }
 
         delegatedTypeRef.configure {

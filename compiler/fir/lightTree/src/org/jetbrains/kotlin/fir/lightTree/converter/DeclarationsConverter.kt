@@ -387,9 +387,9 @@ class DeclarationsConverter(
 
             val selfType = null.toDelegatedSelfType(firClass)
 
-            val defaultDelegatedSuperTypeRef = when {
-                modifiers.isEnum() && (classKind == ClassKind.ENUM_CLASS) ->
-                    FirResolvedTypeRefImpl(
+            when {
+                modifiers.isEnum() && (classKind == ClassKind.ENUM_CLASS) -> {
+                    superTypeRefs += FirResolvedTypeRefImpl(
                         source = null,
                         ConeClassLikeTypeImpl(
                             implicitEnumType.type.lookupTag,
@@ -397,9 +397,12 @@ class DeclarationsConverter(
                             isNullable = false
                         )
                     )
-                modifiers.isAnnotation() && (classKind == ClassKind.ANNOTATION_CLASS) -> implicitAnnotationType
-                else -> implicitAnyType
+                }
+                modifiers.isAnnotation() && (classKind == ClassKind.ANNOTATION_CLASS) -> {
+                    superTypeRefs += implicitAnnotationType
+                }
             }
+            val defaultDelegatedSuperTypeRef = implicitAnyType
 
             superTypeRefs.ifEmpty { superTypeRefs += defaultDelegatedSuperTypeRef }
 

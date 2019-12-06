@@ -65,7 +65,7 @@ private fun Candidate.containsTypeVariablesWithProperEqualConstraints(components
 
             val constraints = variableWithConstraints.constraints
             val onlyProperEqualConstraints =
-                constraints.isNotEmpty() && constraints.all { it.kind.isEqual() && csBuilder.isProperType(it.type) }
+                constraints.isNotEmpty() && constraints.any { it.kind.isEqual() && csBuilder.isProperType(it.type) }
 
             if (!onlyProperEqualConstraints) return false
         }
@@ -258,6 +258,11 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
                 if (processBlocks) {
                     this.returnExpressions().forEach { it.processAllContainingCallCandidates(processBlocks, processor) }
                 }
+            }
+
+            is FirDelegatedConstructorCall -> {
+                processCandidateIfApplicable(processor)
+                this.arguments.forEach { it.processAllContainingCallCandidates(processBlocks, processor) }
             }
         }
     }
