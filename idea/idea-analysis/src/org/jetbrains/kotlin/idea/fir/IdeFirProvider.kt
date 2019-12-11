@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.fir
 
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.fir.FirSession
@@ -28,37 +29,58 @@ import org.jetbrains.kotlin.psi.KtFile
 class IdeFirProvider(
     val project: Project,
     val scope: GlobalSearchScope,
-    val builder: RawFirBuilder,
     val session: FirSession
 ) : FirProvider() {
     private val cacheProvider = FirProviderImpl(session)
-    // TODO: invalidation?
-    private val files = mutableMapOf<KtFile, FirFile>()
+
+    data class FirFileWithStamp(val file: FirFile, val stamp: Long)
+
+    private val files = mutableMapOf<KtFile, FirFileWithStamp>()
 
     override fun getFirClassifierByFqName(classId: ClassId): FirClassLikeDeclaration<*>? {
         return cacheProvider.getFirClassifierByFqName(classId) ?: run {
+            try {
+                val classes = KotlinFullClassNameIndex.getInstance().get(classId.asSingleFqName().asString(), project, scope)
+                val ktClass = classes.firstOrNull {
+                    classId.packageFqName == it.containingKtFile.packageFqName
+                } ?: return null // TODO: what if two of them?
 
-            val classes = KotlinFullClassNameIndex.getInstance().get(classId.asSingleFqName().asString(), project, scope)
-            val ktClass = classes.firstOrNull {
-                classId.packageFqName == it.containingKtFile.packageFqName
-            } ?: return null // TODO: what if two of them?
-            val ktFile = ktClass.containingKtFile
+                val ktFile = ktClass.containingKtFile
+                getOrBuildFile(ktFile)
 
-            getOrBuildFile(ktFile)
-
-            cacheProvider.getFirClassifierByFqName(classId)
+                cacheProvider.getFirClassifierByFqName(classId)
+            } catch (e: ProcessCanceledException) {
+                return null
+            }
         }
     }
 
     fun getOrBuildFile(ktFile: KtFile): FirFile {
-        return files.getOrPut(ktFile) {
-            val file = builder.buildFirFile(ktFile)
-            cacheProvider.recordFile(file)
-            file
+        val modificationStamp = ktFile.modificationStamp
+        files[ktFile]?.let { (firFile, stamp) ->
+            if (stamp == modificationStamp) {
+                return firFile
+            }
+        }
+        return synchronized(ktFile) {
+            var fileWithStamp = files[ktFile]
+            if (fileWithStamp != null && fileWithStamp.stamp == modificationStamp) {
+                fileWithStamp.file
+            } else {
+                val file = RawFirBuilder(session, stubMode = false).buildFirFile(ktFile)
+                cacheProvider.recordFile(file)
+                fileWithStamp = FirFileWithStamp(file, modificationStamp)
+                files[ktFile] = fileWithStamp
+                file
+            }
         }
     }
 
-    fun getFile(ktFile: KtFile): FirFile? = files[ktFile]
+    fun getFile(ktFile: KtFile): FirFile? {
+        val (firFile, stamp) = files[ktFile] ?: return null
+        if (stamp == ktFile.modificationStamp) return firFile
+        return null
+    }
 
     override fun getClassLikeSymbolByFqName(classId: ClassId): FirClassLikeSymbol<*>? {
         return getFirClassifierByFqName(classId)?.symbol
@@ -66,11 +88,15 @@ class IdeFirProvider(
 
     override fun getTopLevelCallableSymbols(packageFqName: FqName, name: Name): List<FirCallableSymbol<*>> {
         val packagePrefix = if (packageFqName.isRoot) "" else "$packageFqName."
-        val topLevelFunctions = KotlinTopLevelFunctionFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
-        val topLevelProperties = KotlinTopLevelPropertyFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
-        topLevelFunctions.forEach { getOrBuildFile(it.containingKtFile) }
-        topLevelProperties.forEach { getOrBuildFile(it.containingKtFile) }
-        return cacheProvider.getTopLevelCallableSymbols(packageFqName, name)
+        return try {
+            val topLevelFunctions = KotlinTopLevelFunctionFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
+            val topLevelProperties = KotlinTopLevelPropertyFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
+            topLevelFunctions.forEach { getOrBuildFile(it.containingKtFile) }
+            topLevelProperties.forEach { getOrBuildFile(it.containingKtFile) }
+            cacheProvider.getTopLevelCallableSymbols(packageFqName, name)
+        } catch (e: ProcessCanceledException) {
+            emptyList()
+        }
     }
 
     override fun getFirClassifierContainerFile(fqName: ClassId): FirFile {
@@ -91,8 +117,12 @@ class IdeFirProvider(
     override fun getFirClassifierContainerFileIfAny(symbol: FirClassLikeSymbol<*>): FirFile? {
         val psi = symbol.fir.source?.psi
         if (psi is KtElement) {
-            val ktFile = psi.containingKtFile
-            return getOrBuildFile(ktFile)
+            return try {
+                val ktFile = psi.containingKtFile
+                getOrBuildFile(ktFile)
+            } catch (e: ProcessCanceledException) {
+                null
+            }
         }
         return getFirClassifierContainerFileIfAny(symbol.classId)
     }
@@ -102,9 +132,13 @@ class IdeFirProvider(
     }
 
     override fun getFirFilesByPackage(fqName: FqName): List<FirFile> {
-        val files = KotlinExactPackagesIndex.getInstance()[fqName.asString(), project, scope]
-        files.forEach { getOrBuildFile(it) }
-        return cacheProvider.getFirFilesByPackage(fqName)
+        return try {
+            val files = KotlinExactPackagesIndex.getInstance()[fqName.asString(), project, scope]
+            files.forEach { getOrBuildFile(it) }
+            cacheProvider.getFirFilesByPackage(fqName)
+        } catch (e: ProcessCanceledException) {
+            emptyList()
+        }
     }
 
     override fun getClassDeclaredMemberScope(classId: ClassId): FirScope? {

@@ -55,7 +55,6 @@ import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralKotlinToKotlinCo
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralTextToKotlinCopyPasteTest
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractTextJavaToKotlinCopyPasteConversionTest
 import org.jetbrains.kotlin.idea.coverage.AbstractKotlinCoverageOutputFilesTest
-import org.jetbrains.kotlin.idea.debugger.*
 import org.jetbrains.kotlin.idea.debugger.evaluate.*
 import org.jetbrains.kotlin.idea.debugger.test.sequence.exec.AbstractSequenceTraceTestCase
 import org.jetbrains.kotlin.idea.debugger.test.*
@@ -253,6 +252,16 @@ fun main(args: Array<String>) {
             model("checker/scripts", extension = "kts")
             model("checker/duplicateJvmSignature")
             model("checker/infos", testMethod = "doTestWithInfos")
+            model("checker/diagnosticsMessage")
+        }
+
+        testClass<AbstractFirPsiCheckerTest> {
+            model("checker", recursive = false)
+            model("checker/regression")
+            model("checker/recovery")
+            model("checker/rendering")
+            model("checker/duplicateJvmSignature")
+            model("checker/infos")
             model("checker/diagnosticsMessage")
         }
 
@@ -497,6 +506,10 @@ fun main(args: Array<String>) {
         }
 
         testClass<AbstractReferenceResolveTest> {
+            model("resolve/references", pattern = KT_WITHOUT_DOTS_IN_NAME)
+        }
+
+        testClass<AbstractFirReferenceResolveTest> {
             model("resolve/references", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
 

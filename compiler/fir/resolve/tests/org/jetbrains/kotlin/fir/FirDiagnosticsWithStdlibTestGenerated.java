@@ -534,6 +534,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/RawType.kt");
         }
 
+        @TestMetadata("smartSet.kt")
+        public void testSmartSet() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/smartSet.kt");
+        }
+
         @TestMetadata("StaticClassConstructorFromBaseClass.kt")
         public void testStaticClassConstructorFromBaseClass() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/StaticClassConstructorFromBaseClass.kt");
@@ -585,6 +590,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         @TestMetadata("tryWithLambdaInside.kt")
         public void testTryWithLambdaInside() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/tryWithLambdaInside.kt");
+        }
+
+        @TestMetadata("weakHashMap.kt")
+        public void testWeakHashMap() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/weakHashMap.kt");
         }
     }
 }

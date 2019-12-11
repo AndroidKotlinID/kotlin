@@ -941,6 +941,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/problems/asImports.kt");
         }
 
+        @TestMetadata("covariantArrayAsReceiver.kt")
+        public void testCovariantArrayAsReceiver() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/covariantArrayAsReceiver.kt");
+        }
+
         @TestMetadata("defaultJavaImportHiding.kt")
         public void testDefaultJavaImportHiding() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/defaultJavaImportHiding.kt");
@@ -1108,6 +1113,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("samSupertypeWithOverride.kt")
         public void testSamSupertypeWithOverride() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/samConversions/samSupertypeWithOverride.kt");
+        }
+
+        @TestMetadata("samWithEquals.kt")
+        public void testSamWithEquals() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/samConversions/samWithEquals.kt");
         }
 
         @TestMetadata("simple.kt")
