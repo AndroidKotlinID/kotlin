@@ -88,6 +88,10 @@ class KotlinBuildProperties(
     val buildCacheUrl: String? = get("kotlin.build.cache.url") as String?
 
     val pushToBuildCache: Boolean = getBoolean("kotlin.build.cache.push", isTeamcityBuild)
+
+    val localBuildCacheEnabled: Boolean = getBoolean("kotlin.build.cache.local.enabled", !isTeamcityBuild)
+
+    val buildScanServer: String? = get("kotlin.build.scan.url") as String?
 }
 
 private const val extensionName = "kotlinBuildProperties"

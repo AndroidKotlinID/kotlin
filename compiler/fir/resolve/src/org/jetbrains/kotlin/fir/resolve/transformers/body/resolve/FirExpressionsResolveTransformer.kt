@@ -5,11 +5,11 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
-import org.jetbrains.kotlin.fir.*
-import org.jetbrains.kotlin.fir.declarations.FirClass
+import com.intellij.openapi.progress.ProcessCanceledException
+import org.jetbrains.kotlin.fir.BuiltinTypes
+import org.jetbrains.kotlin.fir.FirCallResolver
 import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
-import org.jetbrains.kotlin.fir.diagnostics.FirDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirErrorExpressionImpl
@@ -22,14 +22,15 @@ import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.impl.FirErrorNamedReferenceImpl
 import org.jetbrains.kotlin.fir.references.impl.FirExplicitThisReference
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.candidate
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirOperatorAmbiguityError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirTypeMismatchError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirVariableExpectedError
-import org.jetbrains.kotlin.fir.resolve.transformers.IntegerLiteralTypeApproximationTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.InvocationKindTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreReceiver
+import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLookupTagWithFixedSymbol
@@ -155,6 +156,8 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
                     completionResult.transformArguments(transformer, ResolutionMode.LambdaResolution(null))
                 }
                 completionResult
+            } catch (e: ProcessCanceledException) {
+                throw e
             } catch (e: Throwable) {
                 throw RuntimeException("While resolving call ${functionCall.render()}", e)
             }
@@ -282,6 +285,31 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
         }
         dataFlowAnalyzer.exitTypeOperatorCall(typeOperatorCall)
         return resolved.transform(integerLiteralTypeApproximator, null)
+    }
+
+    override fun transformCheckNotNullCall(
+        checkNotNullCall: FirCheckNotNullCall,
+        data: ResolutionMode
+    ): CompositeTransformResult<FirStatement> {
+        // Resolve the return type of a call to the synthetic function with signature:
+        //   fun <K> checkNotNull(arg: K?): K
+        // ...in order to get the not-nullable type of the argument.
+
+        if (checkNotNullCall.calleeReference is FirResolvedNamedReference && checkNotNullCall.resultType !is FirImplicitTypeRef) {
+            return checkNotNullCall.compose()
+        }
+
+        checkNotNullCall.transformArguments(transformer, ResolutionMode.ContextDependent)
+
+        val result = components.syntheticCallGenerator.generateCalleeForCheckNotNullCall(checkNotNullCall)?.let {
+            callCompleter.completeCall(it, data.expectedType)
+        } ?: run {
+            checkNotNullCall.resultType =
+                FirErrorTypeRefImpl(null, FirSimpleDiagnostic("Can't resolve !! operator call", DiagnosticKind.InferenceError))
+            checkNotNullCall
+        }
+        dataFlowAnalyzer.exitCheckNotNullCall(result)
+        return result.compose()
     }
 
     override fun transformBinaryLogicExpression(

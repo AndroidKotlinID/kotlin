@@ -20,29 +20,13 @@ buildscript {
         }
     }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.3")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.6")
     }
 }
 
 def buildProperties = BuildPropertiesKt.getKotlinBuildPropertiesForSettings(settings)
 
-logger.info("buildCacheUrl=${buildProperties.buildCacheUrl}")
-logger.info("pushToBuildCache=${buildProperties.pushToBuildCache}")
-
-buildCache {
-    if (buildProperties.isTeamcityBuild) {
-        local {
-            enabled = false
-        }
-    }
-
-    if (buildProperties.buildCacheUrl != null) {
-        remote(HttpBuildCache) {
-            url = buildProperties.buildCacheUrl
-            push = buildProperties.pushToBuildCache
-        }
-    }
-}
+BuildCacheKt.setupBuildCache(settings)
 
 include "prepare-deps"
 

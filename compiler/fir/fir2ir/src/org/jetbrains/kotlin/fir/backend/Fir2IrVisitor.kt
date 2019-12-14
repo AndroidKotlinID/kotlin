@@ -27,7 +27,6 @@ import org.jetbrains.kotlin.fir.resolve.transformers.IntegerLiteralTypeApproxima
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirIntegerOperator
-import org.jetbrains.kotlin.fir.scopes.impl.FirIntegerOperatorCall
 import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
@@ -45,11 +44,8 @@ import org.jetbrains.kotlin.ir.descriptors.WrappedValueParameterDescriptor
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
-import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.classifierOrFail
-import org.jetbrains.kotlin.ir.types.classifierOrNull
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
-import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.ClassId
@@ -75,7 +71,7 @@ class Fir2IrVisitor(
         private val UNARY_OPERATIONS: Set<FirOperation> = EnumSet.of(FirOperation.EXCL)
     }
 
-    private val integerApproximator = IntegerLiteralTypeApproximationTransformer(session.firSymbolProvider, session.typeContext)
+    private val integerApproximator = IntegerLiteralTypeApproximationTransformer(session.firSymbolProvider, session.inferenceContext)
 
     private val typeContext = session.typeContext
 
@@ -1286,6 +1282,20 @@ class Fir2IrVisitor(
                 startOffset, endOffset, irType, irTypeOperator, irTypeOperand,
                 typeOperatorCall.argument.toIrExpression()
             )
+        }
+    }
+
+    override fun visitCheckNotNullCall(checkNotNullCall: FirCheckNotNullCall, data: Any?): IrElement {
+        return checkNotNullCall.convertWithOffsets { startOffset, endOffset ->
+            IrCallImpl(
+                startOffset, endOffset,
+                checkNotNullCall.typeRef.toIrType(session, declarationStorage),
+                irBuiltIns.checkNotNullSymbol,
+                IrStatementOrigin.EXCLEXCL
+            ).apply {
+                putTypeArgument(0, checkNotNullCall.argument.typeRef.toIrType(session, declarationStorage).makeNotNull())
+                putValueArgument(0, checkNotNullCall.argument.toIrExpression())
+            }
         }
     }
 
