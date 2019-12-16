@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirClassDeclaredMemberScope
+import org.jetbrains.kotlin.fir.scopes.impl.nestedClassifierScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -39,8 +39,11 @@ class FirProviderImpl(val session: FirSession) : FirProvider() {
         return (state.callableMap[CallableId(packageFqName, null, name)] ?: emptyList())
     }
 
-    override fun getClassDeclaredMemberScope(classId: ClassId) =
-        (getFirClassifierByFqName(classId) as? FirRegularClass)?.let(::FirClassDeclaredMemberScope)
+    override fun getNestedClassifierScope(classId: ClassId): FirScope? {
+        return (getFirClassifierByFqName(classId) as? FirRegularClass)?.let {
+            nestedClassifierScope(it)
+        }
+    }
 
     override fun getFirClassifierContainerFile(fqName: ClassId): FirFile {
         return state.classifierContainerFileMap[fqName] ?: error("Couldn't find container for $fqName")

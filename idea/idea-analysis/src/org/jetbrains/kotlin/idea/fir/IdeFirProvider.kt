@@ -141,9 +141,9 @@ class IdeFirProvider(
         }
     }
 
-    override fun getClassDeclaredMemberScope(classId: ClassId): FirScope? {
+    override fun getNestedClassifierScope(classId: ClassId): FirScope? {
         getFirClassifierByFqName(classId)
-        return cacheProvider.getClassDeclaredMemberScope(classId)
+        return cacheProvider.getNestedClassifierScope(classId)
     }
 
     override fun getClassUseSiteMemberScope(classId: ClassId, useSiteSession: FirSession, scopeSession: ScopeSession): FirScope? {

@@ -2246,6 +2246,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/casts/notIs.kt");
         }
 
+        @TestMetadata("nullableSafeCastToTypeParameterWithInterfaceUpperBound.kt")
+        public void testNullableSafeCastToTypeParameterWithInterfaceUpperBound() throws Exception {
+            runTest("compiler/testData/codegen/box/casts/nullableSafeCastToTypeParameterWithInterfaceUpperBound.kt");
+        }
+
         @TestMetadata("unitAsAny.kt")
         public void testUnitAsAny() throws Exception {
             runTest("compiler/testData/codegen/box/casts/unitAsAny.kt");
@@ -8029,9 +8034,19 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/defaultArguments/constructor/kt2852.kt");
             }
 
+            @TestMetadata("kt30517.kt")
+            public void testKt30517() throws Exception {
+                runTest("compiler/testData/codegen/box/defaultArguments/constructor/kt30517.kt");
+            }
+
             @TestMetadata("kt3060.kt")
             public void testKt3060() throws Exception {
                 runTest("compiler/testData/codegen/box/defaultArguments/constructor/kt3060.kt");
+            }
+
+            @TestMetadata("objectExpressionDelegatingToSecondaryConstructor.kt")
+            public void testObjectExpressionDelegatingToSecondaryConstructor() throws Exception {
+                runTest("compiler/testData/codegen/box/defaultArguments/constructor/objectExpressionDelegatingToSecondaryConstructor.kt");
             }
         }
 

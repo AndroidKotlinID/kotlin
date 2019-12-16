@@ -33,8 +33,9 @@ class FirDependenciesSymbolProviderImpl(val session: FirSession) : AbstractFirSy
         } ?: emptyList()
     }
 
-    override fun getClassDeclaredMemberScope(classId: ClassId) =
-        dependencyProviders.firstNotNullResult { it.getClassDeclaredMemberScope(classId) }
+    override fun getNestedClassifierScope(classId: ClassId): FirScope? {
+        return dependencyProviders.firstNotNullResult { it.getNestedClassifierScope(classId) }
+    }
 
     override fun getClassLikeSymbolByFqName(classId: ClassId): FirClassLikeSymbol<*>? {
         return classCache.lookupCacheOrCalculate(classId) {

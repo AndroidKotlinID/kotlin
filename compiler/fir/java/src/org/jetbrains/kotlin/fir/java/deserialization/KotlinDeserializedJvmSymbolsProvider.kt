@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.fir.references.impl.FirErrorNamedReferenceImpl
 import org.jetbrains.kotlin.fir.references.impl.FirResolvedNamedReferenceImpl
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
+import org.jetbrains.kotlin.fir.scopes.impl.nestedClassifierScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.FirErrorTypeRefImpl
@@ -393,10 +393,11 @@ class KotlinDeserializedJvmSymbolsProvider(
         }
     }
 
-    override fun getClassDeclaredMemberScope(classId: ClassId) =
-        findRegularClass(classId)?.let {
-            declaredMemberScope(it)
+    override fun getNestedClassifierScope(classId: ClassId): FirScope? {
+        return findRegularClass(classId)?.let {
+            nestedClassifierScope(it)
         }
+    }
 
     private fun getPackageParts(packageFqName: FqName): Collection<PackagePartsCacheData> {
         return packagePartsCache.getOrPut(packageFqName) {

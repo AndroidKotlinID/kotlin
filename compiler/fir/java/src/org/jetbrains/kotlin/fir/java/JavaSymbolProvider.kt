@@ -28,8 +28,7 @@ import org.jetbrains.kotlin.fir.java.scopes.JavaClassUseSiteMemberScope
 import org.jetbrains.kotlin.fir.java.scopes.JavaOverrideChecker
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirSuperTypeScope
-import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
+import org.jetbrains.kotlin.fir.scopes.impl.*
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.toFirSourceElement
@@ -64,10 +63,18 @@ class JavaSymbolProvider(
     override fun getTopLevelCallableSymbols(packageFqName: FqName, name: Name): List<FirCallableSymbol<*>> =
         emptyList()
 
-    // NB: looks like it's better not to use this function at all...
-    override fun getClassDeclaredMemberScope(classId: ClassId): FirScope? {
-        val classSymbol = getClassLikeSymbolByFqName(classId) ?: return null
-        return declaredMemberScope(classSymbol.fir)
+    override fun getNestedClassifierScope(classId: ClassId): FirScope? {
+        val symbol = this.getClassLikeSymbolByFqName(classId) ?: return null
+        val regularClass = symbol.fir
+        return if (regularClass is FirJavaClass) {
+            lazyNestedClassifierScope(
+                classId,
+                existingNames = regularClass.existingNestedClassifierNames,
+                symbolProvider = this
+            )
+        } else {
+            nestedClassifierScope(regularClass)
+        }
     }
 
     override fun getClassUseSiteMemberScope(
@@ -100,11 +107,11 @@ class JavaSymbolProvider(
         visitedSymbols: MutableSet<FirClassLikeSymbol<*>>
     ): JavaClassUseSiteMemberScope {
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
-            val declaredScope = declaredMemberScope(
+            val declaredScope = if (regularClass is FirJavaClass) declaredMemberScopeWithLazyNestedScope(
                 regularClass,
-                useLazyNestedClassifierScope = regularClass is FirJavaClass,
-                existingNames = (regularClass as? FirJavaClass)?.existingNestedClassifierNames
-            )
+                existingNames = regularClass.existingNestedClassifierNames,
+                symbolProvider = this
+            ) else declaredMemberScope(regularClass)
             val wrappedDeclaredScope = wrapScopeWithJvmMapped(regularClass, declaredScope, useSiteSession, scopeSession)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
