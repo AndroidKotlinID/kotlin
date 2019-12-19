@@ -1972,6 +1972,24 @@ public class BlackBoxInlineCodegenTestGenerated extends AbstractBlackBoxInlineCo
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/boxInline/multiModule")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class MultiModule extends AbstractBlackBoxInlineCodegenTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInMultiModule() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/multiModule"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("tryCatchWithRecursiveInline.kt")
+        public void testTryCatchWithRecursiveInline() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/multiModule/tryCatchWithRecursiveInline.kt");
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/boxInline/multifileClasses")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -2872,6 +2890,21 @@ public class BlackBoxInlineCodegenTestGenerated extends AbstractBlackBoxInlineCo
             @TestMetadata("chain.kt")
             public void testChain() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/reified/checkCast/chain.kt");
+            }
+
+            @TestMetadata("kt26435.kt")
+            public void testKt26435() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/reified/checkCast/kt26435.kt");
+            }
+
+            @TestMetadata("kt26435_2.kt")
+            public void testKt26435_2() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/reified/checkCast/kt26435_2.kt");
+            }
+
+            @TestMetadata("kt26435_3.kt")
+            public void testKt26435_3() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/reified/checkCast/kt26435_3.kt");
             }
 
             @TestMetadata("kt8043.kt")

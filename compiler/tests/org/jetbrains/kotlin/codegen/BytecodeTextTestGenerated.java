@@ -1646,6 +1646,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/disabledOptimizations/noJumpInSingleBranch.kt");
         }
 
+        @TestMetadata("noObjectCastAfterReification.kt")
+        public void testNoObjectCastAfterReification() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/disabledOptimizations/noObjectCastAfterReification.kt");
+        }
+
         @TestMetadata("noUnitInstanceInDefaultParameterInitialization.kt")
         public void testNoUnitInstanceInDefaultParameterInitialization() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/disabledOptimizations/noUnitInstanceInDefaultParameterInitialization.kt");
@@ -3689,6 +3694,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
 
         public void testAllFilesPresentInParameterlessMain() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/parameterlessMain"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("dontGenerateOnExtensionReceiver.kt")
+        public void testDontGenerateOnExtensionReceiver() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/parameterlessMain/dontGenerateOnExtensionReceiver.kt");
         }
 
         @TestMetadata("dontGenerateOnJvmNameMain.kt")

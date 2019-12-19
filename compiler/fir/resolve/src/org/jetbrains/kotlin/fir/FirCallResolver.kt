@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub
 import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedQualifierImpl
+import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedReifiedParameterReferenceImpl
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
@@ -32,12 +33,9 @@ import org.jetbrains.kotlin.fir.resolve.transformers.phasedFir
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.symbols.invoke
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
-import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.results.TypeSpecificityComparator
@@ -203,22 +201,30 @@ class FirCallResolver(
             is FirNamedReferenceWithCandidate -> nameReference.candidateSymbol
             else -> null
         }
-        if (referencedSymbol is FirClassLikeSymbol<*>) {
-            val classId = referencedSymbol.classId
-            return FirResolvedQualifierImpl(nameReference.source, classId.packageFqName, classId.relativeClassName).apply {
-                resultType = if (classId.isLocal) {
-                    typeForQualifierByDeclaration(referencedSymbol.fir, resultType)
-                        ?: resultType.resolvedTypeFromPrototype(
-                            StandardClassIds.Unit(symbolProvider).constructType(emptyArray(), isNullable = false)
-                        )
-                } else {
-                    typeForQualifier(this)
-                }
-            }
-        }
 
         if (qualifiedAccess.explicitReceiver == null) {
             qualifiedResolver.reset()
+        }
+
+        when {
+            referencedSymbol is FirClassLikeSymbol<*> -> {
+                val classId = referencedSymbol.classId
+                return FirResolvedQualifierImpl(nameReference.source, classId.packageFqName, classId.relativeClassName).apply {
+                    resultType = if (classId.isLocal) {
+                        typeForQualifierByDeclaration(referencedSymbol.fir, resultType)
+                            ?: resultType.resolvedTypeFromPrototype(
+                                session.builtinTypes.unitType.type//StandardClassIds.Unit(symbolProvider).constructType(emptyArray(), isNullable = false)
+                            )
+                    } else {
+                        typeForQualifier(this)
+                    }
+                }
+            }
+            referencedSymbol is FirTypeParameterSymbol && referencedSymbol.fir.isReified -> {
+                return FirResolvedReifiedParameterReferenceImpl(nameReference.source, referencedSymbol).apply {
+                    resultType = typeForReifiedParameterReference(this)
+                }
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -439,7 +445,7 @@ class FirCallResolver(
                     coneSymbol is FirBackingFieldSymbol -> FirBackingFieldReferenceImpl(source, null, coneSymbol)
                     coneSymbol is FirVariableSymbol && (
                             coneSymbol !is FirPropertySymbol ||
-                                    (coneSymbol.phasedFir(session) as FirMemberDeclaration).typeParameters.isEmpty()
+                                    (coneSymbol.phasedFir() as FirMemberDeclaration).typeParameters.isEmpty()
                             ) ->
                         FirResolvedNamedReferenceImpl(source, name, coneSymbol)
                     else -> FirNamedReferenceWithCandidate(source, name, candidate)

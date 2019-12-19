@@ -1796,6 +1796,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/callableReference/constraintFromLHSWithCorrectDirection.kt");
             }
 
+            @TestMetadata("constraintFromLHSWithCorrectDirectionError.kt")
+            public void testConstraintFromLHSWithCorrectDirectionError() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/constraintFromLHSWithCorrectDirectionError.kt");
+            }
+
             @TestMetadata("correctInfoAfterArrayLikeCall.kt")
             public void testCorrectInfoAfterArrayLikeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/correctInfoAfterArrayLikeCall.kt");
@@ -2415,6 +2420,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("extensionPropertyOnNullable.kt")
                 public void testExtensionPropertyOnNullable() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/property/extensionPropertyOnNullable.kt");
+                }
+
+                @TestMetadata("extensionsSameName.kt")
+                public void testExtensionsSameName() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/property/extensionsSameName.kt");
                 }
 
                 @TestMetadata("genericClass.kt")

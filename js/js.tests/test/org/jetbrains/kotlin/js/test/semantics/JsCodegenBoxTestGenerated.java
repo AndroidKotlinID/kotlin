@@ -7403,6 +7403,19 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             public void testTryCatch_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/tailCallOptimizations/tryCatch.kt", "kotlin.coroutines");
             }
+
+            @TestMetadata("compiler/testData/codegen/box/coroutines/tailCallOptimizations/unit")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Unit extends AbstractJsCodegenBoxTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInUnit() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/coroutines/tailCallOptimizations/unit"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
+                }
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/coroutines/tailOperations")
@@ -14038,6 +14051,34 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/multiplatform/defaultArguments/typeAlias.kt");
             }
         }
+
+        @TestMetadata("compiler/testData/codegen/box/multiplatform/multiModule")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class MultiModule extends AbstractJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInMultiModule() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/multiModule"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS, true);
+            }
+
+            @TestMetadata("expectActualLink.kt")
+            public void testExpectActualLink() throws Exception {
+                runTest("compiler/testData/codegen/box/multiplatform/multiModule/expectActualLink.kt");
+            }
+
+            @TestMetadata("expectActualMemberLink.kt")
+            public void testExpectActualMemberLink() throws Exception {
+                runTest("compiler/testData/codegen/box/multiplatform/multiModule/expectActualMemberLink.kt");
+            }
+
+            @TestMetadata("expectActualTypealiasLink.kt")
+            public void testExpectActualTypealiasLink() throws Exception {
+                runTest("compiler/testData/codegen/box/multiplatform/multiModule/expectActualTypealiasLink.kt");
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/nonLocalReturns")
@@ -15578,6 +15619,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("nullAsNullableIntIsNull.kt")
         public void testNullAsNullableIntIsNull() throws Exception {
             runTest("compiler/testData/codegen/box/primitiveTypes/nullAsNullableIntIsNull.kt");
+        }
+
+        @TestMetadata("nullableAsIndex.kt")
+        public void testNullableAsIndex() throws Exception {
+            runTest("compiler/testData/codegen/box/primitiveTypes/nullableAsIndex.kt");
         }
 
         @TestMetadata("nullableCharBoolean.kt")

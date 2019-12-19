@@ -17,6 +17,8 @@ import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.util.PatchDeclarationParentsVisitor
+import org.jetbrains.kotlin.ir.util.isAnonymousObject
+import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
@@ -72,8 +74,8 @@ private val arrayConstructorPhase = makeIrFilePhase(
     description = "Transform `Array(size) { index -> value }` into a loop"
 )
 
-private val expectDeclarationsRemovingPhase = makeIrModulePhase(
-    ::ExpectDeclarationsRemoveLowering,
+private val expectDeclarationsRemovingPhase = makeIrModulePhase<JvmBackendContext>(
+    { context -> ExpectDeclarationsRemoveLowering(context, keepOptionalAnnotations = true) },
     name = "ExpectDeclarationsRemoving",
     description = "Remove expect declaration from module fragment"
 )
@@ -122,7 +124,10 @@ internal val localDeclarationsPhase = makeIrFilePhase<CommonBackendContext>(
                     }
 
                 override fun forConstructor(declaration: IrConstructor, inInlineFunctionScope: Boolean): Visibility =
-                    scopedVisibility(inInlineFunctionScope)
+                    if (declaration.parentAsClass.isAnonymousObject)
+                        scopedVisibility(inInlineFunctionScope)
+                    else
+                        declaration.visibility
 
                 private fun scopedVisibility(inInlineFunctionScope: Boolean): Visibility =
                     if (inInlineFunctionScope) Visibilities.PUBLIC else JavaVisibilities.PACKAGE_VISIBILITY
@@ -221,6 +226,12 @@ private val syntheticAccessorPhase = makeIrFilePhase(
     name = "SyntheticAccessor",
     description = "Introduce synthetic accessors",
     prerequisite = setOf(objectClassPhase, staticDefaultFunctionPhase, interfacePhase)
+)
+
+private val tailrecPhase = makeIrFilePhase<JvmBackendContext>(
+    ::JvmTailrecLowering,
+    name = "Tailrec",
+    description = "Handle tailrec calls"
 )
 
 @Suppress("Reformat")

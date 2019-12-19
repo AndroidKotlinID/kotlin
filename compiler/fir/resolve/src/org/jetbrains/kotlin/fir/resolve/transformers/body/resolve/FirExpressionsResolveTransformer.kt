@@ -264,10 +264,7 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
             .transformArguments(integerLiteralTypeApproximator, null)
         when (resolved.operation) {
             FirOperation.IS, FirOperation.NOT_IS -> {
-                resolved.resultType = FirResolvedTypeRefImpl(
-                    null,
-                    StandardClassIds.Boolean(symbolProvider).constructType(emptyArray(), isNullable = false)
-                )
+                resolved.resultType = session.builtinTypes.booleanType
             }
             FirOperation.AS -> {
                 resolved.resultType = resolved.conversionTypeRef
@@ -389,7 +386,7 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
         val typeOfExpression = when (val lhs = transformedGetClassCall.argument) {
             is FirResolvedQualifier -> {
                 val classId = lhs.classId
-                classId?.let { classId ->
+                if (classId != null) {
                     val symbol = symbolProvider.getClassLikeSymbolByFqName(classId)
                     // TODO: Unify logic?
                     symbol?.constructType(
@@ -398,9 +395,17 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
                         },
                         isNullable = false
                     )
-                } ?: lhs.resultType.coneTypeUnsafe<ConeKotlinType>()
+                } else {
+                    null
+                } ?: lhs.resultType.coneTypeUnsafe()
             }
-            else -> lhs.resultType.coneTypeUnsafe<ConeKotlinType>()
+            is FirResolvedReifiedParameterReference -> {
+                val symbol = lhs.symbol
+                symbol.constructType(emptyArray(), isNullable = false)
+            }
+            else -> {
+                lhs.resultType.coneTypeUnsafe<ConeKotlinType>()
+            }
         }
 
         transformedGetClassCall.resultType =

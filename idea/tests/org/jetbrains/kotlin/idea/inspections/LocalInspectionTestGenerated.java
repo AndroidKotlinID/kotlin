@@ -4108,6 +4108,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/deprecatedCallableAddReplaceWith/QualifiedCall.kt");
         }
 
+        @TestMetadata("ReplaceWithHasNamedArgument.kt")
+        public void testReplaceWithHasNamedArgument() throws Exception {
+            runTest("idea/testData/inspectionsLocal/deprecatedCallableAddReplaceWith/ReplaceWithHasNamedArgument.kt");
+        }
+
         @TestMetadata("Return.kt")
         public void testReturn() throws Exception {
             runTest("idea/testData/inspectionsLocal/deprecatedCallableAddReplaceWith/Return.kt");
@@ -5059,6 +5064,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
 
         public void testAllFilesPresentInJavaMapForEach() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/inspectionsLocal/javaMapForEach"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), null, true);
+        }
+
+        @TestMetadata("destructuringDeclaration.kt")
+        public void testDestructuringDeclaration() throws Exception {
+            runTest("idea/testData/inspectionsLocal/javaMapForEach/destructuringDeclaration.kt");
         }
 
         @TestMetadata("java.kt")

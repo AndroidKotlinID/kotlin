@@ -41,17 +41,18 @@ import org.jetbrains.org.objectweb.asm.Type
 class IrFrameMap : FrameMapBase<IrSymbol>() {
     private val typeMap = mutableMapOf<IrSymbol, Type>()
 
-    override fun enter(descriptor: IrSymbol, type: Type): Int {
-        typeMap[descriptor] = type
-        return super.enter(descriptor, type)
+    override fun enter(key: IrSymbol, type: Type): Int {
+        typeMap[key] = type
+        return super.enter(key, type)
     }
 
-    override fun leave(descriptor: IrSymbol): Int {
-        typeMap.remove(descriptor)
-        return super.leave(descriptor)
+    override fun leave(key: IrSymbol): Int {
+        typeMap.remove(key)
+        return super.leave(key)
     }
 
-    fun typeOf(descriptor: IrSymbol): Type = typeMap.getValue(descriptor)
+    fun typeOf(symbol: IrSymbol): Type =
+        typeMap[symbol] ?: error("No mapping for symbol: ${symbol.owner.render()}")
 }
 
 internal val IrFunction.isStatic

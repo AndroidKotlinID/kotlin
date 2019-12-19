@@ -5,13 +5,11 @@
 
 package org.jetbrains.kotlin.idea.scripting.gradle
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiManager
-import com.intellij.psi.PsiRecursiveElementVisitor
-import com.intellij.psi.PsiWhiteSpace
+import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.idea.util.application.runReadAction
@@ -19,6 +17,8 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtScriptInitializer
 import org.jetbrains.kotlin.psi.psiUtil.getChildrenOfType
+
+private val sections = arrayListOf("buildscript", "plugins", "initscript", "pluginManagement")
 
 fun isGradleKotlinScript(virtualFile: VirtualFile) = virtualFile.name.endsWith(".gradle.kts")
 
@@ -38,8 +38,8 @@ fun getGradleScriptInputsStamp(
                 ?.getChildrenOfType<KtScriptInitializer>()
                 ?.forEach {
                     val call = it.children.singleOrNull() as? KtCallExpression
-                    val callRef = call?.firstChild?.text
-                    if (callRef == "buildscript" || callRef == "plugins") {
+                    val callRef = call?.firstChild?.text ?: return@forEach
+                    if (callRef in sections) {
                         result.append(callRef)
                         val lambda = call.lambdaArguments.singleOrNull()
                         lambda?.accept(object : PsiRecursiveElementVisitor(false) {
@@ -47,6 +47,7 @@ fun getGradleScriptInputsStamp(
                                 super.visitElement(element)
                                 when (element) {
                                     is PsiWhiteSpace -> if (element.text.contains("\n")) result.append("\n")
+                                    is PsiComment -> { }
                                     is LeafPsiElement -> result.append(element.text)
                                 }
                             }
@@ -55,7 +56,8 @@ fun getGradleScriptInputsStamp(
                     }
                 }
 
-            GradleKotlinScriptConfigurationInputs(result.toString())
+            val relatedFilesTimeStamp = project.service<GradleScriptInputsWatcher>().lastModifiedFileTimeStamp(file)
+            GradleKotlinScriptConfigurationInputs(result.toString(), file.timeStamp, relatedFilesTimeStamp)
         } else null
     }
 }

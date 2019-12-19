@@ -28,19 +28,19 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
     override val isErrorTypeAllowed: Boolean get() = false
 
     override fun nullableNothingType(): SimpleTypeMarker {
-        return StandardClassIds.Nothing(symbolProvider).constructType(emptyArray(), true)
+        return session.builtinTypes.nullableNothingType.type//StandardClassIds.Nothing(symbolProvider).constructType(emptyArray(), true)
     }
 
     override fun nullableAnyType(): SimpleTypeMarker {
-        return StandardClassIds.Any(symbolProvider).constructType(emptyArray(), true)
+        return session.builtinTypes.nullableAnyType.type//StandardClassIds.Any(symbolProvider).constructType(emptyArray(), true)
     }
 
     override fun nothingType(): SimpleTypeMarker {
-        return StandardClassIds.Nothing(symbolProvider).constructType(emptyArray(), false)
+        return session.builtinTypes.nothingType.type//StandardClassIds.Nothing(symbolProvider).constructType(emptyArray(), false)
     }
 
     override fun anyType(): SimpleTypeMarker {
-        return StandardClassIds.Any(symbolProvider).constructType(emptyArray(), false)
+        return session.builtinTypes.anyType.type//StandardClassIds.Any(symbolProvider).constructType(emptyArray(), false)
     }
 
     override fun createFlexibleType(lowerBound: SimpleTypeMarker, upperBound: SimpleTypeMarker): KotlinTypeMarker {
@@ -96,15 +96,25 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
                 || this is ConeTypeParameterType
     }
 
+    override fun KotlinTypeMarker.typeDepth() = when (this) {
+        is ConeSimpleKotlinType -> typeDepth()
+        is ConeFlexibleType -> maxOf(lowerBound().typeDepth(), upperBound().typeDepth())
+        else -> error("Type should be simple or flexible: $this")
+    }
+
     override fun SimpleTypeMarker.typeDepth(): Int {
         require(this is ConeKotlinType)
         // if (this is TypeUtils.SpecialType) return 0 // TODO: WTF?
 
-        val maxInArguments = this.typeArguments.asSequence().map {
-            if (it.isStarProjection()) 1 else it.getType().typeDepth()
-        }.max() ?: 0
+        var result = 0
+        for (arg in typeArguments) {
+            val current = if (arg is ConeStarProjection) 1 else (arg as ConeTypedProjection).type.typeDepth()
+            if (current > result) {
+                result = current
+            }
+        }
 
-        return maxInArguments + 1
+        return result + 1
     }
 
     override fun KotlinTypeMarker.contains(predicate: (KotlinTypeMarker) -> Boolean): Boolean {
@@ -116,8 +126,7 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
         visited: HashSet<KotlinTypeMarker> = hashSetOf()
     ): Boolean {
         if (this == null) return false
-        if (this in visited) return false
-        visited += this
+        if (!visited.add(this)) return false
 
         /*
         TODO:?

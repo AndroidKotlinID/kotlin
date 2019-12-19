@@ -8,12 +8,14 @@ package org.jetbrains.kotlin.fir
 import com.intellij.openapi.extensions.Extensions
 import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiElementFinder
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
 import org.jetbrains.kotlin.asJava.finder.JavaElementFinder
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys.CONTENT_ROOTS
 import org.jetbrains.kotlin.cli.common.config.KotlinSourceRoot
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
+import org.jetbrains.kotlin.cli.jvm.compiler.TopDownAnalyzerFacadeForJVM
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.dump.MultiModuleHtmlFirDump
@@ -48,9 +50,11 @@ class FirResolveModularizedTotalKotlinTest : AbstractModularizedTest() {
         val project = environment.project
         val ktFiles = environment.getSourceFiles()
 
-        val scope = ProjectScope.getContentScope(project)
+
+        val scope = GlobalSearchScope.filesScope(project, ktFiles.map { it.virtualFile })
+            .uniteWith(TopDownAnalyzerFacadeForJVM.AllJavaSourcesInProjectScope(project))
         val librariesScope = ProjectScope.getLibrariesScope(project)
-        val session = createSession(environment, scope, librariesScope)
+        val session = createSession(environment, scope, librariesScope, moduleData.qualifiedName)
         val builder = RawFirBuilder(session, stubMode = false)
 
         val totalTransformer = FirTotalResolveTransformer()
@@ -122,6 +126,7 @@ class FirResolveModularizedTotalKotlinTest : AbstractModularizedTest() {
 
     override fun beforePass() {
         if (DUMP_FIR) dump = MultiModuleHtmlFirDump(File(FIR_HTML_DUMP_PATH))
+        System.gc()
     }
 
     override fun afterPass(pass: Int) {

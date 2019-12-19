@@ -9,12 +9,9 @@ import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.expressions.FirCallableReferenceAccess
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.resolve.DoubleColonLHS
-import org.jetbrains.kotlin.fir.resolve.constructType
 import org.jetbrains.kotlin.fir.resolve.createFunctionalType
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
-import org.jetbrains.kotlin.fir.symbols.invoke
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
@@ -127,7 +124,7 @@ private fun extraLambdaInfo(
             ?: expectedType?.typeArguments?.singleOrNull()?.safeAs<ConeTypedProjection>()?.type?.takeIf { isFunctionSupertype }
             ?: typeVariable.defaultType
 
-    val nothingType = StandardClassIds.Nothing(argument.session.firSymbolProvider).constructType(emptyArray(), false)
+    val nothingType = argument.session.builtinTypes.nothingType.type //StandardClassIds.Nothing(argument.session.firSymbolProvider).constructType(emptyArray(), false)
     val parameters = argument.valueParameters?.map {
         it.returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: nothingType
     } ?: emptyList()
@@ -166,7 +163,7 @@ private fun extractLambdaParameters(expectedType: ConeKotlinType, argument: FirA
     val parameters = argument.valueParameters
     val expectedParameters = expectedType.extractParametersForFunctionalType(expectedTypeIsExtensionFunctionType)
 
-    val nullableAnyType = StandardClassIds.Any(argument.session.firSymbolProvider).constructType(emptyArray(), true)
+    val nullableAnyType = argument.session.builtinTypes.nullableAnyType.type //StandardClassIds.Any(argument.session.firSymbolProvider).constructType(emptyArray(), true)
 
     if (parameters.isEmpty()) {
         return expectedParameters.map { it?.type ?: nullableAnyType }

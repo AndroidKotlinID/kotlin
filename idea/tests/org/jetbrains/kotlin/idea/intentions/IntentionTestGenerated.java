@@ -4744,6 +4744,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             runTest("idea/testData/intentions/convertLambdaToReference/constructor.kt");
         }
 
+        @TestMetadata("constructor2.kt")
+        public void testConstructor2() throws Exception {
+            runTest("idea/testData/intentions/convertLambdaToReference/constructor2.kt");
+        }
+
         @TestMetadata("conversion.kt")
         public void testConversion() throws Exception {
             runTest("idea/testData/intentions/convertLambdaToReference/conversion.kt");
@@ -12823,6 +12828,16 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("whenLambda.kt")
         public void testWhenLambda() throws Exception {
             runTest("idea/testData/intentions/removeBraces/whenLambda.kt");
+        }
+
+        @TestMetadata("whenLambda2.kt")
+        public void testWhenLambda2() throws Exception {
+            runTest("idea/testData/intentions/removeBraces/whenLambda2.kt");
+        }
+
+        @TestMetadata("whenLambda3.kt")
+        public void testWhenLambda3() throws Exception {
+            runTest("idea/testData/intentions/removeBraces/whenLambda3.kt");
         }
 
         @TestMetadata("whenMultiple.kt")

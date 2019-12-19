@@ -2798,6 +2798,11 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
                 runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/kt29307.kt");
             }
 
+            @TestMetadata("kt35210.kt")
+            public void testKt35210() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/kt35210.kt");
+            }
+
             @TestMetadata("noInferAndLowPriority.kt")
             public void testNoInferAndLowPriority() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/noInferAndLowPriority.kt");
@@ -2811,6 +2816,16 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             @TestMetadata("notNullAnnotation.kt")
             public void testNotNullAnnotation() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/notNullAnnotation.kt");
+            }
+
+            @TestMetadata("onlyInputTypeAndJava.kt")
+            public void testOnlyInputTypeAndJava() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/onlyInputTypeAndJava.kt");
+            }
+
+            @TestMetadata("onlyInputTypeRecursiveBoundAndProjections.kt")
+            public void testOnlyInputTypeRecursiveBoundAndProjections() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/onlyInputTypeRecursiveBoundAndProjections.kt");
             }
 
             @TestMetadata("onlyInputTypes.kt")
@@ -2836,6 +2851,16 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             @TestMetadata("onlyInputTypesCaptured.kt")
             public void testOnlyInputTypesCaptured() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/onlyInputTypesCaptured.kt");
+            }
+
+            @TestMetadata("onlyInputTypesCommonConstraintSystem.kt")
+            public void testOnlyInputTypesCommonConstraintSystem() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/onlyInputTypesCommonConstraintSystem.kt");
+            }
+
+            @TestMetadata("onlyInputTypesUpperBound.kt")
+            public void testOnlyInputTypesUpperBound() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/onlyInputTypesUpperBound.kt");
             }
 
             @TestMetadata("onlyInputTypesWithVarargs.kt")

@@ -401,6 +401,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/addConstructorParameterFromSuperTypeCall/fewerArguments.kt");
         }
 
+        @TestMetadata("generics.kt")
+        public void testGenerics() throws Exception {
+            runTest("idea/testData/quickfix/addConstructorParameterFromSuperTypeCall/generics.kt");
+        }
+
         @TestMetadata("hasDifferentNameParameter.kt")
         public void testHasDifferentNameParameter() throws Exception {
             runTest("idea/testData/quickfix/addConstructorParameterFromSuperTypeCall/hasDifferentNameParameter.kt");
@@ -591,6 +596,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("implicit.kt")
         public void testImplicit() throws Exception {
             runTest("idea/testData/quickfix/addExclExclCall/implicit.kt");
+        }
+
+        @TestMetadata("implicit2.kt")
+        public void testImplicit2() throws Exception {
+            runTest("idea/testData/quickfix/addExclExclCall/implicit2.kt");
+        }
+
+        @TestMetadata("implicit3.kt")
+        public void testImplicit3() throws Exception {
+            runTest("idea/testData/quickfix/addExclExclCall/implicit3.kt");
         }
 
         @TestMetadata("implicitFunctionCall.kt")
@@ -1183,7 +1198,7 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         }
 
         public void testAllFilesPresentInAddSpreadOperatorForArrayAsVarargAfterSam() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/quickfix/addSpreadOperatorForArrayAsVarargAfterSam"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), true);
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/addSpreadOperatorForArrayAsVarargAfterSam"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
         }
     }
 
@@ -2178,6 +2193,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("addEnumConstructorParameter5.kt")
         public void testAddEnumConstructorParameter5() throws Exception {
             runTest("idea/testData/quickfix/changeSignature/addEnumConstructorParameter5.kt");
+        }
+
+        @TestMetadata("addForItParameter.kt")
+        public void testAddForItParameter() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addForItParameter.kt");
         }
 
         @TestMetadata("addFunctionParameter.kt")
