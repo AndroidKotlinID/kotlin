@@ -20,7 +20,6 @@ import org.jetbrains.kotlin.fir.references.impl.FirResolvedNamedReferenceImpl
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.*
-import org.jetbrains.kotlin.fir.resolve.calls.jvm.ConeEquivalentCallConflictResolver
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirAmbiguityError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirInapplicableCandidateError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirUnresolvedNameError
@@ -62,10 +61,9 @@ class FirCallResolver(
         localScopes = localScopes.asReversed()
     )
 
-    private val conflictResolver = ConeCompositeConflictResolver(
-        ConeOverloadConflictResolver(TypeSpecificityComparator.NONE, inferenceComponents),
-        ConeEquivalentCallConflictResolver(TypeSpecificityComparator.NONE, inferenceComponents)
-    )
+    private val conflictResolver =
+        inferenceComponents.session.callConflictResolverFactory
+            .create(TypeSpecificityComparator.NONE, inferenceComponents)
 
     fun resolveCallAndSelectCandidate(functionCall: FirFunctionCall, file: FirFile): FirFunctionCall {
         qualifiedResolver.reset()
@@ -137,7 +135,8 @@ class FirCallResolver(
         val result = towerResolver.runResolver(
             consumer,
             implicitReceiverStack.receiversAsReversed(),
-            shouldProcessExtensionsBeforeMembers = name in HIDES_MEMBERS_NAME_LIST
+            shouldProcessExtensionsBeforeMembers = name in HIDES_MEMBERS_NAME_LIST,
+            shouldProcessExplicitReceiverScopeOnly = explicitReceiver?.typeRef?.coneTypeSafe<ConeIntegerLiteralType>() != null
         )
         val bestCandidates = result.bestCandidates()
         val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {

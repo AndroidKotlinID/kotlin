@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.fir.lightTree
 
 import com.intellij.lang.LighterASTNode
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.CharsetToolkit
 import com.intellij.util.diff.FlyweightCapableTreeStructure
@@ -22,9 +21,8 @@ import java.io.File
 import java.nio.file.Path
 
 class LightTree2Fir(
-    private val session: FirSession = object : FirSessionBase(null) {},
-    private val stubMode: Boolean,
-    private val project: Project
+    val session: FirSession = object : FirSessionBase(null) {},
+    private val stubMode: Boolean = false
 ) {
     //private val ktDummyFile = KtFile(SingleRootFileViewProvider(PsiManager.getInstance(project), LightVirtualFile()), false)
 

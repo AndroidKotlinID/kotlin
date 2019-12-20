@@ -35,6 +35,10 @@ buildscript {
     }
 }
 
+if (kotlinBuildProperties.buildScanServer != null) {
+    apply(from = "gradle/buildScanUserData.gradle")
+}
+
 plugins {
     idea
     id("jps-compatible")
@@ -247,7 +251,8 @@ extra["compilerModules"] = arrayOf(
     ":compiler:fir:psi2fir",
     ":compiler:fir:lightTree",
     ":compiler:fir:fir2ir",
-    ":compiler:fir:java"
+    ":compiler:fir:java",
+    ":compiler:fir:jvm"
 )
 
 val coreLibProjects = listOfNotNull(

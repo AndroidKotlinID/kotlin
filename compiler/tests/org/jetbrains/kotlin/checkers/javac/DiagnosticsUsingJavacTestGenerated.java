@@ -10876,6 +10876,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt3174.kt");
                 }
 
+                @TestMetadata("kt32250.kt")
+                public void testKt32250() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt32250.kt");
+                }
+
                 @TestMetadata("kt32862_both.kt")
                 public void testKt32862_both() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt32862_both.kt");
@@ -12777,6 +12782,21 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/j+k/properties"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
                 }
 
+                @TestMetadata("fieldPropertyOverloads.kt")
+                public void testFieldPropertyOverloads() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/j+k/properties/fieldPropertyOverloads.kt");
+                }
+
+                @TestMetadata("fieldPropertyOverloadsDisabled.kt")
+                public void testFieldPropertyOverloadsDisabled() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/j+k/properties/fieldPropertyOverloadsDisabled.kt");
+                }
+
+                @TestMetadata("fieldPropertyOverloadsNI.kt")
+                public void testFieldPropertyOverloadsNI() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/j+k/properties/fieldPropertyOverloadsNI.kt");
+                }
+
                 @TestMetadata("interface.kt")
                 public void testInterface() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/j+k/properties/interface.kt");
@@ -12785,6 +12805,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("isName.kt")
                 public void testIsName() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/j+k/properties/isName.kt");
+                }
+
+                @TestMetadata("staticFieldPropertyOverloads.kt")
+                public void testStaticFieldPropertyOverloads() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/j+k/properties/staticFieldPropertyOverloads.kt");
                 }
 
                 @TestMetadata("val.kt")
@@ -23418,6 +23443,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("AmbiguousVararg.kt")
             public void testAmbiguousVararg() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/varargs/AmbiguousVararg.kt");
+            }
+
+            @TestMetadata("assignArrayToVararagInNamedForm_1_3.kt")
+            public void testAssignArrayToVararagInNamedForm_1_3() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/varargs/assignArrayToVararagInNamedForm_1_3.kt");
+            }
+
+            @TestMetadata("assignArrayToVararagInNamedForm_1_4.kt")
+            public void testAssignArrayToVararagInNamedForm_1_4() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/varargs/assignArrayToVararagInNamedForm_1_4.kt");
             }
 
             @TestMetadata("assignNonConstSingleArrayElementAsVarargInAnnotation.kt")

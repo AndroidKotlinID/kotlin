@@ -53,6 +53,8 @@ class CodeConformanceTest : TestCase() {
             "libraries/tools/kotlin-test-js-runner/node_modules",
             "libraries/tools/kotlin-test-js-runner/.gradle",
             "libraries/tools/kotlin-test-js-runner/lib",
+            "libraries/tools/kotlin-test-nodejs-runner/node_modules",
+            "libraries/tools/kotlin-test-nodejs-runner/.gradle",
             "libraries/tools/kotlin-source-map-loader/node_modules",
             "libraries/tools/kotlin-source-map-loader/.gradle",
             "libraries/tools/kotlin-source-map-loader/lib",
@@ -159,7 +161,8 @@ class CodeConformanceTest : TestCase() {
                 { source ->
                     // substring check is an optimization
                     "@author" in source && atAuthorPattern.matcher(source).find() &&
-                            "ASM: a very small and fast Java bytecode manipulation framework" !in source
+                            "ASM: a very small and fast Java bytecode manipulation framework" !in source &&
+                            "package org.jetbrains.kotlin.tools.projectWizard.settings.version.maven" !in source
                 }
             ),
             TestData(
