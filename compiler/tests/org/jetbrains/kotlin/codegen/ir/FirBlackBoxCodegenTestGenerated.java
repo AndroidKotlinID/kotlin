@@ -11373,6 +11373,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             runTest("compiler/testData/codegen/box/inference/kt10822.kt");
         }
 
+        @TestMetadata("kt32429.kt")
+        public void testKt32429() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/kt32429.kt");
+        }
+
         @TestMetadata("lastExpressionOfLambdaWithNothingConstraint.kt")
         public void testLastExpressionOfLambdaWithNothingConstraint() throws Exception {
             runTest("compiler/testData/codegen/box/inference/lastExpressionOfLambdaWithNothingConstraint.kt");
@@ -15796,7 +15801,7 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             }
 
             public void testAllFilesPresentInMultiModule() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/multiModule"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JVM_IR, true);
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/multiModule"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
             }
 
             @TestMetadata("expectActualLink.kt")
