@@ -12518,6 +12518,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
         }
 
+        @TestMetadata("builderInference.kt")
+        public void testBuilderInference() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/builderInference.kt");
+        }
+
         @TestMetadata("capturedStarProjection.kt")
         public void testCapturedStarProjection() throws Exception {
             runTest("compiler/testData/codegen/box/inference/capturedStarProjection.kt");
@@ -12744,6 +12749,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("defaultFunctionsFromAnyForInlineClass.kt")
         public void testDefaultFunctionsFromAnyForInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/defaultFunctionsFromAnyForInlineClass.kt");
+        }
+
+        @TestMetadata("defaultWithInlineClassArgument.kt")
+        public void testDefaultWithInlineClassArgument() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/defaultWithInlineClassArgument.kt");
         }
 
         @TestMetadata("elvisWithInlineClassAndNullConstant.kt")
@@ -14464,6 +14474,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("invariantArgumentsNoWildcard.kt")
             public void testInvariantArgumentsNoWildcard() throws Exception {
                 runTest("compiler/testData/codegen/box/javaInterop/generics/invariantArgumentsNoWildcard.kt");
+            }
+
+            @TestMetadata("javaNestedSamInterface.kt")
+            public void testJavaNestedSamInterface() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/generics/javaNestedSamInterface.kt");
             }
         }
 
@@ -22715,6 +22730,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("parameterNamesAndNullability.kt")
             public void testParameterNamesAndNullability() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/lambdaClasses/parameterNamesAndNullability.kt");
+            }
+
+            @TestMetadata("reflectOnDefaultWithInlineClassArgument.kt")
+            public void testReflectOnDefaultWithInlineClassArgument() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/lambdaClasses/reflectOnDefaultWithInlineClassArgument.kt");
             }
 
             @TestMetadata("reflectOnLambdaInField.kt")

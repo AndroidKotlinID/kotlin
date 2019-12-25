@@ -9925,6 +9925,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/inference/kt32434.kt");
             }
 
+            @TestMetadata("kt33263.kt")
+            public void testKt33263() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt33263.kt");
+            }
+
             @TestMetadata("kt6175.kt")
             public void testKt6175() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt6175.kt");
@@ -10369,6 +10374,49 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 }
             }
 
+            @TestMetadata("compiler/testData/diagnostics/tests/inference/completion")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Completion extends AbstractDiagnosticsTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInCompletion() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/completion"), Pattern.compile("^(.*)\\.kts?$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("basic.kt")
+                public void testBasic() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/basic.kt");
+                }
+
+                @TestMetadata("equalityConstraintUpstairs.kt")
+                public void testEqualityConstraintUpstairs() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/equalityConstraintUpstairs.kt");
+                }
+
+                @TestMetadata("kt33166.kt")
+                public void testKt33166() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/kt33166.kt");
+                }
+
+                @TestMetadata("partialForIlt.kt")
+                public void testPartialForIlt() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/partialForIlt.kt");
+                }
+
+                @TestMetadata("transitiveConstraint.kt")
+                public void testTransitiveConstraint() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/transitiveConstraint.kt");
+                }
+
+                @TestMetadata("withExact.kt")
+                public void testWithExact() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/withExact.kt");
+                }
+            }
+
             @TestMetadata("compiler/testData/diagnostics/tests/inference/constraints")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -10568,6 +10616,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 public void testNontrivialCallExpression() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nestedCalls/nontrivialCallExpression.kt");
                 }
+
+                @TestMetadata("preferArgumentToNullability.kt")
+                public void testPreferArgumentToNullability() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nestedCalls/preferArgumentToNullability.kt");
+                }
+
+                @TestMetadata("preferNothingToBound.kt")
+                public void testPreferNothingToBound() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nestedCalls/preferNothingToBound.kt");
+                }
             }
 
             @TestMetadata("compiler/testData/diagnostics/tests/inference/nothingType")
@@ -10600,6 +10658,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("implicitNothingConstraintFromReturn.kt")
                 public void testImplicitNothingConstraintFromReturn() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/implicitNothingConstraintFromReturn.kt");
+                }
+
+                @TestMetadata("inferArgumentToNothingFromNullConstant.kt")
+                public void testInferArgumentToNothingFromNullConstant() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/inferArgumentToNothingFromNullConstant.kt");
                 }
 
                 @TestMetadata("kt24490.kt")
@@ -10894,6 +10957,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("kt3174.kt")
                 public void testKt3174() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt3174.kt");
+                }
+
+                @TestMetadata("kt32106.kt")
+                public void testKt32106() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt32106.kt");
                 }
 
                 @TestMetadata("kt32250.kt")

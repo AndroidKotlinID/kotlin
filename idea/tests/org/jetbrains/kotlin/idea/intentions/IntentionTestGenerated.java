@@ -2525,6 +2525,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
                     runTest("idea/testData/intentions/branched/ifWhen/whenToIf/kt13884.kt");
                 }
 
+                @TestMetadata("variableSubject.kt")
+                public void testVariableSubject() throws Exception {
+                    runTest("idea/testData/intentions/branched/ifWhen/whenToIf/variableSubject.kt");
+                }
+
                 @TestMetadata("whenWithDotQualifiedExpression.kt")
                 public void testWhenWithDotQualifiedExpression() throws Exception {
                     runTest("idea/testData/intentions/branched/ifWhen/whenToIf/whenWithDotQualifiedExpression.kt");
@@ -8099,6 +8104,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             @TestMetadata("simpleInitWithType2.kt")
             public void testSimpleInitWithType2() throws Exception {
                 runTest("idea/testData/intentions/declarations/split/simpleInitWithType2.kt");
+            }
+
+            @TestMetadata("whenSubject.kt")
+            public void testWhenSubject() throws Exception {
+                runTest("idea/testData/intentions/declarations/split/whenSubject.kt");
             }
         }
     }

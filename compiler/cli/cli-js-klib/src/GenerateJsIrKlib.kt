@@ -3,15 +3,16 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
+// Internal CLI for building JS IR libraries
+
 package org.jetbrains.kotlin.ir.backend.js
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.vfs.StandardFileSystems
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiManager
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
-import org.jetbrains.kotlin.cli.common.messages.GroupingMessageCollector
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
+import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
+import org.jetbrains.kotlin.cli.common.messages.*
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.config.*
@@ -27,6 +28,10 @@ fun buildConfiguration(environment: KotlinCoreEnvironment, moduleName: String): 
     val runtimeConfiguration = environment.configuration.copy()
     runtimeConfiguration.put(CommonConfigurationKeys.MODULE_NAME, moduleName)
     runtimeConfiguration.put(JSConfigurationKeys.MODULE_KIND, ModuleKind.PLAIN)
+    runtimeConfiguration.put(
+        CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY,
+        PrintingMessageCollector(System.err, MessageRenderer.PLAIN_RELATIVE_PATHS, false)
+    )
 
     runtimeConfiguration.languageVersionSettings = LanguageVersionSettingsImpl(
         LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE,
@@ -95,17 +100,18 @@ private fun listOfKtFilesFrom(paths: List<String>): List<String> {
 }
 
 fun main(args: Array<String>) {
-
     val inputFiles = mutableListOf<String>()
     var outputPath: String? = null
     val dependencies = mutableListOf<String>()
     val commonSources = mutableListOf<String>()
+    var moduleName: String? = null
 
     var index = 0
     while (index < args.size) {
         val arg = args[index++]
 
         when (arg) {
+            "-n" -> moduleName = args[index++]
             "-o" -> outputPath = args[index++]
             "-d" -> dependencies += args[index++]
             "-c" -> commonSources += args[index++]
@@ -117,11 +123,15 @@ fun main(args: Array<String>) {
         error("Please set path to .klm file: `-o some/dir/module-name.klm`")
     }
 
+    if (moduleName == null) {
+        error("Please set module name: `-n module-name`")
+    }
+
     val resolvedLibraries = jsResolveLibraries(
         dependencies, messageCollectorLogger(MessageCollector.NONE)
     )
 
-    buildKLib(File(outputPath).absolutePath, listOfKtFilesFrom(inputFiles), outputPath, resolvedLibraries, listOfKtFilesFrom(commonSources))
+    buildKLib(moduleName, listOfKtFilesFrom(inputFiles), outputPath, resolvedLibraries, listOfKtFilesFrom(commonSources))
 }
 
 // Copied here from `K2JsIrCompiler` instead of reusing in order to avoid circular dependencies between Gradle tasks
