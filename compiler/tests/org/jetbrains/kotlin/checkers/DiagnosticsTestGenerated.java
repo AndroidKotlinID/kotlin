@@ -8308,6 +8308,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/generics/argumentsForT.kt");
             }
 
+            @TestMetadata("bareTypesWithStarProjections.kt")
+            public void testBareTypesWithStarProjections() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/generics/bareTypesWithStarProjections.kt");
+            }
+
             @TestMetadata("commonSupertypeContravariant.kt")
             public void testCommonSupertypeContravariant() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/generics/commonSupertypeContravariant.kt");
@@ -9735,6 +9740,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/inference/completeInferenceIfManyFailed.kt");
             }
 
+            @TestMetadata("completionOfMultipleLambdas.kt")
+            public void testCompletionOfMultipleLambdas() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/completionOfMultipleLambdas.kt");
+            }
+
             @TestMetadata("conflictingSubstitutions.kt")
             public void testConflictingSubstitutions() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/conflictingSubstitutions.kt");
@@ -10003,6 +10013,26 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("reportAboutUnresolvedReferenceAsUnresolved.kt")
             public void testReportAboutUnresolvedReferenceAsUnresolved() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/reportAboutUnresolvedReferenceAsUnresolved.kt");
+            }
+
+            @TestMetadata("starApproximation.kt")
+            public void testStarApproximation() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/starApproximation.kt");
+            }
+
+            @TestMetadata("starApproximationBangBang.kt")
+            public void testStarApproximationBangBang() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/starApproximationBangBang.kt");
+            }
+
+            @TestMetadata("starApproximationFlexible.kt")
+            public void testStarApproximationFlexible() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/starApproximationFlexible.kt");
+            }
+
+            @TestMetadata("tooEagerSmartcast.kt")
+            public void testTooEagerSmartcast() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/tooEagerSmartcast.kt");
             }
 
             @TestMetadata("tryNumberLowerBoundsBeforeUpperBounds.kt")
@@ -11201,6 +11231,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 @TestMetadata("doNotInferFromBoundsOnly.kt")
                 public void testDoNotInferFromBoundsOnly() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/upperBounds/doNotInferFromBoundsOnly.kt");
+                }
+
+                @TestMetadata("flexibilityInCommonSuperTypeCalculation.kt")
+                public void testFlexibilityInCommonSuperTypeCalculation() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/upperBounds/flexibilityInCommonSuperTypeCalculation.kt");
+                }
+
+                @TestMetadata("flexibilityInCommonSuperTypeCalculation.ni.kt")
+                public void testFlexibilityInCommonSuperTypeCalculation_ni() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/upperBounds/flexibilityInCommonSuperTypeCalculation.ni.kt");
                 }
 
                 @TestMetadata("intersectUpperBounds.kt")

@@ -1,4 +1,4 @@
-// !LANGUAGE: +AllowContractsForCustomFunctions +UseReturnsEffect
+// !LANGUAGE: +AllowContractsForCustomFunctions +UseReturnsEffect +AllowContractsForNonOverridableMembers +AllowReifiedGenericsInContracts
 // !USE_EXPERIMENTAL: kotlin.contracts.ExperimentalContracts
 // !DIAGNOSTICS: -INVISIBLE_REFERENCE -INVISIBLE_MEMBER
 
@@ -13,14 +13,14 @@ inline fun <reified T> referToReifiedGeneric(x: Any?) {
 class Generic<T> {
     fun referToCaptured(x: Any?) {
         contract {
-            returns() implies (x is T)
+            returns() implies (x is <!CANNOT_CHECK_FOR_ERASED, ERROR_IN_CONTRACT_DESCRIPTION!>T<!>)
         }
     }
 }
 
 fun referToSubstituted(x: Any?) {
-    contract {
-        returns() implies (x is Generic<String>)
+    <!ERROR_IN_CONTRACT_DESCRIPTION("Error in contract description")!>contract<!> {
+        returns() implies (x is <!CANNOT_CHECK_FOR_ERASED!>Generic<String><!>)
     }
 }
 
@@ -35,14 +35,14 @@ typealias FunctionalType = () -> Unit
 typealias SimpleType = Int
 
 fun referToAliasedGeneric(x: Any?) {
-    contract {
-        returns() implies (x is GenericString)
+    <!ERROR_IN_CONTRACT_DESCRIPTION("Error in contract description")!>contract<!> {
+        returns() implies (x is <!CANNOT_CHECK_FOR_ERASED!>GenericString<!>)
     }
 }
 
 fun referToAliasedFunctionType(x: Any?) {
-    contract {
-        returns() implies (x is FunctionalType)
+    <!ERROR_IN_CONTRACT_DESCRIPTION("Error in contract description")!>contract<!> {
+        returns() implies (x is <!CANNOT_CHECK_FOR_ERASED!>FunctionalType<!>)
     }
 }
 
