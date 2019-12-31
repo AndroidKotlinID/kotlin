@@ -75,7 +75,7 @@ class Fir2IrVisitor(
 
     private val typeContext = session.typeContext
 
-    private val declarationStorage = Fir2IrDeclarationStorage(session, symbolTable, moduleDescriptor)
+    private val declarationStorage = Fir2IrDeclarationStorage(session, symbolTable, moduleDescriptor, irBuiltIns)
 
     private val nothingType = session.builtinTypes.nothingType.toIrType(session, declarationStorage)
 
@@ -137,6 +137,9 @@ class Fir2IrVisitor(
         if (this != null) subjectVariableStack.removeAt(subjectVariableStack.size - 1)
         return result
     }
+
+    private fun FirTypeRef.toIrType(session: FirSession, declarationStorage: Fir2IrDeclarationStorage) =
+        toIrType(session, declarationStorage, irBuiltIns)
 
     override fun visitElement(element: FirElement, data: Any?): IrElement {
         TODO("Should not be here: ${element.render()}")
@@ -309,8 +312,9 @@ class Fir2IrVisitor(
     private fun IrFunction.addDispatchReceiverParameter(containingClass: IrClass) {
         val thisOrigin = IrDeclarationOrigin.DEFINED
         val thisType = containingClass.thisReceiver!!.type
+        val descriptor = WrappedValueParameterDescriptor()
         dispatchReceiverParameter = symbolTable.declareValueParameter(
-            startOffset, endOffset, thisOrigin, WrappedValueParameterDescriptor(),
+            startOffset, endOffset, thisOrigin, descriptor,
             thisType
         ) { symbol ->
             IrValueParameterImpl(
@@ -318,7 +322,7 @@ class Fir2IrVisitor(
                 Name.special("<this>"), -1, thisType,
                 varargElementType = null, isCrossinline = false, isNoinline = false
             ).setParentByParentStack()
-        }
+        }.also { descriptor.bind(it) }
     }
 
     private fun <T : IrFunction> T.setFunctionContent(
@@ -702,7 +706,7 @@ class Fir2IrVisitor(
                     startOffset, endOffset, type, symbol,
                     origin = calleeReference.statementOrigin()
                 )
-                else -> IrErrorCallExpressionImpl(startOffset, endOffset, type, "Unresolved reference: ${calleeReference.render()}")
+                else -> generateErrorCallExpression(startOffset, endOffset, calleeReference, type)
             }
         }
     }
@@ -710,7 +714,7 @@ class Fir2IrVisitor(
     private fun FirAnnotationCall.toIrExpression(): IrExpression {
         val coneType = (annotationTypeRef as? FirResolvedTypeRef)?.type as? ConeLookupTagBasedType
         val firSymbol = coneType?.lookupTag?.toSymbol(session) as? FirClassSymbol
-        val type = coneType?.toIrType(this@Fir2IrVisitor.session, declarationStorage)
+        val type = coneType?.toIrType(session, declarationStorage, irBuiltIns)
         val symbol = type?.classifierOrNull
         return convertWithOffsets { startOffset, endOffset ->
             when (symbol) {
@@ -792,30 +796,51 @@ class Fir2IrVisitor(
         }
     }
 
+    private fun FirQualifiedAccess.findIrDispatchReceiver(): IrExpression? = findIrReceiver(isDispatch = true)
+
+    private fun FirQualifiedAccess.findIrExtensionReceiver(): IrExpression? = findIrReceiver(isDispatch = false)
+
+    private fun FirQualifiedAccess.findIrReceiver(isDispatch: Boolean): IrExpression? {
+        val firReceiver = if (isDispatch) dispatchReceiver else extensionReceiver
+        return firReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+            ?: explicitReceiver?.toIrExpression() // NB: this applies to the situation when call is unresolved
+            ?: run {
+                // Object case
+                val callableReference = calleeReference as? FirResolvedNamedReference
+                val ownerClassId = (callableReference?.resolvedSymbol as? FirCallableSymbol<*>)?.callableId?.classId
+                val ownerClassSymbol = ownerClassId?.let { session.firSymbolProvider.getClassLikeSymbolByFqName(it) }
+                val firClass = (ownerClassSymbol?.fir as? FirClass)?.takeIf {
+                    it is FirAnonymousObject || it is FirRegularClass && it.classKind == ClassKind.OBJECT
+                }
+                firClass?.convertWithOffsets { startOffset, endOffset ->
+                    val irClass = declarationStorage.getIrClass(firClass, setParent = false)
+                    IrGetObjectValueImpl(startOffset, endOffset, irClass.defaultType, irClass.symbol)
+                }
+            }
+        // TODO: uncomment after fixing KT-35730
+//            ?: run {
+//                val name = if (isDispatch) "Dispatch" else "Extension"
+//                throw AssertionError(
+//                    "$name receiver expected: ${render()} to ${calleeReference.render()}"
+//                )
+//            }
+    }
+
     private fun IrExpression.applyReceivers(qualifiedAccess: FirQualifiedAccess): IrExpression {
         return when (this) {
             is IrCallImpl -> {
                 val ownerFunction = symbol.owner
                 if (ownerFunction.dispatchReceiverParameter != null) {
-                    dispatchReceiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
-                        ?: qualifiedAccess.explicitReceiver?.toIrExpression() // NB: this applies to the situation when call is unresolved
-                    if (dispatchReceiver == null) {
-                        throw AssertionError()
-                    }
+                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver()
                 } else if (ownerFunction.extensionReceiverParameter != null) {
-                    extensionReceiver = qualifiedAccess.extensionReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
-                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
-                    if (extensionReceiver == null) {
-                        throw AssertionError()
-                    }
+                    extensionReceiver = qualifiedAccess.findIrExtensionReceiver()
                 }
                 this
             }
             is IrFieldExpressionBase -> {
                 val ownerField = symbol.owner
                 if (!ownerField.isStatic) {
-                    receiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
-                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
+                    receiver = qualifiedAccess.findIrDispatchReceiver()
                 }
                 this
             }
@@ -877,9 +902,14 @@ class Fir2IrVisitor(
         }
     }
 
-    private fun generateErrorCallExpression(startOffset: Int, endOffset: Int, calleeReference: FirReference): IrErrorCallExpression {
+    private fun generateErrorCallExpression(
+        startOffset: Int,
+        endOffset: Int,
+        calleeReference: FirReference,
+        type: IrType? = null
+    ): IrErrorCallExpression {
         return IrErrorCallExpressionImpl(
-            startOffset, endOffset, IrErrorTypeImpl(null, emptyList(), Variance.INVARIANT),
+            startOffset, endOffset, type ?: createErrorType(),
             "Unresolved reference: ${calleeReference.render()}"
         )
     }

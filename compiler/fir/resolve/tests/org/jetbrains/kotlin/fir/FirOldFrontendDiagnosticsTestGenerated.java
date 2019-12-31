@@ -1849,9 +1849,19 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             runTest("compiler/testData/diagnostics/tests/callableReference/kt32256.kt");
         }
 
+        @TestMetadata("kt32267.kt")
+        public void testKt32267() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/kt32267.kt");
+        }
+
         @TestMetadata("kt7430_wrongClassOnLHS.kt")
         public void testKt7430_wrongClassOnLHS() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/kt7430_wrongClassOnLHS.kt");
+        }
+
+        @TestMetadata("lambdaResult.kt")
+        public void testLambdaResult() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/lambdaResult.kt");
         }
 
         @TestMetadata("memberExtensionsImportedFromObjectsUnsupported.kt")
@@ -9933,6 +9943,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             runTest("compiler/testData/diagnostics/tests/inference/kt33263.kt");
         }
 
+        @TestMetadata("kt35702.kt")
+        public void testKt35702() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/inference/kt35702.kt");
+        }
+
         @TestMetadata("kt6175.kt")
         public void testKt6175() throws Exception {
             runTest("compiler/testData/diagnostics/tests/inference/kt6175.kt");
@@ -10216,6 +10231,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             @TestMetadata("coercionToUnitForLastLambdaInLambda.kt")
             public void testCoercionToUnitForLastLambdaInLambda() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionToUnitForLastLambdaInLambda.kt");
+            }
+
+            @TestMetadata("coercionToUnitReference.kt")
+            public void testCoercionToUnitReference() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/coercionToUnit/coercionToUnitReference.kt");
             }
 
             @TestMetadata("coercionWithExpectedType.kt")
@@ -17931,6 +17951,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
         @TestMetadata("SpecififcityByReceiver.kt")
         public void testSpecififcityByReceiver() throws Exception {
             runTest("compiler/testData/diagnostics/tests/regressions/SpecififcityByReceiver.kt");
+        }
+
+        @TestMetadata("testNestedSpecialCalls.kt")
+        public void testTestNestedSpecialCalls() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/regressions/testNestedSpecialCalls.kt");
         }
 
         @TestMetadata("TypeMismatchOnUnaryOperations.kt")
