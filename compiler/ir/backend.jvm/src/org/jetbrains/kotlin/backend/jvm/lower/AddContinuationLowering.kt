@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.ir.IrInlineReferenceLocator
+import org.jetbrains.kotlin.backend.jvm.ir.defaultValue
 import org.jetbrains.kotlin.codegen.coroutines.*
 import org.jetbrains.kotlin.codegen.inline.coroutines.FOR_INLINE_SUFFIX
 import org.jetbrains.kotlin.descriptors.Modality
@@ -23,7 +24,6 @@ import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetFieldImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
@@ -78,6 +78,9 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                             "Inconsistency between callable reference to suspend lambda and the corresponding continuation"
                         }
                         +irCall(constructor.symbol).apply {
+                            for (typeParameter in info.constructor.parentAsClass.typeParameters) {
+                                putTypeArgument(typeParameter.index, expression.getTypeArgument(typeParameter.index))
+                            }
                             expressionArguments.forEachIndexed { index, argument ->
                                 putValueArgument(index, argument)
                             }
@@ -94,6 +97,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         val suspendLambda = context.ir.symbols.suspendLambdaClass.owner
         return suspendLambda.createContinuationClassFor(parent, JvmLoweredDeclarationOrigin.SUSPEND_LAMBDA).apply {
             copyAttributes(info.reference)
+            copyTypeParametersFrom(info.function)
             val functionNClass = context.ir.symbols.getJvmFunctionClass(info.arity + 1)
             superTypes.add(
                 IrSimpleTypeImpl(
@@ -180,7 +184,6 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         receiverField: IrField?,
         fields: List<IrField>
     ) {
-        copyTypeParametersFrom(irFunction)
         body = irFunction.body?.deepCopyWithSymbols(this)
         body?.transformChildrenVoid(object : IrElementTransformerVoid() {
             override fun visitGetValue(expression: IrGetValue): IrExpression {
@@ -285,6 +288,9 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
             function.body = context.createIrBuilder(function.symbol).irBlockBody {
                 // Create a copy
                 val newlyCreatedObject = irTemporary(irCall(constructor).also { constructorCall ->
+                    for (typeParameter in typeParameters) {
+                        constructorCall.putTypeArgument(typeParameter.index, typeParameter.defaultType)
+                    }
                     for ((index, field) in parametersWithArguments.withIndex()) {
                         constructorCall.putValueArgument(index, irGetField(irGet(function.dispatchReceiverParameter!!), field))
                     }
@@ -321,6 +327,9 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
             function.body = context.createIrBuilder(function.symbol).irBlockBody {
                 var index = 0
                 val constructorCall = irCall(constructor).also {
+                    for (typeParameter in typeParameters) {
+                        it.putTypeArgument(typeParameter.index, typeParameter.defaultType)
+                    }
                     for ((i, field) in parametersWithArguments.withIndex()) {
                         if (info.reference.getValueArgument(i) == null) continue
                         it.putValueArgument(index++, irGetField(irGet(function.dispatchReceiverParameter!!), field))
@@ -395,6 +404,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         return context.ir.symbols.continuationImplClass.owner
             .createContinuationClassFor(irFunction, JvmLoweredDeclarationOrigin.CONTINUATION_CLASS)
             .apply {
+                copyTypeParametersFrom(irFunction)
                 val resultField = addField(
                     context.state.languageVersionSettings.dataFieldName(),
                     context.irBuiltIns.anyType,
@@ -446,6 +456,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         capturedThisField: IrField?,
         isStaticSuspendImpl: Boolean
     ) {
+        val backendContext = context
         val invokeSuspend = context.ir.symbols.continuationImplClass.owner.functions
             .single { it.name == Name.identifier(INVOKE_SUSPEND_METHOD_NAME) }
         addFunctionOverride(invokeSuspend).also { function ->
@@ -472,7 +483,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
 
                 +irReturn(irCall(irFunction).also {
                     for (i in irFunction.typeParameters.indices) {
-                        it.putTypeArgument(i, context.irBuiltIns.anyNType)
+                        it.putTypeArgument(i, typeParameters[i].defaultType)
                     }
                     val capturedThisValue = capturedThisField?.let { irField ->
                         irGetField(irGet(function.dispatchReceiverParameter!!), irField)
@@ -481,15 +492,12 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                         it.dispatchReceiver = capturedThisValue
                     }
                     irFunction.extensionReceiverParameter?.let { extensionReceiverParameter ->
-                        it.extensionReceiver = IrConstImpl.defaultValueForType(
-                            UNDEFINED_OFFSET, UNDEFINED_OFFSET, extensionReceiverParameter.type
+                        it.extensionReceiver = extensionReceiverParameter.type.defaultValue(
+                            UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext
                         )
                     }
                     for ((i, parameter) in irFunction.valueParameters.withIndex()) {
-                        val defaultValueForParameter = IrConstImpl.defaultValueForType(
-                            UNDEFINED_OFFSET, UNDEFINED_OFFSET, parameter.type
-                        )
-                        it.putValueArgument(i, defaultValueForParameter)
+                        it.putValueArgument(i, parameter.type.defaultValue(UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext))
                     }
                     if (isStaticSuspendImpl) {
                         it.putValueArgument(0, capturedThisValue)
@@ -501,6 +509,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
 
     private fun createStaticSuspendImpl(irFunction: IrSimpleFunction): IrSimpleFunction {
         // Create static suspend impl method.
+        val backendContext = context
         val static = createStaticFunctionWithReceivers(
             irFunction.parent,
             irFunction.name.toSuspendImplementationName(),
@@ -520,12 +529,14 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                     it.putValueArgument(i++, irGet(irFunction.dispatchReceiverParameter!!))
                 }
                 if (irFunction.extensionReceiverParameter != null) {
-                    it.putValueArgument(i++, irNull())
+                    val defaultValueForParameter = irFunction.extensionReceiverParameter!!.type.defaultValue(
+                        UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext
+                    )
+                    it.putValueArgument(i++, defaultValueForParameter)
+
                 }
                 for (parameter in irFunction.valueParameters) {
-                    val defaultValueForParameter = IrConstImpl.defaultValueForType(
-                        UNDEFINED_OFFSET, UNDEFINED_OFFSET, parameter.type
-                    )
+                    val defaultValueForParameter = parameter.type.defaultValue(UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext)
                     it.putValueArgument(i++, defaultValueForParameter)
                 }
             })

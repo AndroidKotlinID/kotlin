@@ -977,6 +977,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/annotations/javaUnrepeatable.kt");
             }
 
+            @TestMetadata("kotlinAnnotationOnJavaInterface.kt")
+            public void testKotlinAnnotationOnJavaInterface() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/annotations/kotlinAnnotationOnJavaInterface.kt");
+            }
+
             @TestMetadata("kt1860-negative.kt")
             public void testKt1860_negative() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/annotations/kt1860-negative.kt");
@@ -1859,6 +1864,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("kt32267.kt")
             public void testKt32267() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/kt32267.kt");
+            }
+
+            @TestMetadata("kt34314.kt")
+            public void testKt34314() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/kt34314.kt");
+            }
+
+            @TestMetadata("kt34314_lambda.kt")
+            public void testKt34314_lambda() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/kt34314_lambda.kt");
             }
 
             @TestMetadata("kt7430_wrongClassOnLHS.kt")

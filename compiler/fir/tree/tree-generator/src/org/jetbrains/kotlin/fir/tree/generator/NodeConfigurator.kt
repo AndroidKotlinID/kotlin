@@ -243,11 +243,6 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +annotations
         }
 
-        enumEntry.configure {
-            +arguments.withTransform()
-            +field(typeRef)
-        }
-
         anonymousFunction.configure {
             parentArg(function, "F", anonymousFunction)
             +symbol("FirAnonymousFunctionSymbol")
@@ -346,6 +341,11 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +field("setter", propertyAccessor, nullable = true).withTransform()
             +annotations
             needTransformOtherChildren()
+        }
+
+        enumEntry.configure {
+            parentArg(variable, "F", enumEntry)
+            parentArg(callableMemberDeclaration, "F", enumEntry)
         }
 
         field.configure {

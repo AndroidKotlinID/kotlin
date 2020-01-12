@@ -8,13 +8,12 @@ package org.jetbrains.kotlin.backend.common.ir
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.DumpIrTreeWithDescriptorsVisitor
 import org.jetbrains.kotlin.backend.common.deepCopyWithVariables
-import org.jetbrains.kotlin.backend.common.descriptors.*
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.Scope
 import org.jetbrains.kotlin.ir.declarations.*
@@ -166,28 +165,46 @@ fun IrValueParameter.copyTo(
 
 fun IrTypeParameter.copyToWithoutSuperTypes(
     target: IrTypeParametersContainer,
-    shift: Int = 0,
+    index: Int = this.index,
     origin: IrDeclarationOrigin = this.origin
 ): IrTypeParameter {
     val descriptor = WrappedTypeParameterDescriptor(symbol.descriptor.annotations, symbol.descriptor.source)
     val symbol = IrTypeParameterSymbolImpl(descriptor)
-    return IrTypeParameterImpl(startOffset, endOffset, origin, symbol, name, shift + index, isReified, variance).also { copied ->
+    return IrTypeParameterImpl(startOffset, endOffset, origin, symbol, name, index, isReified, variance).also { copied ->
         descriptor.bind(copied)
         copied.parent = target
     }
 }
 
-fun IrFunction.copyValueParametersFrom(from: IrFunction) {
-    // TODO: should dispatch receiver be copied?
+private fun IrFunction.copyReceiverParametersFrom(from: IrFunction) {
     dispatchReceiverParameter = from.dispatchReceiverParameter?.let {
         IrValueParameterImpl(it.startOffset, it.endOffset, it.origin, it.descriptor, it.type, it.varargElementType).also {
             it.parent = this
         }
     }
     extensionReceiverParameter = from.extensionReceiverParameter?.copyTo(this)
+}
 
+fun IrFunction.copyValueParametersFrom(from: IrFunction) {
+    copyReceiverParametersFrom(from)
     val shift = valueParameters.size
     valueParameters += from.valueParameters.map { it.copyTo(this, index = it.index + shift) }
+}
+
+fun IrFunction.copyValueParametersInsertingContinuationFrom(from: IrFunction, insertContinuation: () -> Unit) {
+    copyReceiverParametersFrom(from)
+    val shift = valueParameters.size
+    var additionalShift = 0
+    from.valueParameters.forEach {
+        // The continuation parameter goes before the default argument mask and handler.
+        if (it.origin == IrDeclarationOrigin.MASK_FOR_DEFAULT_FUNCTION) {
+            insertContinuation()
+            additionalShift = 1
+        }
+        valueParameters.add(it.copyTo(this, index = it.index + shift + additionalShift))
+    }
+    // If there was no default argument mask and handler, the continuation goes last.
+    if (additionalShift == 0) insertContinuation()
 }
 
 fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
@@ -199,17 +216,18 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
 fun IrTypeParametersContainer.copyTypeParameters(
     srcTypeParameters: List<IrTypeParameter>,
     origin: IrDeclarationOrigin? = null
-) {
+): List<IrTypeParameter> {
     val shift = typeParameters.size
     // Any type parameter can figure in a boundary type for any other parameter.
     // Therefore, we first copy the parameters themselves, then set up their supertypes.
-    srcTypeParameters.forEachIndexed { i, sourceParameter ->
-        assert(sourceParameter.index == i)
-        typeParameters.add(sourceParameter.copyToWithoutSuperTypes(this, shift = shift, origin = origin ?: sourceParameter.origin))
+    val newTypeParameters = srcTypeParameters.mapIndexed { i, sourceParameter ->
+        sourceParameter.copyToWithoutSuperTypes(this, index = i + shift, origin = origin ?: sourceParameter.origin)
     }
-    srcTypeParameters.zip(typeParameters.drop(shift)).forEach { (srcParameter, dstParameter) ->
+    typeParameters.addAll(newTypeParameters)
+    srcTypeParameters.zip(newTypeParameters).forEach { (srcParameter, dstParameter) ->
         dstParameter.copySuperTypesFrom(srcParameter)
     }
+    return newTypeParameters
 }
 
 fun IrTypeParametersContainer.copyTypeParametersFrom(
@@ -514,6 +532,7 @@ fun createStaticFunctionWithReceivers(
     dispatchReceiverType: IrType? = oldFunction.dispatchReceiverParameter?.type,
     origin: IrDeclarationOrigin = oldFunction.origin,
     modality: Modality = Modality.FINAL,
+    visibility: Visibility = oldFunction.visibility,
     copyMetadata: Boolean = true
 ): IrSimpleFunction {
     val descriptor = (oldFunction.descriptor as? DescriptorWithContainerSource)?.let {
@@ -524,7 +543,7 @@ fun createStaticFunctionWithReceivers(
         origin,
         IrSimpleFunctionSymbolImpl(descriptor),
         name,
-        oldFunction.visibility,
+        visibility,
         modality,
         oldFunction.returnType,
         isInline = oldFunction.isInline,
