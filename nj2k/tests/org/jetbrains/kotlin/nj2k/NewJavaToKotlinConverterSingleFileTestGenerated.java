@@ -441,6 +441,16 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
             runTest("nj2k/testData/newJ2k/assignmentExpression/bitOperationPriorityComments.java");
         }
 
+        @TestMetadata("compoundAssignmentPriority.java")
+        public void testCompoundAssignmentPriority() throws Exception {
+            runTest("nj2k/testData/newJ2k/assignmentExpression/compoundAssignmentPriority.java");
+        }
+
+        @TestMetadata("compoundAssignmentPriority2.java")
+        public void testCompoundAssignmentPriority2() throws Exception {
+            runTest("nj2k/testData/newJ2k/assignmentExpression/compoundAssignmentPriority2.java");
+        }
+
         @TestMetadata("declarationAssignmentsChain.java")
         public void testDeclarationAssignmentsChain() throws Exception {
             runTest("nj2k/testData/newJ2k/assignmentExpression/declarationAssignmentsChain.java");
@@ -1020,6 +1030,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("nj2k/testData/newJ2k/comments"), Pattern.compile("^([^\\.]+)\\.java$"), null, true);
         }
 
+        @TestMetadata("beginningOfCommentInsideMultilineOne.java")
+        public void testBeginningOfCommentInsideMultilineOne() throws Exception {
+            runTest("nj2k/testData/newJ2k/comments/beginningOfCommentInsideMultilineOne.java");
+        }
+
         @TestMetadata("commentInsideCall.java")
         public void testCommentInsideCall() throws Exception {
             runTest("nj2k/testData/newJ2k/comments/commentInsideCall.java");
@@ -1583,6 +1598,16 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("kt-32253.java")
         public void testKt_32253() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/kt-32253.java");
+        }
+
+        @TestMetadata("kt-35739.java")
+        public void testKt_35739() throws Exception {
+            runTest("nj2k/testData/newJ2k/detectProperties/kt-35739.java");
+        }
+
+        @TestMetadata("NoBackingField.java")
+        public void testNoBackingField() throws Exception {
+            runTest("nj2k/testData/newJ2k/detectProperties/NoBackingField.java");
         }
 
         @TestMetadata("Overrides.java")
@@ -4020,6 +4045,16 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
     public static class ObjectLiteral extends AbstractNewJavaToKotlinConverterSingleFileTest {
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        @TestMetadata("AccesssThisInsideAnonClass.java")
+        public void testAccesssThisInsideAnonClass() throws Exception {
+            runTest("nj2k/testData/newJ2k/objectLiteral/AccesssThisInsideAnonClass.java");
+        }
+
+        @TestMetadata("AccesssThisInsideAnonClass2.java")
+        public void testAccesssThisInsideAnonClass2() throws Exception {
+            runTest("nj2k/testData/newJ2k/objectLiteral/AccesssThisInsideAnonClass2.java");
         }
 
         public void testAllFilesPresentInObjectLiteral() throws Exception {

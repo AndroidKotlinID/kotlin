@@ -18,14 +18,16 @@ import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeVariable
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
 import org.jetbrains.kotlin.resolve.calls.model.PostponedResolvedAtomMarker
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 
-class CallInfo(
+data class CallInfo(
     val callKind: CallKind,
+    val name: Name,
 
     val explicitReceiver: FirExpression?,
     val arguments: List<FirExpression>,
@@ -36,17 +38,29 @@ class CallInfo(
     val containingFile: FirFile,
     val implicitReceiverStack: ImplicitReceiverStack,
 
-    // Three properties for callable references only
+    // Four properties for callable references only
     val expectedType: ConeKotlinType? = null,
     val outerCSBuilder: ConstraintSystemBuilder? = null,
-    val lhs: DoubleColonLHS? = null
+    val lhs: DoubleColonLHS? = null,
+    val stubReceiver: FirExpression? = null
 ) {
     val argumentCount get() = arguments.size
 
+    fun replaceWithVariableAccess(): CallInfo =
+        CallInfo(
+            CallKind.VariableAccess, name, explicitReceiver, emptyList(),
+            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs
+        )
+
+    fun replaceExplicitReceiver(explicitReceiver: FirExpression): CallInfo =
+        CallInfo(
+            callKind, name, explicitReceiver, arguments,
+            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs
+        )
+
     fun withReceiverAsArgument(receiverExpression: FirExpression): CallInfo =
         CallInfo(
-            callKind, explicitReceiver,
-            listOf(receiverExpression) + arguments,
+            callKind, name, explicitReceiver, listOf(receiverExpression) + arguments,
             isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs
         )
 }

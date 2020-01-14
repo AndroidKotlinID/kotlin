@@ -16,10 +16,6 @@ pluginManagement {
             maven { url "https://kotlin.bintray.com/kotlin-dependencies" }
         }
     }
-
-    plugins {
-        id("com.github.node-gradle.node") version "2.2.0"
-    }
 }
 
 buildscript {
@@ -36,7 +32,7 @@ buildscript {
 }
 
 plugins {
-    id "com.gradle.enterprise" version "3.0"
+    id "com.gradle.enterprise" version "3.1.1"
 }
 
 def buildProperties = BuildPropertiesKt.getKotlinBuildPropertiesForSettings(settings)
