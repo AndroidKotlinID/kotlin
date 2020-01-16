@@ -1683,6 +1683,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/callableReference/function/kt21787.kt");
             }
 
+            @TestMetadata("kt32462.kt")
+            public void testKt32462() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/function/kt32462.kt");
+            }
+
             @TestMetadata("nestedConstructorFromClass.kt")
             public void testNestedConstructorFromClass() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/function/nestedConstructorFromClass.kt");
@@ -5580,6 +5585,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/featureIntersection/inlineSuspendFinally.kt", "kotlin.coroutines");
             }
 
+            @TestMetadata("interfaceMethodWithBody.kt")
+            public void testInterfaceMethodWithBody() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/featureIntersection/interfaceMethodWithBody.kt");
+            }
+
             @TestMetadata("safeCallOnTwoReceiversLong.kt")
             public void testSafeCallOnTwoReceiversLong_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/featureIntersection/safeCallOnTwoReceiversLong.kt", "kotlin.coroutines");
@@ -7359,6 +7369,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("insideInlinedObjectMultiModule.kt")
         public void testInsideInlinedObjectMultiModule() throws Exception {
             runTest("compiler/testData/codegen/box/delegatedProperty/insideInlinedObjectMultiModule.kt");
+        }
+
+        @TestMetadata("kt35707.kt")
+        public void testKt35707() throws Exception {
+            runTest("compiler/testData/codegen/box/delegatedProperty/kt35707.kt");
         }
 
         @TestMetadata("kt4138.kt")
@@ -9177,6 +9192,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/functions/recursiveIncrementCall.kt");
         }
 
+        @TestMetadata("typeParametersInLocalFunction.kt")
+        public void testTypeParametersInLocalFunction() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/typeParametersInLocalFunction.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/functions/bigArity")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -9834,6 +9854,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("kt10822.kt")
         public void testKt10822() throws Exception {
             runTest("compiler/testData/codegen/box/inference/kt10822.kt");
+        }
+
+        @TestMetadata("kt35684.kt")
+        public void testKt35684() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/kt35684.kt");
         }
 
         @TestMetadata("lastExpressionOfLambdaWithNothingConstraint.kt")
@@ -11581,6 +11606,39 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             @TestMetadata("mixedNumberTypes.kt")
             public void testMixedNumberTypes() throws Exception {
                 runTest("compiler/testData/codegen/box/ir/primitiveNumberComparisons/mixedNumberTypes.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/ir/serializationRegressions")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class SerializationRegressions extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInSerializationRegressions() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/ir/serializationRegressions"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR, true);
+            }
+
+            @TestMetadata("dispatchReceiverValue.kt")
+            public void testDispatchReceiverValue() throws Exception {
+                runTest("compiler/testData/codegen/box/ir/serializationRegressions/dispatchReceiverValue.kt");
+            }
+
+            @TestMetadata("genericProperty.kt")
+            public void testGenericProperty() throws Exception {
+                runTest("compiler/testData/codegen/box/ir/serializationRegressions/genericProperty.kt");
+            }
+
+            @TestMetadata("innerClassInEnumEntryClass.kt")
+            public void testInnerClassInEnumEntryClass() throws Exception {
+                runTest("compiler/testData/codegen/box/ir/serializationRegressions/innerClassInEnumEntryClass.kt");
+            }
+
+            @TestMetadata("useImportedMember.kt")
+            public void testUseImportedMember() throws Exception {
+                runTest("compiler/testData/codegen/box/ir/serializationRegressions/useImportedMember.kt");
             }
         }
     }
@@ -13500,6 +13558,79 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             @TestMetadata("protectedCompanionObjectAccessedFromNestedClass.kt")
             public void testProtectedCompanionObjectAccessedFromNestedClass() throws Exception {
                 runTest("compiler/testData/codegen/box/objects/companionObjectAccess/protectedCompanionObjectAccessedFromNestedClass.kt");
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class MultipleCompanionsWithAccessors extends AbstractIrJsCodegenBoxTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+                }
+
+                @TestMetadata("accessFromInlineLambda.kt")
+                public void testAccessFromInlineLambda() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/accessFromInlineLambda.kt");
+                }
+
+                public void testAllFilesPresentInMultipleCompanionsWithAccessors() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR, true);
+                }
+
+                @TestMetadata("anonymousObjectInPropertyInitializer.kt")
+                public void testAnonymousObjectInPropertyInitializer() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/anonymousObjectInPropertyInitializer.kt");
+                }
+
+                @TestMetadata("fromAnonymousObjectInNestedClass.kt")
+                public void testFromAnonymousObjectInNestedClass() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/fromAnonymousObjectInNestedClass.kt");
+                }
+
+                @TestMetadata("fromInitBlock.kt")
+                public void testFromInitBlock() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/fromInitBlock.kt");
+                }
+
+                @TestMetadata("fromInitBlockOfNestedClass.kt")
+                public void testFromInitBlockOfNestedClass() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/fromInitBlockOfNestedClass.kt");
+                }
+
+                @TestMetadata("fromInlineLambdaInNestedClass.kt")
+                public void testFromInlineLambdaInNestedClass() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/fromInlineLambdaInNestedClass.kt");
+                }
+
+                @TestMetadata("inheritedProtectedCompanionAndOwnPrivateCompanion.kt")
+                public void testInheritedProtectedCompanionAndOwnPrivateCompanion() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/inheritedProtectedCompanionAndOwnPrivateCompanion.kt");
+                }
+
+                @TestMetadata("inheritedProtectedCompanionsReferencedByName.kt")
+                public void testInheritedProtectedCompanionsReferencedByName() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/inheritedProtectedCompanionsReferencedByName.kt");
+                }
+
+                @TestMetadata("lambdaInPropertyInitializer.kt")
+                public void testLambdaInPropertyInitializer() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/lambdaInPropertyInitializer.kt");
+                }
+
+                @TestMetadata("twoInheritedProtectedCompanions.kt")
+                public void testTwoInheritedProtectedCompanions() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/twoInheritedProtectedCompanions.kt");
+                }
+
+                @TestMetadata("withCompanionObjectBase.kt")
+                public void testWithCompanionObjectBase() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/withCompanionObjectBase.kt");
+                }
+
+                @TestMetadata("withMultipleNestedCompanionObjectBases.kt")
+                public void testWithMultipleNestedCompanionObjectBases() throws Exception {
+                    runTest("compiler/testData/codegen/box/objects/companionObjectAccess/multipleCompanionsWithAccessors/withMultipleNestedCompanionObjectBases.kt");
+                }
             }
 
             @TestMetadata("compiler/testData/codegen/box/objects/companionObjectAccess/primitiveCompanion")

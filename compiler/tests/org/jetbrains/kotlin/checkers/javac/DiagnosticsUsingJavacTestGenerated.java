@@ -1886,6 +1886,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/callableReference/memberExtensionsImportedFromObjectsUnsupported.kt");
             }
 
+            @TestMetadata("noAmbiguityWhenAllReferencesAreInapplicable.kt")
+            public void testNoAmbiguityWhenAllReferencesAreInapplicable() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/noAmbiguityWhenAllReferencesAreInapplicable.kt");
+            }
+
             @TestMetadata("noExceptionOnRedCodeWithArrayLikeCall.kt")
             public void testNoExceptionOnRedCodeWithArrayLikeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/noExceptionOnRedCodeWithArrayLikeCall.kt");
@@ -2379,6 +2384,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/callableReference/generic/kt12286.kt");
                 }
 
+                @TestMetadata("kt35896.kt")
+                public void testKt35896() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/generic/kt35896.kt");
+                }
+
                 @TestMetadata("kt7470.kt")
                 public void testKt7470() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/generic/kt7470.kt");
@@ -2618,6 +2628,21 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt12751.kt")
                 public void testKt12751() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/resolve/kt12751.kt");
+                }
+
+                @TestMetadata("kt35887.kt")
+                public void testKt35887() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/resolve/kt35887.kt");
+                }
+
+                @TestMetadata("kt35887_simple.kt")
+                public void testKt35887_simple() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/resolve/kt35887_simple.kt");
+                }
+
+                @TestMetadata("kt35920.kt")
+                public void testKt35920() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/resolve/kt35920.kt");
                 }
 
                 @TestMetadata("kt8596.kt")
@@ -9955,6 +9980,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/inference/kt32434.kt");
             }
 
+            @TestMetadata("kt32462.kt")
+            public void testKt32462() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt32462.kt");
+            }
+
             @TestMetadata("kt33263.kt")
             public void testKt33263() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt33263.kt");
@@ -10053,6 +10083,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("starApproximationFlexible.kt")
             public void testStarApproximationFlexible() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/starApproximationFlexible.kt");
+            }
+
+            @TestMetadata("starApproximationFromDifferentTypeParameter.kt")
+            public void testStarApproximationFromDifferentTypeParameter() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/starApproximationFromDifferentTypeParameter.kt");
             }
 
             @TestMetadata("tooEagerSmartcast.kt")
@@ -10705,6 +10740,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/complexDependancyOnVariableWithTrivialConstraint.kt");
                 }
 
+                @TestMetadata("discriminateNothingForReifiedParameter.kt")
+                public void testDiscriminateNothingForReifiedParameter() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/discriminateNothingForReifiedParameter.kt");
+                }
+
+                @TestMetadata("discriminatedNothingAndSmartCast.kt")
+                public void testDiscriminatedNothingAndSmartCast() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/discriminatedNothingAndSmartCast.kt");
+                }
+
                 @TestMetadata("generateConstraintWithInnerNothingType.kt")
                 public void testGenerateConstraintWithInnerNothingType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/generateConstraintWithInnerNothingType.kt");
@@ -11072,6 +11117,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt3559.kt")
                 public void testKt3559() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt3559.kt");
+                }
+
+                @TestMetadata("kt35844.kt")
+                public void testKt35844() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt35844.kt");
                 }
 
                 @TestMetadata("kt4420.kt")
@@ -17635,6 +17685,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/regressions/kt32205.kt");
             }
 
+            @TestMetadata("kt32507.kt")
+            public void testKt32507() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/regressions/kt32507.kt");
+            }
+
             @TestMetadata("kt328.kt")
             public void testKt328() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/regressions/kt328.kt");
@@ -20410,6 +20465,21 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt3224.kt")
             public void testKt3224() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/smartCasts/kt3224.kt");
+            }
+
+            @TestMetadata("kt32358_1.kt")
+            public void testKt32358_1() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/smartCasts/kt32358_1.kt");
+            }
+
+            @TestMetadata("kt32358_2.kt")
+            public void testKt32358_2() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/smartCasts/kt32358_2.kt");
+            }
+
+            @TestMetadata("kt32358_3.kt")
+            public void testKt32358_3() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/smartCasts/kt32358_3.kt");
             }
 
             @TestMetadata("kt3244.kt")

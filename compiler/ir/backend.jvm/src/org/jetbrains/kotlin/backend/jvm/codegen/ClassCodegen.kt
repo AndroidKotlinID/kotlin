@@ -35,13 +35,14 @@ import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.kotlin.load.kotlin.header.KotlinClassHeader
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_SYNTHETIC_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.TRANSIENT_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.VOLATILE_ANNOTATION_FQ_NAME
+import org.jetbrains.kotlin.resolve.jvm.checkers.JvmSimpleNameBacktickChecker
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.OtherOrigin
+import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmClassSignature
 import org.jetbrains.kotlin.serialization.DescriptorSerializer
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.org.objectweb.asm.Opcodes
@@ -109,6 +110,11 @@ open class ClassCodegen protected constructor(
         }
         val superClassInfo = irClass.getSuperClassInfo(typeMapper)
         val signature = getSignature(irClass, type, superClassInfo, typeMapper)
+
+        // Ensure that the backend only produces class names that would be valid in the frontend for JVM.
+        if (context.state.classBuilderMode.generateBodies && signature.hasInvalidName()) {
+            throw IllegalStateException("Generating class with invalid name '${type.className}': ${irClass.dump()}")
+        }
 
         visitor.defineClass(
             irClass.descriptor.psiElement,
@@ -281,20 +287,11 @@ open class ClassCodegen protected constructor(
 
     companion object {
         fun generate(irClass: IrClass, context: JvmBackendContext) {
-            val state = context.state
-
-            if (irClass.name == SpecialNames.NO_NAME_PROVIDED) {
-                badClass(irClass, state.classBuilderMode)
-            }
-
             ClassCodegen(irClass, context).generate()
         }
 
-        private fun badClass(irClass: IrClass, mode: ClassBuilderMode) {
-            if (mode.generateBodies) {
-                throw IllegalStateException("Generating bad class in ClassBuilderMode = $mode: ${irClass.dump()}")
-            }
-        }
+        private fun JvmClassSignature.hasInvalidName() =
+            name.splitToSequence('/').any { identifier -> identifier.any { it in JvmSimpleNameBacktickChecker.INVALID_CHARS } }
     }
 
     private fun generateDeclaration(declaration: IrDeclaration) {

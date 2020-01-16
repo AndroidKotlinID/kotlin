@@ -419,6 +419,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             runTest("compiler/fir/resolve/testData/resolve/expresssions/annotations.kt");
         }
 
+        @TestMetadata("baseQualifier.kt")
+        public void testBaseQualifier() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/baseQualifier.kt");
+        }
+
         @TestMetadata("checkArguments.kt")
         public void testCheckArguments() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/checkArguments.kt");
@@ -487,6 +492,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("importedReceiver.kt")
         public void testImportedReceiver() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/importedReceiver.kt");
+        }
+
+        @TestMetadata("innerQualifier.kt")
+        public void testInnerQualifier() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/innerQualifier.kt");
         }
 
         @TestMetadata("lambda.kt")
@@ -592,6 +602,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("qualifiedExpressions.kt")
         public void testQualifiedExpressions() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/qualifiedExpressions.kt");
+        }
+
+        @TestMetadata("qualifierPriority.kt")
+        public void testQualifierPriority() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/qualifierPriority.kt");
         }
 
         @TestMetadata("receiverConsistency.kt")

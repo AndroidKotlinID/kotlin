@@ -121,8 +121,10 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
             val parametersFields = info.function.valueParameters.map { addField(it.name, it.type) }
             val parametersWithoutArguments = parametersFields.withIndex()
                 .mapNotNull { (i, field) -> if (info.reference.getValueArgument(i) == null) field else null }
-            val parametersWithArguments = parametersFields - parametersWithoutArguments
-            val constructor = addPrimaryConstructorForLambda(info.arity, info.reference, parametersFields)
+            val parametersWithArguments = parametersFields.withIndex()
+                .filter { info.reference.getValueArgument(it.index) != null }
+            val fieldsForArguments = parametersWithArguments.map(IndexedValue<IrField>::value)
+            val constructor = addPrimaryConstructorForLambda(info.arity, info.reference, fieldsForArguments)
             val invokeToOverride = functionNClass.functions.single {
                 it.owner.valueParameters.size == info.arity + 1 && it.owner.name.asString() == "invoke"
             }
@@ -140,7 +142,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                     constructor,
                     invokeSuspend,
                     invokeToOverride,
-                    parametersWithArguments,
+                    fieldsForArguments,
                     listOfNotNull(receiverField) + parametersWithoutArguments
                 )
             }
@@ -219,13 +221,6 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                 return IrReturnImpl(ret.startOffset, ret.endOffset, ret.type, symbol, ret.value)
             }
         })
-    }
-
-    private fun IrFunction.copyBodyFrom(oldFunction: IrFunction) {
-        val mapping: Map<IrValueParameter, IrValueParameter> =
-            (listOfNotNull(oldFunction.dispatchReceiverParameter, oldFunction.extensionReceiverParameter) + oldFunction.valueParameters)
-                .zip(listOfNotNull(dispatchReceiverParameter, extensionReceiverParameter) + valueParameters).toMap()
-        copyBodyWithParametersMapping(this, oldFunction, mapping)
     }
 
     private fun IrDeclarationContainer.addFunctionOverride(
@@ -315,7 +310,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         constructor: IrFunction,
         superType: IrClass,
         info: SuspendLambdaInfo,
-        parametersWithArguments: List<IrField>,
+        parametersWithArguments: List<IndexedValue<IrField>>,
         singleParameterField: IrField?
     ): IrFunction {
         val create = superType.functions.single {
@@ -330,7 +325,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                     for (typeParameter in typeParameters) {
                         it.putTypeArgument(typeParameter.index, typeParameter.defaultType)
                     }
-                    for ((i, field) in parametersWithArguments.withIndex()) {
+                    for ((i, field) in parametersWithArguments) {
                         if (info.reference.getValueArgument(i) == null) continue
                         it.putValueArgument(index++, irGetField(irGet(function.dispatchReceiverParameter!!), field))
                     }
@@ -509,7 +504,6 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
 
     private fun createStaticSuspendImpl(irFunction: IrSimpleFunction): IrSimpleFunction {
         // Create static suspend impl method.
-        val backendContext = context
         val static = createStaticFunctionWithReceivers(
             irFunction.parent,
             irFunction.name.toSuspendImplementationName(),
@@ -517,7 +511,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
             origin = JvmLoweredDeclarationOrigin.SUSPEND_IMPL_STATIC_FUNCTION,
             copyMetadata = false
         )
-        copyBodyToStatic(irFunction, static)
+        static.body = irFunction.moveBodyTo(static)
         // Rewrite the body of the original suspend method to forward to the new static method.
         irFunction.body = context.createIrBuilder(irFunction.symbol).irBlockBody {
             +irReturn(irCall(static).also {
@@ -529,15 +523,10 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                     it.putValueArgument(i++, irGet(irFunction.dispatchReceiverParameter!!))
                 }
                 if (irFunction.extensionReceiverParameter != null) {
-                    val defaultValueForParameter = irFunction.extensionReceiverParameter!!.type.defaultValue(
-                        UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext
-                    )
-                    it.putValueArgument(i++, defaultValueForParameter)
-
+                    it.putValueArgument(i++, irGet(irFunction.extensionReceiverParameter!!))
                 }
                 for (parameter in irFunction.valueParameters) {
-                    val defaultValueForParameter = parameter.type.defaultValue(UNDEFINED_OFFSET, UNDEFINED_OFFSET, backendContext)
-                    it.putValueArgument(i++, defaultValueForParameter)
+                    it.putValueArgument(i++, irGet(parameter))
                 }
             })
         }
@@ -568,7 +557,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                         dispatchReceiverParameter = function.dispatchReceiverParameter?.copyTo(this)
                         extensionReceiverParameter = function.extensionReceiverParameter?.copyTo(this)
                         function.valueParameters.mapTo(valueParameters) { it.copyTo(this) }
-                        copyBodyFrom(function)
+                        body = function.copyBodyTo(this)
                         copyAttributes(function)
                     }
                     registerNewFunction(function.parentAsClass, newFunction)
