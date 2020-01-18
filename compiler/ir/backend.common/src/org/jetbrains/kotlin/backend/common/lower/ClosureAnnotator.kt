@@ -55,7 +55,7 @@ class ClosureAnnotator(irFile: IrFile) {
     }
 
     private class ClosureBuilder(val owner: IrDeclaration) {
-        val capturedValues = mutableSetOf<IrValueSymbol>()
+        private val capturedValues = mutableSetOf<IrValueSymbol>()
         private val declaredValues = mutableSetOf<IrValueDeclaration>()
         private val includes = mutableSetOf<ClosureBuilder>()
 
@@ -70,15 +70,16 @@ class ClosureAnnotator(irFile: IrFile) {
          *                  variables declared in the node.
          */
         fun buildClosure(): Closure {
-            val result = mutableSetOf<IrValueSymbol>().apply { addAll(capturedValues) }
             includes.forEach { builder ->
                 if (!builder.processed) {
                     builder.processed = true
-                    builder.buildClosure().capturedValues.filterTo(result) { isExternal(it.owner) }
+                    val subClosure = builder.buildClosure()
+                    subClosure.capturedValues.filterTo(capturedValues) { isExternal(it.owner) }
+                    subClosure.capturedTypeParameters.filterTo(capturedTypeParameters) { isExternal(it) }
                 }
             }
             // TODO: We can save the closure and reuse it.
-            return Closure(result.toList(), capturedTypeParameters.toList())
+            return Closure(capturedValues.toList(), capturedTypeParameters.toList())
         }
 
 
@@ -87,13 +88,16 @@ class ClosureAnnotator(irFile: IrFile) {
         }
 
         fun declareVariable(valueDeclaration: IrValueDeclaration?) {
-            if (valueDeclaration != null)
+            if (valueDeclaration != null) {
                 declaredValues.add(valueDeclaration)
+                seeType(valueDeclaration.type)
+            }
         }
 
         fun seeVariable(value: IrValueSymbol) {
-            if (isExternal(value.owner))
+            if (isExternal(value.owner)) {
                 capturedValues.add(value)
+            }
         }
 
         fun isExternal(valueDeclaration: IrValueDeclaration): Boolean {
@@ -110,18 +114,14 @@ class ClosureAnnotator(irFile: IrFile) {
 
         fun seeType(type: IrType) {
             if (type !is IrSimpleType) return
-            (type.classifier as? IrTypeParameterSymbol)?.let { typeParameterSymbol ->
-                val typeParameter = typeParameterSymbol.owner
-                if (isExternal(typeParameter))
-                    capturedTypeParameters.add(typeParameter)
+            val classifier = type.classifier
+            if (classifier is IrTypeParameterSymbol && isExternal(classifier.owner) && capturedTypeParameters.add(classifier.owner))
+                classifier.owner.superTypes.forEach(::seeType)
+            type.arguments.forEach {
+                (it as? IrTypeProjection)?.type?.let(::seeType)
             }
-            for (arg in type.arguments) {
-                (arg as? IrTypeProjection)?.let { seeType(arg.type) }
-            }
-            type.abbreviation?.let { abbreviation ->
-                for (arg in abbreviation.arguments) {
-                    (arg as? IrTypeProjection)?.let { seeType(arg.type) }
-                }
+            type.abbreviation?.arguments?.forEach {
+                (it as? IrTypeProjection)?.type?.let(::seeType)
             }
         }
     }
@@ -147,6 +147,8 @@ class ClosureAnnotator(irFile: IrFile) {
             val closureBuilder = ClosureBuilder(declaration)
             closureBuilders[declaration] = closureBuilder
 
+            collectPotentiallyCapturedTypeParameters(closureBuilder)
+
             closureBuilder.declareVariable(declaration.thisReceiver)
             if (declaration.isInner) {
                 closureBuilder.declareVariable((declaration.parent as IrClass).thisReceiver)
@@ -158,8 +160,6 @@ class ClosureAnnotator(irFile: IrFile) {
                 constructor.valueParameters.forEach { v -> closureBuilder.declareVariable(v) }
             }
 
-            collectPotentiallyCapturedTypeParameters(closureBuilder)
-
             closuresStack.push(closureBuilder)
             declaration.acceptChildrenVoid(this)
             closuresStack.pop()
@@ -168,6 +168,8 @@ class ClosureAnnotator(irFile: IrFile) {
         override fun visitFunction(declaration: IrFunction) {
             val closureBuilder = ClosureBuilder(declaration)
             closureBuilders[declaration] = closureBuilder
+
+            collectPotentiallyCapturedTypeParameters(closureBuilder)
 
             declaration.valueParameters.forEach { closureBuilder.declareVariable(it) }
             closureBuilder.declareVariable(declaration.dispatchReceiverParameter)
@@ -184,8 +186,6 @@ class ClosureAnnotator(irFile: IrFile) {
                     closureBuilder.include(classBuilder)
                 }
             }
-
-            collectPotentiallyCapturedTypeParameters(closureBuilder)
 
             closuresStack.push(closureBuilder)
             declaration.acceptChildrenVoid(this)

@@ -118,6 +118,11 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         runTest("compiler/testData/compileKotlinAgainstKotlin/delegatedDefault.kt");
     }
 
+    @TestMetadata("delegationAndAnnotations.kt")
+    public void testDelegationAndAnnotations() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/delegationAndAnnotations.kt");
+    }
+
     @TestMetadata("doublyNestedClass.kt")
     public void testDoublyNestedClass() throws Exception {
         runTest("compiler/testData/compileKotlinAgainstKotlin/doublyNestedClass.kt");
@@ -336,6 +341,11 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
     @TestMetadata("unsignedTypesInAnnotations.kt")
     public void testUnsignedTypesInAnnotations() throws Exception {
         runTest("compiler/testData/compileKotlinAgainstKotlin/unsignedTypesInAnnotations.kt");
+    }
+
+    @TestMetadata("useDeserializedFunInterface.kt")
+    public void testUseDeserializedFunInterface() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/useDeserializedFunInterface.kt");
     }
 
     @TestMetadata("compiler/testData/compileKotlinAgainstKotlin/jvm8")

@@ -127,8 +127,13 @@ private class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass
             targetForCommonBridges = bridge
         }
 
-        val signaturesToSkip = mutableSetOf(ourSignature)
-        signaturesToSkip.addAll(getFinalOverridden(irFunction).map { it.getJvmSignature() })
+        val signaturesToSkip =
+            if (irFunction.origin != IrDeclarationOrigin.FAKE_OVERRIDE || irFunction.modality == Modality.ABSTRACT || targetForCommonBridges != irFunction)
+                mutableSetOf(ourSignature)
+            else
+                mutableSetOf()
+
+        signaturesToSkip += getFinalOverridden(irFunction).map { it.getJvmSignature() }
 
         val firstOverridden = irFunction.overriddenInClasses().firstOrNull()
         val firstOverriddenSignature = firstOverridden?.getJvmSignature()
@@ -462,6 +467,9 @@ private class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass
             other is FunctionHandleForIrFunction &&
                     irFunction.parent.safeAs<IrClass>()?.fqNameWhenAvailable == other.irFunction.parent.safeAs<IrClass>()?.fqNameWhenAvailable &&
                     irFunction.getJvmSignature() == other.irFunction.getJvmSignature()
+
+        override fun toString(): String =
+            irFunction.render()
     }
 
     fun IrSimpleFunction.findConcreteSuperDeclaration(): IrSimpleFunction? {

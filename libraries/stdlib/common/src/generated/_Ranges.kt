@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -88,6 +88,69 @@ public fun CharRange.random(random: Random): Char {
     } catch(e: IllegalArgumentException) {
         throw NoSuchElementException(e.message)
     }
+}
+
+/**
+ * Returns a random element from this range, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+@kotlin.internal.InlineOnly
+public inline fun IntRange.randomOrNull(): Int? {
+    return randomOrNull(Random)
+}
+
+/**
+ * Returns a random element from this range, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+@kotlin.internal.InlineOnly
+public inline fun LongRange.randomOrNull(): Long? {
+    return randomOrNull(Random)
+}
+
+/**
+ * Returns a random element from this range, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+@kotlin.internal.InlineOnly
+public inline fun CharRange.randomOrNull(): Char? {
+    return randomOrNull(Random)
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public fun IntRange.randomOrNull(random: Random): Int? {
+    if (isEmpty())
+        return null
+    return random.nextInt(this)
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public fun LongRange.randomOrNull(random: Random): Long? {
+    if (isEmpty())
+        return null
+    return random.nextLong(this)
+}
+
+/**
+ * Returns a random element from this range using the specified source of randomness, or `null` if this range is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public fun CharRange.randomOrNull(random: Random): Char? {
+    if (isEmpty())
+        return null
+    return random.nextInt(first.toInt(), last.toInt() + 1).toChar()
 }
 
 /**

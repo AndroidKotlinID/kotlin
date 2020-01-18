@@ -2540,6 +2540,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/callableReference/resolve/ambiguityWhenNoApplicableCallableReferenceCandidate.kt");
                 }
 
+                @TestMetadata("ambiguityWithBoundExtensionReceiver.kt")
+                public void testAmbiguityWithBoundExtensionReceiver() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/resolve/ambiguityWithBoundExtensionReceiver.kt");
+                }
+
                 @TestMetadata("ambiguousWithVararg.kt")
                 public void testAmbiguousWithVararg() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/resolve/ambiguousWithVararg.kt");
@@ -7869,6 +7874,54 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             }
         }
 
+        @TestMetadata("compiler/testData/diagnostics/tests/funInterface")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class FunInterface extends AbstractDiagnosticsUsingJavacTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInFunInterface() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/funInterface"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+            }
+
+            @TestMetadata("basicFunInterface.kt")
+            public void testBasicFunInterface() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/basicFunInterface.kt");
+            }
+
+            @TestMetadata("basicFunInterfaceConversion.kt")
+            public void testBasicFunInterfaceConversion() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/basicFunInterfaceConversion.kt");
+            }
+
+            @TestMetadata("basicFunInterfaceDisabled.kt")
+            public void testBasicFunInterfaceDisabled() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/basicFunInterfaceDisabled.kt");
+            }
+
+            @TestMetadata("funInterfaceSyntheticConstructors.kt")
+            public void testFunInterfaceSyntheticConstructors() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/funInterfaceSyntheticConstructors.kt");
+            }
+
+            @TestMetadata("genericSubstitutionForFunInterface.kt")
+            public void testGenericSubstitutionForFunInterface() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/genericSubstitutionForFunInterface.kt");
+            }
+
+            @TestMetadata("severalConversionsForFunInterface.kt")
+            public void testSeveralConversionsForFunInterface() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/severalConversionsForFunInterface.kt");
+            }
+
+            @TestMetadata("suspendFunInterfaceConversion.kt")
+            public void testSuspendFunInterfaceConversion() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/suspendFunInterfaceConversion.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/diagnostics/tests/functionAsExpression")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -8087,6 +8140,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("LabeledFunctionLiterals.kt")
             public void testLabeledFunctionLiterals() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/functionLiterals/LabeledFunctionLiterals.kt");
+            }
+
+            @TestMetadata("lambdaInLambda2.kt")
+            public void testLambdaInLambda2() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/functionLiterals/lambdaInLambda2.kt");
             }
 
             @TestMetadata("prematurelyAnalyzingLambdaWhileFixingTypeVariableForAnotherArgument.kt")
@@ -10803,6 +10861,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("nestedLambdaInferenceWithIncorporationOfVariables.kt")
                 public void testNestedLambdaInferenceWithIncorporationOfVariables() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/nestedLambdaInferenceWithIncorporationOfVariables.kt");
+                }
+
+                @TestMetadata("notEnoughInformationFromNullabilityConstraint.kt")
+                public void testNotEnoughInformationFromNullabilityConstraint() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/notEnoughInformationFromNullabilityConstraint.kt");
                 }
 
                 @TestMetadata("nothingWithCallableReference.kt")
@@ -14885,6 +14948,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/nullableTypes/elvisOnUnit.kt");
             }
 
+            @TestMetadata("inferenceFlexibleTToNullable.kt")
+            public void testInferenceFlexibleTToNullable() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/nullableTypes/inferenceFlexibleTToNullable.kt");
+            }
+
             @TestMetadata("nullAssertOnTypeWithNullableUpperBound.kt")
             public void testNullAssertOnTypeWithNullableUpperBound() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/nullableTypes/nullAssertOnTypeWithNullableUpperBound.kt");
@@ -14928,6 +14996,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("safeCallWithInvoke.kt")
             public void testSafeCallWithInvoke() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/nullableTypes/safeCallWithInvoke.kt");
+            }
+
+            @TestMetadata("takingNullabilityFromExplicitTypeArgmentsInsteadOfUsingFlexibleTypes.kt")
+            public void testTakingNullabilityFromExplicitTypeArgmentsInsteadOfUsingFlexibleTypes() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/nullableTypes/takingNullabilityFromExplicitTypeArgmentsInsteadOfUsingFlexibleTypes.kt");
             }
 
             @TestMetadata("uselessElvis.kt")
@@ -17265,24 +17338,6 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             }
         }
 
-        @TestMetadata("compiler/testData/diagnostics/tests/reflection")
-        @TestDataPath("$PROJECT_ROOT")
-        @RunWith(JUnit3RunnerWithInners.class)
-        public static class Reflection extends AbstractDiagnosticsUsingJavacTest {
-            private void runTest(String testDataFilePath) throws Exception {
-                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
-            }
-
-            public void testAllFilesPresentInReflection() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/reflection"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
-            }
-
-            @TestMetadata("noReflectionInClassPath.kt")
-            public void testNoReflectionInClassPath() throws Exception {
-                runTest("compiler/testData/diagnostics/tests/reflection/noReflectionInClassPath.kt");
-            }
-        }
-
         @TestMetadata("compiler/testData/diagnostics/tests/regressions")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -18926,6 +18981,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("SAMAfterSubstitutionKT.kt")
             public void testSAMAfterSubstitutionKT() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/samConversions/SAMAfterSubstitutionKT.kt");
+            }
+
+            @TestMetadata("samConversionToGeneric.kt")
+            public void testSamConversionToGeneric() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/samConversions/samConversionToGeneric.kt");
+            }
+
+            @TestMetadata("samConversionsWithSmartCasts.kt")
+            public void testSamConversionsWithSmartCasts() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/samConversions/samConversionsWithSmartCasts.kt");
             }
 
             @TestMetadata("sameCandidatesFromKotlinAndJavaInOneScope.kt")
@@ -22647,6 +22712,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("OverrideGetterOnly.kt")
                 public void testOverrideGetterOnly() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/syntheticExtensions/javaProperties/OverrideGetterOnly.kt");
+                }
+
+                @TestMetadata("PartiallySupportedSyntheticJavaPropertyReference.kt")
+                public void testPartiallySupportedSyntheticJavaPropertyReference() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/syntheticExtensions/javaProperties/PartiallySupportedSyntheticJavaPropertyReference.kt");
                 }
 
                 @TestMetadata("SetterHasHigherAccess.kt")

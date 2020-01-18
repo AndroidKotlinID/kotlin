@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -498,6 +498,27 @@ public inline fun <T> Collection<T>.random(): T {
 public fun <T> Collection<T>.random(random: Random): T {
     if (isEmpty())
         throw NoSuchElementException("Collection is empty.")
+    return elementAt(random.nextInt(size))
+}
+
+/**
+ * Returns a random element from this collection, or `null` if this collection is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+@kotlin.internal.InlineOnly
+public inline fun <T> Collection<T>.randomOrNull(): T? {
+    return randomOrNull(Random)
+}
+
+/**
+ * Returns a random element from this collection using the specified source of randomness, or `null` if this collection is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public fun <T> Collection<T>.randomOrNull(random: Random): T? {
+    if (isEmpty())
+        return null
     return elementAt(random.nextInt(size))
 }
 

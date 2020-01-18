@@ -116,7 +116,6 @@ enum class LanguageFeature(
     ProhibitNonReifiedArraysAsReifiedTypeArguments(KOTLIN_1_4, kind = BUG_FIX),
     ProhibitProtectedCallFromInline(KOTLIN_1_4, kind = BUG_FIX),
     ProperFinally(KOTLIN_1_4, kind = BUG_FIX),
-    ProhibitVarargAsArrayAfterSamArgument(KOTLIN_1_4, kind = BUG_FIX),
     AllowAssigningArrayElementsToVarargsInNamedFormForFunctions(KOTLIN_1_4),
     AllowNullOperatorsForResult(KOTLIN_1_4),
     AllowResultInReturnType(KOTLIN_1_4),
@@ -124,11 +123,15 @@ enum class LanguageFeature(
     AllowContractsForNonOverridableMembers(KOTLIN_1_4),
     AllowReifiedGenericsInContracts(KOTLIN_1_4),
     ProperVisibilityForCompanionObjectInstanceField(KOTLIN_1_4, kind = BUG_FIX),
+    DoNotGenerateThrowsForDelegatedKotlinMembers(KOTLIN_1_4),
+    ProperIeee754Comparisons(KOTLIN_1_4, kind = BUG_FIX),
+    FunctionalInterfaceConversion(KOTLIN_1_4, kind = UNSTABLE_FEATURE),
 
     // Temporarily disabled, see KT-27084/KT-22379
     SoundSmartcastFromLoopConditionForLoopAssignedVariables(sinceVersion = null, kind = BUG_FIX),
 
-    ProperIeee754Comparisons(sinceVersion = null, defaultState = State.DISABLED, kind = BUG_FIX),
+    // TODO: set `sinceVersion` to KOTLIN_1_5
+    ProhibitVarargAsArrayAfterSamArgument(sinceVersion = null, kind = BUG_FIX),
 
     // Experimental features
 
@@ -148,6 +151,7 @@ enum class LanguageFeature(
     NewDataFlowForTryExpressions(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
     FunctionReferenceWithDefaultValueAsOtherType(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
     NonStrictOnlyInputTypesChecks(KOTLIN_1_4),
+    ReferencesToSyntheticJavaProperties(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
     // ------
     // Next features can be enabled regardless of new inference
 
@@ -261,7 +265,7 @@ enum class LanguageVersion(val major: Int, val minor: Int) : DescriptionAware {
         val FIRST_SUPPORTED = KOTLIN_1_2
 
         @JvmField
-        val LATEST_STABLE = KOTLIN_1_3
+        val LATEST_STABLE = KOTLIN_1_4
     }
 }
 

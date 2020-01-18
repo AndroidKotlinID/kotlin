@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -191,6 +191,27 @@ public inline fun CharSequence.random(): Char {
 public fun CharSequence.random(random: Random): Char {
     if (isEmpty())
         throw NoSuchElementException("Char sequence is empty.")
+    return get(random.nextInt(length))
+}
+
+/**
+ * Returns a random character from this char sequence, or `null` if this char sequence is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+@kotlin.internal.InlineOnly
+public inline fun CharSequence.randomOrNull(): Char? {
+    return randomOrNull(Random)
+}
+
+/**
+ * Returns a random character from this char sequence using the specified source of randomness, or `null` if this char sequence is empty.
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public fun CharSequence.randomOrNull(random: Random): Char? {
+    if (isEmpty())
+        return null
     return get(random.nextInt(length))
 }
 
