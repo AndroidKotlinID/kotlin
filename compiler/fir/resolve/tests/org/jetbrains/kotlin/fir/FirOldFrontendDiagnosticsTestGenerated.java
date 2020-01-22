@@ -10861,6 +10861,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
                 runTest("compiler/testData/diagnostics/tests/inference/nothingType/nestedLambdaInferenceWithIncorporationOfVariables.kt");
             }
 
+            @TestMetadata("notEnoughInformationAndNothing.kt")
+            public void testNotEnoughInformationAndNothing() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/nothingType/notEnoughInformationAndNothing.kt");
+            }
+
             @TestMetadata("notEnoughInformationFromNullabilityConstraint.kt")
             public void testNotEnoughInformationFromNullabilityConstraint() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/nothingType/notEnoughInformationFromNullabilityConstraint.kt");
@@ -11183,6 +11188,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             @TestMetadata("kt35844.kt")
             public void testKt35844() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/regressions/kt35844.kt");
+            }
+
+            @TestMetadata("kt35943.kt")
+            public void testKt35943() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/regressions/kt35943.kt");
             }
 
             @TestMetadata("kt4420.kt")
@@ -12990,6 +13000,29 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             @TestMetadata("withClassTypeParameters.kt")
             public void testWithClassTypeParameters() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/j+k/genericConstructor/withClassTypeParameters.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/diagnostics/tests/j+k/polymorphicSignature")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class PolymorphicSignature extends AbstractFirOldFrontendDiagnosticsTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInPolymorphicSignature() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/j+k/polymorphicSignature"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+            }
+
+            @TestMetadata("spreadOperator_after.kt")
+            public void testSpreadOperator_after() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/j+k/polymorphicSignature/spreadOperator_after.kt");
+            }
+
+            @TestMetadata("spreadOperator_before.kt")
+            public void testSpreadOperator_before() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/j+k/polymorphicSignature/spreadOperator_before.kt");
             }
         }
 

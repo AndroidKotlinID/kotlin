@@ -127,6 +127,8 @@ enum class LanguageFeature(
     ProperIeee754Comparisons(KOTLIN_1_4, kind = BUG_FIX),
     FunctionalInterfaceConversion(KOTLIN_1_4, kind = UNSTABLE_FEATURE),
 
+    ProhibitSpreadOnSignaturePolymorphicCall(KOTLIN_1_5, kind = BUG_FIX),
+
     // Temporarily disabled, see KT-27084/KT-22379
     SoundSmartcastFromLoopConditionForLoopAssignedVariables(sinceVersion = null, kind = BUG_FIX),
 
@@ -240,7 +242,9 @@ enum class LanguageVersion(val major: Int, val minor: Int) : DescriptionAware {
     KOTLIN_1_1(1, 1),
     KOTLIN_1_2(1, 2),
     KOTLIN_1_3(1, 3),
-    KOTLIN_1_4(1, 4);
+    KOTLIN_1_4(1, 4),
+    KOTLIN_1_5(1, 5),
+    ;
 
     val isStable: Boolean
         get() = this <= LATEST_STABLE
