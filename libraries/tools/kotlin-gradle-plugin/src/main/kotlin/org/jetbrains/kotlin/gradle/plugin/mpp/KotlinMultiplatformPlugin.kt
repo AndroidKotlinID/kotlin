@@ -28,12 +28,14 @@ import org.jetbrains.kotlin.gradle.dsl.multiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.sources.DefaultLanguageSettingsBuilder
 import org.jetbrains.kotlin.gradle.plugin.sources.checkSourceSetVisibilityRequirements
+import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.scripting.internal.ScriptingGradleSubplugin
 import org.jetbrains.kotlin.gradle.targets.metadata.isKotlinGranularMetadataEnabled
 import org.jetbrains.kotlin.gradle.utils.*
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget.*
 import org.jetbrains.kotlin.konan.target.presetName
+import org.jetbrains.kotlin.statistics.metrics.StringMetrics
 
 class KotlinMultiplatformPlugin(
     private val kotlinPluginVersion: String,
@@ -255,12 +257,14 @@ class KotlinMultiplatformPlugin(
 
         targets.all { target ->
             target.compilations.findByName(KotlinCompilation.MAIN_COMPILATION_NAME)?.let { mainCompilation ->
-                sourceSets.findByName(mainCompilation.defaultSourceSetName)?.dependsOn(production)
+                mainCompilation.defaultSourceSet.takeIf { it != production }?.dependsOn(production)
             }
 
             target.compilations.findByName(KotlinCompilation.TEST_COMPILATION_NAME)?.let { testCompilation ->
-                sourceSets.findByName(testCompilation.defaultSourceSetName)?.dependsOn(test)
+                testCompilation.defaultSourceSet.takeIf { it != test }?.dependsOn(test)
             }
+
+            KotlinBuildStatsService.getInstance()?.report(StringMetrics.MPP_PLATFORMS, target.targetName)
         }
 
         UnusedSourceSetsChecker.checkSourceSets(project)

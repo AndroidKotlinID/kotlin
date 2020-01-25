@@ -15,6 +15,7 @@ configurations {
     distSources
     distJs
     distLibrary
+    publishedArtifacts
 }
 
 def builtinsSrcDir = "${buildDir}/builtin-sources"
@@ -22,8 +23,8 @@ def builtinsSrcDir2 = "${buildDir}/builtin-sources-for-builtins"
 def commonSrcDir = "${projectDir}/../src/kotlin"
 def commonSrcDir2 = "${projectDir}/../common/src"
 def jsCommonDir = "${projectDir}/../js"
-def coroutinesExpJsSrcDir = "${rootDir}/libraries/stdlib/coroutines-experimental/js/src"
 
+def coroutinesExpJsSrcDir = "${rootDir}/libraries/stdlib/coroutines-experimental/js/src"
 def builtinsDir = "${rootDir}/core/builtins"
 def unsignedCommonSrcDir = "${rootDir}/libraries/stdlib/unsigned/src"
 def coroutinesJsModuleName = 'kotlin-stdlib-coroutines'
@@ -145,7 +146,10 @@ compileKotlin2Js {
         sourceMap = true
         sourceMapPrefix = "./"
         freeCompilerArgs += [
-            "-source-map-base-dirs", [builtinsSrcDir, jsSrcDir, jsCommonSrcDir, commonSrcDir, commonSrcDir2, unsignedCommonSrcDir].collect { file(it).absoluteFile }.join(File.pathSeparator),
+            "-source-map-base-dirs",
+            [builtinsSrcDir, jsSrcDir, jsCommonSrcDir, commonSrcDir, commonSrcDir2, unsignedCommonSrcDir]
+                    .collect { file(it).absoluteFile }
+                    .join(File.pathSeparator),
             "-Xuse-experimental=kotlin.Experimental",
             "-Xuse-experimental=kotlin.ExperimentalMultiplatform",
             "-Xuse-experimental=kotlin.contracts.ExperimentalContracts",
@@ -183,13 +187,16 @@ compileTestKotlin2Js {
 
 task compileJs(type: NoDebugJavaExec) {
     dependsOn compileBuiltinsKotlin2Js, compileKotlin2Js, compileCoroutinesExperimentalKotlin2Js
-    inputs.files(compileBuiltinsKotlin2Js.outputs.files)
-    inputs.files(compileKotlin2Js.outputs.files)
-    inputs.files(compileCoroutinesExperimentalKotlin2Js.outputs.files)
-    inputs.dir(jsSrcDir)
-    inputs.dir(jsCommonSrcDir)
+    inputs.files(compileBuiltinsKotlin2Js.outputs.files).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(compileKotlin2Js.outputs.files).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(compileCoroutinesExperimentalKotlin2Js.outputs.files).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(jsSrcDir).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(jsCommonSrcDir).withPathSensitivity(PathSensitivity.RELATIVE)
+
     outputs.file(jsOutputFile)
     outputs.file("${jsOutputFile}.map")
+    outputs.file(jsOutputMetaFile)
+    outputs.cacheIf { true }
 
     def inputFiles = fileTree(jsSrcJsDir) {
         include '**/*.js'
@@ -337,12 +344,13 @@ task distSourcesJar(type: Jar) {
     }
 }
 
-
+def javadocJar = javadocJar()
 
 artifacts {
     runtime libraryJarWithIr
-    archives libraryJarWithIr
-    archives sourcesJar
+    publishedArtifacts libraryJarWithIr
+    publishedArtifacts sourcesJar
+    publishedArtifacts javadocJar
     sources sourcesJar
     distSources distSourcesJar
     distLibrary libraryJarWithoutIr
@@ -352,7 +360,13 @@ artifacts {
     }
 }
 
-javadocJar()
+uploadArchives {
+    configuration = configurations.publishedArtifacts
+}
+
+install {
+    configuration = configurations.publishedArtifacts
+}
 
 node {
     download = true

@@ -87,9 +87,24 @@ private fun FileCollection.filterOutPublishableInteropLibs(project: Project): Fi
     }
 }
 
-private fun Collection<File>.filterExternalKlibs(project: Project) = filter {
-    // Support only klib files for now.
-    it.extension == "klib" && !it.providedByCompiler(project)
+/**
+ * We pass to the compiler:
+ *
+ *    - Only *.klib files and directories (normally containing an unpacked klib).
+ *      A dependency configuration may contain jar files
+ *      (e.g. when a common artifact was directly added to commonMain source set).
+ *      So, we need to filter out such artifacts.
+ *
+ *    - Only existing files. We don't compile a klib if there are no sources
+ *      for it (NO-SOURCE check). So we need to take this case into account
+ *      and skip libraries that were not compiled. See also: GH-2617 (K/N repo).
+ *
+ *    - Only external libraries (not stdlib/platform libs). We add stdlib and
+ *      platform libs to dependencies to get an IDE support. But the compiler
+ *      uses them by default so we don't pass them to the compiler explicitly.
+ */
+private fun Collection<File>.filterKlibsPassedToCompiler(project: Project) = filter {
+    (it.extension == "klib" || it.isDirectory) && it.exists() && !it.providedByCompiler(project)
 }
 
 // endregion
@@ -101,7 +116,7 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions> : Abstra
     }
 
     @get:Internal
-    abstract val compilation: KotlinNativeCompilation
+    abstract val compilation: AbstractKotlinNativeCompilation
 
     // region inputs/outputs
     @get:Input
@@ -231,10 +246,15 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions> : Abstra
         addArg("-target", target)
         addArg("-p", outputKind.name.toLowerCase())
 
+        if (compilation is KotlinSharedNativeCompilation) {
+            add("-Xklib-mpp")
+            add("-Xmetadata-klib")
+        }
+
         addArg("-o", outputFile.get().absolutePath)
 
         // Libraries.
-        libraries.files.filterExternalKlibs(project).forEach { library ->
+        libraries.files.filterKlibsPassedToCompiler(project).forEach { library ->
             addArg("-l", library.absolutePath)
         }
     }
@@ -259,7 +279,7 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions> : Abstra
  */
 open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions>(), KotlinCompile<KotlinCommonOptions> {
     @Internal
-    override lateinit var compilation: KotlinNativeCompilation
+    final override lateinit var compilation: AbstractKotlinNativeCompilation
 
     @get:Input
     override val outputKind = LIBRARY
@@ -286,7 +306,7 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 
     private val friendModule: FileCollection?
         get() = project.files(
-            project.provider { compilation.friendCompilations.map { it.output.allOutputs } + compilation.friendArtifacts }
+            project.provider { compilation.associateWithTransitiveClosure.map { it.output.allOutputs } + compilation.friendArtifacts }
         )
     // endregion.
 
@@ -318,13 +338,7 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
         override var suppressWarnings: Boolean = false
         override var verbose: Boolean = false
 
-        // TODO: Drop extraOpts in 1.3.70 and create a list here directly
-        // Delegate for compilations's extra options.
-        override var freeCompilerArgs: List<String>
-            get() = compilation.extraOptsNoWarn
-            set(value) {
-                compilation.extraOptsNoWarn = value.toMutableList()
-            }
+        override var freeCompilerArgs: List<String> = listOf()
     }
 
     @get:Input
@@ -404,11 +418,21 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     override fun getSource(): FileTree =
         if (linkFromSources) {
             // Allow a user to force the old behaviour of a link task.
-            // TODO: Remove in 1.3.70.
+            // It's better to keep this flag in 1.3.70 to be able to workaroud probable klib serialization bugs.
+            // TODO: Remove in 1.4.
             project.files(compilation.allSources).asFileTree
         } else {
             project.files(intermediateLibrary.get()).asFileTree
         }
+
+    @OutputDirectory
+    override fun getDestinationDir(): File {
+        return binary.outputDirectory
+    }
+
+    override fun setDestinationDir(destinationDir: File) {
+        binary.outputDirectory = destinationDir
+    }
 
     @get:Input
     override val outputKind: CompilerOutputKind
@@ -493,7 +517,7 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     @get:InputFiles
     val exportLibraries: FileCollection
         get() = binary.let {
-            if (it is Framework) {
+            if (it is AbstractNativeLibrary) {
                 project.configurations.getByName(it.exportConfigurationName)
             } else {
                 project.files()
@@ -530,7 +554,7 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
         linkerOpts.forEach {
             addArg("-linker-option", it)
         }
-        exportLibraries.files.filterExternalKlibs(project).forEach {
+        exportLibraries.files.filterKlibsPassedToCompiler(project).forEach {
             add("-Xexport-library=${it.absolutePath}")
         }
         addKey("-Xstatic-framework", isStaticFramework)
@@ -558,7 +582,7 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
             // Allow a user to force the old behaviour of a link task.
             // TODO: Remove in 1.3.70.
             mutableListOf<String>().apply {
-                val friendCompilations = compilation.friendCompilations
+                val friendCompilations = compilation.associateWithTransitiveClosure.toList()
                 val friendFiles = if (friendCompilations.isNotEmpty())
                     project.files(
                         project.provider { friendCompilations.map { it.output.allOutputs } + compilation.friendArtifacts }
@@ -579,11 +603,11 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
 
     private fun validatedExportedLibraries() {
         val exportConfiguration = exportLibraries as? Configuration ?: return
-        val apiFiles = project.configurations.getByName(compilation.apiConfigurationName).files.filterExternalKlibs(project)
+        val apiFiles = project.configurations.getByName(compilation.apiConfigurationName).files.filterKlibsPassedToCompiler(project)
 
         val failed = mutableSetOf<Dependency>()
         exportConfiguration.allDependencies.forEach {
-            val dependencyFiles = exportConfiguration.files(it).filterExternalKlibs(project)
+            val dependencyFiles = exportConfiguration.files(it).filterKlibsPassedToCompiler(project)
             if (!apiFiles.containsAll(dependencyFiles)) {
                 failed.add(it)
             }
@@ -746,7 +770,7 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
             getAllDependencies(dependency)
                 .flatMap { it.moduleArtifacts }
                 .map { it.file }
-                .filterExternalKlibs(project)
+                .filterKlibsPassedToCompiler(project)
                 .forEach {
                     args += "-l"
                     args += it.absolutePath
@@ -902,7 +926,7 @@ open class CInteropProcess : DefaultTask() {
                 addArg("-linker-option", it)
             }
 
-            libraries.files.filterExternalKlibs(project).forEach { library ->
+            libraries.files.filterKlibsPassedToCompiler(project).forEach { library ->
                 addArg("-library", library.absolutePath)
             }
 

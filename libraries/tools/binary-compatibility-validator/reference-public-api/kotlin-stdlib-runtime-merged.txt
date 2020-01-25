@@ -664,6 +664,38 @@ public abstract class kotlin/collections/AbstractSet : kotlin/collections/Abstra
 	public fun iterator ()Ljava/util/Iterator;
 }
 
+public final class kotlin/collections/ArrayDeque : kotlin/collections/AbstractMutableList {
+	public fun <init> ()V
+	public fun <init> (I)V
+	public fun <init> (Ljava/util/Collection;)V
+	public fun add (ILjava/lang/Object;)V
+	public fun add (Ljava/lang/Object;)Z
+	public fun addAll (ILjava/util/Collection;)Z
+	public fun addAll (Ljava/util/Collection;)Z
+	public final fun addFirst (Ljava/lang/Object;)V
+	public final fun addLast (Ljava/lang/Object;)V
+	public fun clear ()V
+	public fun contains (Ljava/lang/Object;)Z
+	public final fun first ()Ljava/lang/Object;
+	public final fun firstOrNull ()Ljava/lang/Object;
+	public fun get (I)Ljava/lang/Object;
+	public fun getSize ()I
+	public fun indexOf (Ljava/lang/Object;)I
+	public fun isEmpty ()Z
+	public final fun last ()Ljava/lang/Object;
+	public fun lastIndexOf (Ljava/lang/Object;)I
+	public final fun lastOrNull ()Ljava/lang/Object;
+	public fun remove (Ljava/lang/Object;)Z
+	public fun removeAll (Ljava/util/Collection;)Z
+	public fun removeAt (I)Ljava/lang/Object;
+	public final fun removeFirst ()Ljava/lang/Object;
+	public final fun removeFirstOrNull ()Ljava/lang/Object;
+	public final fun removeLast ()Ljava/lang/Object;
+	public final fun removeLastOrNull ()Ljava/lang/Object;
+	public fun retainAll (Ljava/util/Collection;)Z
+	public fun set (ILjava/lang/Object;)Ljava/lang/Object;
+}
+
 public final class kotlin/collections/ArraysKt {
 	public static final fun all ([BLkotlin/jvm/functions/Function1;)Z
 	public static final fun all ([CLkotlin/jvm/functions/Function1;)Z
@@ -2100,6 +2132,10 @@ public final class kotlin/collections/CollectionsKt {
 	public static final fun removeAll (Ljava/util/Collection;Lkotlin/sequences/Sequence;)Z
 	public static final fun removeAll (Ljava/util/Collection;[Ljava/lang/Object;)Z
 	public static final fun removeAll (Ljava/util/List;Lkotlin/jvm/functions/Function1;)Z
+	public static final fun removeFirst (Ljava/util/List;)Ljava/lang/Object;
+	public static final fun removeFirstOrNull (Ljava/util/List;)Ljava/lang/Object;
+	public static final fun removeLast (Ljava/util/List;)Ljava/lang/Object;
+	public static final fun removeLastOrNull (Ljava/util/List;)Ljava/lang/Object;
 	public static final fun requireNoNulls (Ljava/lang/Iterable;)Ljava/lang/Iterable;
 	public static final fun requireNoNulls (Ljava/util/List;)Ljava/util/List;
 	public static final fun retainAll (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function1;)Z
@@ -2335,30 +2371,6 @@ public abstract class kotlin/collections/ShortIterator : java/util/Iterator, kot
 	public final fun next ()Ljava/lang/Short;
 	public abstract fun nextShort ()S
 	public fun remove ()V
-}
-
-public final class kotlin/collections/UArraysKt {
-	public static final field INSTANCE Lkotlin/collections/UArraysKt;
-	public static final fun contentEquals-ctEhBpI ([I[I)Z
-	public static final fun contentEquals-kdPth3s ([B[B)Z
-	public static final fun contentEquals-mazbYpA ([S[S)Z
-	public static final fun contentEquals-us8wMrg ([J[J)Z
-	public static final fun contentHashCode--ajY-9A ([I)I
-	public static final fun contentHashCode-GBYM_sE ([B)I
-	public static final fun contentHashCode-QwZRm1k ([J)I
-	public static final fun contentHashCode-rL5Bavg ([S)I
-	public static final fun contentToString--ajY-9A ([I)Ljava/lang/String;
-	public static final fun contentToString-GBYM_sE ([B)Ljava/lang/String;
-	public static final fun contentToString-QwZRm1k ([J)Ljava/lang/String;
-	public static final fun contentToString-rL5Bavg ([S)Ljava/lang/String;
-	public static final fun random-2D5oskM ([ILkotlin/random/Random;)I
-	public static final fun random-JzugnMA ([JLkotlin/random/Random;)J
-	public static final fun random-oSF2wD8 ([BLkotlin/random/Random;)B
-	public static final fun random-s5X_as8 ([SLkotlin/random/Random;)S
-	public static final fun toTypedArray--ajY-9A ([I)[Lkotlin/UInt;
-	public static final fun toTypedArray-GBYM_sE ([B)[Lkotlin/UByte;
-	public static final fun toTypedArray-QwZRm1k ([J)[Lkotlin/ULong;
-	public static final fun toTypedArray-rL5Bavg ([S)[Lkotlin/UShort;
 }
 
 public abstract class kotlin/collections/UByteIterator : java/util/Iterator, kotlin/jvm/internal/markers/KMappedMarker {
@@ -2671,6 +2683,10 @@ public abstract class kotlin/coroutines/AbstractCoroutineContextElement : kotlin
 	public fun plus (Lkotlin/coroutines/CoroutineContext;)Lkotlin/coroutines/CoroutineContext;
 }
 
+public abstract class kotlin/coroutines/AbstractCoroutineContextKey : kotlin/coroutines/CoroutineContext$Key {
+	public fun <init> (Lkotlin/coroutines/CoroutineContext$Key;Lkotlin/jvm/functions/Function1;)V
+}
+
 public abstract interface class kotlin/coroutines/Continuation {
 	public abstract fun getContext ()Lkotlin/coroutines/CoroutineContext;
 	public abstract fun resumeWith (Ljava/lang/Object;)V
@@ -2728,6 +2744,11 @@ public final class kotlin/coroutines/CoroutineContext$Element$DefaultImpls {
 }
 
 public abstract interface class kotlin/coroutines/CoroutineContext$Key {
+}
+
+public final class kotlin/coroutines/CoroutineContextImplKt {
+	public static final fun getPolymorphicElement (Lkotlin/coroutines/CoroutineContext$Element;Lkotlin/coroutines/CoroutineContext$Key;)Lkotlin/coroutines/CoroutineContext$Element;
+	public static final fun minusPolymorphicKey (Lkotlin/coroutines/CoroutineContext$Element;Lkotlin/coroutines/CoroutineContext$Key;)Lkotlin/coroutines/CoroutineContext;
 }
 
 public final class kotlin/coroutines/EmptyCoroutineContext : java/io/Serializable, kotlin/coroutines/CoroutineContext {

@@ -761,6 +761,16 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/binaryOp/eqNullableDoubles.kt");
         }
 
+        @TestMetadata("eqNullableDoublesToInt.kt")
+        public void testEqNullableDoublesToInt() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/eqNullableDoublesToInt.kt");
+        }
+
+        @TestMetadata("eqNullableDoublesToIntWithTP.kt")
+        public void testEqNullableDoublesToIntWithTP() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/eqNullableDoublesToIntWithTP.kt");
+        }
+
         @TestMetadata("eqNullableDoublesWithTP.kt")
         public void testEqNullableDoublesWithTP() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/eqNullableDoublesWithTP.kt");
@@ -5180,6 +5190,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("kt31784.kt")
         public void testKt31784() throws Exception {
             runTest("compiler/testData/codegen/box/coroutines/kt31784.kt");
+        }
+
+        @TestMetadata("kt35967.kt")
+        public void testKt35967() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/kt35967.kt");
         }
 
         @TestMetadata("lastExpressionIsLoop.kt")

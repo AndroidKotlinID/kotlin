@@ -786,21 +786,6 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/callWithReorderedArguments.kt");
         }
 
-        @TestMetadata("callableRefToGenericMember.kt")
-        public void testCallableRefToGenericMember() throws Exception {
-            runTest("compiler/testData/ir/irText/expressions/callableRefToGenericMember.kt");
-        }
-
-        @TestMetadata("callableReferenceToImportedFromObject.kt")
-        public void testCallableReferenceToImportedFromObject() throws Exception {
-            runTest("compiler/testData/ir/irText/expressions/callableReferenceToImportedFromObject.kt");
-        }
-
-        @TestMetadata("callableReferenceTypeArguments.kt")
-        public void testCallableReferenceTypeArguments() throws Exception {
-            runTest("compiler/testData/ir/irText/expressions/callableReferenceTypeArguments.kt");
-        }
-
         @TestMetadata("calls.kt")
         public void testCalls() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/calls.kt");
@@ -1351,6 +1336,59 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/whileDoWhile.kt");
         }
 
+        @TestMetadata("compiler/testData/ir/irText/expressions/callableReferences")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class CallableReferences extends AbstractIrTextTestCase {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInCallableReferences() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/expressions/callableReferences"), Pattern.compile("^(.+)\\.kt$"), null, true);
+            }
+
+            @TestMetadata("boundInnerGenericConstructor.kt")
+            public void testBoundInnerGenericConstructor() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/boundInnerGenericConstructor.kt");
+            }
+
+            @TestMetadata("constructorWithAdaptedArguments.kt")
+            public void testConstructorWithAdaptedArguments() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/constructorWithAdaptedArguments.kt");
+            }
+
+            @TestMetadata("genericMember.kt")
+            public void testGenericMember() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/genericMember.kt");
+            }
+
+            @TestMetadata("importedFromObject.kt")
+            public void testImportedFromObject() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/importedFromObject.kt");
+            }
+
+            @TestMetadata("typeArguments.kt")
+            public void testTypeArguments() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/typeArguments.kt");
+            }
+
+            @TestMetadata("withAdaptedArguments.kt")
+            public void testWithAdaptedArguments() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/withAdaptedArguments.kt");
+            }
+
+            @TestMetadata("withArgumentAdaptationAndReceiver.kt")
+            public void testWithArgumentAdaptationAndReceiver() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/withArgumentAdaptationAndReceiver.kt");
+            }
+
+            @TestMetadata("withVarargViewedAsArray.kt")
+            public void testWithVarargViewedAsArray() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/withVarargViewedAsArray.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/ir/irText/expressions/floatingPointComparisons")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -1444,6 +1482,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             @TestMetadata("partialSam.kt")
             public void testPartialSam() throws Exception {
                 runTest("compiler/testData/ir/irText/expressions/funInterface/partialSam.kt");
+            }
+
+            @TestMetadata("samConversionOnCallableReference.kt")
+            public void testSamConversionOnCallableReference() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/funInterface/samConversionOnCallableReference.kt");
             }
 
             @TestMetadata("samConversionsWithSmartCasts.kt")

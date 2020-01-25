@@ -207,8 +207,9 @@ class FirCallResolver(
             referencedSymbol is FirClassLikeSymbol<*> -> {
                 val classId = referencedSymbol.classId
                 return FirResolvedQualifierImpl(nameReference.source, classId.packageFqName, classId.relativeClassName).apply {
+                    typeArguments.addAll(qualifiedAccess.typeArguments)
                     resultType = if (classId.isLocal) {
-                        typeForQualifierByDeclaration(referencedSymbol.fir, resultType)
+                        typeForQualifierByDeclaration(referencedSymbol.fir, resultType, session)
                             ?: resultType.resolvedTypeFromPrototype(
                                 session.builtinTypes.unitType.type//StandardClassIds.Unit(symbolProvider).constructType(emptyArray(), isNullable = false)
                             )

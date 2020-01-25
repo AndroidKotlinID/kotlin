@@ -44,6 +44,8 @@ dependencies {
     compileOnly(project(":kotlin-annotation-processing"))
     compileOnly(project(":kotlin-annotation-processing-gradle"))
     compileOnly(project(":kotlin-scripting-compiler"))
+    compileOnly(project(":kotlin-gradle-statistics"))
+    embedded(project(":kotlin-gradle-statistics"))
 
     compile("com.google.code.gson:gson:${rootProject.extra["versions.jar.gson"]}")
     compile("de.undercouch:gradle-download-task:4.0.2")
@@ -82,6 +84,7 @@ dependencies {
     testCompile(project(":kotlin-compiler-runner"))
     testCompile(project(":kotlin-test::kotlin-test-junit"))
     testCompile("junit:junit:4.12")
+    testCompile(project(":kotlin-gradle-statistics"))
     testCompileOnly(project(":kotlin-reflect-api"))
     testCompileOnly(project(":kotlin-annotation-processing"))
     testCompileOnly(project(":kotlin-annotation-processing-gradle"))
