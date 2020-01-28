@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.fir.resolve.calls.SyntheticPropertySymbol
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.resolve.transformers.IntegerLiteralTypeApproximationTransformer
-import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirIntegerOperator
 import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
@@ -217,7 +216,6 @@ class Fir2IrVisitor(
             if (name in processedCallableNames) continue
             processedCallableNames += name
             useSiteMemberScope.processFunctionsByName(name) { functionSymbol ->
-                // TODO: think about overloaded functions. May be we should process all names.
                 if (functionSymbol is FirNamedFunctionSymbol) {
                     val originalFunction = functionSymbol.fir
                     val origin = IrDeclarationOrigin.FAKE_OVERRIDE
@@ -244,7 +242,6 @@ class Fir2IrVisitor(
                         }
                     }
                 }
-                ProcessorAction.STOP
             }
             useSiteMemberScope.processPropertiesByName(name) { propertySymbol ->
                 if (propertySymbol is FirPropertySymbol) {
@@ -273,7 +270,6 @@ class Fir2IrVisitor(
                         }
                     }
                 }
-                ProcessorAction.STOP
             }
         }
     }
@@ -442,12 +438,10 @@ class Fir2IrVisitor(
             classId.shortClassName
         ) {
             when {
-                it !is FirConstructorSymbol -> ProcessorAction.NEXT
-                arguments.size <= it.fir.valueParameters.size -> {
+                it !is FirConstructorSymbol -> {}
+                arguments.size <= it.fir.valueParameters.size && constructorSymbol == null -> {
                     constructorSymbol = it
-                    ProcessorAction.STOP
                 }
-                else -> ProcessorAction.NEXT
             }
         }
         val foundConstructorSymbol = constructorSymbol ?: return null
@@ -879,6 +873,19 @@ class Fir2IrVisitor(
     override fun visitThisReceiverExpression(thisReceiverExpression: FirThisReceiverExpression, data: Any?): IrElement {
         val calleeReference = thisReceiverExpression.calleeReference
         if (calleeReference.labelName == null && calleeReference.boundSymbol is FirRegularClassSymbol) {
+            // Object case
+            val firObject = (calleeReference.boundSymbol?.fir as? FirClass)?.takeIf {
+                it is FirAnonymousObject || it is FirRegularClass && it.classKind == ClassKind.OBJECT
+            }
+            if (firObject != null) {
+                val irObject = declarationStorage.getIrClass(firObject, setParent = false)
+                if (irObject != classStack.lastOrNull()) {
+                    return thisReceiverExpression.convertWithOffsets { startOffset, endOffset ->
+                        IrGetObjectValueImpl(startOffset, endOffset, irObject.defaultType, irObject.symbol)
+                    }
+                }
+            }
+
             val dispatchReceiver = this.functionStack.lastOrNull()?.dispatchReceiverParameter
             if (dispatchReceiver != null) {
                 // Use the dispatch receiver of the containing function

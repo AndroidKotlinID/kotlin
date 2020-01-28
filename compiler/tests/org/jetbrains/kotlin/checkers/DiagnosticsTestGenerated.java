@@ -330,6 +330,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             runTest("compiler/testData/diagnostics/tests/kt310.kt");
         }
 
+        @TestMetadata("kt34857.kt")
+        public void testKt34857() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/kt34857.kt");
+        }
+
         @TestMetadata("kt435.kt")
         public void testKt435() throws Exception {
             runTest("compiler/testData/diagnostics/tests/kt435.kt");
@@ -17791,6 +17796,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("kt32507.kt")
             public void testKt32507() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/regressions/kt32507.kt");
+            }
+
+            @TestMetadata("kt32792.kt")
+            public void testKt32792() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/regressions/kt32792.kt");
             }
 
             @TestMetadata("kt328.kt")
