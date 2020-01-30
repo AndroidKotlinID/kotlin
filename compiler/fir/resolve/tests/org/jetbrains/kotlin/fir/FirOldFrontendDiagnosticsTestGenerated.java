@@ -1834,6 +1834,16 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             runTest("compiler/testData/diagnostics/tests/callableReference/functionReferenceWithDefaultValueAsOtherFunctionType_enabled.kt");
         }
 
+        @TestMetadata("genericCallWithReferenceAgainstVararg.kt")
+        public void testGenericCallWithReferenceAgainstVararg() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/genericCallWithReferenceAgainstVararg.kt");
+        }
+
+        @TestMetadata("genericCallWithReferenceAgainstVarargAndKFunction.kt")
+        public void testGenericCallWithReferenceAgainstVarargAndKFunction() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/callableReference/genericCallWithReferenceAgainstVarargAndKFunction.kt");
+        }
+
         @TestMetadata("kt15439_completeCall.kt")
         public void testKt15439_completeCall() throws Exception {
             runTest("compiler/testData/diagnostics/tests/callableReference/kt15439_completeCall.kt");
@@ -10839,6 +10849,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             @TestMetadata("discriminatedNothingAndSmartCast.kt")
             public void testDiscriminatedNothingAndSmartCast() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/nothingType/discriminatedNothingAndSmartCast.kt");
+            }
+
+            @TestMetadata("discriminatedNothingInsideComplexNestedCall.kt")
+            public void testDiscriminatedNothingInsideComplexNestedCall() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/nothingType/discriminatedNothingInsideComplexNestedCall.kt");
             }
 
             @TestMetadata("generateConstraintWithInnerNothingType.kt")

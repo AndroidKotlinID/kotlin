@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
-import org.jetbrains.kotlin.fir.scopes.scope
+import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
@@ -39,9 +39,8 @@ internal fun FirScope.processFunctionsAndConstructorsByName(
         processor,
         session,
         bodyResolveComponents.scopeSession,
-        name,
-            noInnerConstructors
-        )
+        noInnerConstructors
+    )
 
     processSyntheticConstructors(
         matchedClassSymbol,
@@ -131,7 +130,6 @@ private fun processConstructors(
     processor: (FirFunctionSymbol<*>) -> Unit,
     session: FirSession,
     scopeSession: ScopeSession,
-    name: Name,
     noInner: Boolean
 ) {
     try {
@@ -147,12 +145,13 @@ private fun processConstructors(
                         ) ?: return
                     } else basicScope
                 }
-                is FirClassSymbol -> (matchedSymbol.fir as FirClass<*>).scope(ConeSubstitutor.Empty, session, scopeSession)
+                is FirClassSymbol -> (matchedSymbol.fir as FirClass<*>).unsubstitutedScope(session, scopeSession)
             }
 
             val constructorName = when (matchedSymbol) {
                 is FirTypeAliasSymbol -> finalExpansionName(matchedSymbol, session) ?: return
-                is FirClassSymbol -> name
+                is FirRegularClassSymbol -> matchedSymbol.fir.name
+                else -> return
             }
 
             //TODO: why don't we use declared member scope at this point?

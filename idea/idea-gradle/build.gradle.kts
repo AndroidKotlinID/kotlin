@@ -17,6 +17,8 @@ dependencies {
 
     compile(project(":js:js.frontend"))
 
+    compile(project(":native:kotlin-native-utils")) { isTransitive = false }
+
     compileOnly(intellijDep())
     compileOnly(intellijPluginDep("gradle"))
     Platform[193].orHigher {
@@ -25,6 +27,7 @@ dependencies {
     compileOnly(intellijPluginDep("Groovy"))
     compileOnly(intellijPluginDep("junit"))
     compileOnly(intellijPluginDep("testng"))
+    runtimeOnly(project(":kotlin-coroutines-experimental-compat"))
 
     compileOnly(project(":kotlin-gradle-statistics"))
 
@@ -46,8 +49,8 @@ dependencies {
 
     testCompile(project(":idea:idea-native")) { isTransitive = false }
     testCompile(project(":idea:idea-gradle-native")) { isTransitive = false }
-    testRuntime(project(":kotlin-native:kotlin-native-library-reader")) { isTransitive = false }
-    testRuntime(project(":kotlin-native:kotlin-native-utils")) { isTransitive = false }
+    testRuntime(project(":native:frontend.native")) { isTransitive = false }
+    testRuntime(project(":native:kotlin-native-utils")) { isTransitive = false }
     testRuntime(project(":idea:idea-new-project-wizard"))
 
     testRuntime(project(":kotlin-reflect"))

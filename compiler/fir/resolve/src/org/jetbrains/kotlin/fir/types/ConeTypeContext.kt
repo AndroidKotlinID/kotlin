@@ -417,7 +417,10 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         if (this is ConeTypeParameterType /* || is TypeVariable */)
             return hasNullableSuperType(type)
 
-        // TODO: Intersection types
+        if (this is ConeIntersectionType && intersectedTypes.any { it.isNullableType() }) {
+            return true
+        }
+
         return false
     }
 
@@ -456,6 +459,10 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
 
     override fun TypeConstructorMarker.isInlineClass(): Boolean {
         return toFirRegularClass()?.isInline == true
+    }
+
+    override fun TypeConstructorMarker.isInnerClass(): Boolean {
+        return toFirRegularClass()?.isInner == true
     }
 
     override fun TypeParameterMarker.getRepresentativeUpperBound(): KotlinTypeMarker {

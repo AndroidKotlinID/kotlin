@@ -136,6 +136,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             runTest("compiler/testData/codegen/box/annotations/kt10136.kt");
         }
 
+        @TestMetadata("mustBeDocumented.kt")
+        public void testMustBeDocumented() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/mustBeDocumented.kt");
+        }
+
         @TestMetadata("nestedAnnotation.kt")
         public void testNestedAnnotation() throws Exception {
             runTest("compiler/testData/codegen/box/annotations/nestedAnnotation.kt");
@@ -1960,6 +1965,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             @TestMetadata("boundJvmFieldInInterfaceCompanion.kt")
             public void testBoundJvmFieldInInterfaceCompanion() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/bound/boundJvmFieldInInterfaceCompanion.kt");
+            }
+
+            @TestMetadata("boundReferenceToOverloadedFunction.kt")
+            public void testBoundReferenceToOverloadedFunction() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/bound/boundReferenceToOverloadedFunction.kt");
             }
 
             @TestMetadata("captureVarInInitBlock.kt")
@@ -7200,53 +7210,6 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             @TestMetadata("simple.kt")
             public void testSimple_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/multiModule/simple.kt", "kotlin.coroutines");
-            }
-        }
-
-        @TestMetadata("compiler/testData/codegen/box/coroutines/noStdLib")
-        @TestDataPath("$PROJECT_ROOT")
-        @RunWith(JUnit3RunnerWithInners.class)
-        public static class NoStdLib extends AbstractFirBlackBoxCodegenTest {
-            private void runTest(String testDataFilePath) throws Exception {
-                KotlinTestUtils.runTestWithCustomIgnoreDirective(this::doTest, TargetBackend.JVM_IR, testDataFilePath, "// IGNORE_BACKEND_FIR: ");
-            }
-
-            private void runTestWithPackageReplacement(String testDataFilePath, String packageName) throws Exception {
-                KotlinTestUtils.runTestWithCustomIgnoreDirective(filePath -> doTestWithCoroutinesPackageReplacement(filePath, packageName), TargetBackend.JVM_IR, testDataFilePath, "// IGNORE_BACKEND_FIR: ");
-            }
-
-            public void testAllFilesPresentInNoStdLib() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/coroutines/noStdLib"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
-            }
-
-            @TestMetadata("breakFinally.kt")
-            public void testBreakFinally_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/breakFinally.kt", "kotlin.coroutines");
-            }
-
-            @TestMetadata("breakStatement.kt")
-            public void testBreakStatement_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/breakStatement.kt", "kotlin.coroutines");
-            }
-
-            @TestMetadata("crossinline.kt")
-            public void testCrossinline_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/crossinline.kt", "kotlin.coroutines");
-            }
-
-            @TestMetadata("ifStatement.kt")
-            public void testIfStatement_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/ifStatement.kt", "kotlin.coroutines");
-            }
-
-            @TestMetadata("stateMachine.kt")
-            public void testStateMachine_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/stateMachine.kt", "kotlin.coroutines");
-            }
-
-            @TestMetadata("switchLikeWhen.kt")
-            public void testSwitchLikeWhen_1_3() throws Exception {
-                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/noStdLib/switchLikeWhen.kt", "kotlin.coroutines");
             }
         }
 
@@ -22990,6 +22953,11 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                 runTest("compiler/testData/codegen/box/reflection/mapping/interfaceCompanionPropertyWithJvmField.kt");
             }
 
+            @TestMetadata("lateinitProperty.kt")
+            public void testLateinitProperty() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/mapping/lateinitProperty.kt");
+            }
+
             @TestMetadata("mappedClassIsEqualToClassLiteral.kt")
             public void testMappedClassIsEqualToClassLiteral() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/mapping/mappedClassIsEqualToClassLiteral.kt");
@@ -23015,9 +22983,9 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                 runTest("compiler/testData/codegen/box/reflection/mapping/openSuspendFun.kt");
             }
 
-            @TestMetadata("propertyAccessors.kt")
-            public void testPropertyAccessors() throws Exception {
-                runTest("compiler/testData/codegen/box/reflection/mapping/propertyAccessors.kt");
+            @TestMetadata("privateProperty.kt")
+            public void testPrivateProperty() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/mapping/privateProperty.kt");
             }
 
             @TestMetadata("propertyAccessorsWithJvmName.kt")

@@ -46,7 +46,8 @@ abstract class KotlinIrLinker(
     val symbolTable: SymbolTable,
     private val exportedDependencies: List<ModuleDescriptor>,
     private val forwardModuleDescriptor: ModuleDescriptor?,
-    mangler: KotlinMangler
+    mangler: KotlinMangler,
+    private val tolerateNonKlibDescriptors: Boolean = false
 ) : DescriptorUniqIdAware, IrDeserializer {
 
     private val expectUniqIdToActualUniqId = mutableMapOf<UniqId, UniqId>()
@@ -133,7 +134,9 @@ abstract class KotlinIrLinker(
         private val moduleDeserializationState = DeserializationState.ModuleDeserializationState(this)
         val moduleReversedFileIndex = mutableMapOf<UniqId, IrDeserializerForFile>()
         private val moduleDependencies by lazy {
-            moduleDescriptor.allDependencyModules.filter { it != moduleDescriptor }.map { deserializersForModules[it]!! }
+            moduleDescriptor.allDependencyModules.filter { it != moduleDescriptor }.mapNotNull {
+                deserializersForModules[it] ?: if (tolerateNonKlibDescriptors) null else error("Module without deserializer $it")
+            }
         }
 
         // This is a heavy initializer
@@ -524,7 +527,6 @@ abstract class KotlinIrLinker(
     protected abstract fun readFile(moduleDescriptor: ModuleDescriptor, fileIndex: Int): ByteArray
     protected abstract fun readFileCount(moduleDescriptor: ModuleDescriptor): Int
 
-    protected abstract fun checkAccessibility(declarationDescriptor: DeclarationDescriptor): Boolean
     protected open fun handleNoModuleDeserializerFound(key: UniqId): DeserializationState<*> {
         error("Deserializer for declaration $key is not found")
     }
@@ -553,21 +555,26 @@ abstract class KotlinIrLinker(
         //
         if (!topLevelDescriptor.shouldBeDeserialized()) return null
 
-        require(checkAccessibility(topLevelDescriptor)) {
-            "Locally accessible declarations should not be accessed here $topLevelDescriptor"
-        }
-
         if (topLevelDescriptor !is DeserializedClassDescriptor && topLevelDescriptor !is DeserializedCallableMemberDescriptor) {
             return null
         }
 
-        val descriptorUniqId = topLevelDescriptor.getUniqId()
-            ?: error("Could not get descriptor uniq id for $topLevelDescriptor")
-        val topLevelKey = UniqId(descriptorUniqId)
-
         val moduleOfOrigin = topLevelDescriptor.module
 
-        val moduleDeserializer = deserializersForModules[moduleOfOrigin] ?: error("No module deserializer found for $moduleOfOrigin")
+        val moduleDeserializer = deserializersForModules[moduleOfOrigin] ?:
+        if (tolerateNonKlibDescriptors) {
+            return null
+        } else {
+            error("No module deserializer found for $moduleOfOrigin")
+        }
+
+        val descriptorUniqId = topLevelDescriptor.getUniqId()
+            ?: if (tolerateNonKlibDescriptors) {
+                return null
+            } else {
+                error("Could not get descriptor uniq id for $topLevelDescriptor")
+            }
+        val topLevelKey = UniqId(descriptorUniqId)
 
         moduleDeserializer.addModuleReachableTopLevel(topLevelKey)
 
@@ -697,6 +704,10 @@ abstract class KotlinIrLinker(
 
     fun deserializeOnlyHeaderModule(moduleDescriptor: ModuleDescriptor): IrModuleFragment =
         deserializeIrModuleHeader(moduleDescriptor, DeserializationStrategy.ONLY_DECLARATION_HEADERS)
+
+    fun getAllIrFiles(): List<IrFile> {
+        return deserializersForModules.values.flatMap { it.module.files }
+    }
 }
 
 enum class DeserializationStrategy(val needBodies: Boolean, val explicitlyExported: Boolean, val theWholeWorld: Boolean) {

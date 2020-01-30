@@ -38,6 +38,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/resolve/testData/resolve/stdlib/anonymousInDelegate.kt");
     }
 
+    @TestMetadata("arrayFilterCapturedType.kt")
+    public void testArrayFilterCapturedType() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/arrayFilterCapturedType.kt");
+    }
+
     @TestMetadata("arrayFirstOrNull.kt")
     public void testArrayFirstOrNull() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/arrayFirstOrNull.kt");
@@ -51,6 +56,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("backingField.kt")
     public void testBackingField() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/backingField.kt");
+    }
+
+    @TestMetadata("classLiteralForParameter.kt")
+    public void testClassLiteralForParameter() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/classLiteralForParameter.kt");
     }
 
     @TestMetadata("companionLoad.kt")
@@ -81,6 +91,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("factoryFunctionOverloads.kt")
     public void testFactoryFunctionOverloads() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/factoryFunctionOverloads.kt");
+    }
+
+    @TestMetadata("functionAndFunctionN.kt")
+    public void testFunctionAndFunctionN() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/functionAndFunctionN.kt");
     }
 
     @TestMetadata("functionX.kt")
@@ -191,6 +206,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("simpleLazy.kt")
     public void testSimpleLazy() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/stdlib/simpleLazy.kt");
+    }
+
+    @TestMetadata("toSortedMapWithComparator.kt")
+    public void testToSortedMapWithComparator() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/stdlib/toSortedMapWithComparator.kt");
     }
 
     @TestMetadata("topLevelResolve.kt")
@@ -587,16 +607,6 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib/problems"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
         }
 
-        @TestMetadata("arrayFilterCapturedType.kt")
-        public void testArrayFilterCapturedType() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/arrayFilterCapturedType.kt");
-        }
-
-        @TestMetadata("classLiteralForParameter.kt")
-        public void testClassLiteralForParameter() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/classLiteralForParameter.kt");
-        }
-
         @TestMetadata("cloneArray.kt")
         public void testCloneArray() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/cloneArray.kt");
@@ -607,19 +617,9 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/delegateTypeMismatch.kt");
         }
 
-        @TestMetadata("functionAndFunctionN.kt")
-        public void testFunctionAndFunctionN() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/functionAndFunctionN.kt");
-        }
-
         @TestMetadata("inapplicableRemoveAll.kt")
         public void testInapplicableRemoveAll() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/inapplicableRemoveAll.kt");
-        }
-
-        @TestMetadata("toSortedMapWithComparator.kt")
-        public void testToSortedMapWithComparator() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/toSortedMapWithComparator.kt");
         }
 
         @TestMetadata("tryWithLambdaInside.kt")

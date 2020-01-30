@@ -65,8 +65,8 @@ val projectsToShadow by extra(listOf(
         ":js:js.parser",
         ":js:js.serializer",
         ":js:js.translator",
-        ":kotlin-native:kotlin-native-utils",
-        ":kotlin-native:kotlin-native-library-reader",
+        ":native:kotlin-native-utils",
+        ":native:frontend.native",
         ":kotlin-gradle-statistics",
         ":compiler:light-classes",
         ":compiler:plugin-api",
@@ -97,6 +97,7 @@ val projectsToShadow by extra(listOf(
 // Projects published to maven copied to the plugin as separate jars
 val libraryProjects = listOf(
     ":kotlin-reflect",
+    ":kotlin-coroutines-experimental-compat",
     ":kotlin-compiler-client-embeddable",
     ":kotlin-daemon-client",
     ":kotlin-daemon-client-new",

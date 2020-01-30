@@ -438,7 +438,7 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
 
     fun testReplaceAnnotationClassWithInterface() {
         val library1 = compileLibrary("library-1")
-        val usage = compileLibrary("usage", extraClassPath = *arrayOf(library1))
+        val usage = compileLibrary("usage", extraClassPath = listOf(library1))
         val library2 = compileLibrary("library-2")
         doTestWithTxt(usage, library2)
     }
@@ -446,15 +446,6 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
     fun testProhibitNestedClassesByDollarName() {
         val library = compileLibrary("library")
         compileKotlin("main.kt", tmpdir, listOf(library))
-    }
-
-    fun testTypeAliasesAreInvisibleInCompatibilityMode() {
-        val library = compileLibrary("library")
-        // -Xskip-metadata-version-check because if master is pre-release, an extra error will be reported when compiling with LV 1.0
-        // against a library compiled by a pre-release compiler
-        compileKotlin(
-            "main.kt", tmpdir, listOf(library), K2JVMCompiler(), listOf("-language-version", "1.0", "-Xskip-metadata-version-check")
-        )
     }
 
     fun testInnerClassPackageConflict() {
@@ -507,7 +498,18 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         val version = intArrayOf(1, 0, 1) // legacy coroutines metadata
         val options = listOf("-language-version", "1.2", "-Xcoroutines=enable")
         val library = transformJar(
-            compileLibrary("library", additionalOptions = options),
+            compileLibrary(
+                "library",
+                additionalOptions = options,
+                extraClassPath = listOf(ForTestCompileRuntime.coroutinesCompatForTests()),
+                checkKotlinOutput = { actual ->
+                    // TODO KT-36240
+                    assertEquals(
+                        "warning: language version 1.2 is deprecated and its support will be removed in a future version of Kotlin\nOK\n",
+                        actual
+                    )
+                }
+            ),
             { _, bytes ->
                 val (resultBytes, removedCounter) = stripSuspensionMarksToImitateLegacyCompiler(
                     WrongBytecodeVersionTest.transformMetadataInClassFile(bytes) { name, _ ->
@@ -518,11 +520,11 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
                 resultBytes
             })
         compileKotlin(
-            "source.kt", tmpdir, listOf(library), K2JVMCompiler(),
+            "source.kt", tmpdir, listOf(library, ForTestCompileRuntime.coroutinesCompatForTests()), K2JVMCompiler(),
             additionalOptions = options
         )
         val classLoader = URLClassLoader(
-            arrayOf(library.toURI().toURL(), tmpdir.toURI().toURL()),
+            arrayOf(library.toURI().toURL(), tmpdir.toURI().toURL(), ForTestCompileRuntime.coroutinesCompatForTests().toURI().toURL()),
             ForTestCompileRuntime.runtimeJarClassLoader()
         )
         @Suppress("UNCHECKED_CAST")
@@ -576,12 +578,13 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         val library = compileLibrary(
             "library",
             additionalOptions = listOf("-language-version", "1.2"),
-            checkKotlinOutput = {}
+            checkKotlinOutput = {},
+            extraClassPath = listOf(ForTestCompileRuntime.coroutinesCompatForTests())
         )
         compileKotlin(
             "release.kt",
             tmpdir,
-            listOf(library),
+            listOf(library, ForTestCompileRuntime.coroutinesCompatForTests()),
             additionalOptions = listOf("-language-version", "1.3", "-api-version", "1.3")
         )
     }
@@ -626,6 +629,31 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         val classLoader =
             URLClassLoader(arrayOf(library.toURI().toURL(), tmpdir.toURI().toURL()), ForTestCompileRuntime.runtimeJarClassLoader())
         classLoader.loadClass("SourceKt").getDeclaredMethod("main").invoke(null)
+    }
+
+    fun testJvmIrAgainstJvmIr() {
+        val library = compileLibrary("library", additionalOptions = listOf("-Xuse-ir"))
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-Xuse-ir"))
+    }
+
+    fun testJvmIrAgainstOld() {
+        val library = compileLibrary("library")
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-Xuse-ir"))
+    }
+
+    fun testOldAgainstJvmIr() {
+        val library = compileLibrary("library", additionalOptions = listOf("-Xuse-ir"))
+        compileKotlin("source.kt", tmpdir, listOf(library))
+    }
+
+    fun testOldAgainstJvmIrWithStableAbi() {
+        val library = compileLibrary("library", additionalOptions = listOf("-Xuse-ir", "-Xir-binary-with-stable-abi"))
+        compileKotlin("source.kt", tmpdir, listOf(library))
+    }
+
+    fun testOldAgainstJvmIrWithAllowIrDependencies() {
+        val library = compileLibrary("library", additionalOptions = listOf("-Xuse-ir"))
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-Xallow-jvm-ir-dependencies"))
     }
 
     companion object {
