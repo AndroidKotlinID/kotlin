@@ -30,7 +30,7 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     }
 
     public void testAllFilesPresentInStdlib() throws Exception {
-        KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib"), Pattern.compile("^([^.]+)\\.kt$"), null, true, "contracts");
+        KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib"), Pattern.compile("^([^.]+)\\.kt$"), null, true, "contracts", "smartcasts");
     }
 
     @TestMetadata("anonymousInDelegate.kt")
@@ -464,6 +464,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib/j+k"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("capturedFlexible.kt")
+        public void testCapturedFlexible() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/capturedFlexible.kt");
+        }
+
         @TestMetadata("complexFlexibleInference.kt")
         public void testComplexFlexibleInference() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/complexFlexibleInference.kt");
@@ -620,11 +625,6 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         @TestMetadata("inapplicableRemoveAll.kt")
         public void testInapplicableRemoveAll() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/inapplicableRemoveAll.kt");
-        }
-
-        @TestMetadata("tryWithLambdaInside.kt")
-        public void testTryWithLambdaInside() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/stdlib/problems/tryWithLambdaInside.kt");
         }
 
         @TestMetadata("weakHashMap.kt")
