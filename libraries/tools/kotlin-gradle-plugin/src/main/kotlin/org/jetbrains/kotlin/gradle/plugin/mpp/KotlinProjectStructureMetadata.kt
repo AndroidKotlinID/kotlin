@@ -11,6 +11,9 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.jetbrains.kotlin.gradle.dsl.multiplatformExtensionOrNull
 import org.jetbrains.kotlin.gradle.plugin.PropertiesProvider
+import org.jetbrains.kotlin.gradle.plugin.sources.KotlinDependencyScope
+import org.jetbrains.kotlin.gradle.plugin.sources.getSourceSetHierarchy
+import org.jetbrains.kotlin.gradle.plugin.sources.sourceSetDependencyConfigurationByScope
 import org.jetbrains.kotlin.gradle.targets.metadata.getPublishedPlatformCompilations
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -38,10 +41,8 @@ sealed class SourceSetMetadataLayout(
         fun byName(name: String): SourceSetMetadataLayout? = values.firstOrNull { it.name == name }
 
         fun chooseForProducingProject(project: Project) =
-            if (PropertiesProvider(project.rootProject).enableCommonKlibs == true)
-                KLIB
-            else
-                METADATA
+            /** A producing project will now only generate Granular source sets metadata as a KLIB */
+            KLIB
     }
 }
 
@@ -88,7 +89,21 @@ internal fun buildKotlinProjectStructureMetadata(project: Project): KotlinProjec
             sourceSet.name to sourceSet.dependsOn.filter { it in sourceSetsWithMetadataCompilations }.map { it.name }.toSet()
         },
         sourceSetModuleDependencies = sourceSetsWithMetadataCompilations.keys.associate { sourceSet ->
-            sourceSet.name to project.configurations.getByName(sourceSet.apiConfigurationName).allDependencies.map {
+            /**
+             * Currently, Kotlin/Native dependencies must include the implementation dependencies, too. These dependencies must also be
+             * published as API dependencies of the metadata module to get into the resolution result, see
+             * [KotlinMetadataTargetConfigurator.exportDependenciesForPublishing].
+             */
+            val isNativeSharedSourceSet = sourceSetsWithMetadataCompilations[sourceSet] is KotlinSharedNativeCompilation
+            val sourceSetExportedDependencies = when {
+                isNativeSharedSourceSet -> sourceSet.getSourceSetHierarchy().flatMap { hierarchySourceSet ->
+                    listOf(KotlinDependencyScope.API_SCOPE, KotlinDependencyScope.IMPLEMENTATION_SCOPE).flatMap { scope ->
+                        project.sourceSetDependencyConfigurationByScope(hierarchySourceSet, scope).allDependencies.toList()
+                    }
+                }.distinct()
+                else -> project.configurations.getByName(sourceSet.apiConfigurationName).allDependencies
+            }
+            sourceSet.name to sourceSetExportedDependencies.map {
                 ModuleDependencyIdentifier(it.group.orEmpty(), it.name)
             }.toSet()
         },

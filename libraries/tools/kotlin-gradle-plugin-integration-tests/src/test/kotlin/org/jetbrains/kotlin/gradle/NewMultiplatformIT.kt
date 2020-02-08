@@ -145,7 +145,7 @@ class NewMultiplatformIT : BaseGradleIT() {
 
             fun CompiledProject.checkProgramCompilationCommandLine(check: (String) -> Unit) {
                 output.lineSequence().filter {
-                    it.contains("Run tool: konanc") && it.contains("-p program")
+                    it.contains("Run tool: \"konanc\"") && it.contains("-p program")
                 }.toList().also {
                     assertTrue(it.isNotEmpty())
                 }.forEach(check)
@@ -534,18 +534,22 @@ class NewMultiplatformIT : BaseGradleIT() {
                         useExperimentalAnnotation('kotlin.contracts.ExperimentalContracts')
                         progressiveMode = true
                     }
+                    project.ext.set("kotlin.mpp.freeCompilerArgsForSourceSet.${'$'}name", ["-Xno-inline"])
                 }
             """.trimIndent()
         )
 
-        listOf("compileKotlinJvm6", "compileKotlinNodeJs", "compileKotlin${nativeHostTargetName.capitalize()}").forEach {
+        listOf(
+            "compileKotlinMetadata", "compileKotlinJvm6", "compileKotlinNodeJs", "compileKotlin${nativeHostTargetName.capitalize()}"
+        ).forEach {
             build(it) {
                 assertSuccessful()
                 assertTasksExecuted(":$it")
                 assertContains(
                     "-language-version 1.3", "-api-version 1.3", "-XXLanguage:+InlineClasses",
                     " -progressive", "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
-                    "-Xopt-in=kotlin.contracts.ExperimentalContracts"
+                    "-Xopt-in=kotlin.contracts.ExperimentalContracts",
+                    "-Xno-inline"
                 )
             }
         }
@@ -1022,7 +1026,7 @@ class NewMultiplatformIT : BaseGradleIT() {
         val commandLine = output.lineSequence().dropWhile {
             !it.contains("Executing actions for task '$taskPath'")
         }.first {
-            it.contains("Run tool: konanc")
+            it.contains("Run tool: \"konanc\"")
         }
         check(commandLine)
     }
@@ -1836,6 +1840,9 @@ class NewMultiplatformIT : BaseGradleIT() {
             noArg { annotation 'com.example.Annotation' }
 
             task $printOptionsTaskName {
+                // if the tasks are not configured during evaluation phase, configuring them during execution
+                // leads to new dependencies unsuccessfully added to the resolved compilerPluginsClasspath configuration
+                kotlin.targets.all { compilations.all { /*force to configure the*/ compileKotlinTask } }
                 doFirst {
                     kotlin.sourceSets.each { sourceSet ->
                         def args = sourceSet.languageSettings.compilerPluginArguments
@@ -2235,7 +2242,7 @@ class NewMultiplatformIT : BaseGradleIT() {
             assertFileExists("build/classes/kotlin/js/integrationTest/new-mpp-associate-compilations_integrationTest.js")
 
             // Native:
-            assertFileExists("build/classes/kotlin/$nativeHostTargetName/integrationTest/integrationTest.klib")
+            assertFileExists("build/classes/kotlin/$nativeHostTargetName/integrationTest/new-mpp-associate-compilations_integrationTest.klib")
         }
 
         gradleBuildScript().appendText(

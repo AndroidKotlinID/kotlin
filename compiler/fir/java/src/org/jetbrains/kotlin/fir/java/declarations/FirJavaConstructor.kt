@@ -39,7 +39,6 @@ class FirJavaConstructor(
 ) : FirPureAbstractElement(), FirAbstractAnnotatedElement, FirConstructor {
     override val receiverTypeRef: FirTypeRef? get() = null
     override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
-    override val name: Name get() = CONSTRUCTOR_NAME
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
 
     override var status: FirDeclarationStatus = FirDeclarationStatusImpl(visibility, Modality.FINAL).apply {
@@ -115,5 +114,12 @@ class FirJavaConstructor(
 
     override fun replaceReturnTypeRef(newReturnTypeRef: FirTypeRef) {
         returnTypeRef = newReturnTypeRef
+    }
+
+    override fun replaceReceiverTypeRef(newReceiverTypeRef: FirTypeRef?) {}
+
+    override fun replaceValueParameters(newValueParameters: List<FirValueParameter>) {
+        valueParameters.clear()
+        valueParameters.addAll(newValueParameters)
     }
 }

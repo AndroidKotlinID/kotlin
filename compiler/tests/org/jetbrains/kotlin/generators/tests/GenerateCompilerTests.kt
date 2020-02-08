@@ -59,7 +59,7 @@ import org.jetbrains.kotlin.types.AbstractTypeBindingTest
 import org.jetbrains.kotlin.visualizer.fir.AbstractFirVisualizer
 import org.jetbrains.kotlin.visualizer.psi.AbstractPsiVisualizer
 
-fun main(args: Array<String>) {
+fun main() {
     System.setProperty("java.awt.headless", "true")
 
     val excludedFirTestdataPattern = "^(.+)\\.fir\\.kts?\$"
@@ -106,6 +106,10 @@ fun main(args: Array<String>) {
             model("diagnostics/testsWithJsStdLibAndBackendCompilation")
         }
 
+        testClass<AbstractDiagnosticsNativeTest> {
+            model("diagnostics/nativeTests")
+        }
+
         testClass<AbstractDiagnosticsWithModifiedMockJdkTest> {
             model("diagnostics/testWithModifiedMockJdk")
         }
@@ -120,6 +124,14 @@ fun main(args: Array<String>) {
 
         testClass<AbstractDiagnosticsWithExplicitApi> {
             model("diagnostics/testsWithExplicitApi")
+        }
+
+        testClass<AbstractDiagnosticsTestWithOldJvmBackend> {
+            model("diagnostics/testsWithJvmBackend", targetBackend = TargetBackend.JVM)
+        }
+
+        testClass<AbstractDiagnosticsTestWithJvmIrBackend> {
+            model("diagnostics/testsWithJvmBackend", targetBackend = TargetBackend.JVM_IR)
         }
 
         testClass<AbstractMultiPlatformIntegrationTest> {

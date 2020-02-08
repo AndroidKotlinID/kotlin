@@ -24,13 +24,13 @@ interface FirRegularClass : FirMemberDeclaration, FirTypeParametersOwner, FirCla
     override val source: FirSourceElement?
     override val session: FirSession
     override val resolvePhase: FirResolvePhase
-    override val name: Name
     override val annotations: List<FirAnnotationCall>
     override val typeParameters: List<FirTypeParameter>
     override val status: FirDeclarationStatus
     override val classKind: ClassKind
     override val declarations: List<FirDeclaration>
     override val scopeProvider: FirScopeProvider
+    val name: Name
     override val symbol: FirRegularClassSymbol
     val companionObject: FirRegularClass?
     override val superTypeRefs: List<FirTypeRef>

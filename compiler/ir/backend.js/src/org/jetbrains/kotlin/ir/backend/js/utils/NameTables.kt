@@ -332,6 +332,11 @@ class NameTables(
         val signature = fieldSignature(field)
         val name = memberNames.names[signature] ?: mappedNames[mapToKey(signature)]
 
+        // TODO investigate
+        if (name == null) {
+            return sanitizeName(field.name.asString()) + "__error"
+        }
+
         require(name != null) {
             "Can't find name for member field ${field.render()}"
         }
@@ -346,6 +351,14 @@ class NameTables(
         //       of `invoke` functions in FunctionN interfaces
         if (name == null && signature is ParameterTypeBasedSignature && signature.suggestedName.startsWith("invoke"))
             return signature.suggestedName
+
+        // TODO Add a compiler flag, which enables this behaviour
+        // TODO remove in DCE
+        if (name == null) {
+            return sanitizeName(function.name.asString()) + "__error" // TODO one case is a virtual method of an abstract class with no implementation
+        }
+
+        // TODO report backend error
         require(name != null) {
             "Can't find name for member function ${function.render()}"
         }

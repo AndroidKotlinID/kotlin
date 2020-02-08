@@ -179,6 +179,7 @@ fun IrDeclarationContainer.addFunction(
     name: String,
     returnType: IrType,
     modality: Modality = Modality.FINAL,
+    visibility: Visibility = Visibilities.PUBLIC,
     isStatic: Boolean = false,
     isSuspend: Boolean = false,
     origin: IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
@@ -187,6 +188,7 @@ fun IrDeclarationContainer.addFunction(
         this.name = Name.identifier(name)
         this.returnType = returnType
         this.modality = modality
+        this.visibility = visibility
         this.isSuspend = isSuspend
         this.origin = origin
     }.apply {
@@ -234,7 +236,7 @@ inline fun IrFunction.addValueParameter(builder: IrValueParameterBuilder.() -> U
             index = valueParameters.size
         }
         build().also { valueParameter ->
-            valueParameters.add(valueParameter)
+            valueParameters += valueParameter
             valueParameter.parent = this@addValueParameter
         }
     }
@@ -293,7 +295,7 @@ inline fun IrTypeParametersContainer.addTypeParameter(builder: IrTypeParameterBu
             index = typeParameters.size
         }
         build().also { typeParameter ->
-            typeParameters.add(typeParameter)
+            typeParameters += typeParameter
             typeParameter.parent = this@addTypeParameter
         }
     }

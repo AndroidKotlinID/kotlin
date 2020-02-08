@@ -35,7 +35,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
             parents += modifiableConstructor
             defaultNull("delegatedConstructor")
             defaultNull("body")
-            default("name", "Name.special(\"<init>\")")
 
             default("isPrimary") {
                 value = "false"
@@ -513,6 +512,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         impl(implicitTypeRef) {
             defaultEmptyList("annotations")
         }
+
+        impl(composedSuperTypeRef)
 
         impl(reference, "FirStubReference") {
             default("source") {

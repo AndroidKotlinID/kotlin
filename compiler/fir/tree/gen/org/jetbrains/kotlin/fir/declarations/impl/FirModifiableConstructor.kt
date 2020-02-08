@@ -21,7 +21,6 @@ import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
 import org.jetbrains.kotlin.fir.references.impl.FirEmptyControlFlowGraphReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 import org.jetbrains.kotlin.fir.visitors.*
 
@@ -36,10 +35,9 @@ abstract class FirModifiableConstructor : FirPureAbstractElement(), FirConstruct
     abstract override var resolvePhase: FirResolvePhase
     abstract override var returnTypeRef: FirTypeRef
     abstract override var receiverTypeRef: FirTypeRef?
-    abstract override var controlFlowGraphReference: FirControlFlowGraphReference
     abstract override val typeParameters: MutableList<FirTypeParameter>
+    abstract override var controlFlowGraphReference: FirControlFlowGraphReference
     abstract override val valueParameters: MutableList<FirValueParameter>
-    abstract override val name: Name
     abstract override var status: FirDeclarationStatus
     abstract override var containerSource: DeserializedContainerSource?
     abstract override val annotations: MutableList<FirAnnotationCall>
@@ -62,4 +60,8 @@ abstract class FirModifiableConstructor : FirPureAbstractElement(), FirConstruct
     abstract override fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
 
     abstract override fun replaceReturnTypeRef(newReturnTypeRef: FirTypeRef)
+
+    abstract override fun replaceReceiverTypeRef(newReceiverTypeRef: FirTypeRef?)
+
+    abstract override fun replaceValueParameters(newValueParameters: List<FirValueParameter>)
 }

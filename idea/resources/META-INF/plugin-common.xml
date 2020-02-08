@@ -36,10 +36,6 @@
 
   <application-components>
     <component>
-      <implementation-class>org.jetbrains.kotlin.idea.PluginStartupComponent</implementation-class>
-    </component>
-
-    <component>
       <implementation-class>org.jetbrains.kotlin.idea.versions.KotlinUpdatePluginComponent</implementation-class>
     </component>
   </application-components>
@@ -233,6 +229,9 @@
   </actions>
 
   <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceImplementation="org.jetbrains.kotlin.idea.PluginStartupService" />
+    <postStartupActivity implementation="org.jetbrains.kotlin.idea.PluginStartupActivity"/>
+
     <applicationService serviceInterface="org.jetbrains.kotlin.idea.KotlinIconProviderService"
                         serviceImplementation="org.jetbrains.kotlin.idea.KotlinIdeFileIconProviderService"/>
 
@@ -814,6 +813,7 @@
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinBlockIntoSingleStatementHandler"/>
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinStatementsAddSemicolonHandler"/>
     <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinToStringTemplateHandler"/>
+    <joinLinesHandler implementation="org.jetbrains.kotlin.idea.joinLines.JoinWithTrailingCommaHandler"/>
 
     <targetElementEvaluator
         language="kotlin"
@@ -1337,6 +1337,11 @@
 
     <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.ToRawStringLiteralIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.TrailingCommaIntention</className>
       <category>Kotlin</category>
     </intentionAction>
 

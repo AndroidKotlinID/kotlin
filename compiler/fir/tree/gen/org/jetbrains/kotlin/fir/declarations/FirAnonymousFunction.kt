@@ -30,8 +30,8 @@ abstract class FirAnonymousFunction : FirPureAbstractElement(), FirFunction<FirA
     abstract override val annotations: List<FirAnnotationCall>
     abstract override val returnTypeRef: FirTypeRef
     abstract override val receiverTypeRef: FirTypeRef?
-    abstract override val controlFlowGraphReference: FirControlFlowGraphReference
     abstract override val typeParameters: List<FirTypeParameter>
+    abstract override val controlFlowGraphReference: FirControlFlowGraphReference
     abstract override val valueParameters: List<FirValueParameter>
     abstract override val body: FirBlock?
     abstract override val typeRef: FirTypeRef
@@ -42,7 +42,7 @@ abstract class FirAnonymousFunction : FirPureAbstractElement(), FirFunction<FirA
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitAnonymousFunction(this, data)
 
-    abstract fun replaceInvocationKind(newInvocationKind: InvocationKind)
+    abstract fun replaceInvocationKind(newInvocationKind: InvocationKind?)
 
     abstract override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirAnonymousFunction
 

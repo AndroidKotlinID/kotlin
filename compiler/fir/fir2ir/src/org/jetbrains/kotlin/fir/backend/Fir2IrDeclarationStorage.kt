@@ -509,7 +509,7 @@ class Fir2IrDeclarationStorage(
             irSymbolTable.declareConstructor(startOffset, endOffset, origin, descriptor) { symbol ->
                 IrConstructorImpl(
                     startOffset, endOffset, origin, symbol,
-                    constructor.name, visibility,
+                    Name.special("<init>"), visibility,
                     constructor.returnTypeRef.toIrType(session, this),
                     isInline = false, isExternal = false, isPrimary = isPrimary, isExpect = false
                 ).bindAndDeclareParameters(constructor, descriptor, irParent, isStatic = true, shouldLeaveScope = shouldLeaveScope)
@@ -587,7 +587,7 @@ class Fir2IrDeclarationStorage(
                             this.correspondingClass = klass
                         } else if (irParent != null) {
                             this.initializerExpression =
-                                IrEnumConstructorCallImpl(startOffset, endOffset, irType, irParent.constructors.first().symbol)
+                                IrExpressionBodyImpl(IrEnumConstructorCallImpl(startOffset, endOffset, irType, irParent.constructors.first().symbol))
                         }
                     }
                 }

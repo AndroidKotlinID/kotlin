@@ -47,10 +47,6 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +symbolWithPackage("fir.symbols", "AbstractFirBasedSymbol", "E")
         }
 
-        controlFlowGraphOwner.configure {
-            +controlFlowGraphReferenceField.withTransform()
-        }
-
         typeParametersOwner.configure {
             +typeParameters
         }
@@ -75,7 +71,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         callableDeclaration.configure {
             withArg("F", "FirCallableDeclaration<F>")
             parentArg(symbolOwner, "E", "F")
-            +field("receiverTypeRef", typeRef, nullable = true).withTransform()
+            +field("receiverTypeRef", typeRef, nullable = true, withReplace = true).withTransform()
             +symbol("FirCallableSymbol", "F")
         }
 
@@ -85,15 +81,12 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +field("containerSource", type(DeserializedContainerSource::class), nullable = true)
         }
 
-        namedDeclaration.configure {
-            +name
-        }
-
         function.configure {
             withArg("F", "FirFunction<F>")
             parentArg(callableDeclaration, "F", "F")
+            +controlFlowGraphReferenceField.withTransform()
             +symbol("FirFunctionSymbol", "F")
-            +valueParameters.withTransform()
+            +fieldList(valueParameter, withReplace = true).withTransform()
             +body(nullable = true)
         }
 
@@ -222,6 +215,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         regularClass.configure {
             parentArg(klass, "F", regularClass)
+            +name
             +symbol("FirRegularClassSymbol")
             +field("companionObject", regularClass, nullable = true)
             +superTypeRefs(withReplace = true)
@@ -238,6 +232,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         typeAlias.configure {
             parentArg(classLikeDeclaration, "F", typeAlias)
+            +name
             +symbol("FirTypeAliasSymbol")
             +field("expandedTypeRef", typeRef, withReplace = true)
             +annotations
@@ -255,6 +250,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         typeParameter.configure {
             parentArg(symbolOwner, "F", typeParameter)
+            +name
             +symbol("FirTypeParameterSymbol")
             +field(varianceType)
             +booleanField("isReified")
@@ -262,16 +258,12 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +annotations
         }
 
-        memberFunction.configure {
-            withArg("F", memberFunction)
-            parentArg(function, "F", "F")
-            parentArg(callableMemberDeclaration, "F", "F")
-            +symbol("FirFunctionSymbol", "F")
-            +annotations
-        }
-
         simpleFunction.configure {
-            parentArg(memberFunction, "F", simpleFunction)
+            parentArg(function, "F", simpleFunction)
+            parentArg(callableMemberDeclaration, "F", simpleFunction)
+            +name
+            +symbol("FirFunctionSymbol<FirSimpleFunction>")
+            +annotations
         }
 
         contractDescriptionOwner.configure {
@@ -281,6 +273,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         property.configure {
             parentArg(variable, "F", property)
             parentArg(callableMemberDeclaration, "F", property)
+            +controlFlowGraphReferenceField.withTransform()
             +symbol("FirPropertySymbol")
             +field("backingFieldSymbol", backingFieldSymbolType)
             +booleanField("isLocal")
@@ -312,7 +305,9 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         }
 
         constructor.configure {
-            parentArg(memberFunction, "F", constructor)
+            parentArg(function, "F", constructor)
+            parentArg(callableMemberDeclaration, "F", constructor)
+            +annotations
             +symbol("FirConstructorSymbol")
             +field("delegatedConstructor", delegatedConstructorCall, nullable = true)
             +body(nullable = true)
@@ -333,6 +328,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         variable.configure {
             withArg("F", variable)
             parentArg(callableDeclaration, "F", "F")
+            +name
             +symbol("FirVariableSymbol", "F")
             +initializer.withTransform()
             +field("delegate", expression, nullable = true)
@@ -523,6 +519,10 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +field("receiverTypeRef", typeRef, nullable = true)
             +valueParameters
             +returnTypeRef
+        }
+
+        composedSuperTypeRef.configure {
+            +fieldList("superTypeRefs", resolvedTypeRef)
         }
 
         thisReceiverExpression.configure {

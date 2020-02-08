@@ -128,6 +128,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         runTest("compiler/fir/resolve/testData/resolve/ft.kt");
     }
 
+    @TestMetadata("functionTypeAlias.kt")
+    public void testFunctionTypeAlias() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/functionTypeAlias.kt");
+    }
+
     @TestMetadata("functionTypes.kt")
     public void testFunctionTypes() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/functionTypes.kt");
@@ -684,6 +689,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             runTest("compiler/fir/resolve/testData/resolve/expresssions/simple.kt");
         }
 
+        @TestMetadata("syntheticSmartCast.kt")
+        public void testSyntheticSmartCast() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/syntheticSmartCast.kt");
+        }
+
         @TestMetadata("this.kt")
         public void testThis() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/this.kt");
@@ -902,6 +912,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
 
         public void testAllFilesPresentInInference() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/inference"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("nestedLambdas.kt")
+        public void testNestedLambdas() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/inference/nestedLambdas.kt");
         }
 
         @TestMetadata("receiverWithCapturedType.kt")
@@ -1154,6 +1169,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("samConversionInConstructorCall.kt")
         public void testSamConversionInConstructorCall() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/samConversionInConstructorCall.kt");
+        }
+
+        @TestMetadata("smartCastInInit.kt")
+        public void testSmartCastInInit() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/smartCastInInit.kt");
         }
 
         @TestMetadata("syntheticsVsNormalProperties.kt")

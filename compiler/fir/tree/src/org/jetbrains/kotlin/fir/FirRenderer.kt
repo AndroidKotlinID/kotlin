@@ -135,8 +135,9 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             receiverType.accept(this)
             print(".")
         }
-        if (callableDeclaration is FirNamedDeclaration) {
-            print(callableDeclaration.name)
+        when (callableDeclaration) {
+            is FirSimpleFunction -> print(callableDeclaration.name)
+            is FirVariable<*> -> print(callableDeclaration.name)
         }
 
         if (callableDeclaration is FirFunction<*>) {
@@ -238,20 +239,23 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             }
         }
 
-        visitNamedDeclaration(memberDeclaration)
-    }
-
-    override fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration) {
-        visitDeclaration(namedDeclaration)
-        if (namedDeclaration !is FirCallableDeclaration<*>) { // Handled by visitCallableDeclaration
-            print(" " + namedDeclaration.name)
-            if (namedDeclaration is FirTypeParametersOwner) {
-                namedDeclaration.typeParameters.renderTypeParameters()
+        visitDeclaration(memberDeclaration)
+        when (memberDeclaration) {
+            is FirClassLikeDeclaration<*> -> {
+                if (memberDeclaration is FirRegularClass) {
+                    print(" " + memberDeclaration.name)
+                }
+                if (memberDeclaration is FirTypeAlias) {
+                    print(" " + memberDeclaration.name)
+                }
+                memberDeclaration.typeParameters.renderTypeParameters()
             }
-        } else if (namedDeclaration is FirMemberDeclaration) {
-            if (namedDeclaration.typeParameters.isNotEmpty()) {
-                print(" ")
-                namedDeclaration.typeParameters.renderTypeParameters()
+            is FirCallableDeclaration<*> -> {
+                // Name is handled by visitCallableDeclaration
+                if (memberDeclaration.typeParameters.isNotEmpty()) {
+                    print(" ")
+                    memberDeclaration.typeParameters.renderTypeParameters()
+                }
             }
         }
     }
@@ -272,8 +276,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             }
         )
     }
-
-
 
     private fun List<FirDeclaration>.renderDeclarations() {
         renderInBraces {
@@ -767,7 +769,9 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         annotations.renderAnnotations()
         print("R|")
         val coneType = resolvedTypeRef.type
-        print(coneType.renderFunctionType(kind, resolvedTypeRef.isExtensionFunctionType()))
+        print(coneType.renderFunctionType(kind, resolvedTypeRef.annotations.any {
+            it.isExtensionFunctionAnnotationCall
+        }))
         print("|")
     }
 

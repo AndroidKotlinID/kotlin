@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -39,6 +39,7 @@ class JvmDeclarationFactory(
     private val interfaceCompanionFieldDeclarations = HashMap<IrSymbolOwner, IrField>()
     private val outerThisDeclarations = HashMap<IrClass, IrField>()
     private val innerClassConstructors = HashMap<IrConstructor, IrConstructor>()
+    private val originalInnerClassPrimaryConstructorByClass = HashMap<IrClass, IrConstructor>()
     private val staticBackingFields = HashMap<IrProperty, IrField>()
 
     private val defaultImplsMethods = HashMap<IrSimpleFunction, IrSimpleFunction>()
@@ -74,11 +75,22 @@ class JvmDeclarationFactory(
         }
 
     override fun getInnerClassConstructorWithOuterThisParameter(innerClassConstructor: IrConstructor): IrConstructor {
-        assert((innerClassConstructor.parent as IrClass).isInner) { "Class is not inner: ${(innerClassConstructor.parent as IrClass).dump()}" }
+        val innerClass = innerClassConstructor.parent as IrClass
+        assert(innerClass.isInner) { "Class is not inner: ${(innerClassConstructor.parent as IrClass).dump()}" }
 
         return innerClassConstructors.getOrPut(innerClassConstructor) {
             createInnerClassConstructorWithOuterThisParameter(innerClassConstructor)
+        }.also {
+            if (innerClassConstructor.isPrimary) {
+                originalInnerClassPrimaryConstructorByClass[innerClass] = innerClassConstructor
+            }
         }
+    }
+
+    override fun getInnerClassOriginalPrimaryConstructorOrNull(innerClass: IrClass): IrConstructor? {
+        assert(innerClass.isInner) { "Class is not inner: $innerClass" }
+
+        return originalInnerClassPrimaryConstructorByClass[innerClass]
     }
 
     private fun createInnerClassConstructorWithOuterThisParameter(oldConstructor: IrConstructor): IrConstructor {
@@ -97,7 +109,7 @@ class JvmDeclarationFactory(
             isExpect = oldConstructor.isExpect
         ).apply {
             newDescriptor.bind(this)
-            annotations.addAll(oldConstructor.annotations.map { it.deepCopyWithSymbols(this) })
+            annotations = oldConstructor.annotations.map { it.deepCopyWithSymbols(this) }
             parent = oldConstructor.parent
             returnType = oldConstructor.returnType
             copyTypeParametersFrom(oldConstructor)
@@ -117,9 +129,7 @@ class JvmDeclarationFactory(
                 outerThisDescriptor.bind(it)
                 it.parent = this
             }
-            valueParameters.add(outerThisValueParameter)
-
-            oldConstructor.valueParameters.mapTo(valueParameters) { it.copyTo(this, index = it.index + 1) }
+            valueParameters = listOf(outerThisValueParameter) + oldConstructor.valueParameters.map { it.copyTo(this, index = it.index + 1) }
             metadata = oldConstructor.metadata
         }
     }
@@ -210,12 +220,15 @@ class JvmDeclarationFactory(
                 },
                 // Old backend doesn't generate ACC_FINAL on DefaultImpls methods.
                 modality = Modality.OPEN,
+
                 // Interface functions are always public, with one exception: clone in Cloneable, which is protected. However, Cloneable
                 // has no DefaultImpls, so this merely replicates the incorrect behavior of the old backend. We should rather not generate
                 // a bridge to clone when interface inherits from Cloneable at all. Below, we force everything, including those bridges,
                 // to be public so that we won't try to generate synthetic accessor for them.
-                visibility = Visibilities.PUBLIC
-            ).also { it.copyAttributes(interfaceFun) }
+                visibility = Visibilities.PUBLIC,
+
+                typeParametersFromContext = parent.typeParameters
+            )
         }
     }
 
@@ -264,9 +277,9 @@ class JvmDeclarationFactory(
                 ).apply {
                     descriptor.bind(this)
                     parent = irClass
-                    overriddenSymbols.addAll(fakeOverride.overriddenSymbols)
+                    overriddenSymbols = fakeOverride.overriddenSymbols
                     copyParameterDeclarationsFrom(fakeOverride)
-                    annotations.addAll(fakeOverride.annotations)
+                    annotations = fakeOverride.annotations
                     fakeOverride.correspondingPropertySymbol?.owner?.let { fakeOverrideProperty ->
                         // NB: property is only generated for the sake of the type mapper.
                         // If both setter and getter are present, original property will be duplicated.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -53,10 +53,9 @@ open class FunctionCodegen(
         }
 
     private fun doGenerate(): JvmMethodGenericSignature {
-        val functionView = irFunction.getOrCreateSuspendFunctionViewIfNeeded(context)
-        val signature = classCodegen.methodSignatureMapper.mapSignatureWithGeneric(functionView)
+        val signature = classCodegen.methodSignatureMapper.mapSignatureWithGeneric(irFunction)
 
-        val flags = calculateMethodFlags(functionView.isStatic)
+        val flags = calculateMethodFlags(irFunction.isStatic)
         var methodVisitor = createMethod(flags, signature)
 
         if (state.generateParametersMetadata && flags.and(Opcodes.ACC_SYNTHETIC) == 0) {
@@ -75,14 +74,14 @@ open class FunctionCodegen(
                     )
                 }
             }.genAnnotations(
-                functionView,
+                irFunction,
                 signature.asmMethod.returnType,
                 irFunction.returnType
             )
             // Not generating parameter annotations for default stubs fixes KT-7892, though
             // this certainly looks like a workaround for a javac bug.
             if (irFunction !is IrConstructor || !irFunction.parentAsClass.shouldNotGenerateConstructorParameterAnnotations()) {
-                generateParameterAnnotations(functionView, methodVisitor, signature, classCodegen, context)
+                generateParameterAnnotations(irFunction, methodVisitor, signature, classCodegen, context)
             }
         }
 
@@ -107,7 +106,7 @@ open class FunctionCodegen(
                 )
                 else -> methodVisitor
             }
-            ExpressionCodegen(functionView, signature, frameMap, InstructionAdapter(methodVisitor), classCodegen, inlinedInto).generate()
+            ExpressionCodegen(irFunction, signature, frameMap, InstructionAdapter(methodVisitor), classCodegen, inlinedInto).generate()
             methodVisitor.visitMaxs(-1, -1)
             if (irFunction.hasContinuation()) {
                 context.continuationClassBuilders[continuationClass().attributeOwnerId].sure {
@@ -143,6 +142,8 @@ open class FunctionCodegen(
             origin != IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA &&
             // This is just a template for inliner
             origin != JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE &&
+            // This is just a bridge to the function with the continuation
+            origin != JvmLoweredDeclarationOrigin.MULTIFILE_BRIDGE &&
             // Continuations are generated for suspendImpls
             parentAsClass.functions.none {
                 it.name.asString() == name.asString() + SUSPEND_IMPL_NAME_SUFFIX &&
@@ -151,7 +152,8 @@ open class FunctionCodegen(
             // $$forInline functions never have a continuation
             origin != JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE
 
-    private fun continuationClass() = irFunction.body!!.statements.firstIsInstance<IrClass>()
+    private fun continuationClass() =
+        irFunction.body!!.statements.firstIsInstance<IrClass>()
 
     private fun IrFunction.getVisibilityForDefaultArgumentStub(): Int =
         when (visibility) {
@@ -260,17 +262,16 @@ open class FunctionCodegen(
 
     private fun createFrameMapWithReceivers(): IrFrameMap {
         val frameMap = IrFrameMap()
-        val functionView = irFunction.getOrCreateSuspendFunctionViewIfNeeded(context)
 
         if (irFunction is IrConstructor) {
             frameMap.enterDispatchReceiver(irFunction.constructedClass.thisReceiver!!)
-        } else if (functionView.dispatchReceiverParameter != null) {
-            frameMap.enterDispatchReceiver(functionView.dispatchReceiverParameter!!)
+        } else if (irFunction.dispatchReceiverParameter != null) {
+            frameMap.enterDispatchReceiver(irFunction.dispatchReceiverParameter!!)
         }
-        functionView.extensionReceiverParameter?.let {
+        irFunction.extensionReceiverParameter?.let {
             frameMap.enter(it, classCodegen.typeMapper.mapType(it))
         }
-        for (parameter in functionView.valueParameters) {
+        for (parameter in irFunction.valueParameters) {
             frameMap.enter(parameter, classCodegen.typeMapper.mapType(parameter.type))
         }
 

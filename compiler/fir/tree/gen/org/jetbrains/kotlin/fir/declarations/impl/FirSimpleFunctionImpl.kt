@@ -35,18 +35,18 @@ open class FirSimpleFunctionImpl(
     override val session: FirSession,
     override var returnTypeRef: FirTypeRef,
     override var receiverTypeRef: FirTypeRef?,
-    override val name: Name,
     override var status: FirDeclarationStatus,
+    override val name: Name,
     override val symbol: FirFunctionSymbol<FirSimpleFunction>
 ) : FirSimpleFunction(), FirModifiableFunction<FirSimpleFunction>, FirModifiableTypeParametersOwner, FirAbstractAnnotatedElement {
     override var resolvePhase: FirResolvePhase = FirResolvePhase.RAW_FIR
-    override var controlFlowGraphReference: FirControlFlowGraphReference = FirEmptyControlFlowGraphReference()
     override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
+    override var controlFlowGraphReference: FirControlFlowGraphReference = FirEmptyControlFlowGraphReference()
     override val valueParameters: MutableList<FirValueParameter> = mutableListOf()
     override var body: FirBlock? = null
     override var containerSource: DeserializedContainerSource? = null
-    override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
     override var contractDescription: FirContractDescription = FirEmptyContractDescription
+    override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
 
     init {
         symbol.bind(this)
@@ -55,25 +55,25 @@ open class FirSimpleFunctionImpl(
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         returnTypeRef.accept(visitor, data)
         receiverTypeRef?.accept(visitor, data)
-        controlFlowGraphReference.accept(visitor, data)
         typeParameters.forEach { it.accept(visitor, data) }
+        controlFlowGraphReference.accept(visitor, data)
         valueParameters.forEach { it.accept(visitor, data) }
         body?.accept(visitor, data)
         status.accept(visitor, data)
-        annotations.forEach { it.accept(visitor, data) }
         contractDescription.accept(visitor, data)
+        annotations.forEach { it.accept(visitor, data) }
     }
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
         transformReturnTypeRef(transformer, data)
         transformReceiverTypeRef(transformer, data)
-        transformControlFlowGraphReference(transformer, data)
         typeParameters.transformInplace(transformer, data)
+        transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
         body = body?.transformSingle(transformer, data)
         transformStatus(transformer, data)
-        annotations.transformInplace(transformer, data)
         transformContractDescription(transformer, data)
+        annotations.transformInplace(transformer, data)
         return this
     }
 
@@ -113,5 +113,14 @@ open class FirSimpleFunctionImpl(
 
     override fun replaceReturnTypeRef(newReturnTypeRef: FirTypeRef) {
         returnTypeRef = newReturnTypeRef
+    }
+
+    override fun replaceReceiverTypeRef(newReceiverTypeRef: FirTypeRef?) {
+        receiverTypeRef = newReceiverTypeRef
+    }
+
+    override fun replaceValueParameters(newValueParameters: List<FirValueParameter>) {
+        valueParameters.clear()
+        valueParameters.addAll(newValueParameters)
     }
 }
