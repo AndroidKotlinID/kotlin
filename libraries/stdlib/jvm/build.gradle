@@ -1,7 +1,6 @@
 description = 'Kotlin Standard Library for JVM'
 
 apply plugin: 'kotlin-platform-jvm'
-apply plugin: 'pill-configurable'
 
 archivesBaseName = 'kotlin-stdlib'
 
@@ -10,10 +9,6 @@ configurePublishing(project)
 
 configurations {
     distSources
-}
-
-pill {
-    importAsLibrary = true
 }
 
 sourceSets {
@@ -142,9 +137,14 @@ compileTestKotlin {
         freeCompilerArgs += [
                 "-Xuse-experimental=kotlin.Experimental",
                 "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
-                "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
+                "-Xuse-experimental=kotlin.ExperimentalStdlibApi",
+                "-XXLanguage:-NewInference"
         ]
     }
+}
+
+compileLongRunningTestKotlin {
+    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
 }
 
 task longRunningTest(type: Test, dependsOn: longRunningTestClasses) {

@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.common.ir.passTypeArgumentsFrom
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
+import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.backend.jvm.ir.createDelegatingCallWithPlaceholderTypeArguments
 import org.jetbrains.kotlin.backend.jvm.ir.createPlaceholderAnyNType
@@ -126,11 +127,8 @@ private class InterfaceSuperCallsLowering(val context: JvmBackendContext) : IrEl
             return super.visitCall(expression)
         }
 
-        // TODO: This is too eagerly resolving the fake override statically. It
-        // should cf the old backend call precisely <supertype>.foo, not
-        // resolve foo to its implementation.
-        val superCallee = (expression.symbol.owner as IrSimpleFunction).resolveFakeOverride()!!
-        if (superCallee.isDefinitelyNotDefaultImplsMethod() || superCallee.hasJvmDefault()) return super.visitCall(expression)
+        val superCallee = expression.symbol.owner as IrSimpleFunction
+        if (superCallee.isDefinitelyNotDefaultImplsMethod()) return super.visitCall(expression)
 
         val redirectTarget = context.declarationFactory.getDefaultImplsFunction(superCallee)
         val newCall = createDelegatingCallWithPlaceholderTypeArguments(expression, redirectTarget, context.irBuiltIns)
@@ -174,9 +172,10 @@ private class InterfaceDefaultCallsLowering(val context: JvmBackendContext) : Ir
 }
 
 private fun IrSimpleFunction.isDefinitelyNotDefaultImplsMethod() =
-    resolveFakeOverride()?.let { origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB } == true ||
+    resolveFakeOverride()?.origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB ||
             origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER ||
             hasAnnotation(PLATFORM_DEPENDENT_ANNOTATION_FQ_NAME) ||
+            hasJvmDefault() ||
             (name.asString() == "clone" &&
                     parent.safeAs<IrClass>()?.fqNameWhenAvailable?.asString() == "kotlin.Cloneable" &&
                     valueParameters.isEmpty())
@@ -221,15 +220,23 @@ private class InterfaceObjectCallsLowering(val context: JvmBackendContext) : IrE
  * interface implementation should be generated into the class containing the fake override; or null if the given function is not a fake
  * override of any interface implementation or such method was already generated into the superclass or is a method from Any.
  */
+private fun isDefaultImplsBridge(f: IrSimpleFunction) =
+        f.origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE ||
+        f.origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_TO_SYNTHETIC
+
 internal fun IrSimpleFunction.findInterfaceImplementation(): IrSimpleFunction? {
     if (!isFakeOverride) return null
     parent.let { if (it is IrClass && it.isJvmInterface) return null }
 
-    val implementation = resolveFakeOverride() ?: return null
+    val implementation = resolveFakeOverride(toSkip = ::isDefaultImplsBridge) ?: return null
 
     // Only generate interface delegation for functions immediately inherited from an interface.
     // (Otherwise, delegation will be present in the parent class)
-    if (overriddenSymbols.any { !it.owner.parentAsClass.isInterface && it.owner.modality != Modality.ABSTRACT && it.owner.resolveFakeOverride() == implementation }) {
+    if (overriddenSymbols.any {
+            !it.owner.parentAsClass.isInterface &&
+                    it.owner.modality != Modality.ABSTRACT &&
+                    it.owner.resolveFakeOverride(toSkip = ::isDefaultImplsBridge) == implementation
+        }) {
         return null
     }
 
@@ -237,7 +244,6 @@ internal fun IrSimpleFunction.findInterfaceImplementation(): IrSimpleFunction? {
         || Visibilities.isPrivate(implementation.visibility)
         || implementation.isDefinitelyNotDefaultImplsMethod()
         || implementation.isMethodOfAny()
-        || implementation.hasJvmDefault()
     ) {
         return null
     }

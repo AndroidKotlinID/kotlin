@@ -1,15 +1,10 @@
 description = 'Kotlin Standard Library JDK 7 extension'
 
 apply plugin: 'kotlin'
-apply plugin: 'pill-configurable'
 
 configureJvm6Project(project)
 configurePublishing(project)
 ext.javaHome = JDK_17
-
-pill {
-    importAsLibrary = true
-}
 
 sourceSets {
     main {
@@ -94,7 +89,8 @@ compileTestKotlin {
             "-Xmulti-platform",
             "-Xuse-experimental=kotlin.Experimental",
             "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
-            "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
+            "-Xuse-experimental=kotlin.ExperimentalStdlibApi",
+            "-XXLanguage:-NewInference"
     ]
 }
 

@@ -34,8 +34,8 @@ digraph jumps_kt {
             subgraph cluster_5 {
                 color=blue
                 15 [label="Enter block"];
-                16 [label="Function call: R|kotlin/KotlinNullPointerException.KotlinNullPointerException|()"];
-                17 [label="Throw: throw R|kotlin/KotlinNullPointerException.KotlinNullPointerException|()"];
+                16 [label="Function call: R|java/lang/Exception.Exception|()"];
+                17 [label="Throw: throw R|java/lang/Exception.Exception|()"];
                 18 [label="Stub" style="filled" fillcolor=gray];
                 19 [label="Exit block" style="filled" fillcolor=gray];
             }
@@ -118,7 +118,7 @@ digraph jumps_kt {
         }
         48 [label="Variable declaration: lval y: R|kotlin/Int?|"];
         49 [label="Access variable R|<local>/y|"];
-        50 [label="Function call: R|<local>/y|.<Ambiguity: inc, [kotlin/inc, kotlin/inc]>#()"];
+        50 [label="Function call: R|<local>/y|.<Inapplicable(WRONG_RECEIVER): [kotlin/Int.inc]>#()"];
         51 [label="Exit function test_2" style="filled" fillcolor=red];
     }
 
@@ -165,7 +165,7 @@ digraph jumps_kt {
                     color=blue
                     58 [label="Enter block"];
                     59 [label="Access variable R|<local>/x|"];
-                    60 [label="Type operator: x as Int"];
+                    60 [label="Type operator: (R|<local>/x| as R|kotlin/Int|)"];
                     61 [label="Jump: break@@@[Boolean(true)] "];
                     62 [label="Stub" style="filled" fillcolor=gray];
                     63 [label="Exit block" style="filled" fillcolor=gray];
@@ -211,7 +211,7 @@ digraph jumps_kt {
                     color=blue
                     72 [label="Enter block"];
                     73 [label="Access variable R|<local>/x|"];
-                    74 [label="Type operator: x as Int"];
+                    74 [label="Type operator: (R|<local>/x| as R|kotlin/Int|)"];
                     75 [label="Jump: break@@@[Boolean(true)] "];
                     76 [label="Stub" style="filled" fillcolor=gray];
                     77 [label="Exit block" style="filled" fillcolor=gray];
@@ -343,10 +343,7 @@ digraph jumps_kt {
             117 [label="Exit function anonymousFunction"];
         }
         118 [label="Postponed exit from lambda"];
-        119 [label="Function call: R|/run|(<L> = run@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
-    ^@run Unit
-}
-)"];
+        119 [label="Function call: R|/run|(<L> = run@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN> )"];
         120 [label="Exit function test_6" style="filled" fillcolor=red];
     }
 

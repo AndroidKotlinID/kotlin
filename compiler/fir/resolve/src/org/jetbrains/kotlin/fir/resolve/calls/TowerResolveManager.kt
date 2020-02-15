@@ -7,26 +7,29 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
-import org.jetbrains.kotlin.fir.expressions.impl.FirQualifiedAccessExpressionImpl
+import org.jetbrains.kotlin.fir.expressions.builder.FirQualifiedAccessExpressionBuilder
 import org.jetbrains.kotlin.fir.resolve.constructClassType
+import org.jetbrains.kotlin.fir.resolve.constructType
 import org.jetbrains.kotlin.fir.resolve.transformQualifiedAccessUsingSmartcastInfo
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.firUnsafe
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinTypeRef
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 import org.jetbrains.kotlin.types.AbstractTypeChecker
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import java.util.*
+import kotlin.coroutines.*
 
 class TowerResolveManager internal constructor(private val towerResolver: FirTowerResolver) {
-    private val queue = PriorityQueue<TowerInvokeResolveQuery>()
 
-    private var group = TowerGroup.Start
+    private val queue = PriorityQueue<SuspendedResolverTask>()
 
     lateinit var candidateFactory: CandidateFactory
 
@@ -105,16 +108,26 @@ class TowerResolveManager internal constructor(private val towerResolver: FirTow
         val explicitReceiverKind: ExplicitReceiverKind,
         val group: TowerGroup
     ) {
-        private fun createExplicitReceiverForInvoke(candidate: Candidate): FirQualifiedAccessExpressionImpl {
-            val symbol = candidate.symbol as FirCallableSymbol<*>
-            return FirQualifiedAccessExpressionImpl(null).apply {
+        private fun createExplicitReceiverForInvoke(candidate: Candidate): FirQualifiedAccessExpressionBuilder {
+            val (name, typeRef) = when (val symbol = candidate.symbol) {
+                is FirCallableSymbol<*> -> {
+                    symbol.callableId.callableName to towerResolver.typeCalculator.tryCalculateReturnType(symbol.firUnsafe())
+                }
+                is FirRegularClassSymbol -> {
+                    symbol.classId.shortClassName to buildResolvedTypeRef {
+                        type = symbol.constructType(emptyArray(), isNullable = false)
+                    }
+                }
+                else -> throw AssertionError()
+            }
+            return FirQualifiedAccessExpressionBuilder().apply {
                 calleeReference = FirNamedReferenceWithCandidate(
                     null,
-                    symbol.callableId.callableName,
+                    name,
                     candidate
                 )
                 dispatchReceiver = candidate.dispatchReceiverExpression()
-                typeRef = towerResolver.typeCalculator.tryCalculateReturnType(symbol.firUnsafe())
+                this.typeRef = typeRef
             }
         }
 
@@ -163,12 +176,16 @@ class TowerResolveManager internal constructor(private val towerResolver: FirTow
                     )
                     invokeReceiverCollector.newDataSet()
                     result += processElementsByName(TowerScopeLevel.Token.Properties, info.name, invokeReceiverProcessor)
+                    if (this !is ScopeTowerLevel || this.extensionReceiver == null) {
+                        result += processElementsByName(TowerScopeLevel.Token.Objects, info.name, invokeReceiverProcessor)
+                    }
 
                     if (invokeReceiverCollector.isSuccess()) {
                         for (invokeReceiverCandidate in invokeReceiverCollector.bestCandidates()) {
 
-                            val symbol = invokeReceiverCandidate.symbol as FirCallableSymbol<*>
-                            val isExtensionFunctionType = symbol.fir.returnTypeRef.isExtensionFunctionType(towerResolver.components.session)
+                            val symbol = invokeReceiverCandidate.symbol
+                            if (symbol !is FirCallableSymbol<*> && symbol !is FirRegularClassSymbol) continue
+                            val isExtensionFunctionType = (symbol as? FirCallableSymbol<*>)?.fir?.returnTypeRef?.isExtensionFunctionType(towerResolver.components.session) == true
                             if (invokeBuiltinExtensionMode && !isExtensionFunctionType) {
                                 continue
                             }
@@ -184,7 +201,7 @@ class TowerResolveManager internal constructor(private val towerResolver: FirTow
                                     it.explicitReceiver = info.explicitReceiver
                                     it.safe = info.isSafeCall
                                 }
-                                towerResolver.components.transformQualifiedAccessUsingSmartcastInfo(it)
+                                towerResolver.components.transformQualifiedAccessUsingSmartcastInfo(it.build())
                             }
 
                             val invokeFunctionInfo =
@@ -199,26 +216,33 @@ class TowerResolveManager internal constructor(private val towerResolver: FirTow
                             invokeOnGivenReceiverCandidateFactory = CandidateFactory(towerResolver.components, invokeFunctionInfo)
                             when {
                                 invokeBuiltinExtensionMode -> {
-                                    towerResolver.enqueueResolverForBuiltinInvokeExtensionWithExplicitArgument(
-                                        invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
-                                    )
+                                    enqueueResolverTask {
+                                        towerResolver.runResolverForBuiltinInvokeExtensionWithExplicitArgument(
+                                            invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
+                                        )
+                                    }
                                 }
                                 useImplicitReceiverAsBuiltinInvokeArgument -> {
-                                    towerResolver.enqueueResolverForBuiltinInvokeExtensionWithImplicitArgument(
-                                        invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
-                                    )
-                                    towerResolver.enqueueResolverForInvoke(
-                                        invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
-                                    )
+                                    enqueueResolverTask {
+                                        towerResolver.runResolverForBuiltinInvokeExtensionWithImplicitArgument(
+                                            invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
+                                        )
+                                    }
+                                    enqueueResolverTask {
+                                        towerResolver.runResolverForInvoke(
+                                            invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
+                                        )
+                                    }
                                 }
                                 else -> {
-                                    towerResolver.enqueueResolverForInvoke(
-                                        invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
-                                    )
+                                    enqueueResolverTask {
+                                        towerResolver.runResolverForInvoke(
+                                            invokeFunctionInfo, explicitReceiver, this@TowerResolveManager
+                                        )
+                                    }
                                 }
                             }
                         }
-                        processQueuedLevelsForInvoke()
                     }
                 }
                 CallKind.CallableReference -> {
@@ -260,47 +284,85 @@ class TowerResolveManager internal constructor(private val towerResolver: FirTow
 
     fun reset() {
         queue.clear()
-        group = TowerGroup.Start
     }
 
-    fun processLevel(
+
+    private suspend fun suspendResolverTask(group: TowerGroup) = suspendCoroutine<Unit> { queue += SuspendedResolverTask(it, group) }
+
+    private suspend fun requestGroup(requested: TowerGroup) {
+        val peeked = queue.peek()
+
+        // Task ordering should be FIFO
+        // Here, if peeked have equal group it means that it came first to this function, so should be processed before us
+        if (peeked != null && peeked.group <= requested) {
+            suspendResolverTask(requested)
+        }
+    }
+
+    private suspend fun stopResolverTask(): Nothing = suspendCoroutine { }
+
+    suspend fun processLevel(
         towerLevel: SessionBasedTowerLevel,
         callInfo: CallInfo,
         group: TowerGroup,
-        explicitReceiverKind: ExplicitReceiverKind = ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
+        explicitReceiverKind: ExplicitReceiverKind = ExplicitReceiverKind.NO_EXPLICIT_RECEIVER,
+        invokeResolveMode: InvokeResolveMode? = null
     ): ProcessorAction {
-        assert(group > this.group) {
-            "Incorrect TowerGroup processing order (c) Mikhail Glukhikh"
-        }
-        this.group = group
+        requestGroup(group)
+
         val result = with(LevelHandler(callInfo, explicitReceiverKind, group)) {
-            towerLevel.handleLevel()
+            towerLevel.handleLevel(invokeResolveMode)
         }
-        processQueuedLevelsForInvoke()
+
+        if (resultCollector.isSuccess()) stopResolverTask()
+
         return result
     }
 
-    fun enqueueLevelForInvoke(
+
+    suspend fun processLevelForPropertyWithInvoke(
         towerLevel: SessionBasedTowerLevel,
         callInfo: CallInfo,
         group: TowerGroup,
-        mode: InvokeResolveMode,
         explicitReceiverKind: ExplicitReceiverKind = ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
     ) {
         if (callInfo.callKind == CallKind.Function) {
-            queue.add(TowerInvokeResolveQuery(towerLevel, callInfo, explicitReceiverKind, group, mode))
+            processLevel(towerLevel, callInfo, group, explicitReceiverKind, InvokeResolveMode.RECEIVER_FOR_INVOKE_BUILTIN_EXTENSION)
         }
     }
 
-    fun processQueuedLevelsForInvoke(groupLimit: TowerGroup = this.group) {
-        while (queue.isNotEmpty()) {
-            if (queue.peek().group > groupLimit) {
-                break
-            }
-            val query = queue.poll()
-            with(LevelHandler(query.callInfo, query.explicitReceiverKind, query.group)) {
-                query.towerLevel.handleLevel(invokeResolveMode = query.mode)
-            }
+    data class SuspendedResolverTask(val continuation: Continuation<Unit>, val group: TowerGroup): Comparable<SuspendedResolverTask> {
+        override fun compareTo(other: SuspendedResolverTask): Int {
+            return group.compareTo(other.group)
         }
     }
+
+    fun enqueueResolverTask(group: TowerGroup = TowerGroup.Start, task: suspend () -> Unit) {
+        val continuation = task.createCoroutine(
+            object : Continuation<Unit> {
+                override val context: CoroutineContext
+                    get() = EmptyCoroutineContext
+
+                override fun resumeWith(result: Result<Unit>) {
+                    result.getOrThrow()
+                }
+            }
+        )
+
+        queue += SuspendedResolverTask(continuation, group)
+    }
+
+    fun runTasks() {
+        while (queue.isNotEmpty()) {
+            queue.poll().continuation.resume(Unit)
+            if (resultCollector.isSuccess()) return
+        }
+    }
+
+}
+
+
+enum class InvokeResolveMode {
+    IMPLICIT_CALL_ON_GIVEN_RECEIVER,
+    RECEIVER_FOR_INVOKE_BUILTIN_EXTENSION
 }

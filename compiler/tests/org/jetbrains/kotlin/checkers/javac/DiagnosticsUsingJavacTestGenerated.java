@@ -7926,9 +7926,19 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/funInterface/basicFunInterfaceDisabled.kt");
             }
 
+            @TestMetadata("funInterfaceDeclarationCheck.kt")
+            public void testFunInterfaceDeclarationCheck() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/funInterfaceDeclarationCheck.kt");
+            }
+
             @TestMetadata("funInterfaceSyntheticConstructors.kt")
             public void testFunInterfaceSyntheticConstructors() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/funInterface/funInterfaceSyntheticConstructors.kt");
+            }
+
+            @TestMetadata("funIsNotInheritedFromBaseInterface.kt")
+            public void testFunIsNotInheritedFromBaseInterface() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/funIsNotInheritedFromBaseInterface.kt");
             }
 
             @TestMetadata("genericSubstitutionForFunInterface.kt")
@@ -11300,6 +11310,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt35943.kt")
                 public void testKt35943() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt35943.kt");
+                }
+
+                @TestMetadata("kt36342.kt")
+                public void testKt36342() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt36342.kt");
+                }
+
+                @TestMetadata("kt36342_2.kt")
+                public void testKt36342_2() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt36342_2.kt");
                 }
 
                 @TestMetadata("kt4420.kt")
@@ -16478,6 +16498,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/entrySet.kt");
                 }
 
+                @TestMetadata("flexibilityThroughTypeVariable.kt")
+                public void testFlexibilityThroughTypeVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/flexibilityThroughTypeVariable.kt");
+                }
+
+                @TestMetadata("flexibilityThroughTypeVariableOut.kt")
+                public void testFlexibilityThroughTypeVariableOut() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/flexibilityThroughTypeVariableOut.kt");
+                }
+
                 @TestMetadata("genericsAndArrays.kt")
                 public void testGenericsAndArrays() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/methodCall/genericsAndArrays.kt");
@@ -18334,6 +18364,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/resolve/inferenceInLinkedLambdasDependentOnExpectedType.kt");
             }
 
+            @TestMetadata("kt36264.kt")
+            public void testKt36264() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/resolve/kt36264.kt");
+            }
+
             @TestMetadata("localObject.kt")
             public void testLocalObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/resolve/localObject.kt");
@@ -18342,6 +18377,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("newLineLambda.kt")
             public void testNewLineLambda() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/resolve/newLineLambda.kt");
+            }
+
+            @TestMetadata("noStopOnReceiverUnstableSmartCast.kt")
+            public void testNoStopOnReceiverUnstableSmartCast() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/resolve/noStopOnReceiverUnstableSmartCast.kt");
             }
 
             @TestMetadata("objectLiteralAsArgument.kt")
@@ -18622,6 +18662,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("KT-4372.kt")
                 public void testKT_4372() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/resolve/invoke/KT-4372.kt");
+                }
+
+                @TestMetadata("kt30695.kt")
+                public void testKt30695() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/resolve/invoke/kt30695.kt");
+                }
+
+                @TestMetadata("kt30695_2.kt")
+                public void testKt30695_2() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/resolve/invoke/kt30695_2.kt");
                 }
 
                 @TestMetadata("kt3772.kt")

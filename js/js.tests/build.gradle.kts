@@ -33,7 +33,10 @@ dependencies {
     testCompileOnly(project(":compiler:cli-js-klib"))
     testCompileOnly(project(":compiler:util"))
     testCompileOnly(intellijCoreDep()) { includeJars("intellij-core") }
-    testCompileOnly(intellijDep()) { includeJars("openapi", "idea", "idea_rt", "util") }
+    Platform[193].orLower {
+        testCompileOnly(intellijDep()) { includeJars("openapi", rootProject = rootProject) }
+    }
+    testCompileOnly(intellijDep()) { includeJars("idea", "idea_rt", "util") }
     testCompile(project(":compiler:backend.js"))
     testCompile(project(":compiler:backend.wasm"))
     testCompile(project(":kotlin-stdlib-js-ir"))
@@ -51,7 +54,11 @@ dependencies {
     testCompile(project(":compiler:util"))
 
     testRuntime(project(":kotlin-reflect"))
-    testRuntime(intellijDep()) { includeJars("picocontainer", "trove4j", "guava", "jdom", rootProject = rootProject) }
+
+    if (Platform[193].orLower()) {
+        testRuntime(intellijDep()) { includeJars("picocontainer", rootProject = rootProject) }
+    }
+    testRuntime(intellijDep()) { includeJars("trove4j", "guava", "jdom", rootProject = rootProject) }
 
 
     val currentOs = OperatingSystem.current()

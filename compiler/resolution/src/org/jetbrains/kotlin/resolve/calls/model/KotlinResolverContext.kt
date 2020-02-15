@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.builtins.ReflectionTypes
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
+import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.resolve.calls.components.*
 import org.jetbrains.kotlin.resolve.calls.inference.addSubsystemFromArgument
 import org.jetbrains.kotlin.resolve.calls.inference.components.ConstraintInjector
@@ -47,7 +48,8 @@ class KotlinCallComponents(
     val languageVersionSettings: LanguageVersionSettings,
     val samConversionOracle: SamConversionOracle,
     val samConversionResolver: SamConversionResolver,
-    val kotlinTypeChecker: NewKotlinTypeChecker
+    val kotlinTypeChecker: NewKotlinTypeChecker,
+    val lookupTracker: LookupTracker
 )
 
 class SimpleCandidateFactory(
@@ -144,6 +146,7 @@ class SimpleCandidateFactory(
         if (ErrorUtils.isError(descriptor)) {
             return KotlinResolutionCandidate(
                 callComponents,
+                resolutionCallbacks,
                 callableReferenceResolver,
                 scopeTower,
                 baseSystem,
@@ -154,7 +157,7 @@ class SimpleCandidateFactory(
         }
 
         val candidate = KotlinResolutionCandidate(
-            callComponents, callableReferenceResolver, scopeTower, baseSystem, resolvedKtCall, knownSubstitutor
+            callComponents, resolutionCallbacks, callableReferenceResolver, scopeTower, baseSystem, resolvedKtCall, knownSubstitutor
         )
 
         initialDiagnostics.forEach(candidate::addDiagnostic)

@@ -197,11 +197,11 @@ extra["IntellijCoreDependencies"] =
         "jdom",
         "jna",
         "log4j",
-        "picocontainer",
+        if (Platform[201].orHigher()) null else "picocontainer",
         "snappy-in-java",
         "streamex",
         "trove4j"
-    )
+    ).filterNotNull()
 
 
 extra["compilerModules"] = arrayOf(
@@ -536,7 +536,8 @@ tasks {
     }
 
     register("wasmCompilerTest") {
-        dependsOn(":js:js.tests:wasmTest")
+//  TODO: fix once
+//        dependsOn(":js:js.tests:wasmTest")
     }
 
     register("firCompilerTest") {
@@ -615,7 +616,7 @@ tasks {
     register("konan-tests") {
         dependsOn("dist")
         dependsOn(
-            ":native:kotlin-native-commonizer:test"
+            ":native:kotlin-klib-commonizer:test"
         )
     }
 
@@ -654,6 +655,13 @@ tasks {
             "idea-plugin-main-tests",
             "idea-plugin-additional-tests",
             "idea-new-project-wizard-tests"
+        )
+    }
+
+    register("idea-plugin-performance-tests") {
+        dependsOn("dist")
+        dependsOn(
+            ":idea:performanceTests:performanceTest"
         )
     }
 

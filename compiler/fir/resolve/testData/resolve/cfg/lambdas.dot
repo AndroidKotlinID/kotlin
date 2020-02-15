@@ -23,7 +23,7 @@ digraph lambdas_kt {
                 color=blue
                 5 [label="Enter when branch condition "];
                 6 [label="Access variable R|<local>/x|"];
-                7 [label="Type operator: x is Int"];
+                7 [label="Type operator: (R|<local>/x| is R|kotlin/Int|)"];
                 8 [label="Exit when branch condition"];
             }
             9 [label="Synthetic else branch"];
@@ -40,10 +40,7 @@ digraph lambdas_kt {
                     16 [label="Exit function anonymousFunction"];
                 }
                 17 [label="Postponed exit from lambda"];
-                18 [label="Function call: R|/run|(<L> = run@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
-    ^ R|<local>/x|.R|kotlin/Int.inc|()
-}
-)"];
+                18 [label="Function call: R|/run|(<L> = run@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN> )"];
                 19 [label="Exit block"];
             }
             20 [label="Exit when branch result"];
@@ -84,7 +81,7 @@ digraph lambdas_kt {
                 color=blue
                 25 [label="Enter when branch condition "];
                 26 [label="Access variable R|<local>/x|"];
-                27 [label="Type operator: x is Int"];
+                27 [label="Type operator: (R|<local>/x| is R|kotlin/Int|)"];
                 28 [label="Exit when branch condition"];
             }
             29 [label="Synthetic else branch"];
@@ -157,10 +154,7 @@ digraph lambdas_kt {
             53 [label="Exit function anonymousFunction"];
         }
         54 [label="Postponed exit from lambda"];
-        55 [label="Function call: R|/getInt|(<L> = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
-    ^test_3 Int(1)
-}
-)"];
+        55 [label="Function call: R|/getInt|(<L> = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN> )"];
         56 [label="Jump: ^test_3 R|/getInt|(<L> = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
     ^test_3 Int(1)
 }
@@ -198,10 +192,7 @@ digraph lambdas_kt {
             65 [label="Exit function anonymousFunction"];
         }
         66 [label="Postponed exit from lambda"];
-        67 [label="Function call: R|/getInt|(block = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
-    ^test_4 Int(1)
-}
-)"];
+        67 [label="Function call: R|/getInt|(block = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN> )"];
         68 [label="Jump: ^test_4 R|/getInt|(block = getInt@fun <anonymous>(): R|kotlin/Unit| <kind=UNKNOWN>  {
     ^test_4 Int(1)
 }

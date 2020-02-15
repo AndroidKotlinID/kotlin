@@ -11,16 +11,17 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.calculateSAM
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.addDeclarations
-import org.jetbrains.kotlin.fir.declarations.impl.FirClassImpl
+import org.jetbrains.kotlin.fir.declarations.builder.FirClassImplBuilder
+import org.jetbrains.kotlin.fir.declarations.builder.FirSealedClassBuilder
+import org.jetbrains.kotlin.fir.declarations.builder.buildEnumEntry
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
-import org.jetbrains.kotlin.fir.declarations.impl.FirEnumEntryImpl
-import org.jetbrains.kotlin.fir.declarations.impl.FirSealedClassImpl
+import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.scopes.KotlinScopeProvider
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
-import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.Flags
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
@@ -57,41 +58,28 @@ fun deserializeClassToSymbol(
         isInline = Flags.IS_INLINE_CLASS.get(classProto.flags)
     }
     val isSealed = modality == Modality.SEALED
-    val firClass = if (isSealed) {
-        FirSealedClassImpl(
-            null,
-            session,
-            status,
-            ProtoEnumFlags.classKind(kind),
-            scopeProvider,
-            classId.shortClassName,
-            symbol
+    val classBuilder = if (isSealed) FirSealedClassBuilder() else FirClassImplBuilder()
+    val context =
+        parentContext?.childContext(
+            classProto.typeParameterList,
+            nameResolver,
+            TypeTable(classProto.typeTable),
+            classId.relativeClassName
+        ) ?: FirDeserializationContext.createForClass(
+            classId, classProto, nameResolver, session,
+            defaultAnnotationDeserializer ?: FirBuiltinAnnotationDeserializer(session)
         )
-    } else {
-        FirClassImpl(
-            null,
-            session,
-            status,
-            ProtoEnumFlags.classKind(kind),
-            scopeProvider,
-            classId.shortClassName,
-            symbol
-        )
-    }
-    firClass.apply {
+    classBuilder.apply {
+        this.session = session
+        name = classId.shortClassName
+        this.status = status
+        classKind = ProtoEnumFlags.classKind(kind)
+        this.scopeProvider = scopeProvider
+        this.symbol = symbol
+
         resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
-        val context =
-            parentContext?.childContext(
-                classProto.typeParameterList,
-                nameResolver,
-                TypeTable(classProto.typeTable),
-                classId.relativeClassName
-            ) ?: FirDeserializationContext.createForClass(
-                classId, classProto, nameResolver, session,
-                defaultAnnotationDeserializer ?: FirBuiltinAnnotationDeserializer(session)
-            )
         typeParameters += context.typeDeserializer.ownTypeParameters.map { it.fir }
-        annotations += context.annotationDeserializer.loadClassAnnotations(classProto, context.nameResolver)
+//        annotations += context.annotationDeserializer.loadClassAnnotations(classProto, context.nameResolver)
 
         val typeDeserializer = context.typeDeserializer
         val classDeserializer = context.memberDeserializer
@@ -102,7 +90,7 @@ fun deserializeClassToSymbol(
 
         superTypesDeserialized.mapNotNullTo(superTypeRefs) {
             if (it == null) return@mapNotNullTo null
-            FirResolvedTypeRefImpl(null, it)
+            buildResolvedTypeRef { type = it }
         }
 
         addDeclarations(classProto.functionList.map(classDeserializer::loadFunction))
@@ -126,17 +114,14 @@ fun deserializeClassToSymbol(
                 val enumEntryName = nameResolver.getName(enumEntryProto.name)
 
                 val enumType = ConeClassLikeTypeImpl(symbol.toLookupTag(), emptyArray(), false)
-                val property = FirEnumEntryImpl(
-                    null,
-                    session,
-                    FirResolvedTypeRefImpl(null, enumType),
-                    enumEntryName,
-                    initializer = null,
-                    symbol = FirVariableSymbol(CallableId(classId, enumEntryName)),
-                    status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
+                val property = buildEnumEntry {
+                    this.session = session
+                    returnTypeRef = buildResolvedTypeRef { type = enumType }
+                    name = enumEntryName
+                    this.symbol = FirVariableSymbol(CallableId(classId, enumEntryName))
+                    this.status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
                         isStatic = true
                     }
-                ).apply {
                     resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
                 }
 
@@ -145,10 +130,12 @@ fun deserializeClassToSymbol(
         )
 
         if (isSealed) {
-            classProto.sealedSubclassFqNameList.mapTo((firClass as FirSealedClassImpl).inheritors) {
+            classProto.sealedSubclassFqNameList.mapTo((this as FirSealedClassBuilder).inheritors) {
                 ClassId.fromString(nameResolver.getQualifiedClassName(it))
             }
         }
+        calculateSAM()
+    }.build().also {
+        (it.annotations as MutableList<FirAnnotationCall>) += context.annotationDeserializer.loadClassAnnotations(classProto, context.nameResolver)
     }
-    firClass.calculateSAM()
 }

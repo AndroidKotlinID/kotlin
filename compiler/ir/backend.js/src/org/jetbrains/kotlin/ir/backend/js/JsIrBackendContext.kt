@@ -69,9 +69,11 @@ class JsIrBackendContext(
             private var _owner: IrExternalPackageFragment? = null
             override val owner get() = _owner!!
 
-            override var uniqId: UniqId
-                get() = error("Operation is unsupported")
-                set(value) { error("Operation is unsupported") }
+            override val isPublicApi: Boolean
+                get() = TODO("Not yet implemented")
+
+            override val signature: IdSignature
+                get() = TODO("Not yet implemented")
 
             override val isBound get() = _owner != null
 
@@ -264,7 +266,7 @@ class JsIrBackendContext(
     val coroutineGetContextJs
         get() = ir.symbols.coroutineGetContext
 
-    val coroutineEmptyContinuation = symbolTable.referenceField(getProperty(FqName.fromSegments(listOf("kotlin", "coroutines", "js", "internal", "EmptyContinuation"))))
+    val coroutineEmptyContinuation = symbolTable.referenceProperty(getProperty(FqName.fromSegments(listOf("kotlin", "coroutines", "js", "internal", "EmptyContinuation"))))
 
     val coroutineContextProperty: PropertyDescriptor
         get() {

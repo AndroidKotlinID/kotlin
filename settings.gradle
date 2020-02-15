@@ -126,7 +126,8 @@ include ":kotlin-build-common",
         ":js:js.tests",
         ":native:kotlin-native-utils",
         ":native:frontend.native",
-        ":native:kotlin-native-commonizer",
+        ":native:kotlin-klib-commonizer",
+        ":native:kotlin-klib-commonizer-embeddable",
         ":jps-plugin",
         ":kotlin-jps-plugin",
         ":core:descriptors",
@@ -153,6 +154,7 @@ include ":kotlin-build-common",
         ":idea:idea-test-framework",
         ":idea:idea-native",
         ":idea:idea-gradle-native",
+        ":idea:performanceTests",
         ":idea",
         ":idea-runner",
         ":idea:jvm-debugger:eval4j",
@@ -267,6 +269,7 @@ include ":kotlin-build-common",
         ":examples:scripting-jvm-maven-deps",
         ":examples:scripting-jvm-maven-deps-host",
         ":examples:scripting-jvm-embeddable-host",
+        ":pill:pill-importer",
         ":pill:generate-all-tests",
         ":libraries:kotlin-prepush-hook",
         ":libraries:tools:mutability-annotations-compat",
@@ -407,7 +410,8 @@ project(':kotlin-util-klib').projectDir = "$rootDir/compiler/util-klib" as File
 project(':kotlin-util-klib-metadata').projectDir = "$rootDir/compiler/util-klib-metadata" as File
 project(':native:kotlin-native-utils').projectDir = "$rootDir/native/utils" as File
 project(':native:frontend.native').projectDir = "$rootDir/native/frontend" as File
-project(':native:kotlin-native-commonizer').projectDir = "$rootDir/native/commonizer" as File
+project(':native:kotlin-klib-commonizer').projectDir = "$rootDir/native/commonizer" as File
+project(':native:kotlin-klib-commonizer-embeddable').projectDir = "$rootDir/native/commonizer-embeddable" as File
 project(':kotlin-jps-plugin').projectDir = "$rootDir/prepare/jps-plugin" as File
 project(':idea:idea-android-output-parser').projectDir = "$rootDir/idea/idea-android/idea-android-output-parser" as File
 project(':plugins:android-extensions-compiler').projectDir = "$rootDir/plugins/android-extensions/android-extensions-compiler" as File
@@ -472,6 +476,7 @@ project(':examples:scripting-jvm-simple-script-host').projectDir = "$rootDir/lib
 project(':examples:scripting-jvm-maven-deps').projectDir = "$rootDir/libraries/examples/scripting/jvm-maven-deps/script" as File
 project(':examples:scripting-jvm-maven-deps-host').projectDir = "$rootDir/libraries/examples/scripting/jvm-maven-deps/host" as File
 project(':examples:scripting-jvm-embeddable-host').projectDir = "$rootDir/libraries/examples/scripting/jvm-embeddable-host" as File
+project(':pill:pill-importer').projectDir = "$rootDir/plugins/pill/pill-importer" as File
 project(':pill:generate-all-tests').projectDir = "$rootDir/plugins/pill/generate-all-tests" as File
 project(':kotlin-imports-dumper-compiler-plugin').projectDir = "$rootDir/plugins/imports-dumper" as File
 project(':libraries:kotlin-prepush-hook').projectDir = "$rootDir/libraries/tools/kotlin-prepush-hook" as File

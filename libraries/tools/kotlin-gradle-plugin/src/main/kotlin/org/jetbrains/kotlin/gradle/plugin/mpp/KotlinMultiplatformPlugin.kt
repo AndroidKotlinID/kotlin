@@ -21,7 +21,7 @@ import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.ConfigureUtil
-import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.configureOrCreate
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.dsl.multiplatformExtension
@@ -32,6 +32,8 @@ import org.jetbrains.kotlin.gradle.plugin.sources.checkSourceSetVisibilityRequir
 import org.jetbrains.kotlin.gradle.plugin.sources.sourceSetDependencyConfigurationByScope
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.scripting.internal.ScriptingGradleSubplugin
+import org.jetbrains.kotlin.gradle.targets.js.JsCompilerType
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTargetPreset
 import org.jetbrains.kotlin.gradle.targets.metadata.isKotlinGranularMetadataEnabled
 import org.jetbrains.kotlin.gradle.utils.*
 import org.jetbrains.kotlin.konan.target.HostManager
@@ -152,9 +154,21 @@ class KotlinMultiplatformPlugin(
     }
 
     fun setupDefaultPresets(project: Project) {
+        val propertiesProvider = PropertiesProvider(project)
+
         with(project.multiplatformExtension.presets) {
             add(KotlinJvmTargetPreset(project, kotlinPluginVersion))
-            add(KotlinJsTargetPreset(project, kotlinPluginVersion))
+            when (propertiesProvider.jsCompiler) {
+                JsCompilerType.legacy -> add(KotlinJsTargetPreset(project, kotlinPluginVersion, null))
+                JsCompilerType.ir -> add(KotlinJsIrTargetPreset(project, kotlinPluginVersion, false))
+                JsCompilerType.both -> add(
+                    KotlinJsTargetPreset(
+                        project,
+                        kotlinPluginVersion,
+                        KotlinJsIrTargetPreset(project, kotlinPluginVersion, true)
+                    )
+                )
+            }
             add(KotlinAndroidTargetPreset(project, kotlinPluginVersion))
             add(KotlinJvmWithJavaTargetPreset(project, kotlinPluginVersion))
 

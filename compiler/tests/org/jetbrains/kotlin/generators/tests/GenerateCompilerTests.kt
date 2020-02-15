@@ -59,7 +59,7 @@ import org.jetbrains.kotlin.types.AbstractTypeBindingTest
 import org.jetbrains.kotlin.visualizer.fir.AbstractFirVisualizer
 import org.jetbrains.kotlin.visualizer.psi.AbstractPsiVisualizer
 
-fun main() {
+fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
 
     val excludedFirTestdataPattern = "^(.+)\\.fir\\.kts?\$"
@@ -127,7 +127,7 @@ fun main() {
         }
 
         testClass<AbstractDiagnosticsTestWithOldJvmBackend> {
-            model("diagnostics/testsWithJvmBackend", targetBackend = TargetBackend.JVM)
+            model("diagnostics/testsWithJvmBackend", targetBackend = TargetBackend.JVM_OLD)
         }
 
         testClass<AbstractDiagnosticsTestWithJvmIrBackend> {
@@ -420,7 +420,7 @@ fun main() {
         }
 
         testClass<AbstractIrBlackBoxAgainstJavaCodegenTest> {
-            model("codegen/boxAgainstJava", targetBackend = TargetBackend.JVM_IR)
+            model("codegen/boxAgainstJava", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
         }
 
         testClass<AbstractIrCompileJavaAgainstKotlinTest> {
@@ -435,6 +435,10 @@ fun main() {
 
         testClass<AbstractIrCompileKotlinAgainstKotlinTest> {
             model("compileKotlinAgainstKotlin", targetBackend = TargetBackend.JVM_IR)
+        }
+
+        testClass<AbstractIrBytecodeListingTest> {
+            model("codegen/bytecodeListing", targetBackend = TargetBackend.JVM_IR)
         }
 
         testClass<AbstractIrCheckLocalVariablesTableTest> {
@@ -543,25 +547,17 @@ fun main() {
 
     testGroup("compiler/fir/resolve/tests", "compiler/fir/resolve/testData") {
         testClass<AbstractFirDiagnosticsTest> {
-            model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("stdlib", "cfg", "smartcasts"))
+            model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
 
         testClass<AbstractFirDiagnosticsWithLightTreeTest> {
-            model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("stdlib", "cfg", "smartcasts"))
+            model("resolve", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
+    }
 
-        testClass<AbstractFirDiagnosticsWithCfgTest> {
-            model("resolve/cfg", pattern = KT_WITHOUT_DOTS_IN_NAME)
-            model("resolve/smartcasts", pattern = KT_WITHOUT_DOTS_IN_NAME)
-        }
-
+    testGroup("compiler/fir/resolve/tests", "compiler/fir/resolve/testData") {
         testClass<AbstractFirDiagnosticsWithStdlibTest> {
-            model("resolve/stdlib", pattern = KT_WITHOUT_DOTS_IN_NAME, excludeDirs = listOf("contracts", "smartcasts"))
-        }
-
-        testClass<AbstractFirDiagnosticsWithCfgAndStdlibTest> {
-            model("resolve/stdlib/contracts", pattern = KT_WITHOUT_DOTS_IN_NAME)
-            model("resolve/stdlib/smartcasts", pattern = KT_WITHOUT_DOTS_IN_NAME)
+            model("resolveWithStdlib", pattern = KT_WITHOUT_DOTS_IN_NAME)
         }
     }
 

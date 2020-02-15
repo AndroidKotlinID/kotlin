@@ -1,16 +1,11 @@
 description = 'Kotlin Common Standard Library'
 
 apply plugin: 'kotlin-platform-common'
-apply plugin: 'pill-configurable'
 
 configurePublishing(project)
 
 def commonSrcDir = "../src"
 def commonTestSrcDir = "../test"
-
-pill {
-    importAsLibrary = true
-}
 
 sourceSets {
     main {
@@ -58,7 +53,8 @@ compileTestKotlinCommon {
         freeCompilerArgs += [
                 "-Xuse-experimental=kotlin.Experimental",
                 "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
-                "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
+                "-Xuse-experimental=kotlin.ExperimentalStdlibApi",
+                "-XXLanguage:-NewInference"
         ]
     }
 }

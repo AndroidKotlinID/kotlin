@@ -114,6 +114,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         runTest("compiler/testData/codegen/bytecodeText/falseSmartCast.kt");
     }
 
+    @TestMetadata("flagsInMultiFileInherit.kt")
+    public void testFlagsInMultiFileInherit() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeText/flagsInMultiFileInherit.kt");
+    }
+
     @TestMetadata("inlineFromOtherModule.kt")
     public void testInlineFromOtherModule() throws Exception {
         runTest("compiler/testData/codegen/bytecodeText/inlineFromOtherModule.kt");
@@ -384,16 +389,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
 
         public void testAllFilesPresentInArgumentOrder() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/argumentOrder"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
-        }
-
-        @TestMetadata("argumentReorder.kt")
-        public void testArgumentReorder() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/argumentOrder/argumentReorder.kt");
-        }
-
-        @TestMetadata("argumentReorderWithDefault.kt")
-        public void testArgumentReorderWithDefault() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/argumentOrder/argumentReorderWithDefault.kt");
         }
 
         @TestMetadata("sameOrder.kt")
@@ -3291,6 +3286,16 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         @TestMetadata("ifTrueElse.kt")
         public void testIfTrueElse() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/lineNumbers/ifTrueElse.kt");
+        }
+
+        @TestMetadata("inlineCondition.kt")
+        public void testInlineCondition() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/lineNumbers/inlineCondition.kt");
+        }
+
+        @TestMetadata("inlineCondition2.kt")
+        public void testInlineCondition2() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/lineNumbers/inlineCondition2.kt");
         }
 
         @TestMetadata("singleThen.kt")

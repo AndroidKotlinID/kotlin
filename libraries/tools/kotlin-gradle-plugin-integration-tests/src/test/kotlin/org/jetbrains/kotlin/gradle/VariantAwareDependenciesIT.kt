@@ -5,10 +5,8 @@
 
 package org.jetbrains.kotlin.gradle
 
-import org.jetbrains.kotlin.gradle.util.createTempDir
-import org.jetbrains.kotlin.gradle.util.isWindows
-import org.jetbrains.kotlin.gradle.util.modify
-import org.jetbrains.kotlin.gradle.util.testResolveAllConfigurations
+import org.jetbrains.kotlin.gradle.targets.js.JsCompilerType
+import org.jetbrains.kotlin.gradle.util.*
 import org.junit.Test
 
 class VariantAwareDependenciesIT : BaseGradleIT() {
@@ -38,8 +36,19 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
             embedProject(innerProject)
             gradleBuildScript(innerProject.projectName).appendText("\nrepositories { jcenter() }; dependencies { compile rootProject }")
 
-            testResolveAllConfigurations(innerProject.projectName) {
+            testResolveAllConfigurations(
+                subproject = innerProject.projectName
+            ) {
                 assertContains(">> :${innerProject.projectName}:runtime --> sample-lib-nodejs-1.0.jar")
+            }
+
+            gradleProperties().appendText(jsCompilerType(JsCompilerType.ir))
+
+            testResolveAllConfigurations(
+                subproject = innerProject.projectName,
+                skipSetup = true
+            ) {
+                assertContains(">> :${innerProject.projectName}:runtime --> sample-lib-nodejs-1.0.klib")
             }
         }
     }
@@ -139,14 +148,16 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
             embedProject(innerJvmProject)
             embedProject(innerJsProject)
 
-            gradleBuildScript().appendText("\n" + """
+            gradleBuildScript().appendText(
+                "\n" + """
                 dependencies {
                     jvm6Implementation project(':${innerJvmProject.projectName}')
                     jvm6TestRuntime project(':${innerJvmProject.projectName}')
                     nodeJsImplementation project(':${innerJsProject.projectName}')
                     nodeJsTestRuntime project(':${innerJsProject.projectName}')
                 }
-            """.trimIndent())
+            """.trimIndent()
+            )
 
             testResolveAllConfigurations(innerJvmProject.projectName)
         }
@@ -235,13 +246,15 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
         testResolveAllConfigurations("libJs")
 
         embedProject(Project("sample-lib", directoryPrefix = "new-mpp-lib-and-app"))
-        gradleBuildScript("sample-lib").appendText("\n" + """
+        gradleBuildScript("sample-lib").appendText(
+            "\n" + """
             dependencies {
                 commonMainApi 'com.example.oldmpp:lib:1.0'
                 jvm6MainApi 'com.example.oldmpp:libJvm:1.0'
                 nodeJsMainApi 'com.example.oldmpp:libJs:1.0'
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         testResolveAllConfigurations("sample-lib")
     }
 
@@ -255,7 +268,7 @@ class VariantAwareDependenciesIT : BaseGradleIT() {
     fun testConfigurationsWithNoExplicitUsageResolveRuntime() =
     // Starting with Gradle 5.0, plain Maven dependencies are represented as two variants, and resolving them to the API one leads
     // to transitive dependencies left out of the resolution results. We need to ensure that our attributes schema does not lead to the API
-    // variants chosen over the runtime ones when resolving a configuration with no required Usage:
+        // variants chosen over the runtime ones when resolving a configuration with no required Usage:
         with(Project("simpleProject", GradleVersionRequired.AtLeast("5.0-milestone-1"))) {
             setupWorkingDir()
             gradleBuildScript().appendText("\ndependencies { compile 'org.jetbrains.kotlin:kotlin-compiler-embeddable' }")

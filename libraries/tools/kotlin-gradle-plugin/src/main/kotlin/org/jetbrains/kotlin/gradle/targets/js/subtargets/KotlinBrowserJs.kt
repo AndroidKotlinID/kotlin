@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJsCompilation
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.*
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinBrowserJsIr
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.targets.js.npm.npmProject
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
@@ -42,6 +43,14 @@ open class KotlinBrowserJs @Inject constructor(target: KotlinJsTarget) :
 
     override val testTaskDescription: String
         get() = "Run all ${target.name} tests inside browser using karma and webpack"
+
+    private val irBrowser: KotlinBrowserJsIr?
+        get() = target.irTarget?.browser
+
+    override fun produceExecutable() {
+        super.produceExecutable()
+        irBrowser?.produceExecutable()
+    }
 
     override fun configureDefaultTestFramework(testTask: KotlinJsTest) {
         testTask.useKarma {
@@ -160,9 +169,7 @@ open class KotlinBrowserJs @Inject constructor(target: KotlinJsTarget) :
                 DISTRIBUTE_RESOURCES_TASK_NAME
             )
         ) {
-            it.dependsOn(processResourcesTask)
-
-            it.from(compilation.output.resourcesDir)
+            it.from(processResourcesTask)
             it.into(distribution.directory ?: baseDist)
         }
 

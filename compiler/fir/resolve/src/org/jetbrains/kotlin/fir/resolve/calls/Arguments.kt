@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.inferenceContext
@@ -305,8 +305,8 @@ private fun Candidate.getExpectedTypeWithSAMConversion(
 ): ConeKotlinType? {
     if (candidateExpectedType.isBuiltinFunctionalType(session)) return null
     // TODO: if (!callComponents.languageVersionSettings.supportsFeature(LanguageFeature.SamConversionPerArgument)) return null
-    val firNamedFunction = symbol.fir as? FirSimpleFunction ?: return null
-    if (!samResolver.shouldRunSamConversionForFunction(firNamedFunction)) return null
+    val firFunction = symbol.fir as? FirFunction<*> ?: return null
+    if (!samResolver.shouldRunSamConversionForFunction(firFunction)) return null
 
     val argumentIsFunctional = when ((argument as? FirWrappedArgumentExpression)?.expression ?: argument) {
         is FirAnonymousFunction, is FirCallableReferenceAccess -> true
@@ -324,16 +324,19 @@ private fun Candidate.getExpectedTypeWithSAMConversion(
 internal fun FirExpression.getExpectedType(
     session: FirSession,
     parameter: FirValueParameter/*, languageVersionSettings: LanguageVersionSettings*/
-) =
-//    if (this.isSpread || this.isArrayAssignedAsNamedArgumentInAnnotation(parameter, languageVersionSettings)) {
-//        parameter.type.unwrap()
-//    } else {
-    if (parameter.isVararg && (this !is FirWrappedArgumentExpression || !isSpread)) {
+): ConeKotlinType {
+    val shouldUnwrapVarargType = when (this) {
+        is FirSpreadArgumentExpression -> !isSpread
+        is FirNamedArgumentExpression -> false
+        else -> true
+    }
+
+    return if (parameter.isVararg && shouldUnwrapVarargType) {
         parameter.returnTypeRef.coneTypeUnsafe<ConeKotlinType>().varargElementType(session)
     } else {
         parameter.returnTypeRef.coneTypeUnsafe()
-    }//?.varargElementType?.unwrap() ?: parameter.type.unwrap()
-//    }
+    }
+}
 
 
 private fun ConeKotlinType.varargElementType(session: FirSession): ConeKotlinType {

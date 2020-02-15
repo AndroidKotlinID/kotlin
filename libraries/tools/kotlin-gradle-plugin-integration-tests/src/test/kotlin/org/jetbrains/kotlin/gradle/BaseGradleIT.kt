@@ -11,6 +11,7 @@ import org.jdom.output.Format
 import org.jdom.output.XMLOutputter
 import org.jetbrains.kotlin.gradle.model.ModelContainer
 import org.jetbrains.kotlin.gradle.model.ModelFetcherBuildAction
+import org.jetbrains.kotlin.gradle.targets.js.JsCompilerType
 import org.jetbrains.kotlin.gradle.util.*
 import org.jetbrains.kotlin.test.util.trimTrailingWhitespaces
 import org.junit.After
@@ -210,7 +211,8 @@ abstract class BaseGradleIT {
         val usePreciseJavaTracking: Boolean? = null,
         val withBuildCache: Boolean = false,
         val kaptOptions: KaptOptions? = null,
-        val parallelTasksInProject: Boolean? = null
+        val parallelTasksInProject: Boolean? = null,
+        val jsCompilerType: JsCompilerType? = null
     )
 
     data class KaptOptions(val verbose: Boolean, val useWorkers: Boolean, val incrementalKapt: Boolean = false, val includeCompileClasspath: Boolean = true)
@@ -627,6 +629,15 @@ Finished executing task ':$taskName'|
             singleOrNull { it.exists() } ?: first()
         }
 
+    fun Project.gradleProperties(): File =
+        listOf("gradle.properties").map {
+            File(projectDir, it).also { file ->
+                if (!file.exists()) {
+                    file.createNewFile()
+                }
+            }
+        }.single()
+
     /**
      * @param assertionFileName path to xml with expected test results, relative to test resources root
      */
@@ -751,6 +762,10 @@ Finished executing task ':$taskName'|
 
             options.parallelTasksInProject?.let {
                 add("-Pkotlin.parallel.tasks.in.project=$it")
+            }
+
+            options.jsCompilerType?.let {
+                add("-Pkotlin.js.compiler=$it")
             }
 
             // Workaround: override a console type set in the user machine gradle.properties (since Gradle 4.3):

@@ -1,3 +1,4 @@
+// !DUMP_CFG
 // CONTAINS ERRORS
 
 interface A {
@@ -62,30 +63,28 @@ fun test_4(x: A?) {
     x.foo()
 }
 
-// TODO: Fix this -- see comment in FirDataFlowAnalyzer.getRealVariablesForSafeCallChain()
 fun test_5(q: Q?) {
     // `q.data` is a property that has an open getter, so we can NOT smartcast it to non-nullable MyData.
     if (q?.data?.s?.inc() != null) {
         q.data // good
-        q.data.s // should be bad
-        q.data.s.inc() // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!> // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!UNRESOLVED_REFERENCE!>inc<!>() // should be bad
     }
 }
 
-// TODO: Fix this -- see comment in FirDataFlowAnalyzer.getRealVariablesForSafeCallChain()
 fun test_6(q: Q?) {
     // `q.data` is a property that has an open getter, so we can NOT smartcast it to non-nullable MyData.
     q?.data?.s?.inc() ?: return
     q.data // good
-    q.data.s // should be bad
-    q.data.s.inc() // should be bad
+    q.data.<!INAPPLICABLE_CANDIDATE!>s<!> // should be bad
+    q.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!UNRESOLVED_REFERENCE!>inc<!>() // should be bad
 }
 
 fun test_7(q: Q?) {
     if (q?.fdata()?.fs()?.inc() != null) {
         q.fdata() // good
         q.fdata().<!INAPPLICABLE_CANDIDATE!>fs<!>() // bad
-        q.fdata().<!INAPPLICABLE_CANDIDATE!>fs<!>().<!AMBIGUITY!>inc<!>() // bad
+        q.fdata().<!INAPPLICABLE_CANDIDATE!>fs<!>().<!UNRESOLVED_REFERENCE!>inc<!>() // bad
     }
 }
 
@@ -99,47 +98,46 @@ fun test_9(a: Int, b: Int?) {
     if (a == b) {
         b.inc()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (a === b) {
         b.inc()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (b == a) {
         b.inc()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (b === a) {
         b.inc()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 }
 
 fun test_10(a: Int?, b: Int?) {
     if (a == b) {
-        b.<!AMBIGUITY!>inc<!>()
+        b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (a === b) {
-        b.<!AMBIGUITY!>inc<!>()
+        b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (b == a) {
-        b.<!AMBIGUITY!>inc<!>()
+        b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 
     if (b === a) {
-        b.<!AMBIGUITY!>inc<!>()
+        b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
     }
-    b.<!AMBIGUITY!>inc<!>()
+    b.<!INAPPLICABLE_CANDIDATE!>inc<!>()
 }
 
-// TODO: Fix this -- see comment in FirDataFlowAnalyzer.getRealVariablesForSafeCallChain()
 fun test_11(q: QImpl?, q2: QImpl) {
     // `q.data` is a property with the default getter, so we CAN smartcast it to non-nullable MyData.
     if (q?.data?.s?.inc() != null) {
@@ -151,7 +149,7 @@ fun test_11(q: QImpl?, q2: QImpl) {
         // Issue: Smartcasting of QImpl.data affects all instances
         q2.data
         q2.data.<!INAPPLICABLE_CANDIDATE!>s<!> // should be bad
-        q2.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!AMBIGUITY!>inc<!>() // should be bad
+        q2.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!UNRESOLVED_REFERENCE!>inc<!>() // should be bad
 
         if (q2.data != null) {
             q2.data.s
@@ -160,22 +158,20 @@ fun test_11(q: QImpl?, q2: QImpl) {
     }
 }
 
-// TODO: Fix this -- see comment in FirDataFlowAnalyzer.getRealVariablesForSafeCallChain()
 fun test_12(q: QImplWithCustomGetter?) {
     // `q.data` is a property that has an open getter, so we can NOT smartcast it to non-nullable MyData.
     if (q?.data?.s?.inc() != null) {
         q.data // good
-        q.data.s // should be bad
-        q.data.s.inc() // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!> // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!UNRESOLVED_REFERENCE!>inc<!>() // should be bad
     }
 }
 
-// TODO: Fix this -- see comment in FirDataFlowAnalyzer.getRealVariablesForSafeCallChain()
 fun test_13(q: QImplMutable?) {
     // `q.data` is a property that is mutable, so we can NOT smartcast it to non-nullable MyData.
     if (q?.data?.s?.inc() != null) {
         q.data // good
-        q.data.s // should be bad
-        q.data.s.inc() // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!> // should be bad
+        q.data.<!INAPPLICABLE_CANDIDATE!>s<!>.<!UNRESOLVED_REFERENCE!>inc<!>() // should be bad
     }
 }
