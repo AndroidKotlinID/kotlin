@@ -150,12 +150,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
         }
     }
 
-    @Suppress("UNREACHABLE_CODE")
     private fun canSkipStackSpillingOnInline(methodNode: MethodNode): Boolean {
-        // TODO: Temporary disable this optimization until
-        // https://issuetracker.google.com/issues/68796377 is fixed
-        // or until d8 substitute dex
-        return false
         // Stack spilling before inline function 'f' call is required if:
         //  - 'f' is a suspend function
         //  - 'f' has try-catch blocks
@@ -396,7 +391,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
                 info = invocationParamBuilder.addNextValueParameter(jvmType, false, remappedValue, parameterIndex)
                 info.functionalArgument = when (kind) {
                     ValueKind.NON_INLINEABLE_ARGUMENT_FOR_INLINE_PARAMETER_CALLED_IN_SUSPEND ->
-                        NonInlineableArgumentForInlineableParameterCalledInSuspend(kotlinType?.isSuspendFunctionTypeOrSubtype == true)
+                        NonInlineableArgumentForInlineableParameterCalledInSuspend
                     ValueKind.NON_INLINEABLE_ARGUMENT_FOR_INLINE_SUSPEND_PARAMETER -> NonInlineableArgumentForInlineableSuspendParameter
                     else -> null
                 }

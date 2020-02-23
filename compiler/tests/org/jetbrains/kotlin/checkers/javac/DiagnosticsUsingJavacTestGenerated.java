@@ -9898,6 +9898,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/inference/conflictingSubstitutions.kt");
             }
 
+            @TestMetadata("cstFromErrorAndNonErrorTypes.kt")
+            public void testCstFromErrorAndNonErrorTypes() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/cstFromErrorAndNonErrorTypes.kt");
+            }
+
             @TestMetadata("dependOnExpectedType.kt")
             public void testDependOnExpectedType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/dependOnExpectedType.kt");
@@ -10096,6 +10101,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt35702.kt")
             public void testKt35702() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt35702.kt");
+            }
+
+            @TestMetadata("kt36819.kt")
+            public void testKt36819() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt36819.kt");
             }
 
             @TestMetadata("kt6175.kt")
@@ -10664,6 +10674,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/completion/partialForIlt.kt");
                 }
 
+                @TestMetadata("partialForIltWithNothing.kt")
+                public void testPartialForIltWithNothing() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/partialForIltWithNothing.kt");
+                }
+
                 @TestMetadata("transitiveConstraint.kt")
                 public void testTransitiveConstraint() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/completion/transitiveConstraint.kt");
@@ -10685,6 +10700,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
 
                 public void testAllFilesPresentInConstraints() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/constraints"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("approximationWithDefNotNullInInvPositionDuringInference.kt")
+                public void testApproximationWithDefNotNullInInvPositionDuringInference() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/constraints/approximationWithDefNotNullInInvPositionDuringInference.kt");
                 }
 
                 @TestMetadata("constraintFromVariantTypeWithNestedProjection.kt")
@@ -12746,6 +12766,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt3311.kt")
             public void testKt3311() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/j+k/kt3311.kt");
+            }
+
+            @TestMetadata("kt36856.kt")
+            public void testKt36856() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/j+k/kt36856.kt");
             }
 
             @TestMetadata("kt6720_abstractProperty.kt")
@@ -21202,6 +21227,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 public void testSmartCastOnReceiver() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/smartCasts/inference/smartCastOnReceiver.kt");
                 }
+
+                @TestMetadata("stabilityOfSmartcastsAgainstGenericFunctions.kt")
+                public void testStabilityOfSmartcastsAgainstGenericFunctions() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/smartCasts/inference/stabilityOfSmartcastsAgainstGenericFunctions.kt");
+                }
             }
 
             @TestMetadata("compiler/testData/diagnostics/tests/smartCasts/intersectionScope")
@@ -23344,9 +23374,14 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/typeParameters/functionTypeAsUpperBound.kt");
             }
 
-            @TestMetadata("implicitNothingAsTypeParameter.kt")
-            public void testImplicitNothingAsTypeParameter() throws Exception {
-                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingAsTypeParameter.kt");
+            @TestMetadata("implicitNothingAgainstNotNothingExpectedType.kt")
+            public void testImplicitNothingAgainstNotNothingExpectedType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingAgainstNotNothingExpectedType.kt");
+            }
+
+            @TestMetadata("implicitNothingInReturnPosition.kt")
+            public void testImplicitNothingInReturnPosition() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingInReturnPosition.kt");
             }
 
             @TestMetadata("implicitNothingOnDelegates.kt")

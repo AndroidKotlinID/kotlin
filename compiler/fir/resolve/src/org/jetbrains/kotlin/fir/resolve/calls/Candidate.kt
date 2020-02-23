@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
+import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintSystemImpl
 import org.jetbrains.kotlin.resolve.calls.model.PostponedResolvedAtomMarker
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 
@@ -32,6 +33,7 @@ data class CallInfo(
     val explicitReceiver: FirExpression?,
     val arguments: List<FirExpression>,
     val isSafeCall: Boolean,
+    val isPotentialQualifierPart: Boolean,
 
     val typeArguments: List<FirTypeProjection>,
     val session: FirSession,
@@ -49,26 +51,18 @@ data class CallInfo(
     fun noStubReceiver(): CallInfo =
         if (stubReceiver == null) this else CallInfo(
             callKind, name, explicitReceiver, arguments,
-            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs, null
+            isSafeCall, isPotentialQualifierPart, typeArguments, session,
+            containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs, null
         )
 
     fun replaceWithVariableAccess(): CallInfo =
-        CallInfo(
-            CallKind.VariableAccess, name, explicitReceiver, emptyList(),
-            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs, stubReceiver
-        )
+        copy(callKind = CallKind.VariableAccess, arguments = emptyList())
 
     fun replaceExplicitReceiver(explicitReceiver: FirExpression?): CallInfo =
-        CallInfo(
-            callKind, name, explicitReceiver, arguments,
-            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs, stubReceiver
-        )
+        copy(explicitReceiver = explicitReceiver)
 
     fun withReceiverAsArgument(receiverExpression: FirExpression): CallInfo =
-        CallInfo(
-            callKind, name, explicitReceiver, listOf(receiverExpression) + arguments,
-            isSafeCall, typeArguments, session, containingFile, implicitReceiverStack, expectedType, outerCSBuilder, lhs, stubReceiver
-        )
+        copy(arguments = listOf(receiverExpression) + arguments)
 }
 
 enum class CandidateApplicability {
@@ -91,7 +85,7 @@ class Candidate(
 ) {
 
     var systemInitialized: Boolean = false
-    val system by lazy {
+    val system: NewConstraintSystemImpl by lazy {
         val system = bodyResolveComponents.inferenceComponents.createConstraintSystem()
         system.addOtherSystem(baseSystem)
         systemInitialized = true

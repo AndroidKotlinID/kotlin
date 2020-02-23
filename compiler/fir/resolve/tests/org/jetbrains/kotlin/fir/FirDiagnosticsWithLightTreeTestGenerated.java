@@ -58,6 +58,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         runTest("compiler/fir/resolve/testData/resolve/copy.kt");
     }
 
+    @TestMetadata("covariantArrayAsReceiver.kt")
+    public void testCovariantArrayAsReceiver() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/covariantArrayAsReceiver.kt");
+    }
+
     @TestMetadata("defaultJavaImportHiding.kt")
     public void testDefaultJavaImportHiding() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/defaultJavaImportHiding.kt");
@@ -256,6 +261,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
     @TestMetadata("recursiveCallOnWhenWithSealedClass.kt")
     public void testRecursiveCallOnWhenWithSealedClass() throws Exception {
         runTest("compiler/fir/resolve/testData/resolve/recursiveCallOnWhenWithSealedClass.kt");
+    }
+
+    @TestMetadata("sealedClass.kt")
+    public void testSealedClass() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolve/sealedClass.kt");
     }
 
     @TestMetadata("simpleClass.kt")
@@ -1269,14 +1279,14 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/problems"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("callableReferenceToLocalClass.kt")
+        public void testCallableReferenceToLocalClass() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/callableReferenceToLocalClass.kt");
+        }
+
         @TestMetadata("callableReferencesAndDefaultParameters.kt")
         public void testCallableReferencesAndDefaultParameters() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/callableReferencesAndDefaultParameters.kt");
-        }
-
-        @TestMetadata("covariantArrayAsReceiver.kt")
-        public void testCovariantArrayAsReceiver() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolve/problems/covariantArrayAsReceiver.kt");
         }
 
         @TestMetadata("definetelyNotNullForTypeParameter.kt")
@@ -1284,9 +1294,24 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             runTest("compiler/fir/resolve/testData/resolve/problems/definetelyNotNullForTypeParameter.kt");
         }
 
+        @TestMetadata("definitelyNotNullAndOriginalType.kt")
+        public void testDefinitelyNotNullAndOriginalType() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/definitelyNotNullAndOriginalType.kt");
+        }
+
+        @TestMetadata("extensionLambdaInDefaultArgument.kt")
+        public void testExtensionLambdaInDefaultArgument() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/extensionLambdaInDefaultArgument.kt");
+        }
+
         @TestMetadata("javaAccessorConversion.kt")
         public void testJavaAccessorConversion() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/javaAccessorConversion.kt");
+        }
+
+        @TestMetadata("typesInLocalFunctions.kt")
+        public void testTypesInLocalFunctions() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/typesInLocalFunctions.kt");
         }
     }
 
@@ -1449,6 +1474,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("nullability.kt")
         public void testNullability() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/smartcasts/nullability.kt");
+        }
+
+        @TestMetadata("orInWhenBranch.kt")
+        public void testOrInWhenBranch() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/smartcasts/orInWhenBranch.kt");
         }
 
         @TestMetadata("smartCastInInit.kt")
@@ -1708,6 +1738,37 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @TestMetadata("smartcastAfterReassignment.kt")
             public void testSmartcastAfterReassignment() throws Exception {
                 runTest("compiler/fir/resolve/testData/resolve/smartcasts/variables/smartcastAfterReassignment.kt");
+            }
+        }
+    }
+
+    @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Stdlib extends AbstractFirDiagnosticsWithLightTreeTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInStdlib() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("compiler/fir/resolve/testData/resolve/stdlib/j+k")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class J_k extends AbstractFirDiagnosticsWithLightTreeTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInJ_k() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/resolve/testData/resolve/stdlib/j+k"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+            }
+
+            @TestMetadata("flexibleWildcard.kt")
+            public void testFlexibleWildcard() throws Exception {
+                runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/flexibleWildcard.kt");
             }
         }
     }

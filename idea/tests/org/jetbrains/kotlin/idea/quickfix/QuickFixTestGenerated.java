@@ -2339,6 +2339,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/changeSignature/removeFunctionFirstParameter.kt");
         }
 
+        @TestMetadata("removeFunctionLastLambdaParameter.kt")
+        public void testRemoveFunctionLastLambdaParameter() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/removeFunctionLastLambdaParameter.kt");
+        }
+
         @TestMetadata("removeFunctionSecondParameter1.kt")
         public void testRemoveFunctionSecondParameter1() throws Exception {
             runTest("idea/testData/quickfix/changeSignature/removeFunctionSecondParameter1.kt");
@@ -10353,6 +10358,44 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         }
     }
 
+    @TestMetadata("idea/testData/quickfix/removeArgument")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RemoveArgument extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRemoveArgument() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/removeArgument"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("constructor.kt")
+        public void testConstructor() throws Exception {
+            runTest("idea/testData/quickfix/removeArgument/constructor.kt");
+        }
+
+        @TestMetadata("function.kt")
+        public void testFunction() throws Exception {
+            runTest("idea/testData/quickfix/removeArgument/function.kt");
+        }
+
+        @TestMetadata("lambdaArgument.kt")
+        public void testLambdaArgument() throws Exception {
+            runTest("idea/testData/quickfix/removeArgument/lambdaArgument.kt");
+        }
+
+        @TestMetadata("matchedArguments.kt")
+        public void testMatchedArguments() throws Exception {
+            runTest("idea/testData/quickfix/removeArgument/matchedArguments.kt");
+        }
+
+        @TestMetadata("typeMismatch.kt")
+        public void testTypeMismatch() throws Exception {
+            runTest("idea/testData/quickfix/removeArgument/typeMismatch.kt");
+        }
+    }
+
     @TestMetadata("idea/testData/quickfix/removeAtFromAnnotationArgument")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -14541,6 +14584,21 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("singleVariable.kt")
                 public void testSingleVariable() throws Exception {
                     runTest("idea/testData/quickfix/variables/changeMutability/canBeVal/singleVariable.kt");
+                }
+
+                @TestMetadata("uninitializedWithGetter.kt")
+                public void testUninitializedWithGetter() throws Exception {
+                    runTest("idea/testData/quickfix/variables/changeMutability/canBeVal/uninitializedWithGetter.kt");
+                }
+
+                @TestMetadata("uninitializedWithGetter2.kt")
+                public void testUninitializedWithGetter2() throws Exception {
+                    runTest("idea/testData/quickfix/variables/changeMutability/canBeVal/uninitializedWithGetter2.kt");
+                }
+
+                @TestMetadata("uninitializedWithGetter3.kt")
+                public void testUninitializedWithGetter3() throws Exception {
+                    runTest("idea/testData/quickfix/variables/changeMutability/canBeVal/uninitializedWithGetter3.kt");
                 }
             }
         }

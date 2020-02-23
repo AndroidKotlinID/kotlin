@@ -1,23 +1,11 @@
 FILE: enumEntryUse.kt
     public final enum class TestEnum : R|kotlin/Enum<TestEnum>| {
         private constructor(): R|TestEnum| {
-            super<R|kotlin/Any|>()
+            super<R|kotlin/Enum<TestEnum>|>()
         }
 
-        public final static enum entry FIRST: R|TestEnum| = object : R|TestEnum| {
-            private constructor(): R|anonymous| {
-                super<R|TestEnum|>()
-            }
-
-        }
-
-        public final static enum entry SECOND: R|TestEnum| = object : R|TestEnum| {
-            private constructor(): R|anonymous| {
-                super<R|TestEnum|>()
-            }
-
-        }
-
+        public final static enum entry FIRST: R|TestEnum|
+        public final static enum entry SECOND: R|TestEnum|
         public final static enum entry THIRD: R|TestEnum| = object : R|TestEnum| {
             private constructor(): R|anonymous| {
                 super<R|TestEnum|>()

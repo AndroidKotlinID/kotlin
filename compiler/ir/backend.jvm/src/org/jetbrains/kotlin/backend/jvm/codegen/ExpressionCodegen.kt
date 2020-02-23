@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.backend.jvm.codegen
 
 import org.jetbrains.kotlin.backend.common.lower.BOUND_RECEIVER_PARAMETER
-import org.jetbrains.kotlin.backend.common.lower.LocalDeclarationsLowering
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin.*
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
@@ -15,11 +14,8 @@ import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
+import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.*
-import org.jetbrains.kotlin.codegen.BaseExpressionCodegen
-import org.jetbrains.kotlin.codegen.CallGenerator
-import org.jetbrains.kotlin.codegen.StackValue
-import org.jetbrains.kotlin.codegen.extractReificationArgument
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.Companion.putNeedClassReificationMarker
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.AS
@@ -361,7 +357,7 @@ class ExpressionCodegen(
         visitStatementContainer(body, data).discard()
 
     override fun visitContainerExpression(expression: IrContainerExpression, data: BlockInfo) =
-        visitStatementContainer(expression, data).coerce(expression.type)
+        visitStatementContainer(expression, data)
 
     override fun visitFunctionAccess(expression: IrFunctionAccessExpression, data: BlockInfo): PromisedValue {
         classCodegen.context.irIntrinsics.getIntrinsic(expression.symbol)
@@ -459,39 +455,36 @@ class ExpressionCodegen(
             }
             expression is IrConstructorCall ->
                 MaterialValue(this, asmType, expression.type)
-            expression.type.isUnit() && callable.asmMethod.returnType == Type.VOID_TYPE ->
-                //don't generate redundant UNIT/pop instructions
-                immaterialUnitValue
-            expression.type.isUnit() ->
+            expression.type.isUnit() -> {
                 // NewInference allows casting `() -> T` to `() -> Unit`. A CHECKCAST here will fail.
-                MaterialValue(this, callable.asmMethod.returnType, callee.returnType).discard().coerce(expression.type)
+                if (callable.asmMethod.returnType != Type.VOID_TYPE)
+                    MaterialValue(this, callable.asmMethod.returnType, callee.returnType).discard()
+                // don't generate redundant UNIT/pop instructions
+                immaterialUnitValue
+            }
+            callee.parentAsClass.isAnnotationClass && callable.asmMethod.returnType == AsmTypes.JAVA_CLASS_TYPE -> {
+                wrapJavaClassIntoKClass(mv)
+                MaterialValue(this, AsmTypes.K_CLASS_TYPE, expression.type)
+            }
+            callee.parentAsClass.isAnnotationClass && callable.asmMethod.returnType == AsmTypes.JAVA_CLASS_ARRAY_TYPE -> {
+                wrapJavaClassesIntoKClasses(mv)
+                MaterialValue(this, AsmTypes.K_CLASS_ARRAY_TYPE, expression.type)
+            }
             else ->
-                MaterialValue(this, callable.asmMethod.returnType, callee.returnType).coerce(expression.type)
+                MaterialValue(this, callable.asmMethod.returnType, callee.returnType)
         }
     }
 
-    private fun IrFunctionAccessExpression.isSuspensionPoint(): Boolean {
-        val owner = symbol.owner
-        return when {
-            // Only suspend functions are suspension points
-            !owner.isSuspend -> false
-            // But not inside continuation classes and bridges
-            irFunction.shouldNotContainSuspendMarkers() -> false
-            // Noinline function are always suspension points
-            !owner.isInline -> true
-            // The suspend intrinsics are, albeit inline, also suspension points
-            owner.fqNameForIrSerialization == FqName("kotlin.coroutines.intrinsics.IntrinsicsKt.suspendCoroutineUninterceptedOrReturn") -> true
-            // Inside $$forInline functions crossinline calls are (usually) not suspension points, otherwise, flow will be pessimized
-            (dispatchReceiver as? IrGetField)?.symbol?.owner?.origin ==
-                    LocalDeclarationsLowering.DECLARATION_ORIGIN_FIELD_FOR_CROSSINLINE_CAPTURED_VALUE ->
-                irFunction.origin != FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE
-            // The same goes for inline lambdas
-            (dispatchReceiver as? IrGetValue)?.let {
-                it.origin == IrStatementOrigin.VARIABLE_AS_FUNCTION && (it.symbol.owner as? IrValueParameter)?.isNoinline != true
-            } == true -> irFunction.origin != FOR_INLINE_STATE_MACHINE_TEMPLATE
-            // Otherwise, this is normal inline call, ergo not a suspension point
-            else -> false
-        }
+    private fun IrFunctionAccessExpression.isSuspensionPoint(): Boolean = when {
+        !symbol.owner.isSuspend || irFunction.shouldNotContainSuspendMarkers() -> false
+        // Copy-pasted bytecode blocks are not suspension points.
+        symbol.owner.isInline ->
+            symbol.owner.fqNameForIrSerialization == FqName("kotlin.coroutines.intrinsics.IntrinsicsKt.suspendCoroutineUninterceptedOrReturn")
+        // This includes inline lambdas, but only in functions intended for the inliner; in others, they stay as `f.invoke()`.
+        dispatchReceiver.isReadOfInlineLambda() ->
+            irFunction.origin != FOR_INLINE_STATE_MACHINE_TEMPLATE && irFunction.origin != FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE &&
+                    irFunction.origin != IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+        else -> true
     }
 
     override fun visitVariable(declaration: IrVariable, data: BlockInfo): PromisedValue {
@@ -529,24 +522,28 @@ class ExpressionCodegen(
 
         val realField = callee.resolveFakeOverride()!!
         val fieldType = typeMapper.mapType(realField.type)
-        val ownerType = typeMapper.mapClass(callee.parentAsClass).internalName
         val fieldName = realField.name.asString()
         val isStatic = expression.receiver == null
         expression.markLineNumber(startOffset = true)
-        expression.receiver?.accept(this, data)?.materialize()
+        val ownerName = expression.receiver?.let { receiver ->
+            val ownerType = typeMapper.mapTypeAsDeclaration(receiver.type)
+            receiver.accept(this, data).coerce(ownerType, receiver.type).materialize()
+            ownerType.internalName
+        } ?: typeMapper.mapClass(callee.parentAsClass).internalName
         return if (expression is IrSetField) {
             expression.value.accept(this, data).coerce(fieldType, callee.type).materialize()
             when {
-                isStatic -> mv.putstatic(ownerType, fieldName, fieldType.descriptor)
-                else -> mv.putfield(ownerType, fieldName, fieldType.descriptor)
+                isStatic -> mv.putstatic(ownerName, fieldName, fieldType.descriptor)
+                else -> mv.putfield(ownerName, fieldName, fieldType.descriptor)
             }
-            defaultValue(expression.type)
+            assert(expression.type.isUnit())
+            immaterialUnitValue
         } else {
             when {
-                isStatic -> mv.getstatic(ownerType, fieldName, fieldType.descriptor)
-                else -> mv.getfield(ownerType, fieldName, fieldType.descriptor)
+                isStatic -> mv.getstatic(ownerName, fieldName, fieldType.descriptor)
+                else -> mv.getfield(ownerName, fieldName, fieldType.descriptor)
             }
-            MaterialValue(this, fieldType, callee.type).coerce(expression.type)
+            MaterialValue(this, fieldType, callee.type)
         }
     }
 
@@ -555,9 +552,7 @@ class ExpressionCodegen(
         // Do not add redundant field initializers that initialize to default values.
         val inPrimaryConstructor = irFunction is IrConstructor && irFunction.isPrimary
         val inClassInit = irFunction.origin == JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER
-        // "expression.origin == null" means that the field is initialized when it is declared,
-        // i.e., not in an initializer block or constructor body.
-        val isFieldInitializer = expression.origin == null
+        val isFieldInitializer = expression.origin == IrStatementOrigin.INITIALIZE_FIELD
         val skip = (inPrimaryConstructor || inClassInit) && isFieldInitializer && expressionValue is IrConst<*> &&
                 isDefaultValueForType(expression.symbol.owner.type.asmType, expressionValue.value)
         return if (skip) defaultValue(expression.type) else super.visitSetField(expression, data)
@@ -653,13 +648,6 @@ class ExpressionCodegen(
         val returnType = if (owner == irFunction) signature.returnType else methodSignatureMapper.mapReturnType(owner)
         val afterReturnLabel = Label()
         expression.value.accept(this, data).coerce(returnType, owner.returnType).materialize()
-        // We replaced COERTION_TO_UNIT with IrReturn during TailCallOptimizationLowering.
-        // Generate POP GETSTATIC kotlin/Unit.INSTANCE now.
-        // Otherwise, tail-call optimization will not work. See tailSuspendUnitFun.kt test.
-        if (expression in context.suspendTailCallsWithUnitReplacement) {
-            mv.pop()
-            mv.getstatic("kotlin/Unit", "INSTANCE", "Lkotlin/Unit;")
-        }
         generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data)
         expression.markLineNumber(startOffset = true)
         if (isNonLocalReturn) {
@@ -721,7 +709,7 @@ class ExpressionCodegen(
         val kotlinType = typeOperand.toKotlinType()
         return when (expression.operator) {
             IrTypeOperator.IMPLICIT_CAST ->
-                expression.argument.accept(this, data).coerce(expression.type)
+                expression.argument.accept(this, data)
 
             IrTypeOperator.CAST, IrTypeOperator.SAFE_CAST -> {
                 val result = expression.argument.accept(this, data)
@@ -737,7 +725,7 @@ class ExpressionCodegen(
                     assert(expression.operator == IrTypeOperator.CAST) { "IrTypeOperator.SAFE_CAST should have been lowered." }
                     TypeIntrinsics.checkcast(mv, kotlinType, boxedRightType, false)
                 }
-                MaterialValue(this, boxedRightType, expression.type).coerce(expression.type)
+                MaterialValue(this, boxedRightType, expression.type)
             }
 
             IrTypeOperator.INSTANCEOF -> {
@@ -978,7 +966,13 @@ class ExpressionCodegen(
 
     override fun visitThrow(expression: IrThrow, data: BlockInfo): PromisedValue {
         expression.markLineNumber(startOffset = true)
-        expression.value.accept(this, data).materialize()
+        val exception = expression.value.accept(this, data)
+        // Avoid unecessary CHECKCASTs to java/lang/Throwable. If the exception is not of type Object
+        // then it must be some subtype of throwable and we don't need to coerce it.
+        if (exception.type == OBJECT_TYPE)
+            exception.coerce(context.irBuiltIns.throwableType).materialize()
+        else
+            exception.materialize()
         mv.athrow()
         return immaterialUnitValue
     }

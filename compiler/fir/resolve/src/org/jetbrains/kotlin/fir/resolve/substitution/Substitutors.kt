@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.fir.resolve.substitution
 
-import org.jetbrains.kotlin.fir.resolve.withNullability
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
@@ -38,6 +37,9 @@ abstract class AbstractConeSubstitutor : ConeSubstitutor() {
 
     override fun substituteOrNull(type: ConeKotlinType): ConeKotlinType? {
         val newType = substituteType(type)
+        if (newType != null && type is ConeDefinitelyNotNullType) {
+            return newType.makeConeTypeDefinitelyNotNullOrNotNull()
+        }
         return (newType ?: type.substituteRecursive())
     }
 
@@ -118,7 +120,11 @@ abstract class AbstractConeSubstitutor : ConeSubstitutor() {
 }
 
 fun substitutorByMap(substitution: Map<FirTypeParameterSymbol, ConeKotlinType>): ConeSubstitutor {
-    if (substitution.isEmpty()) return ConeSubstitutor.Empty
+    // If all arguments match parameters, then substitutor isn't needed
+    if (substitution.all { (parameterSymbol, argumentType) ->
+            (argumentType as? ConeTypeParameterType)?.lookupTag?.typeParameterSymbol == parameterSymbol
+        }
+    ) return ConeSubstitutor.Empty
     return ConeSubstitutorByMap(substitution)
 }
 

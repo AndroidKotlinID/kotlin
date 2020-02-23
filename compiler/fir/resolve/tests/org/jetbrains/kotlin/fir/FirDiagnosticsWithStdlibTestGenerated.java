@@ -138,6 +138,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/resolve/testData/resolveWithStdlib/implicitReceiverOrder.kt");
     }
 
+    @TestMetadata("inapplicableRemoveAll.kt")
+    public void testInapplicableRemoveAll() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolveWithStdlib/inapplicableRemoveAll.kt");
+    }
+
     @TestMetadata("javaEnumSynthetic.kt")
     public void testJavaEnumSynthetic() throws Exception {
         runTest("compiler/fir/resolve/testData/resolveWithStdlib/javaEnumSynthetic.kt");
@@ -196,6 +201,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("reflectionClass.kt")
     public void testReflectionClass() throws Exception {
         runTest("compiler/fir/resolve/testData/resolveWithStdlib/reflectionClass.kt");
+    }
+
+    @TestMetadata("removeIf.kt")
+    public void testRemoveIf() throws Exception {
+        runTest("compiler/fir/resolve/testData/resolveWithStdlib/removeIf.kt");
     }
 
     @TestMetadata("removeOnAbstractMap.kt")
@@ -670,11 +680,6 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolveWithStdlib/problems/delegateTypeMismatch.kt");
         }
 
-        @TestMetadata("inapplicableRemoveAll.kt")
-        public void testInapplicableRemoveAll() throws Exception {
-            runTest("compiler/fir/resolve/testData/resolveWithStdlib/problems/inapplicableRemoveAll.kt");
-        }
-
         @TestMetadata("invokePriority.kt")
         public void testInvokePriority() throws Exception {
             runTest("compiler/fir/resolve/testData/resolveWithStdlib/problems/invokePriority.kt");
@@ -693,6 +698,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         @TestMetadata("weakHashMap.kt")
         public void testWeakHashMap() throws Exception {
             runTest("compiler/fir/resolve/testData/resolveWithStdlib/problems/weakHashMap.kt");
+        }
+
+        @TestMetadata("withInInitializer.kt")
+        public void testWithInInitializer() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolveWithStdlib/problems/withInInitializer.kt");
         }
     }
 

@@ -44,7 +44,9 @@ import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
-class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider, val stubMode: Boolean) : BaseFirBuilder<PsiElement>(session) {
+class RawFirBuilder(
+    session: FirSession, val baseScopeProvider: FirScopeProvider, val stubMode: Boolean
+) : BaseFirBuilder<PsiElement>(session) {
 
     fun buildFirFile(file: KtFile): FirFile {
         return file.accept(Visitor(), Unit) as FirFile
@@ -122,21 +124,23 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
         private fun KtTypeReference?.toFirOrErrorType(): FirTypeRef =
             convertSafe() ?: buildErrorTypeRef {
                 source = this@toFirOrErrorType?.toFirSourceElement()
-                diagnostic = FirSimpleDiagnostic(if (this@toFirOrErrorType == null) "Incomplete code" else "Conversion failed", DiagnosticKind.Syntax)
+                diagnostic = FirSimpleDiagnostic(
+                    if (this@toFirOrErrorType == null) "Incomplete code" else "Conversion failed", DiagnosticKind.Syntax
+                )
             }
 
         // Here we accept lambda as receiver to prevent expression calculation in stub mode
         private fun (() -> KtExpression?).toFirExpression(errorReason: String): FirExpression =
             if (stubMode) buildExpressionStub()
             else with(this()) {
-                convertSafe<FirExpression>() ?: buildErrorExpression(
+                convertSafe() ?: buildErrorExpression(
                     this?.toFirSourceElement(), FirSimpleDiagnostic(errorReason, DiagnosticKind.Syntax),
                 )
             }
 
         private fun KtExpression?.toFirExpression(errorReason: String): FirExpression =
             if (stubMode) buildExpressionStub()
-            else convertSafe<FirExpression>() ?: buildErrorExpression(
+            else convertSafe() ?: buildErrorExpression(
                 this?.toFirSourceElement(), FirSimpleDiagnostic(errorReason, DiagnosticKind.Syntax),
             )
 
@@ -150,16 +154,25 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
             delegatedSuperType: FirTypeRef?, delegatedSelfType: FirResolvedTypeRef?, owner: KtClassOrObject, hasPrimaryConstructor: Boolean,
         ): FirDeclaration {
             return when (this) {
-                is KtSecondaryConstructor -> toFirConstructor(
-                    delegatedSuperType,
-                    delegatedSelfType ?: buildErrorTypeRef {
-                        source = this@toFirDeclaration.toFirSourceElement()
-                        diagnostic = FirSimpleDiagnostic("Constructor in object", DiagnosticKind.ConstructorInObject)
-                    },
-                    owner,
-                    hasPrimaryConstructor,
-                )
-                is KtEnumEntry -> toFirEnumEntry(delegatedSelfType!!)
+                is KtSecondaryConstructor -> {
+                    toFirConstructor(
+                        delegatedSuperType,
+                        delegatedSelfType ?: buildErrorTypeRef {
+                            source = this@toFirDeclaration.toFirSourceElement()
+                            diagnostic = FirSimpleDiagnostic("Constructor in object", DiagnosticKind.ConstructorInObject)
+                        },
+                        owner,
+                        hasPrimaryConstructor,
+                    )
+                }
+                is KtEnumEntry -> {
+                    val primaryConstructor = owner.primaryConstructor
+                    val ownerClassHasDefaultConstructor =
+                        primaryConstructor?.valueParameters?.isEmpty() ?: owner.secondaryConstructors.let { constructors ->
+                            constructors.isEmpty() || constructors.any { it.valueParameters.isEmpty() }
+                        }
+                    toFirEnumEntry(delegatedSelfType!!, ownerClassHasDefaultConstructor)
+                }
                 else -> convert()
             }
         }
@@ -404,13 +417,14 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                      *   for correct resolve of super constructor call or just call kotlin.Any constructor
                      *   and convert it to right call at backend, because of it doesn't affects frontend work
                      */
-                    container.superTypeRefs += buildResolvedTypeRef {
+                    delegatedSuperTypeRef = buildResolvedTypeRef {
                         type = ConeClassLikeTypeImpl(
                             implicitEnumType.type.lookupTag,
                             delegatedSelfTypeRef?.coneTypeUnsafe<ConeKotlinType>()?.let { arrayOf(it) } ?: emptyArray(),
                             isNullable = false,
                         )
                     }
+                    container.superTypeRefs += delegatedSuperTypeRef
                 }
                 this is KtClass && classKind == ClassKind.ANNOTATION_CLASS -> {
                     container.superTypeRefs += implicitAnnotationType
@@ -464,14 +478,17 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
             fun defaultVisibility() = when {
                 // TODO: object / enum is HIDDEN (?)
                 owner is KtObjectDeclaration || owner.hasModifier(ENUM_KEYWORD) -> Visibilities.PRIVATE
-                owner.hasModifier(SEALED_KEYWORD) -> Visibilities.PUBLIC
+                owner.hasModifier(SEALED_KEYWORD) -> Visibilities.PRIVATE
                 else -> Visibilities.UNKNOWN
             }
 
-            val status = FirDeclarationStatusImpl(this?.visibility ?: defaultVisibility(), Modality.FINAL).apply {
+            val explicitVisibility = this?.visibility
+            val status = FirDeclarationStatusImpl(explicitVisibility ?: defaultVisibility(), Modality.FINAL).apply {
                 isExpect = this@toFirConstructor?.hasExpectModifier() ?: false
                 isActual = this@toFirConstructor?.hasActualModifier() ?: false
                 isInner = owner.hasModifier(INNER_KEYWORD)
+                isFromSealedClass = owner.hasModifier(SEALED_KEYWORD) && explicitVisibility !== Visibilities.PRIVATE
+                isFromEnumClass = owner.hasModifier(ENUM_KEYWORD)
             }
             return buildPrimaryConstructor {
                 source = constructorSource
@@ -510,13 +527,26 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
             }
         }
 
-        private fun KtEnumEntry.toFirEnumEntry(delegatedEnumSelfTypeRef: FirResolvedTypeRef): FirDeclaration {
+        private fun KtEnumEntry.toFirEnumEntry(
+            delegatedEnumSelfTypeRef: FirResolvedTypeRef,
+            ownerClassHasDefaultConstructor: Boolean
+        ): FirDeclaration {
             val ktEnumEntry = this@toFirEnumEntry
             return buildEnumEntry {
                 source = toFirSourceElement()
                 session = baseSession
                 returnTypeRef = delegatedEnumSelfTypeRef
                 name = nameAsSafeName
+                status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
+                    isStatic = true
+                }
+                symbol = FirVariableSymbol(callableIdForName(nameAsSafeName))
+                // NB: not sure should annotations be on enum entry itself, or on its corresponding object
+                if (ownerClassHasDefaultConstructor && ktEnumEntry.initializerList == null &&
+                    ktEnumEntry.annotationEntries.isEmpty() && ktEnumEntry.body == null
+                ) {
+                    return@buildEnumEntry
+                }
                 initializer = withChildClassName(nameAsSafeName) {
                     buildAnonymousObject {
                         source = toFirSourceElement()
@@ -551,12 +581,6 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                         }
                     }
                 }
-                status = FirDeclarationStatusImpl(
-                    Visibilities.PUBLIC, Modality.FINAL,
-                ).apply {
-                    isStatic = true
-                }
-                symbol = FirVariableSymbol(callableIdForName(nameAsSafeName))
             }
         }
 
@@ -603,7 +627,9 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                     val primaryConstructor = classOrObject.primaryConstructor
                     val firPrimaryConstructor = declarations.firstOrNull() as? FirConstructor
                     if (primaryConstructor != null && firPrimaryConstructor != null) {
-                        primaryConstructor.valueParameters.zip(firPrimaryConstructor.valueParameters).forEach { (ktParameter, firParameter) ->
+                        primaryConstructor.valueParameters.zip(
+                            firPrimaryConstructor.valueParameters
+                        ).forEach { (ktParameter, firParameter) ->
                             if (ktParameter.hasValOrVar()) {
                                 addDeclaration(ktParameter.toFirProperty(firParameter))
                             }
@@ -635,7 +661,6 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                         generateValuesFunction(baseSession, context.packageFqName, context.className)
                         generateValueOfFunction(baseSession, context.packageFqName, context.className)
                     }
-                    calculateSAM()
                 }.build()
             }
         }
@@ -839,10 +864,13 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                 source = this@toFirConstructor.toFirSourceElement()
                 session = baseSession
                 returnTypeRef = delegatedSelfTypeRef
-                status = FirDeclarationStatusImpl(visibility, Modality.FINAL).apply {
+                val explicitVisibility = visibility
+                status = FirDeclarationStatusImpl(explicitVisibility, Modality.FINAL).apply {
                     isExpect = hasExpectModifier()
                     isActual = hasActualModifier()
                     isInner = owner.hasModifier(INNER_KEYWORD)
+                    isFromSealedClass = owner.hasModifier(SEALED_KEYWORD) && explicitVisibility !== Visibilities.PRIVATE
+                    isFromEnumClass = owner.hasModifier(ENUM_KEYWORD)
                 }
                 symbol = FirConstructorSymbol(callableIdForClassConstructor())
                 delegatedConstructor = getDelegationCall().convert(delegatedSuperTypeRef, delegatedSelfTypeRef, hasPrimaryConstructor)
@@ -945,7 +973,8 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
 
                     val receiver = delegateExpression?.toFirExpression("Should have delegate")
                     generateAccessorsByDelegate(
-                        delegateBuilder,baseSession,
+                        delegateBuilder,
+                        baseSession,
                         member = !property.isTopLevel,
                         extension = property.receiverTypeReference != null,
                         stubMode,
@@ -1243,15 +1272,12 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
         }
 
         override fun visitForExpression(expression: KtForExpression, data: Unit?): FirElement {
-            val ktRangeExpression = expression.loopRange.toFirExpression("No range in for loop")
+            val rangeExpression = expression.loopRange.toFirExpression("No range in for loop")
             val ktParameter = expression.loopParameter
             val loopSource = expression.toFirSourceElement()
             return buildBlock {
                 source = loopSource
                 val rangeSource = expression.loopRange?.toFirSourceElement()
-                val rangeVal =
-                    generateTemporaryVariable(baseSession, rangeSource, Name.special("<range>"), ktRangeExpression)
-                statements += rangeVal
                 val iteratorVal = generateTemporaryVariable(
                     baseSession, rangeSource, Name.special("<iterator>"),
                     buildFunctionCall {
@@ -1260,7 +1286,7 @@ class RawFirBuilder(session: FirSession, val baseScopeProvider: FirScopeProvider
                             source = loopSource
                             name = Name.identifier("iterator")
                         }
-                        explicitReceiver = generateResolvedAccessExpression(rangeSource, rangeVal)
+                        explicitReceiver = rangeExpression
                     },
                 )
                 statements += iteratorVal

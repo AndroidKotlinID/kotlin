@@ -1826,6 +1826,16 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/types/asOnPlatformType.kt");
         }
 
+        @TestMetadata("castsInsideCoroutineInference.kt")
+        public void testCastsInsideCoroutineInference() throws Exception {
+            runTest("compiler/testData/ir/irText/types/castsInsideCoroutineInference.kt");
+        }
+
+        @TestMetadata("coercionToUnitInLambdaReturnValue.kt")
+        public void testCoercionToUnitInLambdaReturnValue() throws Exception {
+            runTest("compiler/testData/ir/irText/types/coercionToUnitInLambdaReturnValue.kt");
+        }
+
         @TestMetadata("genericPropertyReferenceType.kt")
         public void testGenericPropertyReferenceType() throws Exception {
             runTest("compiler/testData/ir/irText/types/genericPropertyReferenceType.kt");
@@ -1861,9 +1871,19 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/types/intersectionType3_OI.kt");
         }
 
+        @TestMetadata("kt36143.kt")
+        public void testKt36143() throws Exception {
+            runTest("compiler/testData/ir/irText/types/kt36143.kt");
+        }
+
         @TestMetadata("localVariableOfIntersectionType_NI.kt")
         public void testLocalVariableOfIntersectionType_NI() throws Exception {
             runTest("compiler/testData/ir/irText/types/localVariableOfIntersectionType_NI.kt");
+        }
+
+        @TestMetadata("receiverOfIntersectionType.kt")
+        public void testReceiverOfIntersectionType() throws Exception {
+            runTest("compiler/testData/ir/irText/types/receiverOfIntersectionType.kt");
         }
 
         @TestMetadata("smartCastOnFakeOverrideReceiver.kt")
@@ -1879,6 +1899,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("smartCastOnReceiverOfGenericType.kt")
         public void testSmartCastOnReceiverOfGenericType() throws Exception {
             runTest("compiler/testData/ir/irText/types/smartCastOnReceiverOfGenericType.kt");
+        }
+
+        @TestMetadata("starProjection_OI.kt")
+        public void testStarProjection_OI() throws Exception {
+            runTest("compiler/testData/ir/irText/types/starProjection_OI.kt");
         }
 
         @TestMetadata("compiler/testData/ir/irText/types/nullChecks")

@@ -13,10 +13,12 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.inferenceContext
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
+import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
+import org.jetbrains.kotlin.fir.resolve.inference.preprocessCallableReference
+import org.jetbrains.kotlin.fir.resolve.inference.preprocessLambdaArgument
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.firUnsafe
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.resultType
-import org.jetbrains.kotlin.fir.resolve.withNullability
 import org.jetbrains.kotlin.fir.returnExpressions
 import org.jetbrains.kotlin.fir.scopes.impl.FirILTTypeRefPlaceHolder
 import org.jetbrains.kotlin.fir.scopes.impl.FirIntegerOperator

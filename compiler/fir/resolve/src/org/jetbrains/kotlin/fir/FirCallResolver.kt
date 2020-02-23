@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirAmbiguityError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirInapplicableCandidateError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirUnresolvedNameError
+import org.jetbrains.kotlin.fir.resolve.inference.ResolvedCallableReferenceAtom
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreNameReference
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreReceiver
@@ -126,6 +127,7 @@ class FirCallResolver(
             explicitReceiver,
             arguments,
             functionCall.safe,
+            isPotentialQualifierPart = false,
             typeArguments,
             session,
             file,
@@ -165,6 +167,7 @@ class FirCallResolver(
             qualifiedAccess.explicitReceiver,
             emptyList(),
             qualifiedAccess.safe,
+            qualifiedAccess.explicitReceiver is FirResolvedQualifier && qualifiedResolver.isPotentialQualifierPartPosition(),
             emptyList(),
             session,
             file,
@@ -220,6 +223,7 @@ class FirCallResolver(
                     relativeClassFqName = classId.relativeClassName
                     safe = false
                     typeArguments.addAll(qualifiedAccess.typeArguments)
+                    symbol = referencedSymbol
                 }.apply {
                     resultType = if (classId.isLocal) {
                         typeForQualifierByDeclaration(referencedSymbol.fir, resultType, session)
@@ -313,6 +317,7 @@ class FirCallResolver(
             explicitReceiver = null,
             delegatedConstructorCall.arguments,
             isSafeCall = false,
+            isPotentialQualifierPart = false,
             typeArguments = typeArguments,
             session,
             file,
@@ -363,6 +368,7 @@ class FirCallResolver(
             callableReferenceAccess.explicitReceiver,
             emptyList(),
             false,
+            isPotentialQualifierPart = false,
             emptyList(),
             session,
             file,

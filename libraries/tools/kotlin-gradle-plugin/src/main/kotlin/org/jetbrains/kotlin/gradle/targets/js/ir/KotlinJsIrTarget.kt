@@ -9,13 +9,16 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.jetbrains.kotlin.gradle.plugin.AbstractKotlinTargetConfigurator.Companion.runTaskNameSuffix
+import org.jetbrains.kotlin.gradle.plugin.KotlinJsCompilerType
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinTargetWithTests
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinOnlyTarget
+import org.jetbrains.kotlin.gradle.plugin.removeJsCompilerSuffix
 import org.jetbrains.kotlin.gradle.targets.js.JsAggregatingExecutionSource
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsProducingType
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsReportAggregatingTestRun
 import org.jetbrains.kotlin.gradle.targets.js.dsl.*
+import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import javax.inject.Inject
 
@@ -32,6 +35,9 @@ constructor(
     KotlinJsSubTargetContainerDsl {
     override lateinit var testRuns: NamedDomainObjectContainer<KotlinJsReportAggregatingTestRun>
         internal set
+
+    val disambiguationClassifierInPlatform: String?
+        get() = disambiguationClassifier?.removeJsCompilerSuffix(KotlinJsCompilerType.IR)
 
     var producingType: KotlinJsProducingType? = null
 
@@ -55,7 +61,8 @@ constructor(
 
     override val browser by browserLazyDelegate
 
-    override val isBrowserConfigured: Boolean = browserLazyDelegate.isInitialized()
+    override val isBrowserConfigured: Boolean
+        get() = browserLazyDelegate.isInitialized()
 
     override fun browser(body: KotlinJsBrowserDsl.() -> Unit) {
         body(browser)
@@ -76,7 +83,8 @@ constructor(
 
     override val nodejs by nodejsLazyDelegate
 
-    override val isNodejsConfigured: Boolean = nodejsLazyDelegate.isInitialized()
+    override val isNodejsConfigured: Boolean
+        get() = nodejsLazyDelegate.isInitialized()
 
     override fun nodejs(body: KotlinJsNodeDsl.() -> Unit) {
         body(nodejs)
@@ -127,13 +135,26 @@ constructor(
         }
     }
 
-    fun useCommonJs() {
+    override fun useCommonJs() {
         compilations.all {
-            it.compileKotlinTask.kotlinOptions {
-                moduleKind = "commonjs"
-                sourceMap = true
-                sourceMapEmbedSources = null
+            it.compileKotlinTask.configureCommonJsOptions()
+
+            listOf(
+                it.productionLinkTask,
+                it.developmentLinkTask
+            ).forEach {
+                it.configure { linkTask ->
+                    linkTask.configureCommonJsOptions()
+                }
             }
+        }
+    }
+
+    private fun Kotlin2JsCompile.configureCommonJsOptions() {
+        kotlinOptions {
+            moduleKind = "commonjs"
+            sourceMap = true
+            sourceMapEmbedSources = null
         }
     }
 }

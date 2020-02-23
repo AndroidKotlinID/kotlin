@@ -339,6 +339,21 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         runTest("compiler/testData/codegen/bytecodeText/redundantValInitializer.kt");
     }
 
+    @TestMetadata("redundantValInitializerInObject.kt")
+    public void testRedundantValInitializerInObject() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeText/redundantValInitializerInObject.kt");
+    }
+
+    @TestMetadata("redundantVarInitializer.kt")
+    public void testRedundantVarInitializer() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeText/redundantVarInitializer.kt");
+    }
+
+    @TestMetadata("redundantVarInitializerInObject.kt")
+    public void testRedundantVarInitializerInObject() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeText/redundantVarInitializerInObject.kt");
+    }
+
     @TestMetadata("reifiedAsCheck.kt")
     public void testReifiedAsCheck() throws Exception {
         runTest("compiler/testData/codegen/bytecodeText/reifiedAsCheck.kt");
@@ -1354,6 +1369,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("returnUnitInLambda.kt")
         public void testReturnUnitInLambda_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/bytecodeText/coroutines/returnUnitInLambda.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("suspendMain.kt")
+        public void testSuspendMain() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/coroutines/suspendMain.kt");
         }
 
         @TestMetadata("throwOnFailure.kt")
@@ -3035,34 +3055,6 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("trimMarginPositive.kt")
         public void testTrimMarginPositive() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/intrinsicsTrim/trimMarginPositive.kt");
-        }
-    }
-
-    @TestMetadata("compiler/testData/codegen/bytecodeText/jackAndJill")
-    @TestDataPath("$PROJECT_ROOT")
-    @RunWith(JUnit3RunnerWithInners.class)
-    public static class JackAndJill extends AbstractBytecodeTextTest {
-        private void runTest(String testDataFilePath) throws Exception {
-            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
-        }
-
-        public void testAllFilesPresentInJackAndJill() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/jackAndJill"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
-        }
-
-        @TestMetadata("inlineDefaultBodyInClass.kt")
-        public void testInlineDefaultBodyInClass() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/jackAndJill/inlineDefaultBodyInClass.kt");
-        }
-
-        @TestMetadata("inlinedConstuctor.kt")
-        public void testInlinedConstuctor() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/jackAndJill/inlinedConstuctor.kt");
-        }
-
-        @TestMetadata("inlinedConstuctorWithSuperCallParams.kt")
-        public void testInlinedConstuctorWithSuperCallParams() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/jackAndJill/inlinedConstuctorWithSuperCallParams.kt");
         }
     }
 

@@ -8,12 +8,13 @@ buildscript {
     extra["defaultSnapshotVersion"] = "1.4-SNAPSHOT"
     val cacheRedirectorEnabled = findProperty("cacheRedirectorEnabled")?.toString()?.toBoolean() == true
 
-    kotlinBootstrapFrom(BootstrapOption.BintrayBootstrap("1.4.0-dev-1075", cacheRedirectorEnabled))
+    kotlinBootstrapFrom(BootstrapOption.BintrayBootstrap(kotlinBuildProperties.kotlinBootstrapVersion!!, cacheRedirectorEnabled))
 
     repositories {
         bootstrapKotlinRepo?.let(::maven)
 
         if (cacheRedirectorEnabled) {
+            maven("https://cache-redirector.jetbrains.com/jcenter.bintray.com")
             maven("https://cache-redirector.jetbrains.com/plugins.gradle.org/m2")
         } else {
             maven("https://plugins.gradle.org/m2")
@@ -28,6 +29,7 @@ buildscript {
     dependencies {
         bootstrapCompilerClasspath(kotlin("compiler-embeddable", bootstrapKotlinVersion))
 
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.10")
         classpath("com.gradle.publish:plugin-publish-plugin:0.9.7")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
         classpath("net.sf.proguard:proguard-gradle:6.1.0")
@@ -172,14 +174,14 @@ extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
-extra["versions.completion-ranking-kotlin"] = "0.0.2"
+extra["versions.completion-ranking-kotlin"] = "0.1.2"
 extra["versions.r8"] = "1.5.70"
 
 // NOTE: please, also change KTOR_NAME in pathUtil.kt and all versions in corresponding jar names in daemon tests.
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.4-dev-14287"
+    extra["versions.kotlin-native"] = "1.4-dev-14579"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
@@ -546,7 +548,18 @@ tasks {
         dependsOn(":compiler:fir:fir2ir:test")
         dependsOn(":compiler:fir:lightTree:test")
     }
-    
+
+    register("firAllTest") {
+        dependsOn(
+            ":compiler:fir:psi2fir:test",
+            ":compiler:fir:lightTree:test",
+            ":compiler:fir:resolve:test",
+            ":compiler:fir:fir2ir:test",
+            ":compiler:firBlackBox:test",
+            ":idea:firTest"
+        )
+    }
+
     register("compilerFrontendVisualizerTest") {
         dependsOn("compiler:visualizer:test")
     }

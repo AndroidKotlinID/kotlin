@@ -8,10 +8,7 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
-import org.jetbrains.kotlin.fir.declarations.FirValueParameter
-import org.jetbrains.kotlin.fir.declarations.addDefaultBoundIfNecessary
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.FirSimpleFunctionBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildTypeParameter
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
@@ -27,7 +24,6 @@ import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.diagnostics.FirUnresolvedNameError
 import org.jetbrains.kotlin.fir.resolve.inference.FirCallCompleter
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirAbstractBodyResolveTransformer
-import org.jetbrains.kotlin.fir.resolve.withNullability
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.SyntheticCallableId
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
@@ -157,16 +153,14 @@ class FirSyntheticCallGenerator(
         explicitReceiver = null,
         arguments = arguments,
         isSafeCall = false,
+        isPotentialQualifierPart = false,
         typeArguments = emptyList(),
         session = session,
         containingFile = file,
         implicitReceiverStack = implicitReceiverStack
     )
 
-    private fun generateSyntheticSelectFunction(callableId: CallableId): FirSimpleFunction {
-        // Synthetic function signature:
-        //   fun <K> select(vararg values: K): K
-        val functionSymbol = FirSyntheticFunctionSymbol(callableId)
+    private fun generateSyntheticSelectTypeParameter(): Pair<FirTypeParameter, FirResolvedTypeRef> {
         val typeParameterSymbol = FirTypeParameterSymbol()
         val typeParameter =
             buildTypeParameter {
@@ -178,7 +172,17 @@ class FirSyntheticCallGenerator(
                 addDefaultBoundIfNecessary()
             }
 
-        val returnType = buildResolvedTypeRef { type = ConeTypeParameterTypeImpl(typeParameterSymbol.toLookupTag(), false) }
+        val typeParameterTypeRef = buildResolvedTypeRef { type = ConeTypeParameterTypeImpl(typeParameterSymbol.toLookupTag(), false) }
+        return typeParameter to typeParameterTypeRef
+    }
+
+
+    private fun generateSyntheticSelectFunction(callableId: CallableId): FirSimpleFunction {
+        // Synthetic function signature:
+        //   fun <K> select(vararg values: K): K
+        val functionSymbol = FirSyntheticFunctionSymbol(callableId)
+
+        val (typeParameter, returnType) = generateSyntheticSelectTypeParameter()
 
         val argumentType = buildResolvedTypeRef { type = returnType.coneTypeUnsafe<ConeKotlinType>().createArrayOf(session) }
         val typeArgument = buildTypeProjectionWithVariance {
@@ -200,18 +204,7 @@ class FirSyntheticCallGenerator(
         //   fun <X> test(a: X) = a!!
         // `X` is not a subtype of `Any` and hence cannot satisfy `K` if it had an upper bound of `Any`.
         val functionSymbol = FirSyntheticFunctionSymbol(SyntheticCallableId.CHECK_NOT_NULL)
-        val typeParameterSymbol = FirTypeParameterSymbol()
-        val typeParameter =
-            buildTypeParameter {
-                session = this@FirSyntheticCallGenerator.session
-                name = Name.identifier("K")
-                symbol = typeParameterSymbol
-                variance = Variance.INVARIANT
-                isReified = false
-                addDefaultBoundIfNecessary()
-            }
-
-        val returnType = buildResolvedTypeRef { type = ConeTypeParameterTypeImpl(typeParameterSymbol.toLookupTag(), false) }
+        val (typeParameter, returnType) = generateSyntheticSelectTypeParameter()
 
         val argumentType = buildResolvedTypeRef {
             type = returnType.coneTypeUnsafe<ConeKotlinType>().withNullability(ConeNullability.NULLABLE, session.inferenceContext)

@@ -2369,6 +2369,8 @@ public final class kotlin/collections/SetsKt {
 	public static final fun plus (Ljava/util/Set;[Ljava/lang/Object;)Ljava/util/Set;
 	public static final fun setOf (Ljava/lang/Object;)Ljava/util/Set;
 	public static final fun setOf ([Ljava/lang/Object;)Ljava/util/Set;
+	public static final fun setOfNotNull (Ljava/lang/Object;)Ljava/util/Set;
+	public static final fun setOfNotNull ([Ljava/lang/Object;)Ljava/util/Set;
 	public static final fun sortedSetOf (Ljava/util/Comparator;[Ljava/lang/Object;)Ljava/util/TreeSet;
 	public static final fun sortedSetOf ([Ljava/lang/Object;)Ljava/util/TreeSet;
 }
@@ -3858,6 +3860,10 @@ public abstract class kotlin/properties/ObservableProperty : kotlin/properties/R
 	protected fun beforeChange (Lkotlin/reflect/KProperty;Ljava/lang/Object;Ljava/lang/Object;)Z
 	public fun getValue (Ljava/lang/Object;Lkotlin/reflect/KProperty;)Ljava/lang/Object;
 	public fun setValue (Ljava/lang/Object;Lkotlin/reflect/KProperty;Ljava/lang/Object;)V
+}
+
+public abstract interface class kotlin/properties/PropertyDelegateProvider {
+	public abstract fun provideDelegate (Ljava/lang/Object;Lkotlin/reflect/KProperty;)Ljava/lang/Object;
 }
 
 public abstract interface class kotlin/properties/ReadOnlyProperty {

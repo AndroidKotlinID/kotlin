@@ -318,13 +318,15 @@ class KotlinToResolvedCallTransformer(
                 )
             }
 
-            updateRecordedType(
-                argumentExpression,
-                parameter,
-                newContext,
-                constantConvertedArgument?.unknownIntegerType?.unwrap(),
-                resolvedCall.isReallySuccess()
-            )
+            if (!valueArgument.isExternal()) {
+                updateRecordedType(
+                    argumentExpression,
+                    parameter,
+                    newContext,
+                    constantConvertedArgument?.unknownIntegerType?.unwrap(),
+                    resolvedCall.isReallySuccess()
+                )
+            }
         }
     }
 
@@ -773,16 +775,23 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
             }
             is FunctionDescriptor -> candidateDescriptor.substituteInferredVariablesAndApproximate(substitutor)
             is PropertyDescriptor -> {
-                val shouldRunApproximation = candidateDescriptor.returnType?.let { type ->
-                    type.contains { it is NewCapturedType } ||
-                            type.contains { it.constructor is IntegerLiteralTypeConstructor } ||
-                            type.contains { it is DefinitelyNotNullType }
-                } ?: false
-
-                if (candidateDescriptor.typeParameters.isNotEmpty() || shouldRunApproximation)
+                if (candidateDescriptor.typeParameters.isNotEmpty())
                     candidateDescriptor.substituteInferredVariablesAndApproximate(substitutor)
-                else
-                    candidateDescriptor
+                else {
+                    val shouldForceApproximationAndSubstitution = candidateDescriptor.returnType?.let { type ->
+                        type.contains {
+                            it is NewCapturedType ||
+                                    it.constructor is IntegerLiteralTypeConstructor ||
+                                    it is DefinitelyNotNullType ||
+                                    it is StubType
+                        }
+                    } ?: false
+
+                    if (shouldForceApproximationAndSubstitution)
+                        candidateDescriptor.substituteInferredVariablesAndApproximate(substitutor)
+                    else
+                        candidateDescriptor
+                }
             }
             else -> candidateDescriptor
         }

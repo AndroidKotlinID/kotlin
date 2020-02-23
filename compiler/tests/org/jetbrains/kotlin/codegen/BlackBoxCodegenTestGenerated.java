@@ -1716,6 +1716,24 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/builderInference")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class BuilderInference extends AbstractBlackBoxCodegenTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInBuilderInference() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/builderInference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("lackOfNullCheckOnNullableInsideBuild.kt")
+        public void testLackOfNullCheckOnNullableInsideBuild() throws Exception {
+            runTest("compiler/testData/codegen/box/builderInference/lackOfNullCheckOnNullableInsideBuild.kt");
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/builtinStubMethods")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3456,6 +3474,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("initializerBlockDImpl.kt")
         public void testInitializerBlockDImpl() throws Exception {
             runTest("compiler/testData/codegen/box/classes/initializerBlockDImpl.kt");
+        }
+
+        @TestMetadata("initializerBlockResetToDefault.kt")
+        public void testInitializerBlockResetToDefault() throws Exception {
+            runTest("compiler/testData/codegen/box/classes/initializerBlockResetToDefault.kt");
         }
 
         @TestMetadata("innerClass.kt")
@@ -6132,6 +6155,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/crossInlineWithCapturedOuterReceiver.kt", "kotlin.coroutines");
         }
 
+        @TestMetadata("defaultParametersInSuspendWithJvmOverloads.kt")
+        public void testDefaultParametersInSuspendWithJvmOverloads() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/defaultParametersInSuspendWithJvmOverloads.kt");
+        }
+
         @TestMetadata("defaultParametersInSuspend.kt")
         public void testDefaultParametersInSuspend_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/defaultParametersInSuspend.kt", "kotlin.coroutines.experimental");
@@ -6170,6 +6198,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("emptyClosure.kt")
         public void testEmptyClosure_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/emptyClosure.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("emptyCommonConstraintSystemForCoroutineInferenceCall.kt")
+        public void testEmptyCommonConstraintSystemForCoroutineInferenceCall() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/emptyCommonConstraintSystemForCoroutineInferenceCall.kt");
         }
 
         @TestMetadata("epam.kt")
@@ -6901,6 +6934,16 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
 
             public void testAllFilesPresentInBridges() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/coroutines/bridges"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("interfaceSpecialization.kt")
+            public void testInterfaceSpecialization_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/interfaceSpecialization.kt", "kotlin.coroutines.experimental");
+            }
+
+            @TestMetadata("interfaceSpecialization.kt")
+            public void testInterfaceSpecialization_1_3() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/interfaceSpecialization.kt", "kotlin.coroutines");
             }
 
             @TestMetadata("lambdaWithLongReceiver.kt")
@@ -9849,6 +9892,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/delegatedProperty/useReflectionOnKProperty.kt");
         }
 
+        @TestMetadata("valByMapDelegatedProperty.kt")
+        public void testValByMapDelegatedProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/delegatedProperty/valByMapDelegatedProperty.kt");
+        }
+
         @TestMetadata("valInInnerClass.kt")
         public void testValInInnerClass() throws Exception {
             runTest("compiler/testData/codegen/box/delegatedProperty/valInInnerClass.kt");
@@ -12692,9 +12740,19 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/inference/builderInference.kt");
         }
 
+        @TestMetadata("builderInferenceLeakingVariable.kt")
+        public void testBuilderInferenceLeakingVariable() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/builderInferenceLeakingVariable.kt");
+        }
+
         @TestMetadata("capturedStarProjection.kt")
         public void testCapturedStarProjection() throws Exception {
             runTest("compiler/testData/codegen/box/inference/capturedStarProjection.kt");
+        }
+
+        @TestMetadata("coercionToUnitWithLastLambdaExpression.kt")
+        public void testCoercionToUnitWithLastLambdaExpression() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/coercionToUnitWithLastLambdaExpression.kt");
         }
 
         @TestMetadata("integerLiteralTypeInLamdaReturnType.kt")
@@ -12715,6 +12773,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("kt35684.kt")
         public void testKt35684() throws Exception {
             runTest("compiler/testData/codegen/box/inference/kt35684.kt");
+        }
+
+        @TestMetadata("kt36446.kt")
+        public void testKt36446() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/kt36446.kt");
         }
 
         @TestMetadata("lastExpressionOfLambdaWithNothingConstraint.kt")
@@ -17462,6 +17525,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("initializationOrder.kt")
         public void testInitializationOrder() throws Exception {
             runTest("compiler/testData/codegen/box/objects/initializationOrder.kt");
+        }
+
+        @TestMetadata("initializerBlockResetToDefault.kt")
+        public void testInitializerBlockResetToDefault() throws Exception {
+            runTest("compiler/testData/codegen/box/objects/initializerBlockResetToDefault.kt");
         }
 
         @TestMetadata("interfaceCompanion.kt")
@@ -24390,6 +24458,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             public void testSignatureOfSimpleInnerSimpleOuter() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/genericSignature/signatureOfSimpleInnerSimpleOuter.kt");
             }
+
+            @TestMetadata("suspendFunctionLiteralGenericSignature.kt")
+            public void testSuspendFunctionLiteralGenericSignature() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/genericSignature/suspendFunctionLiteralGenericSignature.kt");
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/reflection/isInstance")
@@ -28180,6 +28253,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("privateInterfaceMethod.kt")
         public void testPrivateInterfaceMethod() throws Exception {
             runTest("compiler/testData/codegen/box/traits/privateInterfaceMethod.kt");
+        }
+
+        @TestMetadata("receiverOfIntersectionType.kt")
+        public void testReceiverOfIntersectionType() throws Exception {
+            runTest("compiler/testData/codegen/box/traits/receiverOfIntersectionType.kt");
         }
 
         @TestMetadata("syntheticAccessor.kt")

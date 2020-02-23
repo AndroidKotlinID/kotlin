@@ -14,6 +14,8 @@ import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.*
+import org.jetbrains.kotlin.fir.resolve.inference.ResolvedCallableReferenceAtom
+import org.jetbrains.kotlin.fir.resolve.inference.csBuilder
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.SyntheticSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
@@ -228,7 +230,10 @@ internal object CheckCallableReferenceExpectedType : CheckerStage() {
         val returnTypeRef = candidate.bodyResolveComponents.returnTypeCalculator.tryCalculateReturnType(fir)
 
         val resultingType: ConeKotlinType = when (fir) {
-            is FirFunction -> createKFunctionType(fir, resultingReceiverType, returnTypeRef)
+            is FirFunction -> createKFunctionType(
+                fir, resultingReceiverType, returnTypeRef,
+                expectedParameterNumberWithReceiver = expectedType?.let { it.typeArguments.size - 1 }
+            )
             is FirVariable<*> -> createKPropertyType(fir, resultingReceiverType, returnTypeRef)
             else -> ConeKotlinErrorType("Unknown callable kind: ${fir::class}")
         }.let(candidate.substitutor::substituteOrSelf)
@@ -282,10 +287,20 @@ private fun createKPropertyType(
 private fun createKFunctionType(
     function: FirFunction<*>,
     receiverType: ConeKotlinType?,
-    returnTypeRef: FirResolvedTypeRef
+    returnTypeRef: FirResolvedTypeRef,
+    expectedParameterNumberWithReceiver: Int?
 ): ConeKotlinType {
-    val parameterTypes = function.valueParameters.map {
-        it.returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: ConeKotlinErrorType("No type for parameter $it")
+    val parameterTypes = mutableListOf<ConeKotlinType>()
+    val expectedParameterNumber = when {
+        expectedParameterNumberWithReceiver == null -> null
+        receiverType != null -> expectedParameterNumberWithReceiver - 1
+        else -> expectedParameterNumberWithReceiver
+    }
+    for ((index, valueParameter) in function.valueParameters.withIndex()) {
+        if (expectedParameterNumber == null || index < expectedParameterNumber || valueParameter.defaultValue == null) {
+            parameterTypes += valueParameter.returnTypeRef.coneTypeSafe()
+                ?: ConeKotlinErrorType("No type for parameter $valueParameter")
+        }
     }
 
     return createFunctionalType(
@@ -406,7 +421,7 @@ internal object CheckVisibility : CheckerStage() {
             }
             Visibilities.PRIVATE, Visibilities.PRIVATE_TO_THIS -> {
                 if (declaration.session == callInfo.session) {
-                    if (ownerId == null) {
+                    if (ownerId == null || declaration is FirConstructor && declaration.isFromSealedClass) {
                         // Top-level: visible in file
                         candidateFile == useSiteFile
                     } else {

@@ -450,6 +450,7 @@ class QuickFixRegistrar : QuickFixContributor {
             MigrateExternalExtensionFix
         )
         PROTECTED_CALL_FROM_PUBLIC_INLINE.registerFactory(ReplaceProtectedToPublishedApiCallFix)
+        PROTECTED_CALL_FROM_PUBLIC_INLINE_ERROR.registerFactory(ReplaceProtectedToPublishedApiCallFix)
 
         POSITIONED_VALUE_ARGUMENT_FOR_JAVA_ANNOTATION.registerFactory(ReplaceJavaAnnotationPositionedArgumentsFix)
 
@@ -638,5 +639,8 @@ class QuickFixRegistrar : QuickFixContributor {
 
         ACCIDENTAL_OVERRIDE.registerFactory(MakePrivateAndOverrideMemberFix.AccidentalOverrideFactory)
 
+        MUST_BE_INITIALIZED.registerFactory(ChangeVariableMutabilityFix.MUST_BE_INITIALIZED_FACTORY)
+
+        TOO_MANY_ARGUMENTS.registerFactory(RemoveArgumentFix)
     }
 }
