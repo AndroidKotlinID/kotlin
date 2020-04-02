@@ -405,14 +405,24 @@ public class JoinLinesTestGenerated extends AbstractJoinLinesTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/joinLines/removeTrailingComma"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
-        @TestMetadata("destructionDeclaration.kt")
-        public void testDestructionDeclaration() throws Exception {
-            runTest("idea/testData/joinLines/removeTrailingComma/destructionDeclaration.kt");
+        @TestMetadata("destructuringDeclarations.kt")
+        public void testDestructuringDeclarations() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/destructuringDeclarations.kt");
         }
 
-        @TestMetadata("destructionDeclarationInLambda.kt")
-        public void testDestructionDeclarationInLambda() throws Exception {
-            runTest("idea/testData/joinLines/removeTrailingComma/destructionDeclarationInLambda.kt");
+        @TestMetadata("destructuringDeclarationsInLambda.kt")
+        public void testDestructuringDeclarationsInLambda() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/destructuringDeclarationsInLambda.kt");
+        }
+
+        @TestMetadata("functionArguments.kt")
+        public void testFunctionArguments() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/functionArguments.kt");
+        }
+
+        @TestMetadata("indices.kt")
+        public void testIndices() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/indices.kt");
         }
 
         @TestMetadata("inner.kt")
@@ -425,9 +435,19 @@ public class JoinLinesTestGenerated extends AbstractJoinLinesTest {
             runTest("idea/testData/joinLines/removeTrailingComma/lambda.kt");
         }
 
+        @TestMetadata("literal.kt")
+        public void testLiteral() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/literal.kt");
+        }
+
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("idea/testData/joinLines/removeTrailingComma/simple.kt");
+        }
+
+        @TestMetadata("typeArguments.kt")
+        public void testTypeArguments() throws Exception {
+            runTest("idea/testData/joinLines/removeTrailingComma/typeArguments.kt");
         }
 
         @TestMetadata("typeParameters.kt")

@@ -30,7 +30,7 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.properties.Delegates
 
-@UseExperimental(FirImplementationDetail::class)
+@OptIn(FirImplementationDetail::class)
 class FirJavaField @FirImplementationDetail constructor(
     override val source: FirSourceElement?,
     override val session: FirSession,
@@ -42,6 +42,7 @@ class FirJavaField @FirImplementationDetail constructor(
     override val isVar: Boolean,
     override val annotations: MutableList<FirAnnotationCall>,
     override val typeParameters: MutableList<FirTypeParameter>,
+    val isEnumEntry: Boolean
 ) : FirField() {
     init {
         symbol.bind(this)
@@ -116,6 +117,10 @@ class FirJavaField @FirImplementationDetail constructor(
     }
 
     override fun replaceReceiverTypeRef(newReceiverTypeRef: FirTypeRef?) {}
+
+    override fun <D> transformDelegate(transformer: FirTransformer<D>, data: D): FirField {
+        return this
+    }
 }
 
 @FirBuilderDsl
@@ -123,10 +128,11 @@ internal class FirJavaFieldBuilder : FirFieldBuilder() {
     var modality: Modality? = null
     lateinit var visibility: Visibility
     var isStatic: Boolean by Delegates.notNull()
+    var isEnumEntry: Boolean by Delegates.notNull()
 
     override var resolvePhase: FirResolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
 
-    @UseExperimental(FirImplementationDetail::class)
+    @OptIn(FirImplementationDetail::class)
     override fun build(): FirJavaField {
         val status: FirDeclarationStatus = FirDeclarationStatusImpl(visibility, modality).apply {
             isStatic = this@FirJavaFieldBuilder.isStatic
@@ -145,12 +151,13 @@ internal class FirJavaFieldBuilder : FirFieldBuilder() {
             status,
             isVar,
             annotations,
-            typeParameters
+            typeParameters,
+            isEnumEntry
         )
     }
 }
 
-@UseExperimental(ExperimentalContracts::class)
+@OptIn(ExperimentalContracts::class)
 internal inline fun buildJavaField(init: FirJavaFieldBuilder.() -> Unit): FirJavaField {
     contract {
         callsInPlace(init, InvocationKind.EXACTLY_ONCE)

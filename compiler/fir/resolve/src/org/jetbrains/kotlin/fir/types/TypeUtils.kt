@@ -85,7 +85,7 @@ fun ConeKotlinType.makeConeTypeDefinitelyNotNullOrNotNull(): ConeKotlinType {
     return ConeDefinitelyNotNullType.create(this) ?: this.withNullability(ConeNullability.NOT_NULL)
 }
 
-fun <T : ConeKotlinType> T.withArguments(arguments: Array<out ConeKotlinTypeProjection>): T {
+fun <T : ConeKotlinType> T.withArguments(arguments: Array<out ConeTypeProjection>): T {
     if (this.typeArguments === arguments) {
         return this
     }
@@ -121,34 +121,34 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability, typeCon
 
     return when (this) {
         is ConeClassErrorType -> this
-        is ConeClassLikeTypeImpl -> ConeClassLikeTypeImpl(lookupTag, typeArguments, nullability.isNullable) as T
-        is ConeTypeParameterTypeImpl -> ConeTypeParameterTypeImpl(lookupTag, nullability.isNullable) as T
+        is ConeClassLikeTypeImpl -> ConeClassLikeTypeImpl(lookupTag, typeArguments, nullability.isNullable)
+        is ConeTypeParameterTypeImpl -> ConeTypeParameterTypeImpl(lookupTag, nullability.isNullable)
         is ConeFlexibleType -> {
             if (nullability == ConeNullability.UNKNOWN) {
                 if (lowerBound.nullability != upperBound.nullability || lowerBound.nullability == ConeNullability.UNKNOWN) {
                     return this
                 }
             }
-            coneFlexibleOrSimpleType(typeContext, lowerBound.withNullability(nullability), upperBound.withNullability(nullability)) as T
+            coneFlexibleOrSimpleType(typeContext, lowerBound.withNullability(nullability), upperBound.withNullability(nullability))
         }
-        is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag) as T
-        is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor) as T
+        is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag)
+        is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor)
         is ConeIntersectionType -> when (nullability) {
             ConeNullability.NULLABLE -> this.mapTypes {
                 it.withNullability(nullability)
             }
             ConeNullability.UNKNOWN -> this // TODO: is that correct?
             ConeNullability.NOT_NULL -> this
-        } as T
-        is ConeStubType -> ConeStubType(variable, nullability) as T
+        }
+        is ConeStubType -> ConeStubType(variable, nullability)
         is ConeDefinitelyNotNullType -> when (nullability) {
             ConeNullability.NOT_NULL -> this
             ConeNullability.NULLABLE -> original.withNullability(nullability)
             ConeNullability.UNKNOWN -> original.withNullability(nullability)
-        } as T
-        is ConeIntegerLiteralType -> this
+        }
+        is ConeIntegerLiteralType -> ConeIntegerLiteralTypeImpl(value, isUnsigned, nullability)
         else -> error("sealed: ${this::class}")
-    }
+    } as T
 }
 
 fun coneFlexibleOrSimpleType(
@@ -175,7 +175,7 @@ fun coneFlexibleOrSimpleType(
     }
 }
 
-fun ConeKotlinType.toTypeProjection(variance: Variance): ConeKotlinTypeProjection =
+fun ConeKotlinType.toTypeProjection(variance: Variance): ConeTypeProjection =
     when (variance) {
         Variance.INVARIANT -> this
         Variance.IN_VARIANCE -> ConeKotlinTypeProjectionIn(this)
@@ -183,13 +183,13 @@ fun ConeKotlinType.toTypeProjection(variance: Variance): ConeKotlinTypeProjectio
     }
 
 fun ConeClassLikeLookupTag.constructClassType(
-    typeArguments: Array<out ConeKotlinTypeProjection>,
+    typeArguments: Array<out ConeTypeProjection>,
     isNullable: Boolean,
 ): ConeClassLikeType {
     return ConeClassLikeTypeImpl(this, typeArguments, isNullable)
 }
 
-fun ConeClassifierLookupTag.constructType(typeArguments: Array<out ConeKotlinTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
+fun ConeClassifierLookupTag.constructType(typeArguments: Array<out ConeTypeProjection>, isNullable: Boolean): ConeLookupTagBasedType {
     return when (this) {
         is ConeTypeParameterLookupTag -> ConeTypeParameterTypeImpl(this, isNullable)
         is ConeClassLikeLookupTag -> this.constructClassType(typeArguments, isNullable)

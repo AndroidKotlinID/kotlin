@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
 import org.jetbrains.kotlin.backend.common.serialization.KlibIrVersion
+import org.jetbrains.kotlin.backend.common.serialization.knownBuiltins
 import org.jetbrains.kotlin.backend.common.serialization.mangle.ManglerChecker
 import org.jetbrains.kotlin.backend.common.serialization.mangle.descriptor.Ir2DescriptorManglerAdapter
 import org.jetbrains.kotlin.backend.common.serialization.metadata.DynamicTypeDeserializer
@@ -37,6 +38,7 @@ import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.konan.properties.propertyList
 import org.jetbrains.kotlin.konan.util.KlibMetadataFactories
 import org.jetbrains.kotlin.library.*
+import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
 import org.jetbrains.kotlin.library.impl.buildKoltinLibrary
 import org.jetbrains.kotlin.library.resolver.KotlinLibraryResolveResult
 import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
@@ -47,6 +49,7 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.Psi2IrConfiguration
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
 import org.jetbrains.kotlin.psi2ir.generators.GeneratorContext
+import org.jetbrains.kotlin.psi2ir.generators.createGeneratorContext
 import org.jetbrains.kotlin.psi2ir.generators.GeneratorExtensions
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.BindingContextUtils
@@ -198,6 +201,12 @@ fun loadIr(
             deserializer.initializeExpectActualLinker()
 
             val moduleFragment = psi2IrContext.generateModuleFragmentWithPlugins(project, mainModule.files, deserializer)
+
+            // TODO: not sure whether this check should be enabled by default. Add configuration key for it.
+            val mangleChecker = ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc))
+            moduleFragment.acceptVoid(mangleChecker)
+            irBuiltIns.knownBuiltins.forEach { it.acceptVoid(mangleChecker) }
+
             return IrModuleInfo(moduleFragment, deserializedModuleFragments, irBuiltIns, symbolTable, deserializer)
         }
         is MainModule.Klib -> {
@@ -241,7 +250,7 @@ private fun runAnalysisAndPreparePsi2Ir(depsDescriptors: ModulesStructure): Gene
     val mangler = JsManglerDesc
     val signaturer = IdSignatureDescriptor(mangler)
 
-    return GeneratorContext(
+    return createGeneratorContext(
         Psi2IrConfiguration(),
         analysisResult.moduleDescriptor,
         analysisResult.bindingContext,
@@ -503,7 +512,8 @@ fun serializeModuleIntoKlib(
         moduleName = moduleName,
         nopack = nopack,
         output = klibPath,
-        versions = versions
+        versions = versions,
+        builtInsPlatform = BuiltInsPlatform.JS
     )
 }
 

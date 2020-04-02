@@ -11,21 +11,24 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.modality
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
-import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.ConeClassLikeType
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.coneTypeSafe
+import org.jetbrains.kotlin.fir.types.coneTypeUnsafe
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-@UseExperimental(DfaInternals::class)
-class VariableStorage(val session: FirSession) {
+@OptIn(DfaInternals::class)
+class VariableStorage(private val session: FirSession) {
     private var counter = 1
     private val realVariables: MutableMap<Identifier, RealVariable> = HashMap()
     private val syntheticVariables: MutableMap<FirElement, SyntheticVariable> = HashMap()
@@ -42,7 +45,7 @@ class VariableStorage(val session: FirSession) {
     }
 
     private fun FirElement.unwrapElement(): FirElement = when (this) {
-        is FirWhenSubjectExpression -> whenSubject.whenExpression.let { it.subjectVariable ?: it.subject } ?: this
+        is FirWhenSubjectExpression -> whenSubject.whenExpression.let { it.subjectVariable ?: it.subject }?.unwrapElement() ?: this
         is FirExpressionWithSmartcast -> originalExpression.unwrapElement()
         else -> this
     }
@@ -70,7 +73,6 @@ class VariableStorage(val session: FirSession) {
             is FirQualifiedAccessExpression -> originalFir
             is FirWhenSubjectExpression -> originalFir.whenSubject.whenExpression.subject as? FirQualifiedAccessExpression
             is FirVariableAssignment -> originalFir
-            is FirArraySetCall -> originalFir
             else -> null
         }
 
@@ -149,7 +151,7 @@ class VariableStorage(val session: FirSession) {
         syntheticVariables.clear()
     }
 
-    @UseExperimental(ExperimentalContracts::class)
+    @OptIn(ExperimentalContracts::class)
     fun AbstractFirBasedSymbol<*>?.isStable(originalFir: FirElement): Boolean {
         contract {
             returns(true) implies(this@isStable != null)
@@ -172,7 +174,7 @@ class VariableStorage(val session: FirSession) {
             property.getter.let { it != null && it !is FirDefaultPropertyAccessor } -> false
             property.modality != Modality.FINAL -> {
                 val dispatchReceiver = (originalFir as? FirQualifiedAccess)?.dispatchReceiver ?: return false
-                val propertyClassName = (this as FirPropertySymbol).callableId.classId
+                val propertyClassName = (this as FirPropertySymbol).let { it.overriddenSymbol ?: it }.callableId.classId
                 val receiverType = dispatchReceiver.typeRef.coneTypeSafe<ConeClassLikeType>()?.fullyExpandedType(session) ?: return false
                 val receiverSymbol = receiverType.fullyExpandedType(session).lookupTag.toSymbol(session) ?: return false
                 val receiverClassName = receiverSymbol.classId

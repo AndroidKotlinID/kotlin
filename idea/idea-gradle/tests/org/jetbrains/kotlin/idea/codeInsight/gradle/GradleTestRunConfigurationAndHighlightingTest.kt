@@ -16,19 +16,14 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiFile
 import org.jetbrains.kotlin.gradle.GradleDaemonAnalyzerTestCase
 import org.jetbrains.kotlin.gradle.checkFiles
-import org.jetbrains.kotlin.idea.run.KotlinGradleRunConfiguration
 import org.jetbrains.kotlin.test.TagsTestDataUtil
+import org.jetbrains.plugins.gradle.service.execution.GradleRunConfiguration
 import org.junit.Test
 import java.io.File
 
 class GradleTestRunConfigurationAndHighlightingTest : GradleImportingTestCase() {
     @Test
     fun testExpectClassWithTests() {
-        doTest()
-    }
-
-    @Test
-    fun testKotlinJUnitSettings() {
         doTest()
     }
 
@@ -54,7 +49,12 @@ class GradleTestRunConfigurationAndHighlightingTest : GradleImportingTestCase() 
         checkFiles(
             files.filter { it.extension == "kt" },
             project,
-            object : GradleDaemonAnalyzerTestCase(testLineMarkers = true, checkWarnings = true, checkInfos = false) {
+            object : GradleDaemonAnalyzerTestCase(
+                testLineMarkers = true,
+                checkWarnings = true,
+                checkInfos = false,
+                rootDisposable = testRootDisposable
+            ) {
                 override fun renderAdditionalAttributeForTag(tag: TagsTestDataUtil.TagInfo<*>): String? {
                     val lineMarkerInfo = tag.data as? LineMarkerInfo<*> ?: return null
 
@@ -64,7 +64,7 @@ class GradleTestRunConfigurationAndHighlightingTest : GradleImportingTestCase() 
                     if ("Run Test" !in lineMarkerInfo.lineMarkerTooltip.orEmpty()) return null
 
                     val kotlinConfigsFromContext = lineMarkerInfo.extractConfigurationsFromContext()
-                        .filter { it.configuration is KotlinGradleRunConfiguration }
+                        .filter { it.configuration is GradleRunConfiguration }
 
                     if (kotlinConfigsFromContext.isEmpty()) return "settings=\"Nothing here\""
 
@@ -100,7 +100,7 @@ class GradleTestRunConfigurationAndHighlightingTest : GradleImportingTestCase() 
     }
 
     private fun ConfigurationFromContext.renderDescription(tagsToRender: List<RunConfigurationsTags>): String {
-        val configuration = configuration as KotlinGradleRunConfiguration
+        val configuration = configuration as GradleRunConfiguration
 
         val location = PsiLocation(sourceElement)
         val context = ConfigurationContext.createEmptyContextForLocation(location)

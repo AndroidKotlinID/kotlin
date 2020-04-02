@@ -136,14 +136,14 @@ compileKotlin2Js {
         outputFile = "${buildDir}/classes/main/kotlin.js"
         sourceMap = true
         sourceMapPrefix = "./"
+        sourceMapBaseDirs = files(
+                [builtinsSrcDir, jsSrcDir, jsCommonSrcDir, commonSrcDir, commonSrcDir2, unsignedCommonSrcDir]
+                        .collect { file(it).absoluteFile }
+        )
         freeCompilerArgs += [
-            "-source-map-base-dirs",
-            [builtinsSrcDir, jsSrcDir, jsCommonSrcDir, commonSrcDir, commonSrcDir2, unsignedCommonSrcDir]
-                    .collect { file(it).absoluteFile }
-                    .join(File.pathSeparator),
-            "-Xuse-experimental=kotlin.Experimental",
-            "-Xuse-experimental=kotlin.ExperimentalMultiplatform",
-            "-Xuse-experimental=kotlin.contracts.ExperimentalContracts",
+            "-Xopt-in=kotlin.RequiresOptIn",
+            "-Xopt-in=kotlin.ExperimentalMultiplatform",
+            "-Xopt-in=kotlin.contracts.ExperimentalContracts",
             "-Xinline-classes"
         ]
     }
@@ -153,9 +153,9 @@ compileTestKotlin2Js {
     kotlinOptions {
         moduleKind = "umd"
         freeCompilerArgs += [
-            "-Xuse-experimental=kotlin.Experimental",
-            "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
-            "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
+            "-Xopt-in=kotlin.RequiresOptIn",
+            "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
+            "-Xopt-in=kotlin.ExperimentalStdlibApi",
         ]
     }
 }
@@ -268,7 +268,7 @@ task libraryJarWithIr(type: Zip, dependsOn: libraryJarWithoutIr) {
     if (rootProject.includeStdlibJsIr) {
         def irKlib = tasks.getByPath(":kotlin-stdlib-js-ir:generateFullRuntimeKLib")
         dependsOn(irKlib)
-        from fileTree("${irKlib.outputs.files.singleFile.path}/klib")
+        from fileTree(irKlib.outputs.files.singleFile.path)
     }
 }
 

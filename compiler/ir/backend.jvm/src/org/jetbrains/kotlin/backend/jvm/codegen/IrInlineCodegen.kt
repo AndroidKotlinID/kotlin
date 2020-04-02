@@ -5,15 +5,13 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
-import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionViewOrStub
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineParameter
 import org.jetbrains.kotlin.backend.jvm.ir.isLambda
+import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.state.GenerationState
-import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
 import org.jetbrains.kotlin.ir.declarations.*
@@ -146,36 +144,16 @@ class IrInlineCodegen(
         invocationParamBuilder.markValueParametersStart()
     }
 
-    private inner class IrInlineCall(
-        private val irFunctionAccessExpression: IrFunctionAccessExpression
-    ) : InlineCall {
-
-        override val calleeDescriptor: CallableDescriptor =
-            irFunctionAccessExpression.symbol.descriptor.original
-
-        override val callElement: PsiElement?
-            get() =
-                codegen.context.psiSourceManager.findPsiElement(irFunctionAccessExpression, function)
-                    ?: codegen.context.psiSourceManager.findPsiElement(function)
-
-        override val id: Any
-            get() = irFunctionAccessExpression
-
-        override fun toString(): String = irFunctionAccessExpression.render()
-    }
-
     override fun genCall(
         callableMethod: IrCallableMethod,
         codegen: ExpressionCodegen,
         expression: IrFunctionAccessExpression
     ) {
-        val inlineCall = IrInlineCall(expression)
-        if (!state.globalInlineContext.enterIntoInlining(inlineCall)) {
-            AsmUtil.genThrow(
-                codegen.v,
-                "java/lang/UnsupportedOperationException",
-                "Call is a part of inline call cycle: ${expression.render()}"
-            )
+        val element = codegen.context.psiSourceManager.findPsiElement(expression, codegen.irFunction)
+            ?: codegen.context.psiSourceManager.findPsiElement(codegen.irFunction)
+        if (!state.globalInlineContext.enterIntoInlining(expression.symbol.owner.suspendFunctionOriginal().descriptor, element)) {
+            val message = "Call is a part of inline call cycle: ${expression.render()}"
+            AsmUtil.genThrow(codegen.v, "java/lang/UnsupportedOperationException", message)
             return
         }
         try {
@@ -187,7 +165,7 @@ class IrInlineCodegen(
                 false
             )
         } finally {
-            state.globalInlineContext.exitFromInliningOf(inlineCall)
+            state.globalInlineContext.exitFromInlining()
         }
     }
 
@@ -222,7 +200,7 @@ class IrExpressionLambdaImpl(
     val function: IrFunction,
     private val typeMapper: IrTypeMapper,
     methodSignatureMapper: MethodSignatureMapper,
-    private val context: JvmBackendContext,
+    context: JvmBackendContext,
     isCrossInline: Boolean,
     override val isBoundCallableReference: Boolean,
     override val isExtensionLambda: Boolean
@@ -248,7 +226,7 @@ class IrExpressionLambdaImpl(
 
     override val capturedVars: List<CapturedParamDesc> = capturedParameters.keys.toList()
 
-    private val loweredMethod = methodSignatureMapper.mapAsmMethod(function.suspendFunctionViewOrStub(context))
+    private val loweredMethod = methodSignatureMapper.mapAsmMethod(function)
 
     val capturedParamsInDesc: List<Type> = if (isBoundCallableReference) {
         loweredMethod.argumentTypes.take(1)
@@ -270,9 +248,7 @@ class IrExpressionLambdaImpl(
 
     override val hasDispatchReceiver: Boolean = false
 
-    override fun getInlineSuspendLambdaViewDescriptor(): FunctionDescriptor {
-        return function.suspendFunctionViewOrStub(context).descriptor
-    }
+    override fun getInlineSuspendLambdaViewDescriptor(): FunctionDescriptor = function.descriptor
 
     override fun isCapturedSuspend(desc: CapturedParamDesc, inliningContext: InliningContext): Boolean =
         capturedParameters[desc]?.let { it.isInlineParameter() && it.type.isSuspendFunctionTypeOrSubtype() } == true

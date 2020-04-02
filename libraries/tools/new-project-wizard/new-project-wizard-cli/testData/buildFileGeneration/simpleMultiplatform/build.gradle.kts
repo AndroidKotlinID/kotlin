@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.3.61"
+    kotlin("multiplatform") version "1.3.70"
 }
 group = "testGroupId"
 version = "1.0-SNAPSHOT"
@@ -8,7 +8,11 @@ repositories {
     mavenCentral()
 }
 kotlin {
-    jvm()
+    jvm {
+        compilations.all {
+            kotlinOptions.jvmTarget = "9"
+        }
+    }
     js("a") {
         browser {
 

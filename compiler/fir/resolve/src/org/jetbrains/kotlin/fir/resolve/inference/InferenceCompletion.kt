@@ -6,121 +6,59 @@
 package org.jetbrains.kotlin.fir.resolve.inference
 
 import org.jetbrains.kotlin.fir.expressions.*
+import org.jetbrains.kotlin.fir.resolve.BodyResolveComponents
 import org.jetbrains.kotlin.fir.resolve.calls.Candidate
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.returnExpressions
-import org.jetbrains.kotlin.fir.types.ConeIntegerLiteralType
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
-import org.jetbrains.kotlin.fir.types.ConeTypeVariable
-import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
+import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.inference.components.KotlinConstraintSystemCompleter
+import org.jetbrains.kotlin.resolve.calls.inference.components.KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode
 import org.jetbrains.kotlin.resolve.calls.inference.components.TypeVariableDirectionCalculator
 import org.jetbrains.kotlin.resolve.calls.inference.components.VariableFixationFinder
 import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintSystemImpl
+import org.jetbrains.kotlin.resolve.calls.inference.model.SimpleConstraintSystemConstraintPosition
 import org.jetbrains.kotlin.resolve.calls.inference.model.VariableWithConstraints
-import org.jetbrains.kotlin.resolve.calls.model.PostponedResolvedAtom
 import org.jetbrains.kotlin.resolve.calls.model.PostponedResolvedAtomMarker
 import org.jetbrains.kotlin.types.model.KotlinTypeMarker
 import org.jetbrains.kotlin.types.model.TypeConstructorMarker
-import org.jetbrains.kotlin.types.model.isIntegerLiteralTypeConstructor
 import org.jetbrains.kotlin.types.model.typeConstructor
 import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-
-fun Candidate.computeCompletionMode(
-    components: InferenceComponents,
-    expectedType: FirTypeRef?,
-    currentReturnType: ConeKotlinType?
-): KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode {
-    // Presence of expected type means that we trying to complete outermost call => completion mode should be full
-    if (expectedType != null) return KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL
-
-    // This is questionable as null return type can be only for error call
-    if (currentReturnType == null || currentReturnType is ConeIntegerLiteralType)
-        return KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.PARTIAL
-
-    return when {
-        // Consider call foo(bar(x)), if return type of bar is a proper one, then we can complete resolve for bar => full completion mode
-        // Otherwise, we shouldn't complete bar until we process call foo
-        csBuilder.isProperType(currentReturnType) -> KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL
-
-        // Nested call is connected with the outer one through the UPPER constraint (returnType <: expectedOuterType)
-        // This means that there will be no new LOWER constraints =>
-        //   it's possible to complete call now if there are proper LOWER constraints
-        csBuilder.isTypeVariable(currentReturnType) ->
-            if (hasProperNonTrivialLowerConstraints(components, currentReturnType))
-                KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL
-            else
-                KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.PARTIAL
-
-        // Return type has proper equal constraints => there is no need in the outer call
-        containsTypeVariablesWithProperEqualConstraints(components, currentReturnType) -> KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL
-
-        else -> KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.PARTIAL
-    }
-}
-
 val Candidate.csBuilder: NewConstraintSystemImpl get() = system.getBuilder()
 
-private fun Candidate.containsTypeVariablesWithProperEqualConstraints(components: InferenceComponents, type: ConeKotlinType): Boolean =
-    with(components.ctx){
-        for ((variableConstructor, variableWithConstraints) in csBuilder.currentStorage().notFixedTypeVariables) {
-            if (!type.contains { it.typeConstructor() == variableConstructor }) continue
 
-            val constraints = variableWithConstraints.constraints
-            val onlyProperEqualConstraints =
-                constraints.isNotEmpty() && constraints.any { it.kind.isEqual() && csBuilder.isProperType(it.type) }
+class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
+    private val variableFixationFinder = VariableFixationFinder(components.inferenceComponents.trivialConstraintTypeInferenceOracle)
 
-            if (!onlyProperEqualConstraints) return false
-        }
-
-        return true
-    }
-
-private fun Candidate.hasProperNonTrivialLowerConstraints(components: InferenceComponents, typeVariable: ConeKotlinType): Boolean {
-    assert(csBuilder.isTypeVariable(typeVariable)) { "$typeVariable is not a type variable" }
-
-    val context = components.ctx
-    val constructor = typeVariable.typeConstructor(context)
-    val variableWithConstraints = csBuilder.currentStorage().notFixedTypeVariables[constructor] ?: return false
-    val constraints = variableWithConstraints.constraints
-    // TODO: support Exact annotation
-    // see KotlinCallCompleter:244
-    return constraints.isNotEmpty() && constraints.any {
-        !it.type.typeConstructor(context).isIntegerLiteralTypeConstructor(context) &&
-                (it.kind.isLower() || it.kind.isEqual()) && csBuilder.isProperType(it.type)
-    }
-
-}
-
-
-class ConstraintSystemCompleter(val components: InferenceComponents) {
-    private val variableFixationFinder = VariableFixationFinder(components.trivialConstraintTypeInferenceOracle)
     fun complete(
         c: KotlinConstraintSystemCompleter.Context,
-        completionMode: KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode,
+        completionMode: ConstraintSystemCompletionMode,
         topLevelAtoms: List<FirStatement>,
         candidateReturnType: ConeKotlinType,
-        analyze: (PostponedResolvedAtomMarker) -> Unit
+        analyze: (PostponedResolvedAtom) -> Unit
     ) {
 
         while (true) {
             if (analyzePostponeArgumentIfPossible(c, topLevelAtoms, analyze)) continue
 
             val allTypeVariables = getOrderedAllTypeVariables(c, topLevelAtoms)
-            val postponedKtPrimitives = getOrderedNotAnalyzedPostponedArguments(topLevelAtoms)
+            val postponedAtoms = getOrderedNotAnalyzedPostponedArguments(topLevelAtoms)
             val variableForFixation =
                 variableFixationFinder.findFirstVariableForFixation(
-                    c, allTypeVariables, postponedKtPrimitives, completionMode, candidateReturnType
+                    c, allTypeVariables, postponedAtoms, completionMode, candidateReturnType
                 ) ?: break
 
-//            if (shouldForceCallableReferenceOrLambdaResolution(completionMode, variableForFixation)) {
-//                if (forcePostponedAtomResolution<ResolvedCallableReferenceAtom>(topLevelAtoms, analyze)) continue
-//                if (forcePostponedAtomResolution<LambdaWithTypeVariableAsExpectedTypeAtom>(topLevelAtoms, analyze)) continue
-//            }
+            if (
+                completionMode == ConstraintSystemCompletionMode.FULL &&
+                resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(c, variableForFixation, postponedAtoms, analyze)
+            ) {
+                continue
+            }
 
-            if (variableForFixation.hasProperConstraint || completionMode == KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL) {
+            if (variableForFixation.hasProperConstraint || completionMode == ConstraintSystemCompletionMode.FULL) {
                 val variableWithConstraints = c.notFixedTypeVariables.getValue(variableForFixation.variable)
 
                 fixVariable(c, candidateReturnType, variableWithConstraints, emptyList())
@@ -134,7 +72,7 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
             break
         }
 
-        if (completionMode == KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL) {
+        if (completionMode == ConstraintSystemCompletionMode.FULL) {
             // force resolution for all not-analyzed argument's
             getOrderedNotAnalyzedPostponedArguments(topLevelAtoms).forEach(analyze)
 //
@@ -143,6 +81,89 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
 //            }
         }
     }
+
+    private fun resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(
+        c: KotlinConstraintSystemCompleter.Context,
+        variableForFixation: VariableFixationFinder.VariableForFixation,
+        postponedAtoms: List<PostponedResolvedAtom>,
+        /*diagnosticsHolder: KotlinDiagnosticsHolder,*/
+        analyze: (PostponedResolvedAtom) -> Unit
+    ): Boolean {
+        val variable = variableForFixation.variable as ConeTypeVariableTypeConstructor
+        val hasProperAtom = postponedAtoms.any {
+            when (it) {
+                is LambdaWithTypeVariableAsExpectedTypeAtom/*, is PostponedCallableReferenceAtom*/
+                -> it.expectedType.typeConstructor(c) == variable // TODO
+                else -> false
+            }
+        }
+        if (
+            !hasProperAtom &&
+            variableForFixation.hasProperConstraint &&
+            !variableForFixation.hasOnlyTrivialProperConstraint
+        ) return false
+
+        val postponedAtom = postponedAtoms.firstOrNull() ?: return false
+        val csBuilder = (c as NewConstraintSystemImpl).getBuilder()
+        val expectedTypeVariableConstructor = postponedAtom.expectedType?.typeConstructor(c)?.takeIf { it in c.allTypeVariables } as? ConeTypeVariableTypeConstructor ?: variable
+        val expectedTypeVariable = csBuilder.currentStorage().allTypeVariables[expectedTypeVariableConstructor] as ConeTypeVariable? ?: return false
+
+        val atomToAnalyze = when (postponedAtom) {
+            is LambdaWithTypeVariableAsExpectedTypeAtom -> {
+                postponedAtom.preparePostponedAtomWithTypeVariableAsExpectedType(
+                    c, csBuilder, expectedTypeVariable,
+                    parameterTypes = null,
+                    isSuitable = { isBuiltinFunctionalType(components.session) },
+                    typeVariableCreator = { ConeTypeVariableForLambdaReturnType(postponedAtom.atom, "_R") },
+                    newAtomCreator = { returnTypeVariable, expectedType ->
+                        postponedAtom.transformToResolvedLambda(csBuilder, expectedType, returnTypeVariable)
+                    }
+                )
+            }
+            // is PostponedCallableReferenceAtom -> TODO()
+            else -> return false
+        }
+        analyze(atomToAnalyze)
+        return true
+    }
+
+    private inline fun <T : PostponedResolvedAtom, V : ConeTypeVariable> T.preparePostponedAtomWithTypeVariableAsExpectedType(
+        c: KotlinConstraintSystemCompleter.Context,
+        csBuilder: ConstraintSystemBuilder,
+        variable: ConeTypeVariable,
+        parameterTypes: Array<out ConeKotlinType?>?,
+        isSuitable: ConeKotlinType.() -> Boolean,
+        typeVariableCreator: () -> V,
+        newAtomCreator: (V, ConeKotlinType) -> PostponedResolvedAtom
+    ): PostponedResolvedAtom {
+        val functionalType = (components.inferenceComponents.resultTypeResolver.findResultType(
+            c,
+            c.notFixedTypeVariables.getValue(variable.typeConstructor),
+            TypeVariableDirectionCalculator.ResolveDirection.TO_SUPERTYPE
+        ) as ConeKotlinType).lowerBoundIfFlexible() as ConeClassLikeType
+        val isExtensionWithoutParameters = false
+//        TODO
+//             functionalType.isExtensionFunctionType && functionalType.arguments.size == 2 && parameterTypes?.isEmpty() == true
+        if (parameterTypes?.all { type -> type != null } == true && !isExtensionWithoutParameters) return this
+        if (!functionalType.isSuitable()) return this
+        val returnVariable = typeVariableCreator()
+        csBuilder.registerVariable(returnVariable)
+
+        val expectedType = ConeClassLikeTypeImpl(
+            lookupTag = functionalType.lookupTag,
+            typeArguments = (functionalType.typeArguments.dropLast(1) + returnVariable.defaultType).toTypedArray(),
+            isNullable = functionalType.isNullable
+        )
+
+        csBuilder.addSubtypeConstraint(
+            expectedType,
+            variable.defaultType,
+            SimpleConstraintSystemConstraintPosition
+//            ArgumentConstraintPosition(atom as KotlinCallArgument)
+        )
+        return newAtomCreator(returnVariable, expectedType)
+    }
+
 
     private fun getOrderedAllTypeVariables(
         c: KotlinConstraintSystemCompleter.Context,
@@ -158,6 +179,11 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
                     typeVariable.toTypeConstructor()
                 }
 
+                for (postponedAtom in candidate.postponedAtoms) {
+                    when (postponedAtom) {
+                        is ResolvedLambdaAtom -> postponedAtom.typeVariableForLambdaReturnType
+                    }
+                }
                 for (lambdaAtom in candidate.postponedAtoms.filterIsInstance<ResolvedLambdaAtom>()) {
                     result.addIfNotNull(lambdaAtom.typeVariableForLambdaReturnType.toTypeConstructor())
                 }
@@ -191,14 +217,14 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
         variableWithConstraints: VariableWithConstraints,
         direction: TypeVariableDirectionCalculator.ResolveDirection
     ) {
-        val resultType = components.resultTypeResolver.findResultType(c, variableWithConstraints, direction)
+        val resultType = components.inferenceComponents.resultTypeResolver.findResultType(c, variableWithConstraints, direction)
         c.fixVariable(variableWithConstraints.typeVariable, resultType, atom = null) // TODO: obtain atom for diagnostics
     }
 
     private fun analyzePostponeArgumentIfPossible(
         c: KotlinConstraintSystemCompleter.Context,
         topLevelAtoms: List<FirStatement>,
-        analyze: (PostponedResolvedAtomMarker) -> Unit
+        analyze: (PostponedResolvedAtom) -> Unit
     ): Boolean {
         for (argument in getOrderedNotAnalyzedPostponedArguments(topLevelAtoms)) {
             if (canWeAnalyzeIt(c, argument)) {
@@ -209,8 +235,8 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
         return false
     }
 
-    private fun getOrderedNotAnalyzedPostponedArguments(topLevelAtoms: List<FirStatement>): List<PostponedResolvedAtomMarker> {
-        val notAnalyzedArguments = arrayListOf<PostponedResolvedAtomMarker>()
+    private fun getOrderedNotAnalyzedPostponedArguments(topLevelAtoms: List<FirStatement>): List<PostponedResolvedAtom> {
+        val notAnalyzedArguments = arrayListOf<PostponedResolvedAtom>()
         for (primitive in topLevelAtoms) {
             primitive.processAllContainingCallCandidates(
                 // TODO: remove this argument and relevant parameter
@@ -218,7 +244,7 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
                 processBlocks = true
             ) { candidate ->
                 candidate.postponedAtoms.forEach {
-                    notAnalyzedArguments.addIfNotNull(it.safeAs<PostponedResolvedAtomMarker>()?.takeUnless { it.analyzed })
+                    notAnalyzedArguments.addIfNotNull(it.safeAs<PostponedResolvedAtom>()?.takeUnless { it.analyzed })
                 }
             }
         }

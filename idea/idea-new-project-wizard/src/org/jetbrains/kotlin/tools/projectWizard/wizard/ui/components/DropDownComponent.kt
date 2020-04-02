@@ -3,7 +3,7 @@ package org.jetbrains.kotlin.tools.projectWizard.wizard.ui.components
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.SimpleTextAttributes
-import org.jetbrains.kotlin.tools.projectWizard.core.ValuesReadingContext
+import org.jetbrains.kotlin.tools.projectWizard.core.Context
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.SettingValidator
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.ValidationResult
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.settingValidator
@@ -12,27 +12,28 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.awt.event.ItemEvent
 import javax.swing.DefaultComboBoxModel
 import javax.swing.Icon
-import javax.swing.JComboBox
 import javax.swing.JList
 
 class DropDownComponent<T : DisplayableSettingItem>(
-    private val valuesReadingContext: ValuesReadingContext,
+    context: Context,
     initialValues: List<T> = emptyList(),
+    initiallySelectedValue: T? = null,
     labelText: String? = null,
-    private val filter: (T) -> Boolean = { true },
+    filter: (T) -> Boolean = { true },
     private val validator: SettingValidator<T> = settingValidator { ValidationResult.OK },
     private val iconProvider: (T) -> Icon? = { null },
     onValueUpdate: (T) -> Unit = {}
 ) : UIComponent<T>(
-    valuesReadingContext,
+    context,
     labelText,
     validator,
     onValueUpdate
 ) {
     @Suppress("UNCHECKED_CAST")
-    override val uiComponent: ComboBox<T> = ComboBox<T>(
+    override val uiComponent: ComboBox<T> = ComboBox(
         initialValues.filter(filter).toTypedArray<DisplayableSettingItem>() as Array<T>
     ).apply {
+        selectedItem = initiallySelectedValue
         renderer = object : ColoredListCellRenderer<T>() {
             override fun customizeCellRenderer(
                 list: JList<out T>,
@@ -47,8 +48,8 @@ class DropDownComponent<T : DisplayableSettingItem>(
                 value.greyText?.let {
                     append(" $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
                 }
-                if (this@apply.selectedItem != value) {
-                    validator.validate(valuesReadingContext, value)
+                if (this@apply.selectedItem != value) read {
+                    validator.validate(this, value)
                         .safeAs<ValidationResult.ValidationError>()
                         ?.messages
                         ?.firstOrNull()
@@ -67,10 +68,8 @@ class DropDownComponent<T : DisplayableSettingItem>(
         }
     }
 
-    fun setValues(newValues: List<T>) {
-        @Suppress("UNCHECKED_CAST")
-        uiComponent.model = DefaultComboBoxModel(newValues.filter(filter).toTypedArray<DisplayableSettingItem>() as Array<T>)
-    }
+    val valuesCount
+        get() = uiComponent.model.size
 
     override fun updateUiValue(newValue: T) = safeUpdateUi {
         uiComponent.selectedItem = newValue
@@ -79,4 +78,3 @@ class DropDownComponent<T : DisplayableSettingItem>(
     @Suppress("UNCHECKED_CAST")
     override fun getUiValue(): T? = uiComponent.selectedItem as? T
 }
-

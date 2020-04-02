@@ -10,7 +10,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import org.jetbrains.kotlin.backend.common.CodegenUtil
 import org.jetbrains.kotlin.backend.common.ir.ir2string
-import org.jetbrains.kotlin.backend.jvm.lower.getOrCreateSuspendFunctionViewIfNeeded
 import org.jetbrains.kotlin.codegen.BaseExpressionCodegen
 import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.codegen.OwnerKind
@@ -29,7 +28,7 @@ import org.jetbrains.kotlin.ir.declarations.IrAttributeContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.isSuspend
 import org.jetbrains.kotlin.ir.util.parentAsClass
@@ -38,7 +37,6 @@ import org.jetbrains.kotlin.psi.doNotAnalyze
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.ErrorsJvm.SUSPENSION_POINT_INSIDE_MONITOR
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
-import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodGenericSignature
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.org.objectweb.asm.*
@@ -48,7 +46,7 @@ import org.jetbrains.org.objectweb.asm.tree.MethodNode
 
 class IrSourceCompilerForInline(
     override val state: GenerationState,
-    override val callElement: IrMemberAccessExpression,
+    override val callElement: IrFunctionAccessExpression,
     private val callee: IrFunction,
     internal val codegen: ExpressionCodegen,
     private val data: BlockInfo
@@ -80,7 +78,7 @@ class IrSourceCompilerForInline(
         get() = codegen.context.psiSourceManager.getKtFile(codegen.irFunction.fileParent)
 
     override val contextKind: OwnerKind
-        get() = OwnerKind.getMemberOwnerKind(callElement.symbol.descriptor.containingDeclaration!!)
+        get() = OwnerKind.getMemberOwnerKind(callElement.symbol.descriptor.containingDeclaration)
 
     override val inlineCallSiteInfo: InlineCallSiteInfo
         get() {
@@ -96,39 +94,13 @@ class IrSourceCompilerForInline(
         }
 
     override val lazySourceMapper: DefaultSourceMapper
-        get() = codegen.classCodegen.getOrCreateSourceMapper()
+        get() = codegen.smapOverride ?: codegen.classCodegen.getOrCreateSourceMapper()
 
-    private fun makeInlineNode(function: IrFunction, classCodegen: ClassCodegen, isLambda: Boolean): SMAPAndMethodNode {
-        var node: MethodNode? = null
-        // Do not inline the generated state-machine, which was generated to support java interop of inline suspend functions.
-        // Instead, find its $$forInline companion (they share the same attributeOwnerId), which is generated for the inliner to use.
-        val forInlineFunction =
-            if (function.isSuspend)
-                function.parentAsClass.functions.find {
-                    it.name.asString() == function.name.asString() + FOR_INLINE_SUFFIX &&
-                            it.attributeOwnerId == (function as? IrAttributeContainer)?.attributeOwnerId
-                } ?: function.getOrCreateSuspendFunctionViewIfNeeded(classCodegen.context)
-            else function
-        val functionCodegen = object : FunctionCodegen(forInlineFunction, classCodegen, codegen.takeIf { isLambda }) {
-            override fun createMethod(flags: Int, signature: JvmMethodGenericSignature): MethodVisitor {
-                val asmMethod = signature.asmMethod
-                node = MethodNode(
-                    Opcodes.API_VERSION,
-                    flags,
-                    asmMethod.name.removeSuffix(FOR_INLINE_SUFFIX),
-                    asmMethod.descriptor,
-                    signature.genericsSignature,
-                    null
-                )
-                return wrapWithMaxLocalCalc(node!!)
-            }
-        }
-        functionCodegen.generate()
-        return SMAPAndMethodNode(node!!, SMAP(classCodegen.getOrCreateSourceMapper().resultMappings))
+    override fun generateLambdaBody(lambdaInfo: ExpressionLambda): SMAPAndMethodNode {
+        val smap = codegen.context.getSourceMapper(codegen.classCodegen.irClass)
+        val node = FunctionCodegen((lambdaInfo as IrExpressionLambdaImpl).function, codegen.classCodegen, codegen).generate(smap)
+        return SMAPAndMethodNode(node, SMAP(smap.resultMappings))
     }
-
-    override fun generateLambdaBody(lambdaInfo: ExpressionLambda): SMAPAndMethodNode =
-        makeInlineNode((lambdaInfo as IrExpressionLambdaImpl).function, codegen.classCodegen, true)
 
     override fun doCreateMethodNodeFromSource(
         callableDescriptor: FunctionDescriptor,
@@ -137,7 +109,18 @@ class IrSourceCompilerForInline(
         asmMethod: Method
     ): SMAPAndMethodNode {
         assert(callableDescriptor == callee.symbol.descriptor.original) { "Expected $callableDescriptor got ${callee.descriptor.original}" }
-        return makeInlineNode(callee, FakeClassCodegen(callee, codegen.classCodegen), false)
+        // Do not inline the generated state-machine, which was generated to support java interop of inline suspend functions.
+        // Instead, find its $$forInline companion (they share the same attributeOwnerId), which is generated for the inliner to use.
+        val forInlineFunction = if (callee.isSuspend)
+            callee.parentAsClass.functions.find {
+                it.name.asString() == callee.name.asString() + FOR_INLINE_SUFFIX &&
+                        it.attributeOwnerId == (callee as IrAttributeContainer).attributeOwnerId
+            } ?: callee
+        else
+            callee
+        val classCodegen = FakeClassCodegen(forInlineFunction, codegen.classCodegen)
+        val node = FunctionCodegen(forInlineFunction, classCodegen).generate()
+        return SMAPAndMethodNode(node, SMAP(classCodegen.getOrCreateSourceMapper().resultMappings))
     }
 
     override fun hasFinallyBlocks() = data.hasFinallyBlocks()
@@ -150,7 +133,7 @@ class IrSourceCompilerForInline(
     override fun createCodegenForExternalFinallyBlockGenerationOnNonLocalReturn(finallyNode: MethodNode, curFinallyDepth: Int) =
         ExpressionCodegen(
             codegen.irFunction, codegen.signature, codegen.frameMap, InstructionAdapter(finallyNode), codegen.classCodegen,
-            codegen.inlinedInto
+            codegen.inlinedInto, codegen.smapOverride
         ).also {
             it.finallyDepth = curFinallyDepth
         }
@@ -165,10 +148,10 @@ class IrSourceCompilerForInline(
     }
 
     override val compilationContextDescriptor: DeclarationDescriptor
-        get() = callElement.symbol.descriptor
+        get() = compilationContextFunctionDescriptor
 
     override val compilationContextFunctionDescriptor: FunctionDescriptor
-        get() = callElement.symbol.descriptor as FunctionDescriptor
+        get() = generateSequence(codegen) { it.inlinedInto }.last().irFunction.descriptor
 
     override fun getContextLabels(): Set<String> {
         val name = codegen.irFunction.name.asString()
@@ -254,15 +237,15 @@ class IrSourceCompilerForInline(
                     TODO("not implemented")
                 }
 
+                override fun visitSMAP(smap: SourceMapper, backwardsCompatibleSyntax: Boolean) {
+                    TODO("not implemented")
+                }
+
                 override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
                     TODO("not implemented")
                 }
 
                 override fun getThisName(): String {
-                    TODO("not implemented")
-                }
-
-                override fun addSMAP(mapping: FileMapping?) {
                     TODO("not implemented")
                 }
             }

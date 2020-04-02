@@ -201,7 +201,7 @@ abstract class IrFileDeserializer(val logger: LoggingContext, val builtIns: IrBu
 
     private fun deserializePublicIdSignature(proto: ProtoPublicIdSignature): IdSignature.PublicSignature {
         val pkg = deserializeFqName(proto.packageFqNameList)
-        val cls = deserializeFqName(proto.classFqNameList)
+        val cls = deserializeFqName(proto.declarationFqNameList)
         val memberId = if (proto.hasMemberUniqId()) proto.memberUniqId else null
 
         return IdSignature.PublicSignature(pkg, cls, memberId, proto.flags)
@@ -215,7 +215,7 @@ abstract class IrFileDeserializer(val logger: LoggingContext, val builtIns: IrBu
         val mask = proto.flags
 
         val accessorSignature = with(propertySignature) {
-            IdSignature.PublicSignature(packageFqn, classFqn.child(Name.special(name)), hash, mask)
+            IdSignature.PublicSignature(packageFqn, declarationFqn.child(Name.special(name)), hash, mask)
         }
 
         return IdSignature.AccessorSignature(propertySignature, accessorSignature)
@@ -835,10 +835,10 @@ abstract class IrFileDeserializer(val logger: LoggingContext, val builtIns: IrBu
             -> IrConstImpl.long(start, end, type, proto.long)
             STRING
             -> IrConstImpl.string(start, end, type, deserializeString(proto.string))
-            FLOAT
-            -> IrConstImpl.float(start, end, type, proto.float)
-            DOUBLE
-            -> IrConstImpl.double(start, end, type, proto.double)
+            FLOAT_BITS
+            -> IrConstImpl.float(start, end, type, Float.fromBits(proto.floatBits))
+            DOUBLE_BITS
+            -> IrConstImpl.double(start, end, type, Double.fromBits(proto.doubleBits))
             VALUE_NOT_SET
             -> error("Const deserialization error: ${proto.valueCase} ")
         }

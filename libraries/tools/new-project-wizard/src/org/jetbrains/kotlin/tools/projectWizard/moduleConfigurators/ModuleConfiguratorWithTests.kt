@@ -5,51 +5,62 @@
 
 package org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators
 
-import org.jetbrains.kotlin.tools.projectWizard.core.ValuesReadingContext
-import org.jetbrains.kotlin.tools.projectWizard.core.entity.ModuleConfiguratorSetting
-import org.jetbrains.kotlin.tools.projectWizard.core.entity.ModuleConfiguratorSettingReference
+
+import org.jetbrains.annotations.NonNls
+import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
+import org.jetbrains.kotlin.tools.projectWizard.core.Reader
+import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.ModuleConfiguratorSetting
+import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.ModuleConfiguratorSettingReference
+import org.jetbrains.kotlin.tools.projectWizard.core.safeAs
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.BuildSystemIR
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.DependencyType
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.KotlinArbitraryDependencyIR
 import org.jetbrains.kotlin.tools.projectWizard.phases.GenerationPhase
 import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.KotlinPlugin
-import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModuleConfigurationData
+import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModulesToIrConversionData
 import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModuleType
 import org.jetbrains.kotlin.tools.projectWizard.settings.DisplayableSettingItem
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.Module
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.ModuleKind
 
-abstract class ModuleConfiguratorWithTests : ModuleConfiguratorWithSettings() {
-    val testFramework by enumSetting<KotlinTestFramework>(
-        "Test Framework",
-        neededAtPhase = GenerationPhase.PROJECT_GENERATION
-    ) {
-        defaultValue = defaultTestFramework()
+interface ModuleConfiguratorWithTests : ModuleConfiguratorWithSettings {
+    companion object : ModuleConfiguratorSettings() {
+        val testFramework by enumSetting<KotlinTestFramework>(
+            KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework"),
+            neededAtPhase = GenerationPhase.PROJECT_GENERATION
+        ) {
+            filter = filter@{ reference, kotlinTestFramework ->
+                if (reference !is ModuleConfiguratorSettingReference<*, *>) return@filter true
 
-        filter = filter@{ reference, kotlinTestFramework ->
-            if (reference !is ModuleConfiguratorSettingReference<*, *>) return@filter true
-
-            val moduleType = reference.module?.configurator?.moduleType
-            kotlinTestFramework.moduleType == moduleType
+                val moduleType = reference.module?.configurator?.safeAs<ModuleConfiguratorWithModuleType>()?.moduleType
+                kotlinTestFramework.moduleType == moduleType
+            }
         }
     }
 
-    abstract fun defaultTestFramework(): KotlinTestFramework
+    fun defaultTestFramework(): KotlinTestFramework
 
-    override fun ValuesReadingContext.createModuleIRs(configurationData: ModuleConfigurationData, module: Module): List<BuildSystemIR> =
+    override fun createModuleIRs(
+        reader: Reader,
+        configurationData: ModulesToIrConversionData,
+        module: Module
+    ): List<BuildSystemIR> =
         withSettingsOf(module) {
-            testFramework.reference.settingValue.dependencyNames.map { dependencyName ->
-                KotlinArbitraryDependencyIR(
-                    dependencyName,
-                    isInMppModule = module.kind
-                        .let { it == ModuleKind.multiplatform || it == ModuleKind.target },
-                    version = KotlinPlugin::version.propertyValue,
-                    dependencyType = DependencyType.TEST
-                )
+            reader {
+                testFramework.reference.settingValue.dependencyNames.map { dependencyName ->
+                    KotlinArbitraryDependencyIR(
+                        dependencyName,
+                        isInMppModule = module.kind
+                            .let { it == ModuleKind.multiplatform || it == ModuleKind.target },
+                        version = KotlinPlugin::version.propertyValue,
+                        dependencyType = DependencyType.TEST
+                    )
+                }
             }
         }
 
-    override val settings: List<ModuleConfiguratorSetting<*, *>> = listOf(testFramework)
+
+    override fun getConfiguratorSettings(): List<ModuleConfiguratorSetting<*, *>> = listOf(testFramework)
 }
 
 
@@ -58,9 +69,29 @@ enum class KotlinTestFramework(
     val moduleType: ModuleType,
     val dependencyNames: List<String>
 ) : DisplayableSettingItem {
-    JUNIT4("JUnit 4 Test Framework", ModuleType.jvm, listOf("test-junit")),
-    JUNIT5("JUnit 5 Test Framework", ModuleType.jvm, listOf("test-junit5")),
-    TEST_NG("Test NG Test Framework", ModuleType.jvm, listOf("test-testng")),
-    JS("JavaScript Test Framework", ModuleType.js, listOf("test-js")),
-    COMMON("Common Test Framework", ModuleType.common, listOf("test-common", "test-annotations-common")),
+    JUNIT4(
+        KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework.junit4"),
+        ModuleType.jvm,
+        listOf("test-junit")
+    ),
+    JUNIT5(
+        KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework.junit5"),
+        ModuleType.jvm,
+        listOf("test-junit5")
+    ),
+    TEST_NG(
+        KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework.test.ng"),
+        ModuleType.jvm,
+        listOf("test-testng")
+    ),
+    JS(
+        KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework.js"),
+        ModuleType.js,
+        listOf("test-js")
+    ),
+    COMMON(
+        KotlinNewProjectWizardBundle.message("module.configurator.tests.setting.framework.common"),
+        ModuleType.common,
+        listOf("test-common", "test-annotations-common")
+    )
 }

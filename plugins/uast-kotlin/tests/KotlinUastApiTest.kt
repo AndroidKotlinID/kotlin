@@ -638,6 +638,36 @@ class KotlinUastApiTest : AbstractKotlinUastTest() {
                 function10 -> PsiType:T
                 function11 -> PsiType:T
             """.trimIndent(), methods.joinToString("\n") { m -> m.name + " -> " + m.returnType.toString() })
+            for (method in methods.drop(3)) {
+                assertEquals("assert return types comparable for '${method.name}'", method.returnType, method.returnType)
+            }
+        }
+    }
+
+    @Test
+    fun testReifiedParameters() {
+        doTest("ReifiedParameters") { _, file ->
+            val methods = file.classes.flatMap { it.methods.asIterable() }
+
+            for (method in methods) {
+                assertNotNull("method ${method.name} should have source", method.sourcePsi)
+                assertEquals("method ${method.name} should be equals to converted from sourcePsi", method, method.sourcePsi.toUElement())
+                assertEquals("method ${method.name} should be equals to converted from javaPsi", method, method.javaPsi.toUElement())
+
+                for (parameter in method.uastParameters) {
+                    assertNotNull("parameter ${parameter.name} should have source", parameter.sourcePsi)
+                    assertEquals(
+                        "parameter ${parameter.name} of method ${method.name} should be equals to converted from sourcePsi",
+                        parameter,
+                        parameter.sourcePsi.toUElementOfType<UParameter>()
+                    )
+                    assertEquals(
+                        "parameter ${parameter.name} of method ${method.name} should be equals to converted from javaPsi",
+                        parameter,
+                        parameter.javaPsi.toUElement()
+                    )
+                }
+            }
         }
     }
 

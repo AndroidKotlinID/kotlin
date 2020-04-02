@@ -22,24 +22,24 @@ val Project.internalKotlinRepo: String?
             "branch:default:any/artifacts/content/internal/repo"
 
 fun Project.kotlinBootstrapFrom(defaultSource: BootstrapOption) {
-    val customVersion = findProperty("bootstrap.kotlin.version") as String?
-    val customRepo = findProperty("bootstrap.kotlin.repo") as String?
-    val teamCityVersion = findProperty("bootstrap.teamcity.kotlin.version") as String?
-    val teamCityBuild = findProperty("bootstrap.teamcity.build.number") as String?
-    val teamCityProject = findProperty("bootstrap.teamcity.project") as String?
-
+    val teamCityBootstrapVersion = kotlinBuildProperties.teamCityBootstrapVersion
+    val customBootstrapVersion = kotlinBuildProperties.customBootstrapVersion
     val bootstrapSource = when {
-        hasProperty("bootstrap.local") -> BootstrapOption.Local(
-            findProperty("bootstrap.local.version") as String?,
-            findProperty("bootstrap.local.path") as String?
+        kotlinBuildProperties.localBootstrap -> BootstrapOption.Local(
+            kotlinBuildProperties.localBootstrapVersion,
+            kotlinBuildProperties.localBootstrapPath
         )
-        teamCityVersion != null -> BootstrapOption.TeamCity(
-            teamCityVersion,
-            teamCityBuild,
-            projectExtId = teamCityProject,
+        teamCityBootstrapVersion != null -> BootstrapOption.TeamCity(
+            teamCityBootstrapVersion,
+            kotlinBuildProperties.teamCityBootstrapBuildNumber,
+            projectExtId = kotlinBuildProperties.teamCityBootstrapProject,
+            teamcityUrl = kotlinBuildProperties.teamCityBootstrapUrl,
             onlySuccessBootstrap = false
         )
-        customVersion != null -> BootstrapOption.Custom(kotlinVersion = customVersion, repo = customRepo)
+        customBootstrapVersion != null -> BootstrapOption.Custom(
+            kotlinVersion = customBootstrapVersion,
+            repo = kotlinBuildProperties.customBootstrapRepo
+        )
         else -> defaultSource
     }
 
@@ -84,12 +84,13 @@ sealed class BootstrapOption {
         val buildNumber: String? = null,
         val projectExtId: String? = null,
         val onlySuccessBootstrap: Boolean = true,
-        val teamcityUrl: String = "https://teamcity.jetbrains.com"
+        val teamcityUrl: String? = null
     ) : BootstrapOption() {
         override fun applyToProject(project: Project) {
             val query = if (onlySuccessBootstrap) "status:SUCCESS,tag:bootstrap,pinned:true" else "branch:default:any"
-            project.bootstrapKotlinRepo = "$teamcityUrl/guestAuth/app/rest/builds/buildType:(id:${projectExtId
-                ?: "Kotlin_dev_Compiler"}),number:${buildNumber ?: kotlinVersion},$query/artifacts/content/maven/"
+            project.bootstrapKotlinRepo =
+                "${teamcityUrl ?: "https://buildserver.labs.intellij.net"}/guestAuth/app/rest/builds/buildType:(id:${projectExtId
+                    ?: "Kotlin_KotlinDev_Compiler"}),number:${buildNumber ?: kotlinVersion},$query/artifacts/content/maven/"
             project.bootstrapKotlinVersion = kotlinVersion
         }
     }
@@ -102,10 +103,11 @@ sealed class BootstrapOption {
      */
     class Local(val kotlinVersion: String? = null, val localPath: String? = null) : BootstrapOption() {
         override fun applyToProject(project: Project) {
+            val rootProjectDir = project.kotlinBuildProperties.rootProjectDir
             val repoPath = if (localPath != null)
-                project.projectDir.resolve(localPath).canonicalFile
+                rootProjectDir.resolve(localPath).canonicalFile
             else
-                project.buildDir.resolve("repo")
+                rootProjectDir.resolve("build").resolve("repo")
 
             project.bootstrapKotlinRepo = repoPath.toURI().toString()
             project.bootstrapKotlinVersion = kotlinVersion ?: project.property("defaultSnapshotVersion") as String

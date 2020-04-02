@@ -62,9 +62,11 @@ import org.jetbrains.kotlin.fir.expressions.FirConstExpression
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirStarProjection
 import org.jetbrains.kotlin.fir.types.FirTypeProjectionWithVariance
+import org.jetbrains.kotlin.fir.expressions.FirArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirCall
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirOperatorCall
+import org.jetbrains.kotlin.fir.expressions.FirComparisonExpression
 import org.jetbrains.kotlin.fir.expressions.FirTypeOperatorCall
 import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
 import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
@@ -72,7 +74,7 @@ import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessWithoutCallee
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirCheckNotNullCall
 import org.jetbrains.kotlin.fir.expressions.FirArrayOfCall
-import org.jetbrains.kotlin.fir.expressions.FirArraySetCall
+import org.jetbrains.kotlin.fir.expressions.FirAugmentedArraySetCall
 import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
 import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
 import org.jetbrains.kotlin.fir.declarations.FirErrorFunction
@@ -353,6 +355,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformElement(typeProjectionWithVariance, data)
     }
 
+    open fun transformArgumentList(argumentList: FirArgumentList, data: D): CompositeTransformResult<FirArgumentList> {
+        return transformElement(argumentList, data)
+    }
+
     open fun transformCall(call: FirCall, data: D): CompositeTransformResult<FirStatement> {
         return transformElement(call, data)
     }
@@ -363,6 +369,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     open fun transformOperatorCall(operatorCall: FirOperatorCall, data: D): CompositeTransformResult<FirStatement> {
         return transformElement(operatorCall, data)
+    }
+
+    open fun transformComparisonExpression(comparisonExpression: FirComparisonExpression, data: D): CompositeTransformResult<FirStatement> {
+        return transformElement(comparisonExpression, data)
     }
 
     open fun transformTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: D): CompositeTransformResult<FirStatement> {
@@ -393,8 +403,8 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformElement(arrayOfCall, data)
     }
 
-    open fun transformArraySetCall(arraySetCall: FirArraySetCall, data: D): CompositeTransformResult<FirStatement> {
-        return transformElement(arraySetCall, data)
+    open fun transformAugmentedArraySetCall(augmentedArraySetCall: FirAugmentedArraySetCall, data: D): CompositeTransformResult<FirStatement> {
+        return transformElement(augmentedArraySetCall, data)
     }
 
     open fun transformClassReferenceExpression(classReferenceExpression: FirClassReferenceExpression, data: D): CompositeTransformResult<FirStatement> {
@@ -805,6 +815,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformTypeProjectionWithVariance(typeProjectionWithVariance, data)
     }
 
+    final override fun visitArgumentList(argumentList: FirArgumentList, data: D): CompositeTransformResult<FirArgumentList> {
+        return transformArgumentList(argumentList, data)
+    }
+
     final override fun visitCall(call: FirCall, data: D): CompositeTransformResult<FirStatement> {
         return transformCall(call, data)
     }
@@ -815,6 +829,10 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitOperatorCall(operatorCall: FirOperatorCall, data: D): CompositeTransformResult<FirStatement> {
         return transformOperatorCall(operatorCall, data)
+    }
+
+    final override fun visitComparisonExpression(comparisonExpression: FirComparisonExpression, data: D): CompositeTransformResult<FirStatement> {
+        return transformComparisonExpression(comparisonExpression, data)
     }
 
     final override fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: D): CompositeTransformResult<FirStatement> {
@@ -845,8 +863,8 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformArrayOfCall(arrayOfCall, data)
     }
 
-    final override fun visitArraySetCall(arraySetCall: FirArraySetCall, data: D): CompositeTransformResult<FirStatement> {
-        return transformArraySetCall(arraySetCall, data)
+    final override fun visitAugmentedArraySetCall(augmentedArraySetCall: FirAugmentedArraySetCall, data: D): CompositeTransformResult<FirStatement> {
+        return transformAugmentedArraySetCall(augmentedArraySetCall, data)
     }
 
     final override fun visitClassReferenceExpression(classReferenceExpression: FirClassReferenceExpression, data: D): CompositeTransformResult<FirStatement> {

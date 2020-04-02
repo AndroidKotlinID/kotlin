@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.types.model.*
 import org.jetbrains.kotlin.types.typeUtil.asTypeProjection
 import org.jetbrains.kotlin.types.typeUtil.contains
 import org.jetbrains.kotlin.types.typeUtil.representativeUpperBound
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -404,6 +405,17 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext, TypeSy
         return this.constructor.projection
     }
 
+    override fun CapturedTypeMarker.withNotNullProjection(): KotlinTypeMarker {
+        require(this is NewCapturedType, this::errorMessage)
+
+        return NewCapturedType(captureStatus, constructor, lowerType, annotations, isMarkedNullable, isProjectionNotNull = true)
+    }
+
+    override fun CapturedTypeMarker.isProjectionNotNull(): Boolean {
+        require(this is NewCapturedType, this::errorMessage)
+        return this.isProjectionNotNull
+    }
+
     override fun CapturedTypeMarker.typeParameter(): TypeParameterMarker? {
         require(this is NewCapturedType, this::errorMessage)
         return this.constructor.typeParameter
@@ -606,6 +618,21 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext, TypeSy
         val descriptor = constructor.declarationDescriptor
         return descriptor is ClassDescriptor && (descriptor.kind == ClassKind.INTERFACE || descriptor.kind == ClassKind.ANNOTATION_CLASS)
     }
+
+    override fun createTypeWithAlternativeForIntersectionResult(
+        firstCandidate: KotlinTypeMarker,
+        secondCandidate: KotlinTypeMarker,
+    ): KotlinTypeMarker {
+        require(firstCandidate is KotlinType, this::errorMessage)
+        require(secondCandidate is KotlinType, this::errorMessage)
+
+        firstCandidate.constructor.safeAs<IntersectionTypeConstructor>()?.let { intersectionConstructor ->
+            val intersectionTypeWithAlternative = intersectionConstructor.setAlternative(secondCandidate).createType()
+            return if (firstCandidate.isMarkedNullable) intersectionTypeWithAlternative.makeNullableAsSpecified(true)
+            else intersectionTypeWithAlternative
+
+        } ?: error("Expected intersection type, found $firstCandidate")
+    }
 }
 
 fun TypeVariance.convertVariance(): Variance {
@@ -658,7 +685,7 @@ fun Variance.convertVariance(): TypeVariance {
 }
 
 
-@UseExperimental(ExperimentalContracts::class)
+@OptIn(ExperimentalContracts::class)
 fun requireOrDescribe(condition: Boolean, value: Any?) {
     contract {
         returns() implies condition

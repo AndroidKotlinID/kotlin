@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -56,7 +56,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
                 is IrField -> {
                 }
                 else -> {
-                    error("Unexpected declaration in class: ${declaration.descriptor}")
+                    error("Unexpected declaration in class: ${declaration.render()}")
                 }
             }
         }
@@ -71,7 +71,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
                 if (property.visibility != Visibilities.PUBLIC)
                     continue
 
-                if (property.origin == IrDeclarationOrigin.FAKE_OVERRIDE)
+                if (property.isFakeOverride)
                     continue
 
                 fun IrSimpleFunction.accessorRef(): JsNameRef? =
@@ -112,13 +112,16 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
 
     private fun generateMemberFunction(declaration: IrSimpleFunction): JsStatement? {
 
-        val translatedFunction = declaration.run { if (isReal) accept(IrFunctionToJsTransformer(), context) else null }
-        assert(!declaration.isStaticMethodOfClass)
-
         val memberName = context.getNameForMemberFunction(declaration.realOverrideTarget)
         val memberRef = JsNameRef(memberName, classPrototypeRef)
 
-        translatedFunction?.let { return jsAssignment(memberRef, it.apply { name = null }).makeStmt() }
+        if (declaration.isReal && declaration.body != null) {
+            val translatedFunction = declaration.accept(IrFunctionToJsTransformer(), context)
+
+            assert(!declaration.isStaticMethodOfClass)
+
+            return jsAssignment(memberRef, translatedFunction.apply { name = null }).makeStmt()
+        }
 
         // do not generate code like
         // interface I { foo() = "OK" }
@@ -201,14 +204,14 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
     }
 
     private fun generateSuperClasses(): JsPropertyInitializer {
-        val functionTypeOrSubtype = irClass.defaultType.isFunctionTypeOrSubtype()
         return JsPropertyInitializer(
             JsNameRef(Namer.METADATA_INTERFACES),
             JsArrayLiteral(
                 irClass.superTypes.mapNotNull {
                     val symbol = it.classifierOrFail as IrClassSymbol
+                    val isFunctionType = it.run { isFunctionOrKFunction() || isSuspendFunctionOrKFunction() }
                     // TODO: make sure that there is a test which breaks when isExternal is used here instead of isEffectivelyExternal
-                    if (symbol.isInterface && !functionTypeOrSubtype && !symbol.isEffectivelyExternal) {
+                    if (symbol.isInterface && !isFunctionType && !symbol.isEffectivelyExternal) {
                         JsNameRef(context.getNameForClass(symbol.owner))
                     } else null
                 }

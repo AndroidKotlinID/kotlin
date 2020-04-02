@@ -120,15 +120,21 @@ class PostponedArgumentsAnalyzer(
             else FilteredAnnotations(annotations, true) { it != KotlinBuiltIns.FQ_NAMES.extensionFunctionType }
         }
 
-        val (returnArgumentsInfo, inferenceSession) = resolutionCallbacks.analyzeAndGetLambdaReturnArguments(
-            lambda.atom,
-            lambda.isSuspend,
-            receiver,
-            parameters,
-            expectedTypeForReturnArguments,
-            convertedAnnotations ?: Annotations.EMPTY,
-            stubsForPostponedVariables.cast()
-        )
+        val (returnArgumentsInfo, inferenceSession, hasInapplicableCallForBuilderInference) =
+            resolutionCallbacks.analyzeAndGetLambdaReturnArguments(
+                lambda.atom,
+                lambda.isSuspend,
+                receiver,
+                parameters,
+                expectedTypeForReturnArguments,
+                convertedAnnotations ?: Annotations.EMPTY,
+                stubsForPostponedVariables.cast()
+            )
+
+        if (hasInapplicableCallForBuilderInference) {
+            c.getBuilder().removePostponedVariables()
+            return
+        }
 
         val returnArguments = returnArgumentsInfo.nonErrorArguments
         returnArguments.forEach { c.addSubsystemFromArgument(it) }
@@ -144,7 +150,10 @@ class PostponedArgumentsAnalyzer(
         val subResolvedKtPrimitives = allReturnArguments.map {
             resolveKtPrimitive(
                 c.getBuilder(), it, lambda.returnType.let(::substitute), diagnosticHolder, ReceiverInfo.notReceiver, convertedType = null
-            )
+            ).apply {
+                if (this is LambdaWithTypeVariableAsExpectedTypeAtom)
+                    isReturnArgumentOfAnotherLambda = true
+            }
         }
 
         if (!returnArgumentsInfo.returnArgumentsExist) {

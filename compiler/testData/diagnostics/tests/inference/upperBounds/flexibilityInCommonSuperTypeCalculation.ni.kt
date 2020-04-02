@@ -107,7 +107,7 @@ fun case_8() {
     val x3 = Test.id(A(null))
 
     val result_1 = select(x1, x2, x3)
-    <!DEBUG_INFO_EXPRESSION_TYPE("A<out {Comparable<{Int & String}> & java.io.Serializable}?>?")!>result_1<!>
+    <!DEBUG_INFO_EXPRESSION_TYPE("A<out {Comparable<*>? & java.io.Serializable?}>?")!>result_1<!>
 }
 
 fun case_9() {
@@ -116,7 +116,7 @@ fun case_9() {
     val x3 = A(Test.id(A('s')))
 
     val result_1 = select(x1, x2, x3)
-    <!DEBUG_INFO_EXPRESSION_TYPE("A<out A<out {Comparable<{Char & Int & String}> & java.io.Serializable}>?>")!>result_1<!>
+    <!DEBUG_INFO_EXPRESSION_TYPE("A<out A<out {Comparable<*> & java.io.Serializable}>?>")!>result_1<!>
 }
 
 fun case_10() {
@@ -169,8 +169,8 @@ fun <T> case_11(y: T) {
         <!DEBUG_INFO_EXPRESSION_TYPE("(T!!..T?)")!>x3<!>
         <!DEBUG_INFO_EXPRESSION_TYPE("T & T!!")!>y<!>
 
-        <!DEBUG_INFO_EXPRESSION_TYPE("A<T>")!>result_1<!>
-        <!DEBUG_INFO_EXPRESSION_TYPE("A<(T..T?)>")!>result_2<!>
+        <!DEBUG_INFO_EXPRESSION_TYPE("A<out (T..T?)>")!>result_1<!>
+        <!DEBUG_INFO_EXPRESSION_TYPE("A<out T?>")!>result_2<!>
         <!DEBUG_INFO_EXPRESSION_TYPE("A<(T!!..T?)>")!>result_3<!>
         <!DEBUG_INFO_EXPRESSION_TYPE("A<T>")!>result_4<!>
         <!DEBUG_INFO_EXPRESSION_TYPE("A<(T..T?)>")!>result_5<!>

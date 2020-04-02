@@ -28,9 +28,8 @@ import org.jetbrains.kotlin.fir.scopes.impl.lazyNestedClassifierScope
 import org.jetbrains.kotlin.fir.scopes.impl.nestedClassifierScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.ConeNullability
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
-import org.jetbrains.kotlin.fir.toFirSourceElement
+import org.jetbrains.kotlin.fir.toFirPsiSourceElement
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.load.java.JavaClassFinder
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames
@@ -77,23 +76,33 @@ class JavaSymbolProvider(
         }
     }
 
-    private fun JavaTypeParameter.toFirTypeParameter(javaTypeParameterStack: JavaTypeParameterStack): FirTypeParameterBuilder {
-        javaTypeParameterStack.getBuilder(this)?.let { return it }
+    private fun JavaTypeParameter.toFirTypeParameterSymbol(
+        javaTypeParameterStack: JavaTypeParameterStack
+    ): Pair<FirTypeParameterSymbol, Boolean> {
+        val stored = javaTypeParameterStack.safeGet(this)
+        if (stored != null) return stored to true
         val firSymbol = FirTypeParameterSymbol()
+        javaTypeParameterStack.add(this, firSymbol)
+        return firSymbol to false
+    }
+
+    private fun JavaTypeParameter.toFirTypeParameter(
+        firSymbol: FirTypeParameterSymbol,
+        javaTypeParameterStack: JavaTypeParameterStack
+    ): FirTypeParameter {
         return FirTypeParameterBuilder().apply {
-            session = this@JavaSymbolProvider.session
-            name = this@toFirTypeParameter.name
+            this.session = this@JavaSymbolProvider.session
+            this.name = this@toFirTypeParameter.name
             symbol = firSymbol
             variance = INVARIANT
             isReified = false
-        }.also {
-            javaTypeParameterStack.add(this, it)
-        }
+            addBounds(this@toFirTypeParameter, javaTypeParameterStack)
+        }.build()
     }
 
     private fun FirTypeParameterBuilder.addBounds(
         javaTypeParameter: JavaTypeParameter,
-        stack: JavaTypeParameterStack,
+        stack: JavaTypeParameterStack
     ) {
         for (upperBound in javaTypeParameter.upperBounds) {
             bounds += upperBound.toFirResolvedTypeRef(
@@ -103,18 +112,16 @@ class JavaSymbolProvider(
                 forTypeParameterBounds = true
             )
         }
-        addDefaultBoundIfNecessary()
+        addDefaultBoundIfNecessary(isFlexible = true)
     }
 
     private fun List<JavaTypeParameter>.convertTypeParameters(stack: JavaTypeParameterStack): List<FirTypeParameter> {
-        return this
-            .map { it.toFirTypeParameter(stack) }
-            .mapIndexed { index, typeParameterBuilder ->
-                if (typeParameterBuilder.bounds.isEmpty()) {
-                    typeParameterBuilder.addBounds(this[index], stack)
-                }
-                typeParameterBuilder.build()
-            }
+        return map { it.toFirTypeParameterSymbol(stack) }.mapIndexed { index, (symbol, initialized) ->
+            // This nasty logic is required, because type parameter bound can refer other type parameter from the list
+            // So we have to create symbols first, and type parameters themselves after them
+            if (initialized) symbol.fir
+            else this[index].toFirTypeParameter(symbol, stack)
+        }
     }
 
     override fun getClassLikeSymbolByFqName(classId: ClassId): FirRegularClassSymbol? {
@@ -155,7 +162,7 @@ class JavaSymbolProvider(
                     }
                 }
                 val firJavaClass = buildJavaClass {
-                    source = (javaClass as? JavaElementImpl<*>)?.psi?.toFirSourceElement()
+                    source = (javaClass as? JavaElementImpl<*>)?.psi?.toFirPsiSourceElement()
                     session = this@JavaSymbolProvider.session
                     symbol = firSymbol
                     name = javaClass.name
@@ -178,7 +185,7 @@ class JavaSymbolProvider(
                         val fieldSymbol = FirFieldSymbol(fieldId)
                         val returnType = javaField.type
                         val firJavaField = buildJavaField {
-                            source = (javaField as? JavaElementImpl<*>)?.psi?.toFirSourceElement()
+                            source = (javaField as? JavaElementImpl<*>)?.psi?.toFirPsiSourceElement()
                             session = this@JavaSymbolProvider.session
                             symbol = fieldSymbol
                             name = fieldName
@@ -187,6 +194,7 @@ class JavaSymbolProvider(
                             returnTypeRef = returnType.toFirJavaTypeRef(this@JavaSymbolProvider.session, javaTypeParameterStack)
                             isVar = !javaField.isFinal
                             isStatic = javaField.isStatic
+                            isEnumEntry = javaField.isEnumEntry
                             addAnnotationsFrom(this@JavaSymbolProvider.session, javaField, javaTypeParameterStack)
                         }
                         declarations += firJavaField
@@ -198,7 +206,7 @@ class JavaSymbolProvider(
                         val returnType = javaMethod.returnType
                         val firJavaMethod = buildJavaMethod {
                             session = this@JavaSymbolProvider.session
-                            source = (javaMethod as? JavaElementImpl<*>)?.psi?.toFirSourceElement()
+                            source = (javaMethod as? JavaElementImpl<*>)?.psi?.toFirPsiSourceElement()
                             symbol = methodSymbol
                             name = methodName
                             visibility = javaMethod.visibility
@@ -226,7 +234,7 @@ class JavaSymbolProvider(
                         val constructorSymbol = FirConstructorSymbol(constructorId)
                         val classTypeParameters = javaClass.typeParameters.convertTypeParameters(javaTypeParameterStack)
                         return FirJavaConstructorBuilder().apply {
-                            source = psi?.toFirSourceElement()
+                            source = psi?.toFirPsiSourceElement()
                             session = this@JavaSymbolProvider.session
                             symbol = constructorSymbol
                             this.visibility = visibility

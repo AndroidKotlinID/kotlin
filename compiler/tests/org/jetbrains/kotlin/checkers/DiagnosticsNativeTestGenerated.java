@@ -28,8 +28,18 @@ public class DiagnosticsNativeTestGenerated extends AbstractDiagnosticsNativeTes
         KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/nativeTests"), Pattern.compile("^(.+)\\.kt$"), null, true);
     }
 
+    @TestMetadata("sharedImmutable.kt")
+    public void testSharedImmutable() throws Exception {
+        runTest("compiler/testData/diagnostics/nativeTests/sharedImmutable.kt");
+    }
+
     @TestMetadata("throws.kt")
     public void testThrows() throws Exception {
         runTest("compiler/testData/diagnostics/nativeTests/throws.kt");
+    }
+
+    @TestMetadata("topLevelSingleton.kt")
+    public void testTopLevelSingleton() throws Exception {
+        runTest("compiler/testData/diagnostics/nativeTests/topLevelSingleton.kt");
     }
 }

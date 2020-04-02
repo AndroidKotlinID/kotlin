@@ -41,9 +41,9 @@ fun buildConfiguration(environment: KotlinCoreEnvironment, moduleName: String): 
         ),
         analysisFlags = mapOf(
             AnalysisFlags.useExperimental to listOf(
+                "kotlin.RequiresOptIn",
                 "kotlin.contracts.ExperimentalContracts",
-                "kotlin.Experimental",
-                "kotlin.ExperimentalMultiplatform"
+                "kotlin.ExperimentalMultiplatform",
             ),
             AnalysisFlags.allowResultReturnType to true
         )
@@ -52,7 +52,9 @@ fun buildConfiguration(environment: KotlinCoreEnvironment, moduleName: String): 
     return runtimeConfiguration
 }
 
-val environment = KotlinCoreEnvironment.createForTests(Disposable { }, CompilerConfiguration(), EnvironmentConfigFiles.JS_CONFIG_FILES)
+@Suppress("RedundantSamConstructor")
+private val environment =
+    KotlinCoreEnvironment.createForProduction(Disposable { }, CompilerConfiguration(), EnvironmentConfigFiles.JS_CONFIG_FILES)
 
 fun createPsiFile(fileName: String): KtFile {
     val psiManager = PsiManager.getInstance(environment.project)

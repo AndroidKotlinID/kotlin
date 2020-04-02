@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.load.java.JavaVisibilities
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.SimpleConstraintSystemConstraintPosition
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
@@ -103,7 +104,7 @@ internal sealed class CheckReceivers : ResolutionStage() {
             if (receiverType != null) return receiverType
             val returnTypeRef = callable.returnTypeRef as? FirResolvedTypeRef ?: return null
             if (!returnTypeRef.isExtensionFunctionType(bodyResolveComponents.session)) return null
-            return (returnTypeRef.type.typeArguments.firstOrNull() as? ConeTypedProjection)?.type
+            return (returnTypeRef.type.typeArguments.firstOrNull() as? ConeKotlinTypeProjection)?.type
         }
     }
 
@@ -351,6 +352,11 @@ internal object CheckVisibility : CheckerStage() {
         if (classId in visited) return false
         visited += classId
         if (classId.isSame(ownerId)) return true
+
+        fir.companionObject?.let { companion ->
+            if (companion.classId.isSame(ownerId)) return true
+        }
+
         val superTypes = fir.superConeTypes
         for (superType in superTypes) {
             val superTypeSymbol = superType.lookupTag.toSymbol(session) as? FirRegularClassSymbol ?: continue
@@ -469,6 +475,27 @@ internal object CheckVisibility : CheckerStage() {
             if (classSymbol is FirRegularClassSymbol) {
                 checkVisibility(classSymbol.fir, classSymbol, sink, callInfo)
             }
+        }
+    }
+}
+
+internal object CheckLowPriorityInOverloadResolution : CheckerStage() {
+    private val LOW_PRIORITY_IN_OVERLOAD_RESOLUTION_CLASS_ID: ClassId =
+        ClassId(FqName("kotlin.internal"), Name.identifier("LowPriorityInOverloadResolution"))
+
+    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+        val annotations = when (val fir = candidate.symbol.fir) {
+            is FirSimpleFunction -> fir.annotations
+            is FirProperty -> fir.annotations
+            else -> return
+        }
+        val hasLowPriorityAnnotation = annotations.any {
+            val lookupTag = ((it.annotationTypeRef as? FirResolvedTypeRef)?.type as? ConeClassLikeType)?.lookupTag ?: return@any false
+            lookupTag.classId == LOW_PRIORITY_IN_OVERLOAD_RESOLUTION_CLASS_ID
+        }
+
+        if (hasLowPriorityAnnotation) {
+            sink.reportApplicability(CandidateApplicability.RESOLVED_LOW_PRIORITY)
         }
     }
 }

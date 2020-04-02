@@ -181,6 +181,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/classes/innerClassWithDelegatingConstructor.kt");
         }
 
+        @TestMetadata("kt31649.kt")
+        public void testKt31649() throws Exception {
+            runTest("compiler/testData/ir/irText/classes/kt31649.kt");
+        }
+
         @TestMetadata("lambdaInDataClassDefaultParameter.kt")
         public void testLambdaInDataClassDefaultParameter() throws Exception {
             runTest("compiler/testData/ir/irText/classes/lambdaInDataClassDefaultParameter.kt");
@@ -992,6 +997,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/expressions/interfaceThisRef.kt");
         }
 
+        @TestMetadata("javaSyntheticGenericPropretyAccess.kt")
+        public void testJavaSyntheticGenericPropretyAccess() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/javaSyntheticGenericPropretyAccess.kt");
+        }
+
         @TestMetadata("javaSyntheticPropertyAccess.kt")
         public void testJavaSyntheticPropertyAccess() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/javaSyntheticPropertyAccess.kt");
@@ -1060,6 +1070,21 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
         @TestMetadata("kt30796.kt")
         public void testKt30796() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/kt30796.kt");
+        }
+
+        @TestMetadata("kt36956.kt")
+        public void testKt36956() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/kt36956.kt");
+        }
+
+        @TestMetadata("kt36963.kt")
+        public void testKt36963() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/kt36963.kt");
+        }
+
+        @TestMetadata("kt37570.kt")
+        public void testKt37570() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/kt37570.kt");
         }
 
         @TestMetadata("lambdaInCAO.kt")
@@ -1232,6 +1257,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/expressions/thisOfGenericOuterClass.kt");
         }
 
+        @TestMetadata("thisRefToObjectInNestedClassConstructorCall.kt")
+        public void testThisRefToObjectInNestedClassConstructorCall() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/thisRefToObjectInNestedClassConstructorCall.kt");
+        }
+
         @TestMetadata("thisReferenceBeforeClassDeclared.kt")
         public void testThisReferenceBeforeClassDeclared() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/thisReferenceBeforeClassDeclared.kt");
@@ -1355,6 +1385,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
                 KotlinTestUtils.runTestWithCustomIgnoreDirective(this::doTest, TargetBackend.ANY, testDataFilePath, "// IGNORE_BACKEND_FIR: ");
             }
 
+            @TestMetadata("adaptedExtensionFunctions.kt")
+            public void testAdaptedExtensionFunctions() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/adaptedExtensionFunctions.kt");
+            }
+
             public void testAllFilesPresentInCallableReferences() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/expressions/callableReferences"), Pattern.compile("^(.+)\\.kt$"), null, true);
             }
@@ -1374,6 +1409,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
                 runTest("compiler/testData/ir/irText/expressions/callableReferences/constructorWithAdaptedArguments.kt");
             }
 
+            @TestMetadata("funWithDefaultParametersAsKCallableStar.kt")
+            public void testFunWithDefaultParametersAsKCallableStar() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/funWithDefaultParametersAsKCallableStar.kt");
+            }
+
             @TestMetadata("genericMember.kt")
             public void testGenericMember() throws Exception {
                 runTest("compiler/testData/ir/irText/expressions/callableReferences/genericMember.kt");
@@ -1382,6 +1422,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             @TestMetadata("importedFromObject.kt")
             public void testImportedFromObject() throws Exception {
                 runTest("compiler/testData/ir/irText/expressions/callableReferences/importedFromObject.kt");
+            }
+
+            @TestMetadata("kt37131.kt")
+            public void testKt37131() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/kt37131.kt");
             }
 
             @TestMetadata("typeArguments.kt")
@@ -1837,9 +1882,24 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/types/coercionToUnitInLambdaReturnValue.kt");
         }
 
+        @TestMetadata("genericDelegatedDeepProperty.kt")
+        public void testGenericDelegatedDeepProperty() throws Exception {
+            runTest("compiler/testData/ir/irText/types/genericDelegatedDeepProperty.kt");
+        }
+
+        @TestMetadata("genericFunWithStar.kt")
+        public void testGenericFunWithStar() throws Exception {
+            runTest("compiler/testData/ir/irText/types/genericFunWithStar.kt");
+        }
+
         @TestMetadata("genericPropertyReferenceType.kt")
         public void testGenericPropertyReferenceType() throws Exception {
             runTest("compiler/testData/ir/irText/types/genericPropertyReferenceType.kt");
+        }
+
+        @TestMetadata("inStarProjectionInReceiverType.kt")
+        public void testInStarProjectionInReceiverType() throws Exception {
+            runTest("compiler/testData/ir/irText/types/inStarProjectionInReceiverType.kt");
         }
 
         @TestMetadata("intersectionType1_NI.kt")

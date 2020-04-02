@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.testFramework
 
+import com.intellij.openapi.externalSystem.importing.ImportSpecBuilder
 import com.intellij.openapi.externalSystem.service.execution.ProgressExecutionMode
 import com.intellij.openapi.externalSystem.service.project.manage.ExternalProjectsManagerImpl
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
@@ -16,10 +17,11 @@ import org.jetbrains.plugins.gradle.service.project.open.setupGradleSettings
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import org.jetbrains.plugins.gradle.util.GradleLog
+import java.io.File
 import kotlin.test.assertNotNull
 
 fun refreshGradleProject(projectPath: String, project: Project) {
-    _importProject(projectPath, project)
+    _importProject(File(projectPath).absolutePath, project)
 
     dispatchAllInvocationEvents()
 }
@@ -51,13 +53,20 @@ private fun _attachGradleProjectAndRefresh(
             ExternalSystemUtil.ensureToolWindowInitialized(project, GradleConstants.SYSTEM_ID)
         }
     }
-    //ExternalProjectsManagerImpl.getInstance(project).setStoreExternally(false)
 
     ExternalProjectsManagerImpl.disableProjectWatcherAutoUpdate(project)
     val settings = ExternalSystemApiUtil.getSettings(project, GradleConstants.SYSTEM_ID)
     if (settings.getLinkedProjectSettings(externalProjectPath) == null) {
         settings.linkProject(gradleProjectSettings)
     }
-    //ExternalSystemUtil.refreshProject(project, GradleConstants.SYSTEM_ID, externalProjectPath, true, ProgressExecutionMode.MODAL_SYNC)
-    ExternalSystemUtil.refreshProject(project, GradleConstants.SYSTEM_ID, externalProjectPath, false, ProgressExecutionMode.MODAL_SYNC)
+
+    StatefulTestGradleProjectRefreshCallback(externalProjectPath, project).use { callback ->
+        ExternalSystemUtil.refreshProject(
+            externalProjectPath,
+            ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
+                .use(ProgressExecutionMode.MODAL_SYNC)
+                .callback(callback)
+                .build()
+        )
+    }
 }

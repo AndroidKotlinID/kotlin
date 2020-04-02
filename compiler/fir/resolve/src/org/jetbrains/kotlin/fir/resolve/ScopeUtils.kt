@@ -58,13 +58,16 @@ fun ConeKotlinType.scope(useSiteSession: FirSession, scopeSession: ScopeSession)
 
             @Suppress("USELESS_CAST") // TODO: remove once fixed: https://youtrack.jetbrains.com/issue/KT-35635
             scopeSession.getOrBuild(
-                FirIntegerLiteralTypeScope.ILT_SYMBOL,
+                when {
+                    isUnsigned -> FirIntegerLiteralTypeScope.ILTKey.Unsigned
+                    else -> FirIntegerLiteralTypeScope.ILTKey.Signed
+                },
                 FirIntegerLiteralTypeScope.SCOPE_SESSION_KEY
             ) {
-                FirIntegerLiteralTypeScope(useSiteSession)
+                FirIntegerLiteralTypeScope(useSiteSession, isUnsigned)
             } as FirScope
         }
-        else -> error("Failed type $this")
+        else -> null
     }
 }
 

@@ -1,12 +1,12 @@
 FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
-  CLASS ENUM_CLASS name:Test0 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test0>]
+  CLASS ENUM_CLASS name:Test0 modality:OPEN visibility:public superTypes:[kotlin.Enum<<root>.Test0>]
     $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test0
     CONSTRUCTOR visibility:private <> (x:kotlin.Int) returnType:<root>.Test0 [primary]
       VALUE_PARAMETER name:x index:0 type:kotlin.Int
       BLOCK_BODY
         ENUM_CONSTRUCTOR_CALL 'public constructor <init> (name: kotlin.String, ordinal: kotlin.Int) [primary] declared in kotlin.Enum'
           <E>: <root>.Test0
-        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test0 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test0>]'
+        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test0 modality:OPEN visibility:public superTypes:[kotlin.Enum<<root>.Test0>]'
     PROPERTY name:x visibility:public modality:FINAL [val]
       FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]
         EXPRESSION_BODY
@@ -19,9 +19,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
             GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]' type=kotlin.Int origin=null
               receiver: GET_VAR '<this>: <root>.Test0 declared in <root>.Test0.<get-x>' type=<root>.Test0 origin=null
     ENUM_ENTRY name:ZERO
+      init: EXPRESSION_BODY
+        ENUM_CONSTRUCTOR_CALL 'private constructor <init> () [primary] declared in <root>.Test0.ZERO'
       class: CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test0]
         $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test0.ZERO
-        CONSTRUCTOR visibility:private <> () returnType:<uninitialized parent>.<anonymous> [primary]
+        CONSTRUCTOR visibility:private <> () returnType:<root>.Test0.ZERO [primary]
           BLOCK_BODY
             ENUM_CONSTRUCTOR_CALL 'private constructor <init> () declared in <root>.Test0'
             INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test0]'
@@ -29,13 +31,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
       BLOCK_BODY
         ENUM_CONSTRUCTOR_CALL 'private constructor <init> (x: kotlin.Int) [primary] declared in <root>.Test0'
           x: CONST Int type=kotlin.Int value=0
-    FUN name:values visibility:public modality:FINAL <> ($this:<root>.Test0) returnType:kotlin.Array<<root>.Test0>
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test0
-      BLOCK_BODY
-    FUN name:valueOf visibility:public modality:FINAL <> ($this:<root>.Test0, value:kotlin.String) returnType:<root>.Test0
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test0
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:values visibility:public modality:FINAL <> () returnType:kotlin.Array<<root>.Test0>
+      SYNTHETIC_BODY kind=ENUM_VALUES
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:valueOf visibility:public modality:FINAL <> (value:kotlin.String) returnType:<root>.Test0
       VALUE_PARAMETER name:value index:0 type:kotlin.String
-      BLOCK_BODY
+      SYNTHETIC_BODY kind=ENUM_VALUEOF
     FUN FAKE_OVERRIDE name:clone visibility:protected modality:FINAL <> ($this:kotlin.Enum<E of kotlin.Enum>) returnType:kotlin.Any [fake_override]
       overridden:
         protected final fun clone (): kotlin.Any declared in kotlin.Enum
@@ -70,14 +70,14 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
         overridden:
           public final fun <get-ordinal> (): kotlin.Int declared in kotlin.Enum
         $this: VALUE_PARAMETER name:<this> type:<root>.Test0
-  CLASS ENUM_CLASS name:Test1 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test1>]
+  CLASS ENUM_CLASS name:Test1 modality:OPEN visibility:public superTypes:[kotlin.Enum<<root>.Test1>]
     $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test1
     CONSTRUCTOR visibility:private <> (x:kotlin.Int) returnType:<root>.Test1 [primary]
       VALUE_PARAMETER name:x index:0 type:kotlin.Int
       BLOCK_BODY
         ENUM_CONSTRUCTOR_CALL 'public constructor <init> (name: kotlin.String, ordinal: kotlin.Int) [primary] declared in kotlin.Enum'
           <E>: <root>.Test1
-        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test1 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test1>]'
+        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test1 modality:OPEN visibility:public superTypes:[kotlin.Enum<<root>.Test1>]'
     PROPERTY name:x visibility:public modality:FINAL [val]
       FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]
         EXPRESSION_BODY
@@ -90,16 +90,20 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
             GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]' type=kotlin.Int origin=null
               receiver: GET_VAR '<this>: <root>.Test1 declared in <root>.Test1.<get-x>' type=<root>.Test1 origin=null
     ENUM_ENTRY name:ZERO
+      init: EXPRESSION_BODY
+        ENUM_CONSTRUCTOR_CALL 'private constructor <init> () [primary] declared in <root>.Test1.ZERO'
       class: CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test1]
         $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test1.ZERO
-        CONSTRUCTOR visibility:private <> () returnType:<uninitialized parent>.<anonymous> [primary]
+        CONSTRUCTOR visibility:private <> () returnType:<root>.Test1.ZERO [primary]
           BLOCK_BODY
             ENUM_CONSTRUCTOR_CALL 'private constructor <init> () declared in <root>.Test1'
             INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test1]'
     ENUM_ENTRY name:ONE
+      init: EXPRESSION_BODY
+        ENUM_CONSTRUCTOR_CALL 'private constructor <init> () [primary] declared in <root>.Test1.ONE'
       class: CLASS ENUM_ENTRY name:ONE modality:FINAL visibility:private superTypes:[<root>.Test1]
         $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test1.ONE
-        CONSTRUCTOR visibility:private <> () returnType:<uninitialized parent>.<anonymous> [primary]
+        CONSTRUCTOR visibility:private <> () returnType:<root>.Test1.ONE [primary]
           BLOCK_BODY
             ENUM_CONSTRUCTOR_CALL 'private constructor <init> (x: kotlin.Int) [primary] declared in <root>.Test1'
               x: CONST Int type=kotlin.Int value=1
@@ -108,13 +112,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
       BLOCK_BODY
         ENUM_CONSTRUCTOR_CALL 'private constructor <init> (x: kotlin.Int) [primary] declared in <root>.Test1'
           x: CONST Int type=kotlin.Int value=0
-    FUN name:values visibility:public modality:FINAL <> ($this:<root>.Test1) returnType:kotlin.Array<<root>.Test1>
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test1
-      BLOCK_BODY
-    FUN name:valueOf visibility:public modality:FINAL <> ($this:<root>.Test1, value:kotlin.String) returnType:<root>.Test1
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test1
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:values visibility:public modality:FINAL <> () returnType:kotlin.Array<<root>.Test1>
+      SYNTHETIC_BODY kind=ENUM_VALUES
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:valueOf visibility:public modality:FINAL <> (value:kotlin.String) returnType:<root>.Test1
       VALUE_PARAMETER name:value index:0 type:kotlin.String
-      BLOCK_BODY
+      SYNTHETIC_BODY kind=ENUM_VALUEOF
     FUN FAKE_OVERRIDE name:clone visibility:protected modality:FINAL <> ($this:kotlin.Enum<E of kotlin.Enum>) returnType:kotlin.Any [fake_override]
       overridden:
         protected final fun clone (): kotlin.Any declared in kotlin.Enum
@@ -149,14 +151,14 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
         overridden:
           public final fun <get-ordinal> (): kotlin.Int declared in kotlin.Enum
         $this: VALUE_PARAMETER name:<this> type:<root>.Test1
-  CLASS ENUM_CLASS name:Test2 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test2>]
+  CLASS ENUM_CLASS name:Test2 modality:ABSTRACT visibility:public superTypes:[kotlin.Enum<<root>.Test2>]
     $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test2
     CONSTRUCTOR visibility:private <> (x:kotlin.Int) returnType:<root>.Test2 [primary]
       VALUE_PARAMETER name:x index:0 type:kotlin.Int
       BLOCK_BODY
         ENUM_CONSTRUCTOR_CALL 'public constructor <init> (name: kotlin.String, ordinal: kotlin.Int) [primary] declared in kotlin.Enum'
           <E>: <root>.Test2
-        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test2 modality:FINAL visibility:public superTypes:[kotlin.Enum<<root>.Test2>]'
+        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_CLASS name:Test2 modality:ABSTRACT visibility:public superTypes:[kotlin.Enum<<root>.Test2>]'
     PROPERTY name:x visibility:public modality:FINAL [val]
       FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]
         EXPRESSION_BODY
@@ -169,9 +171,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
             GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:x type:kotlin.Int visibility:private [final]' type=kotlin.Int origin=null
               receiver: GET_VAR '<this>: <root>.Test2 declared in <root>.Test2.<get-x>' type=<root>.Test2 origin=null
     ENUM_ENTRY name:ZERO
+      init: EXPRESSION_BODY
+        ENUM_CONSTRUCTOR_CALL 'private constructor <init> () [primary] declared in <root>.Test2.ZERO'
       class: CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test2]
         $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test2.ZERO
-        CONSTRUCTOR visibility:private <> () returnType:<uninitialized parent>.<anonymous> [primary]
+        CONSTRUCTOR visibility:private <> () returnType:<root>.Test2.ZERO [primary]
           BLOCK_BODY
             ENUM_CONSTRUCTOR_CALL 'private constructor <init> () declared in <root>.Test2'
             INSTANCE_INITIALIZER_CALL classDescriptor='CLASS ENUM_ENTRY name:ZERO modality:FINAL visibility:private superTypes:[<root>.Test2]'
@@ -181,9 +185,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
             CALL 'public final fun println (message: kotlin.Any?): kotlin.Unit [inline] declared in kotlin.io' type=kotlin.Unit origin=null
               message: CONST String type=kotlin.String value="ZERO"
     ENUM_ENTRY name:ONE
+      init: EXPRESSION_BODY
+        ENUM_CONSTRUCTOR_CALL 'private constructor <init> () [primary] declared in <root>.Test2.ONE'
       class: CLASS ENUM_ENTRY name:ONE modality:FINAL visibility:private superTypes:[<root>.Test2]
         $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Test2.ONE
-        CONSTRUCTOR visibility:private <> () returnType:<uninitialized parent>.<anonymous> [primary]
+        CONSTRUCTOR visibility:private <> () returnType:<root>.Test2.ONE [primary]
           BLOCK_BODY
             ENUM_CONSTRUCTOR_CALL 'private constructor <init> (x: kotlin.Int) [primary] declared in <root>.Test2'
               x: CONST Int type=kotlin.Int value=1
@@ -199,13 +205,11 @@ FILE fqName:<root> fileName:/enumWithSecondaryCtor.kt
           x: CONST Int type=kotlin.Int value=0
     FUN name:foo visibility:public modality:ABSTRACT <> ($this:<root>.Test2) returnType:kotlin.Unit
       $this: VALUE_PARAMETER name:<this> type:<root>.Test2
-    FUN name:values visibility:public modality:FINAL <> ($this:<root>.Test2) returnType:kotlin.Array<<root>.Test2>
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test2
-      BLOCK_BODY
-    FUN name:valueOf visibility:public modality:FINAL <> ($this:<root>.Test2, value:kotlin.String) returnType:<root>.Test2
-      $this: VALUE_PARAMETER name:<this> type:<root>.Test2
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:values visibility:public modality:FINAL <> () returnType:kotlin.Array<<root>.Test2>
+      SYNTHETIC_BODY kind=ENUM_VALUES
+    FUN ENUM_CLASS_SPECIAL_MEMBER name:valueOf visibility:public modality:FINAL <> (value:kotlin.String) returnType:<root>.Test2
       VALUE_PARAMETER name:value index:0 type:kotlin.String
-      BLOCK_BODY
+      SYNTHETIC_BODY kind=ENUM_VALUEOF
     FUN FAKE_OVERRIDE name:clone visibility:protected modality:FINAL <> ($this:kotlin.Enum<E of kotlin.Enum>) returnType:kotlin.Any [fake_override]
       overridden:
         protected final fun clone (): kotlin.Any declared in kotlin.Enum

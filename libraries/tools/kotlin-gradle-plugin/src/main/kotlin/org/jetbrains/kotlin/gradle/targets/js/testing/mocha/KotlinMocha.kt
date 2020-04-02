@@ -69,28 +69,24 @@ class KotlinMocha(override val compilation: KotlinJsCompilation) :
             .map { npmProject.require(it) }
             .single()
 
-        val adapter = createAdapterJs(file, debug)
+        val adapter = createAdapterJs(file)
 
         val args = mutableListOf(
             "--require",
             npmProject.require("source-map-support/register.js")
         ).apply {
             if (debug) {
-                // Idle run of tests to load file with source maps to enable break points
-                add("--require")
-                add(
-                    npmProject.require("kotlin-test-js-runner/kotlin-test-nodejs-idle-runner.js")
-                )
-                add("--require")
-                add(file)
-
                 add("--inspect-brk")
             }
             add(mocha)
             add(adapter.canonicalPath)
             addAll(cliArgs.toList())
             addAll(cliArg("--reporter", "kotlin-test-js-runner/mocha-kotlin-reporter.js"))
-            addAll(cliArg("--timeout", timeout))
+            if (debug) {
+                add(NO_TIMEOUT_ARG)
+            } else {
+                addAll(cliArg(TIMEOUT_ARG, timeout))
+            }
         }
 
         return TCServiceMessagesTestExecutionSpec(
@@ -106,8 +102,7 @@ class KotlinMocha(override val compilation: KotlinJsCompilation) :
     }
 
     private fun createAdapterJs(
-        file: String,
-        debug: Boolean
+        file: String
     ): File {
         val npmProject = compilation.npmProject
 
@@ -115,12 +110,6 @@ class KotlinMocha(override val compilation: KotlinJsCompilation) :
         adapterJs.printWriter().use { writer ->
             val adapter = npmProject.require("kotlin-test-js-runner/kotlin-test-nodejs-runner.js")
             val escapedFile = file.jsQuoted()
-
-            if (debug) {
-                // Invalidate caches after idle run
-                writer.println("delete require.cache[require.resolve($escapedFile)]")
-                writer.println("delete require.cache[require.resolve('kotlin-test')]")
-            }
 
             writer.println("require(${adapter.jsQuoted()})")
 
@@ -136,3 +125,6 @@ class KotlinMocha(override val compilation: KotlinJsCompilation) :
         private const val DEFAULT_TIMEOUT = "2s"
     }
 }
+
+private const val TIMEOUT_ARG = "--timeout"
+private const val NO_TIMEOUT_ARG = "--no-timeout"

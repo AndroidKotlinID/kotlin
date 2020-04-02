@@ -86,18 +86,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
             isMutable("safe")
         }
 
-        impl(arraySetCall) {
-            parents += modifiableQualifiedAccess
-            default("arguments") {
-                value = "indexes + rValue"
-                withGetter = true
-            }
-            default("lValue") {
-                value = "calleeReference"
-                customSetter = "calleeReference = value"
-            }
-        }
-
         impl(callableReferenceAccess) {
             parents += modifiableQualifiedAccess
         }
@@ -151,8 +139,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(errorLoop) {
             default("block", "FirEmptyExpressionBlock()")
-            default("condition", "FirErrorExpressionImpl(source, diagnostic)")
-            useTypes(emptyExpressionBlock)
+            default("condition", "FirErrorExpressionImpl(source, ConeStubDiagnostic(diagnostic))")
+            useTypes(emptyExpressionBlock, coneStubDiagnosticType)
         }
 
         impl(expression, "FirExpressionStub") {
@@ -173,7 +161,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(getClassCall) {
             default("argument") {
-                value = "arguments.first()"
+                value = "argumentList.arguments.first()"
                 withGetter = true
             }
         }
@@ -239,6 +227,11 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 """.trimMargin())
 
             useTypes(implicitTypeRefType, implicitBooleanTypeRefType)
+        }
+
+        impl(comparisonExpression) {
+            default("typeRef", "FirImplicitBooleanTypeRef(null)")
+            useTypes(implicitBooleanTypeRefType)
         }
 
         impl(typeOperatorCall)
@@ -397,8 +390,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(errorExpression) {
             defaultEmptyList("annotations")
-            default("typeRef", "FirErrorTypeRefImpl(source, diagnostic)")
-            useTypes(errorTypeRefImpl)
+            default("typeRef", "FirErrorTypeRefImpl(source, ConeStubDiagnostic(diagnostic))")
+            useTypes(errorTypeRefImpl, coneStubDiagnosticType)
         }
 
         impl(resolvedFunctionTypeRef) {

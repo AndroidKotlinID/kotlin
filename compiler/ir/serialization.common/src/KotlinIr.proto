@@ -25,7 +25,7 @@ message IrFile {
 
 message PublicIdSignature {
   repeated int32 package_fq_name = 1 [packed=true];
-  repeated int32 class_fq_name = 2 [packed=true];
+  repeated int32 declaration_fq_name = 2 [packed = true];
   optional int64 member_uniq_id = 3;
   optional int64 flags = 4 [default = 0];
 }
@@ -170,8 +170,8 @@ message IrConst {
     int32 short = 5;
     int32 int = 6;
     int64 long = 7;
-    float float = 8;
-    double double = 9;
+    fixed32 float_bits = 8;  // float/double is stored via fixed 32/64 bit value to avoid raw bit conversion
+    fixed64 double_bits = 9;
     int32 string = 10;
   }
 }

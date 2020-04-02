@@ -58,6 +58,7 @@ internal class ModuleResolutionFacadeImpl(
         ResolveInDispatchThreadManager.assertNoResolveInDispatchThread()
 
         if (elements.isEmpty()) return BindingContext.EMPTY
+
         val resolveElementCache = getFrontendService(elements.first(), ResolveElementCache::class.java)
         return runWithCancellationCheck {
             resolveElementCache.resolveToElements(elements, bodyResolveMode)

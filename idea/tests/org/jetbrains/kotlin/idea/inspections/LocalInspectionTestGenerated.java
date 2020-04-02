@@ -7153,7 +7153,7 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         }
 
         public void testAllFilesPresentInRedundantElvisReturnNull() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("idea/testData/inspectionsLocal/redundantElvisReturnNull"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), true);
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/inspectionsLocal/redundantElvisReturnNull"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), null, true);
         }
 
         @TestMetadata("basic.kt")
@@ -7710,6 +7710,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("typeParameter3_ni.kt")
         public void testTypeParameter3_ni() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/typeParameter3_ni.kt");
+        }
+
+        @TestMetadata("typeParameter4.kt")
+        public void testTypeParameter4() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantLambdaArrow/typeParameter4.kt");
         }
 
         @TestMetadata("underscore.kt")
@@ -8812,6 +8817,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("underscore.kt")
         public void testUnderscore() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/underscore.kt");
+        }
+
+        @TestMetadata("underscores.kt")
+        public void testUnderscores() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/underscores.kt");
+        }
+
+        @TestMetadata("underscores2.kt")
+        public void testUnderscores2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/underscores2.kt");
         }
 
         @TestMetadata("yield.kt")
@@ -11879,6 +11894,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/simpleRedundantLet/dotWithComparison.kt");
         }
 
+        @TestMetadata("extensionCall.kt")
+        public void testExtensionCall() throws Exception {
+            runTest("idea/testData/inspectionsLocal/simpleRedundantLet/extensionCall.kt");
+        }
+
+        @TestMetadata("extensionWithNullableReceiverCall.kt")
+        public void testExtensionWithNullableReceiverCall() throws Exception {
+            runTest("idea/testData/inspectionsLocal/simpleRedundantLet/extensionWithNullableReceiverCall.kt");
+        }
+
+        @TestMetadata("extensionWithNullableReceiverCall2.kt")
+        public void testExtensionWithNullableReceiverCall2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/simpleRedundantLet/extensionWithNullableReceiverCall2.kt");
+        }
+
+        @TestMetadata("extensionWithNullableReceiverCall3.kt")
+        public void testExtensionWithNullableReceiverCall3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/simpleRedundantLet/extensionWithNullableReceiverCall3.kt");
+        }
+
         @TestMetadata("functionCall1.kt")
         public void testFunctionCall1() throws Exception {
             runTest("idea/testData/inspectionsLocal/simpleRedundantLet/functionCall1.kt");
@@ -13288,6 +13323,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/inspectionsLocal/unusedUnaryOperator"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), null, true);
         }
 
+        @TestMetadata("annotation.kt")
+        public void testAnnotation() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/annotation.kt");
+        }
+
+        @TestMetadata("annotation2.kt")
+        public void testAnnotation2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/annotation2.kt");
+        }
+
+        @TestMetadata("annotation3.kt")
+        public void testAnnotation3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/annotation3.kt");
+        }
+
         @TestMetadata("basic.kt")
         public void testBasic() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/basic.kt");
@@ -13296,6 +13346,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("basic2.kt")
         public void testBasic2() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/basic2.kt");
+        }
+
+        @TestMetadata("namedParameter.kt")
+        public void testNamedParameter() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedUnaryOperator/namedParameter.kt");
         }
 
         @TestMetadata("usedAsExpression.kt")

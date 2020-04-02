@@ -43,6 +43,8 @@ class IrIntrinsicMethods(val irBuiltIns: IrBuiltIns, val symbols: JvmSymbols) {
     private val intrinsicsMap = (
             listOf(
                 Key(kotlinJvm, FqName("T"), "<get-javaClass>", emptyList()) to JavaClassProperty,
+                Key(kotlinJvm, KotlinBuiltIns.FQ_NAMES.kClass.toSafe(), "<get-javaObjectType>", emptyList()) to GetJavaObjectType,
+                Key(kotlinJvm, KotlinBuiltIns.FQ_NAMES.kClass.toSafe(), "<get-javaPrimitiveType>", emptyList()) to GetJavaPrimitiveType,
                 Key(
                     kotlinJvm,
                     KotlinBuiltIns.FQ_NAMES.kClass.toSafe(),
@@ -91,6 +93,12 @@ class IrIntrinsicMethods(val irBuiltIns: IrBuiltIns, val symbols: JvmSymbols) {
                     "enumValueOf",
                     listOf(KotlinBuiltIns.FQ_NAMES.string.toSafe())
                 ) to EnumValueOf,
+                Key(
+                    KotlinBuiltIns.BUILT_INS_PACKAGE_FQ_NAME,
+                    KotlinBuiltIns.FQ_NAMES.string.toSafe(),
+                    "plus",
+                    listOf(KotlinBuiltIns.FQ_NAMES.any.toSafe())
+                ) to StringPlus,
                 irBuiltIns.eqeqSymbol.toKey()!! to Equals(KtTokens.EQEQ),
                 irBuiltIns.eqeqeqSymbol.toKey()!! to Equals(KtTokens.EQEQEQ),
                 irBuiltIns.ieee754equalsFunByOperandType[irBuiltIns.floatClass]!!.toKey()!! to Ieee754Equals(Type.FLOAT_TYPE),
@@ -104,8 +112,7 @@ class IrIntrinsicMethods(val irBuiltIns: IrBuiltIns, val symbols: JvmSymbols) {
                 irBuiltIns.dataClassArrayMemberToStringSymbol.toKey()!! to IrDataClassArrayMemberToString,
                 symbols.unsafeCoerceIntrinsic.toKey()!! to UnsafeCoerce,
                 symbols.signatureStringIntrinsic.toKey()!! to SignatureString,
-                symbols.reassignParameterIntrinsic.toKey()!! to ReassignParameter,
-                symbols.runSuspendFunction.toKey()!! to RunSuspend
+                symbols.reassignParameterIntrinsic.toKey()!! to ReassignParameter
             ) +
                     numberConversionMethods() +
                     unaryFunForPrimitives("plus", UnaryPlus) +

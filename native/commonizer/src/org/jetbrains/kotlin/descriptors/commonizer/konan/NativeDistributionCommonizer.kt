@@ -13,12 +13,14 @@ import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
 import org.jetbrains.kotlin.descriptors.commonizer.*
 import org.jetbrains.kotlin.descriptors.commonizer.Target
 import org.jetbrains.kotlin.descriptors.commonizer.utils.ResettableClockMark
+import org.jetbrains.kotlin.descriptors.konan.NATIVE_STDLIB_MODULE_NAME
 import org.jetbrains.kotlin.konan.library.*
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.library.KotlinLibrary
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.library.ToolingSingleFileKlibResolveStrategy
 import org.jetbrains.kotlin.library.impl.BaseWriterImpl
+import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
 import org.jetbrains.kotlin.library.impl.KoltinLibraryWriterImpl
 import org.jetbrains.kotlin.library.resolveSingleFileKlib
 import org.jetbrains.kotlin.name.Name
@@ -215,16 +217,20 @@ class NativeDistributionCommonizer(
         manifestData: NativeSensitiveManifestData,
         destination: File
     ) {
-        val library = KoltinLibraryWriterImpl(KFile(destination.path), manifestData.uniqueName, manifestData.versions, nopack = true)
+        val library = KoltinLibraryWriterImpl(
+            KFile(destination.path),
+            manifestData.uniqueName,
+            manifestData.versions,
+            BuiltInsPlatform.NATIVE,
+            nopack = true
+        )
         library.addMetadata(metadata)
         manifestData.applyTo(library.base as BaseWriterImpl)
         library.commit()
     }
 
     private companion object {
-        val stdlibName = Name.special("<$KONAN_STDLIB_NAME>")
-
         fun shouldBeSerialized(libraryName: Name) =
-            libraryName != stdlibName && libraryName != KlibResolvedModuleDescriptorsFactoryImpl.FORWARD_DECLARATIONS_MODULE_NAME
+            libraryName != NATIVE_STDLIB_MODULE_NAME && libraryName != KlibResolvedModuleDescriptorsFactoryImpl.FORWARD_DECLARATIONS_MODULE_NAME
     }
 }

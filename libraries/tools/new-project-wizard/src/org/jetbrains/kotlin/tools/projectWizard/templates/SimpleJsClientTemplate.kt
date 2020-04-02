@@ -5,11 +5,13 @@
 
 package org.jetbrains.kotlin.tools.projectWizard.templates
 
+
+import org.jetbrains.annotations.Nls
+import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.tools.projectWizard.WizardGradleRunConfiguration
 import org.jetbrains.kotlin.tools.projectWizard.WizardRunConfiguration
 import org.jetbrains.kotlin.tools.projectWizard.core.*
-import org.jetbrains.kotlin.tools.projectWizard.core.entity.TemplateSetting
-import org.jetbrains.kotlin.tools.projectWizard.core.safeAs
+import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.TemplateSetting
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.*
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.*
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.multiplatform.DefaultTargetConfigurationIR
@@ -25,39 +27,46 @@ import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.*
 import org.jetbrains.kotlin.tools.projectWizard.settings.version.Version
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.TemplateInterceptor
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.interceptTemplate
+import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
 
 class SimpleJsClientTemplate : Template() {
-    override val title: String = "JS client"
-    override val htmlDescription: String = title
+    override val title: String = KotlinNewProjectWizardBundle.message("module.template.js.simple.title")
+    override val description: String = KotlinNewProjectWizardBundle.message("module.template.js.simple.description")
+
     override val moduleTypes: Set<ModuleType> = setOf(ModuleType.js)
+
+    @NonNls
     override val id: String = "simpleJsClient"
 
     override fun isApplicableTo(module: Module): Boolean =
         module.configurator == JsBrowserTargetConfigurator
                 || module.configurator == JsSingleplatformModuleConfigurator
 
-    val renderEngine by enumSetting<RenderEngine>("Rendering engine", GenerationPhase.PROJECT_GENERATION) {
-        defaultValue = RenderEngine.REACT_WITH_STYLED
+    val renderEngine by enumSetting<RenderEngine>(
+        KotlinNewProjectWizardBundle.message("module.template.js.simple.setting.rendering.engine"),
+        GenerationPhase.PROJECT_GENERATION
+    ) {
+        defaultValue = value(RenderEngine.REACT_WITH_STYLED)
     }
 
     override val settings: List<TemplateSetting<*, *>> = listOf(renderEngine)
 
-    override fun ValuesReadingContext.createRunConfigurations(module: ModuleIR): List<WizardRunConfiguration> = buildList {
+    override fun Reader.createRunConfigurations(module: ModuleIR): List<WizardRunConfiguration> = buildList {
         if (module.originalModule.kind == ModuleKind.singleplatformJs) {
             +WizardGradleRunConfiguration(
-                "BrowserDevelopmentRun in continuous mode",
+                KotlinNewProjectWizardBundle.message("module.template.js.simple.run.configuration.dev"),
                 "browserDevelopmentRun",
                 listOf("--continuous")
             )
             +WizardGradleRunConfiguration(
-                "BrowserProductionRun in continuous mode",
+                KotlinNewProjectWizardBundle.message("module.template.js.simple.run.configuration.prod"),
                 "browserProductionRun",
                 listOf("--continuous")
             )
         }
     }
 
-    override fun TaskRunningContext.getRequiredLibraries(module: ModuleIR): List<DependencyIR> = withSettingsOf(module.originalModule) {
+    override fun Writer.getRequiredLibraries(module: ModuleIR): List<DependencyIR> = withSettingsOf(module.originalModule) {
         buildList {
             +ArtifactBasedLibraryDependencyIR(
                 MavenArtifact(DefaultRepository.JCENTER, "org.jetbrains.kotlinx", "kotlinx-html-js"),
@@ -81,7 +90,7 @@ class SimpleJsClientTemplate : Template() {
     }
 
 
-    override fun TaskRunningContext.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> =
+    override fun Writer.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> =
         withSettingsOf(module.originalModule) {
             buildList {
                 val hasKtorServNeighbourTarget = module.safeAs<MultiplatformModuleIR>()
@@ -112,7 +121,7 @@ class SimpleJsClientTemplate : Template() {
         +interceptTemplate(KtorServerTemplate()) {
             applicableIf { buildFileIR ->
                 val tasks = buildFileIR.irsOfTypeOrNull<GradleConfigureTaskIR>() ?: return@applicableIf false
-                tasks.none { it.taskAccess.name.endsWith("Jar") }
+                tasks.none { it.taskAccess.safeAs<GradleByNameTaskAccessIR>()?.name?.endsWith("Jar") == true }
             }
 
             interceptAtPoint(template.routes) { value ->
@@ -200,7 +209,7 @@ class SimpleJsClientTemplate : Template() {
         }
     }
 
-    override fun TaskRunningContext.getIrsToAddToBuildFile(module: ModuleIR): List<BuildSystemIR> = buildList {
+    override fun Writer.getIrsToAddToBuildFile(module: ModuleIR): List<BuildSystemIR> = buildList {
         +RepositoryIR(DefaultRepository.JCENTER)
         if (module is MultiplatformModuleIR) {
             +GradleImportIR("org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack")
@@ -221,8 +230,13 @@ class SimpleJsClientTemplate : Template() {
     }
 
     companion object {
+        @NonNls
         private const val JS_OUTPUT_FILE_NAME = "output.js"
+
+        @NonNls
         private const val WEBPACK_TASK_CLASS = "KotlinWebpack"
+
+        @NonNls
         private const val WEBPACK_TASK_SUFFIX = "BrowserProductionWebpack"
     }
 
@@ -270,9 +284,9 @@ class SimpleJsClientTemplate : Template() {
         )
     }
 
-    enum class RenderEngine(override val text: String) : DisplayableSettingItem {
-        KOTLINX_HTML("Use statically typed Kotlinx.html DSL"),
-        REACT("Use Kotlin-wrapped React library"),
-        REACT_WITH_STYLED("Use Kotlin-wrapped React framework together with Styled Components"),
+    enum class RenderEngine(@Nls override val text: String) : DisplayableSettingItem {
+        KOTLINX_HTML(KotlinNewProjectWizardBundle.message("module.template.js.simple.setting.rendering.kotlinx.html")),
+        REACT(KotlinNewProjectWizardBundle.message("module.template.js.simple.setting.rendering.react")),
+        REACT_WITH_STYLED(KotlinNewProjectWizardBundle.message("module.template.js.simple.setting.rendering.react.styled"))
     }
 }

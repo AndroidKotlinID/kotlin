@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -33,9 +33,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrTypeParameterSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
-import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeBuilder
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
-import org.jetbrains.kotlin.ir.types.impl.buildSimpleType
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
@@ -107,6 +105,12 @@ val IrSimpleFunction.isOverridable: Boolean
     get() = visibility != Visibilities.PRIVATE && modality != Modality.FINAL && (parent as? IrClass)?.isFinalClass != true
 
 val IrSimpleFunction.isOverridableOrOverrides: Boolean get() = isOverridable || overriddenSymbols.isNotEmpty()
+
+val IrDeclaration.isMemberOfOpenClass: Boolean
+    get() {
+        val parentClass = this.parent as? IrClass ?: return false
+        return !parentClass.isFinalClass
+    }
 
 fun IrReturnTarget.returnType(context: CommonBackendContext) =
     when (this) {
@@ -185,7 +189,7 @@ fun IrTypeParameter.copyToWithoutSuperTypes(
     }
 }
 
-private fun IrFunction.copyReceiverParametersFrom(from: IrFunction) {
+fun IrFunction.copyReceiverParametersFrom(from: IrFunction) {
     dispatchReceiverParameter = from.dispatchReceiverParameter?.let {
         IrValueParameterImpl(it.startOffset, it.endOffset, it.origin, it.descriptor, it.type, it.varargElementType).also {
             it.parent = this
@@ -198,22 +202,6 @@ fun IrFunction.copyValueParametersFrom(from: IrFunction) {
     copyReceiverParametersFrom(from)
     val shift = valueParameters.size
     valueParameters += from.valueParameters.map { it.copyTo(this, index = it.index + shift) }
-}
-
-fun IrFunction.copyValueParametersInsertingContinuationFrom(from: IrFunction, insertContinuation: () -> Unit) {
-    copyReceiverParametersFrom(from)
-    val shift = valueParameters.size
-    var additionalShift = 0
-    from.valueParameters.forEach {
-        // The continuation parameter goes before the default argument mask and handler.
-        if (it.origin == IrDeclarationOrigin.MASK_FOR_DEFAULT_FUNCTION && additionalShift == 0) {
-            insertContinuation()
-            additionalShift = 1
-        }
-        valueParameters += it.copyTo(this, index = it.index + shift + additionalShift)
-    }
-    // If there was no default argument mask and handler, the continuation goes last.
-    if (additionalShift == 0) insertContinuation()
 }
 
 fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
@@ -369,7 +357,16 @@ fun IrDeclarationContainer.addChild(declaration: IrDeclaration) {
     stageController.unrestrictDeclarationListsAccess {
         this.declarations += declaration
     }
-    declaration.accept(SetDeclarationsParentVisitor, this)
+    declaration.setDeclarationsParent(this)
+}
+
+fun IrDeclarationContainer.addChildren(declarations: List<IrDeclaration>) {
+    declarations.forEach { this.addChild(it) }
+}
+
+fun <T : IrElement> T.setDeclarationsParent(parent: IrDeclarationParent): T {
+    accept(SetDeclarationsParentVisitor, parent)
+    return this
 }
 
 object SetDeclarationsParentVisitor : IrElementVisitor<Unit, IrDeclarationParent> {
@@ -425,9 +422,6 @@ fun IrClass.createImplicitParameterDeclarationWithWrappedDescriptor() {
         thisReceiverDescriptor.bind(valueParameter)
         valueParameter.parent = this
     }
-
-    assert(typeParameters.isEmpty())
-    assert(descriptor.declaredTypeParameters.isEmpty())
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -495,14 +489,14 @@ val IrFunction.allParameters: List<IrValueParameter>
         explicitParameters
     }
 
-fun IrClass.addFakeOverrides() {
+fun IrClass.addFakeOverrides(implementedMembers: List<IrSimpleFunction> = emptyList()) {
     fun IrDeclaration.toList() = when (this) {
         is IrSimpleFunction -> listOf(this)
         is IrProperty -> listOfNotNull(getter, setter)
         else -> emptyList()
     }
 
-    val overriddenFunctions = declarations
+    val overriddenFunctions = (declarations + implementedMembers)
         .flatMap { it.toList() }
         .flatMap { it.overriddenSymbols.map { it.owner } }
         .toSet()
@@ -542,7 +536,7 @@ fun IrClass.addFakeOverrides() {
             ).apply {
                 descriptor.bind(this)
                 parent = this@addFakeOverrides
-                overriddenSymbols += overriddenFunctions.map { it.symbol }
+                overriddenSymbols = overriddenFunctions.map { it.symbol }
                 copyParameterDeclarationsFrom(irFunction)
                 copyAttributes(irFunction)
             }
@@ -553,7 +547,9 @@ fun IrClass.addFakeOverrides() {
         .associate { it.value.first() to createFakeOverride(it.value) }
         .toMutableMap()
 
-    declarations += fakeOverriddenFunctions.values
+    for (fo in fakeOverriddenFunctions.values) {
+        addChild(fo)
+    }
 }
 
 fun createStaticFunctionWithReceivers(
@@ -564,6 +560,7 @@ fun createStaticFunctionWithReceivers(
     origin: IrDeclarationOrigin = oldFunction.origin,
     modality: Modality = Modality.FINAL,
     visibility: Visibility = oldFunction.visibility,
+    isFakeOverride: Boolean = oldFunction.isFakeOverride,
     copyMetadata: Boolean = true,
     typeParametersFromContext: List<IrTypeParameter> = listOf()
 ): IrSimpleFunction {
@@ -583,7 +580,7 @@ fun createStaticFunctionWithReceivers(
         isTailrec = false,
         isSuspend = oldFunction.isSuspend,
         isExpect = oldFunction.isExpect,
-        isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE,
+        isFakeOverride = isFakeOverride,
         isOperator = oldFunction is IrSimpleFunction && oldFunction.isOperator
     ).apply {
         descriptor.bind(this)

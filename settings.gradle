@@ -27,7 +27,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.10")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.17")
     }
 }
 
@@ -43,6 +43,7 @@ gradleEnterprise {
         if (buildProperties.buildScanServer != null) {
             server = buildProperties.buildScanServer
             allowUntrustedServer = true
+            captureTaskInputFiles = true
             publishAlways()
         } else {
             setTermsOfServiceUrl("https://gradle.com/terms-of-service")
@@ -58,6 +59,8 @@ include ":kotlin-build-common",
         ":benchmarks",
         ":compiler",
         ":compiler:util",
+        ":compiler:config",
+        ":compiler:config.jvm",
         ":kotlin-util-io",
         ":kotlin-util-klib",
         ":kotlin-util-klib-metadata",
@@ -79,14 +82,18 @@ include ":kotlin-build-common",
         ":compiler:fir:cones",
         ":compiler:fir:tree",
         ":compiler:fir:tree:tree-generator",
-        ":compiler:fir:psi2fir",
-        ":compiler:fir:lightTree",
+        ":compiler:fir:raw-fir:fir-common",
+        ":compiler:fir:raw-fir:psi2fir",
+        ":compiler:fir:raw-fir:light-tree2fir",
         ":compiler:fir:fir2ir",
+        ":compiler:fir:fir2ir:jvm-backend",
         ":compiler:fir:resolve",
         ":compiler:fir:java",
         ":compiler:fir:modularized-tests",
         ":compiler:fir:dump",
         ":compiler:fir:jvm",
+        ":compiler:fir:checkers",
+        ":compiler:fir:analysis-tests",
         ":compiler:frontend",
         ":compiler:frontend.common",
         ":compiler:frontend.java",
@@ -107,6 +114,7 @@ include ":kotlin-build-common",
         ":compiler:backend",
         ":compiler:plugin-api",
         ":compiler:light-classes",
+        ":compiler:javac-wrapper",
         ":compiler:cli",
         ":compiler:cli-js",
         ":compiler:cli-js-klib",
@@ -119,6 +127,7 @@ include ":kotlin-build-common",
         ":js:js.ast",
         ":js:js.serializer",
         ":js:js.parser",
+        ":js:js.config",
         ":js:js.engines",
         ":js:js.frontend",
         ":js:js.translator",
@@ -138,7 +147,9 @@ include ":kotlin-build-common",
         ":core:metadata",
         ":core:metadata.jvm",
         ":core:util.runtime",
+        ":compiler:compiler.version",
         ":dependencies:android-sdk",
+        ":dependencies:tools-jar-api",
         ":idea:idea-jvm",
         ":idea:idea-maven",
         ":idea:idea-gradle",
@@ -148,6 +159,7 @@ include ":kotlin-build-common",
         ":idea:formatter",
         ":idea:ide-common",
         ":idea:idea-core",
+        ":idea:idea-fir",
         ":idea:kotlin-gradle-tooling",
         ":idea:idea-android",
         ":idea:idea-android-output-parser",

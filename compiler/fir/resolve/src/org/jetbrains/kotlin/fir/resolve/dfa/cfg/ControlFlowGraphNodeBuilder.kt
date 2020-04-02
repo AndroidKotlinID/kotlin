@@ -5,10 +5,8 @@
 
 package org.jetbrains.kotlin.fir.resolve.dfa.cfg
 
-import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
-import org.jetbrains.kotlin.fir.declarations.FirAnonymousInitializer
-import org.jetbrains.kotlin.fir.declarations.FirFunction
-import org.jetbrains.kotlin.fir.declarations.FirProperty
+import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
 
 fun ControlFlowGraphBuilder.createStubNode(): StubNode = StubNode(graph, levelCounter, createId())
@@ -40,6 +38,9 @@ fun ControlFlowGraphBuilder.createCheckNotNullCallNode(fir: FirCheckNotNullCall)
 
 fun ControlFlowGraphBuilder.createQualifiedAccessNode(fir: FirQualifiedAccessExpression): QualifiedAccessNode =
     QualifiedAccessNode(graph, fir, levelCounter, createId())
+
+fun ControlFlowGraphBuilder.createResolvedQualifierNode(fir: FirResolvedQualifier): ResolvedQualifierNode =
+    ResolvedQualifierNode(graph, fir, levelCounter, createId())
 
 fun ControlFlowGraphBuilder.createBlockEnterNode(fir: FirBlock): BlockEnterNode = BlockEnterNode(graph, fir, levelCounter, createId())
 
@@ -112,6 +113,9 @@ fun ControlFlowGraphBuilder.createLoopBlockExitNode(fir: FirLoop): LoopBlockExit
 
 fun ControlFlowGraphBuilder.createFunctionCallNode(fir: FirFunctionCall): FunctionCallNode =
     FunctionCallNode(graph, fir, levelCounter, createId())
+
+fun ControlFlowGraphBuilder.createDelegatedConstructorCallNode(fir: FirDelegatedConstructorCall): DelegatedConstructorCallNode =
+    DelegatedConstructorCallNode(graph, fir, levelCounter, createId())
 
 fun ControlFlowGraphBuilder.createVariableAssignmentNode(fir: FirVariableAssignment): VariableAssignmentNode =
     VariableAssignmentNode(graph, fir, levelCounter, createId())
@@ -187,3 +191,9 @@ fun ControlFlowGraphBuilder.createPostponedLambdaExitNode(fir: FirAnonymousFunct
 
 fun ControlFlowGraphBuilder.createPostponedLambdaEnterNode(fir: FirAnonymousFunction): PostponedLambdaEnterNode =
     PostponedLambdaEnterNode(graph, fir, levelCounter, createId())
+
+fun ControlFlowGraphBuilder.createAnonymousObjectExitNode(fir: FirAnonymousObject): AnonymousObjectExitNode =
+    AnonymousObjectExitNode(graph, fir, levelCounter, createId())
+
+fun ControlFlowGraphBuilder.createUnionFunctionCallArgumentsNode(fir: FirElement): UnionFunctionCallArgumentsNode =
+    UnionFunctionCallArgumentsNode(graph, fir, levelCounter, createId())

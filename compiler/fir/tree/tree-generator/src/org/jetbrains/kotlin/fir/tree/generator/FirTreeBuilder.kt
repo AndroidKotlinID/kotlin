@@ -76,9 +76,11 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val typeProjection = element("TypeProjection", TypeRef)
     val starProjection = element("StarProjection", TypeRef, typeProjection)
     val typeProjectionWithVariance = element("TypeProjectionWithVariance", TypeRef, typeProjection)
+    val argumentList = element("ArgumentList", Expression)
     val call = element("Call", Expression, statement) // TODO: may smth like `CallWithArguments` or `ElementWithArguments`?
     val annotationCall = element("AnnotationCall", Expression, expression, call)
     val operatorCall = element("OperatorCall", Expression, expression, call)
+    val comparisonExpression = element("ComparisonExpression", Expression, expression)
     val typeOperatorCall = element("TypeOperatorCall", Expression, expression, call)
     val whenExpression = element("WhenExpression", Expression, expression, resolvable)
     val whenBranch = element("WhenBranch", Expression)
@@ -87,7 +89,7 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val checkNotNullCall = element("CheckNotNullCall", Expression, expression, call, resolvable)
 
     val arrayOfCall = element("ArrayOfCall", Expression, expression, call)
-    val arraySetCall = element("ArraySetCall", Expression, qualifiedAccess, call)
+    val arraySetCall = element("AugmentedArraySetCall", Expression, statement)
     val classReferenceExpression = element("ClassReferenceExpression", Expression, expression)
     val errorExpression = element("ErrorExpression", Expression, expression, diagnosticHolder)
     val errorFunction = element("ErrorFunction", Declaration, function, diagnosticHolder)

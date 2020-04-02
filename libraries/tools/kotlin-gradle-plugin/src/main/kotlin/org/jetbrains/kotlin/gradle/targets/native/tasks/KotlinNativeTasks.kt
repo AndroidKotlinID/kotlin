@@ -24,13 +24,11 @@ import org.jetbrains.kotlin.gradle.plugin.LanguageSettingsBuilder
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.plugin.sources.DefaultLanguageSettingsBuilder
+import org.jetbrains.kotlin.konan.library.KLIB_INTEROP_IR_PROVIDER_IDENTIFIER
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind.*
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import org.jetbrains.kotlin.library.KotlinLibrary
-import org.jetbrains.kotlin.library.resolveSingleFileKlib
-import org.jetbrains.kotlin.library.uniqueName
-import org.jetbrains.kotlin.library.unresolvedDependencies
+import org.jetbrains.kotlin.library.*
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -130,7 +128,11 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions> : Abstra
 
     // Inputs and outputs
     val libraries: FileCollection
-        @InputFiles get() = compilation.compileDependencyFiles.filterOutPublishableInteropLibs(project)
+        @InputFiles get() =
+            // Avoid resolving these dependencies during task graph construction when we can't build the target:
+            if (compilation.konanTarget.enabledOnCurrentHost)
+                compilation.compileDependencyFiles.filterOutPublishableInteropLibs(project)
+            else project.files()
 
     override fun getClasspath(): FileCollection = libraries
     override fun setClasspath(configuration: FileCollection?) {
@@ -644,7 +646,12 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     }
 }
 
-class CacheBuilder(val project: Project, val binary: NativeBinary) {
+internal class CacheBuilder(val project: Project, val binary: NativeBinary) {
+
+    private val nativeSingleFileResolveStrategy: SingleFileKlibResolveStrategy
+        get() = CompilerSingleFileKlibResolveAllowingIrProvidersStrategy(
+            listOf(KLIB_INTEROP_IR_PROVIDER_IDENTIFIER)
+        )
     private val compilation: KotlinNativeCompilation
         get() = binary.compilation
 
@@ -664,10 +671,9 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
     private val target: String
         get() = compilation.konanTarget.name
 
-    private val optionsAwareCacheName get() = "$target${if (debuggable) "-g" else ""}$konanCacheKind"
-
-    private val rootCacheDirectory
-        get() = File(project.konanHome).resolve("klib/cache/$optionsAwareCacheName")
+    private val rootCacheDirectory by lazy {
+        getRootCacheDirectory(File(project.konanHome), compilation.konanTarget, debuggable, konanCacheKind)
+    }
 
     private fun getAllDependencies(dependency: ResolvedDependency): Set<ResolvedDependency> {
         val allDependencies = mutableSetOf<ResolvedDependency>()
@@ -729,7 +735,11 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
         cacheDirectory.mkdirs()
 
         val artifactsLibraries = artifactsToAddToCache
-            .map { resolveSingleFileKlib(org.jetbrains.kotlin.konan.file.File(it.file.absolutePath)) }
+            .map {
+                resolveSingleFileKlib(
+                    org.jetbrains.kotlin.konan.file.File(it.file.absolutePath), strategy = nativeSingleFileResolveStrategy
+                )
+            }
             .associateBy { it.uniqueName }
 
         // Top sort artifacts.
@@ -787,9 +797,7 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
     }
 
     private val String.cachedName
-        get() = konanCacheKind.outputKind?.let {
-            "${it.prefix(compilation.konanTarget)}${this}-cache${it.suffix(compilation.konanTarget)}"
-        } ?: error("No output for kind $konanCacheKind")
+        get() = getCacheFileName(this, konanCacheKind, compilation.konanTarget)
 
     private fun ensureCompilerProvidedLibPrecached(platformLibName: String, platformLibs: Map<String, File>, visitedLibs: MutableSet<String>) {
         if (platformLibName in visitedLibs)
@@ -798,7 +806,10 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
         val platformLib = platformLibs[platformLibName] ?: error("$platformLibName is not found in platform libs")
         if (File(rootCacheDirectory, platformLibName.cachedName).exists())
             return
-        for (dependency in resolveSingleFileKlib(org.jetbrains.kotlin.konan.file.File(platformLib.absolutePath)).unresolvedDependencies)
+        val unresolvedDependencies = resolveSingleFileKlib(
+            org.jetbrains.kotlin.konan.file.File(platformLib.absolutePath), strategy = nativeSingleFileResolveStrategy
+        ).unresolvedDependencies
+        for (dependency in unresolvedDependencies)
             ensureCompilerProvidedLibPrecached(dependency.path, platformLibs, visitedLibs)
         project.logger.info("Compiling $platformLibName (${visitedLibs.size}/${platformLibs.size}) to cache")
         val args = mutableListOf(
@@ -819,11 +830,9 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
             ensureCompilerProvidedLibPrecached(platformLibName, platformLibs, visitedLibs)
     }
 
-    private val KonanTarget.cacheWorks
-        get() = this == KonanTarget.IOS_X64 || this == KonanTarget.MACOS_X64
 
     fun buildCompilerArgs(): List<String> = mutableListOf<String>().apply {
-        if (konanCacheKind != NativeCacheKind.NONE && !optimized && compilation.konanTarget.cacheWorks) {
+        if (konanCacheKind != NativeCacheKind.NONE && !optimized && cacheWorksFor(compilation.konanTarget)) {
             rootCacheDirectory.mkdirs()
             ensureCompilerProvidedLibsPrecached()
             add("-Xcache-directory=${rootCacheDirectory.absolutePath}")
@@ -841,6 +850,24 @@ class CacheBuilder(val project: Project, val binary: NativeBinary) {
             for (cacheDirectory in allCacheDirectories)
                 add("-Xcache-directory=$cacheDirectory")
         }
+    }
+
+    companion object {
+        internal fun getRootCacheDirectory(konanHome: File, target: KonanTarget, debuggable: Boolean, cacheKind: NativeCacheKind): File {
+            require(cacheKind != NativeCacheKind.NONE) { "Usupported cache kind: ${NativeCacheKind.NONE}" }
+            val optionsAwareCacheName = "$target${if (debuggable) "-g" else ""}$cacheKind"
+            return konanHome.resolve("klib/cache/$optionsAwareCacheName")
+        }
+
+        internal fun getCacheFileName(baseName: String, cacheKind: NativeCacheKind, konanTarget: KonanTarget): String =
+            cacheKind.outputKind?.let {
+                "${it.prefix(konanTarget)}${baseName}-cache${it.suffix(konanTarget)}"
+            } ?: error("No output for kind $cacheKind")
+
+        internal fun cacheWorksFor(target: KonanTarget) =
+            target == KonanTarget.IOS_X64 || target == KonanTarget.MACOS_X64
+
+        internal val DEFAULT_CACHE_KIND: NativeCacheKind = NativeCacheKind.STATIC
     }
 }
 

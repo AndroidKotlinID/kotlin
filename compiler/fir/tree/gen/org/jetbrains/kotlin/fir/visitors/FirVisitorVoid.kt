@@ -62,9 +62,11 @@ import org.jetbrains.kotlin.fir.expressions.FirConstExpression
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirStarProjection
 import org.jetbrains.kotlin.fir.types.FirTypeProjectionWithVariance
+import org.jetbrains.kotlin.fir.expressions.FirArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirCall
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirOperatorCall
+import org.jetbrains.kotlin.fir.expressions.FirComparisonExpression
 import org.jetbrains.kotlin.fir.expressions.FirTypeOperatorCall
 import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
 import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
@@ -72,7 +74,7 @@ import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessWithoutCallee
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirCheckNotNullCall
 import org.jetbrains.kotlin.fir.expressions.FirArrayOfCall
-import org.jetbrains.kotlin.fir.expressions.FirArraySetCall
+import org.jetbrains.kotlin.fir.expressions.FirAugmentedArraySetCall
 import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
 import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
 import org.jetbrains.kotlin.fir.declarations.FirErrorFunction
@@ -351,6 +353,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(typeProjectionWithVariance)
     }
 
+    open fun visitArgumentList(argumentList: FirArgumentList) {
+        visitElement(argumentList)
+    }
+
     open fun visitCall(call: FirCall) {
         visitElement(call)
     }
@@ -361,6 +367,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitOperatorCall(operatorCall: FirOperatorCall) {
         visitElement(operatorCall)
+    }
+
+    open fun visitComparisonExpression(comparisonExpression: FirComparisonExpression) {
+        visitElement(comparisonExpression)
     }
 
     open fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall) {
@@ -391,8 +401,8 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(arrayOfCall)
     }
 
-    open fun visitArraySetCall(arraySetCall: FirArraySetCall) {
-        visitElement(arraySetCall)
+    open fun visitAugmentedArraySetCall(augmentedArraySetCall: FirAugmentedArraySetCall) {
+        visitElement(augmentedArraySetCall)
     }
 
     open fun visitClassReferenceExpression(classReferenceExpression: FirClassReferenceExpression) {
@@ -803,6 +813,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitTypeProjectionWithVariance(typeProjectionWithVariance)
     }
 
+    final override fun visitArgumentList(argumentList: FirArgumentList, data: Nothing?) {
+        visitArgumentList(argumentList)
+    }
+
     final override fun visitCall(call: FirCall, data: Nothing?) {
         visitCall(call)
     }
@@ -813,6 +827,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitOperatorCall(operatorCall: FirOperatorCall, data: Nothing?) {
         visitOperatorCall(operatorCall)
+    }
+
+    final override fun visitComparisonExpression(comparisonExpression: FirComparisonExpression, data: Nothing?) {
+        visitComparisonExpression(comparisonExpression)
     }
 
     final override fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: Nothing?) {
@@ -843,8 +861,8 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitArrayOfCall(arrayOfCall)
     }
 
-    final override fun visitArraySetCall(arraySetCall: FirArraySetCall, data: Nothing?) {
-        visitArraySetCall(arraySetCall)
+    final override fun visitAugmentedArraySetCall(augmentedArraySetCall: FirAugmentedArraySetCall, data: Nothing?) {
+        visitAugmentedArraySetCall(augmentedArraySetCall)
     }
 
     final override fun visitClassReferenceExpression(classReferenceExpression: FirClassReferenceExpression, data: Nothing?) {

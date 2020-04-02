@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -137,7 +137,7 @@ internal class CallableReferenceLowering(private val context: JvmBackendContext)
             origin = if (isLambda) JvmLoweredDeclarationOrigin.LAMBDA_IMPL else JvmLoweredDeclarationOrigin.FUNCTION_REFERENCE_IMPL
             name = SpecialNames.NO_NAME_PROVIDED
         }.apply {
-            parent = currentDeclarationParent
+            parent = currentDeclarationParent ?: error("No current declaration parent at ${irFunctionReference.dump()}")
             superTypes += superType
             if (samSuperType == null)
                 superTypes += functionSuperClass.typeWith(parameterTypes)
@@ -153,6 +153,7 @@ internal class CallableReferenceLowering(private val context: JvmBackendContext)
 
         val fakeOverrideReceiverField = functionReferenceClass.addField {
             name = receiverFieldFromSuper.name
+            isFakeOverride = true
             origin = IrDeclarationOrigin.FAKE_OVERRIDE
             type = receiverFieldFromSuper.type
             isFinal = receiverFieldFromSuper.isFinal
@@ -370,9 +371,15 @@ internal class CallableReferenceLowering(private val context: JvmBackendContext)
             kClassToJavaClass(kClassReference(classType), context)
 
         internal fun IrBuilderWithScope.calculateOwner(irContainer: IrDeclarationParent, context: JvmBackendContext): IrExpression {
-            // For built-in members (i.e. top level `toString`) we don't know any meaningful container, so we're generating Any.
-            // The non-IR backend generates equally meaningless "kotlin/KotlinPackage" in this case (see KT-17151).
-            val kClass = kClassReference((irContainer as? IrClass)?.defaultType ?: context.irBuiltIns.anyNType)
+            val classType =
+                if (irContainer is IrClass) irContainer.defaultType
+                else {
+                    // For built-in members (i.e. top level `toString`) we generate reference to an internal class for an owner.
+                    // This allows kotlin-reflect to understand that this is a built-in intrinsic which has no real declaration,
+                    // and construct a special KCallable object.
+                    context.ir.symbols.intrinsicsKotlinClass.defaultType
+                }
+            val kClass = kClassReference(classType)
 
             if ((irContainer as? IrClass)?.isFileClass != true && irContainer !is IrPackageFragment)
                 return kClass

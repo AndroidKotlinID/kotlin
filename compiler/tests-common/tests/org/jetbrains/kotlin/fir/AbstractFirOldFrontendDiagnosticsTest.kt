@@ -12,7 +12,7 @@ import java.io.File
 
 abstract class AbstractFirOldFrontendDiagnosticsTest : AbstractFirDiagnosticsTest() {
     override fun createTestFileFromPath(filePath: String): File {
-        val newPath = filePath.replace(".kt", ".fir.kt")
+        val newPath = if (File(filePath).readText().contains("// FIR_IDENTICAL")) filePath else filePath.replace(".kt", ".fir.kt")
         return File(newPath).also {
             prepareTestDataFile(filePath, it)
         }
@@ -25,7 +25,7 @@ abstract class AbstractFirOldFrontendDiagnosticsTest : AbstractFirDiagnosticsTes
     }
 
     override fun runAnalysis(testDataFile: File, testFiles: List<TestFile>, firFilesPerSession: Map<FirSession, List<FirFile>>) {
-        if (testFiles.any { it.directives.containsKey("FIR_IGNORE") }) return
+        if (testFiles.any { "FIR_IGNORE" in it.directives }) return
         val failure: AssertionError? = try {
             for ((_, firFiles) in firFilesPerSession) {
                 doFirResolveTestBench(firFiles, FirTotalResolveTransformer().transformers, gc = false)
@@ -40,7 +40,12 @@ abstract class AbstractFirOldFrontendDiagnosticsTest : AbstractFirDiagnosticsTes
             checkResultingFirFiles(allFirFiles, testDataFile)
             assertFalse("Test is good but there is expected exception", failureFile.exists())
             checkDiagnostics(testDataFile, testFiles, allFirFiles)
-            val needDump = testFiles.any { it.directives.containsKey("FIR_DUMP") }
+            if (testDataFile.absolutePath.endsWith(".fir.kt")) {
+                val oldFrontendTestDataFile = File(testDataFile.absolutePath.replace(".fir.kt", ".kt"))
+                compareAndMergeFirFileAndOldFrontendFile(oldFrontendTestDataFile, testDataFile)
+            }
+
+            val needDump = testFiles.any { "FIR_DUMP" in it.directives }
             if (needDump) {
                 checkFir(testDataFile, allFirFiles)
             }

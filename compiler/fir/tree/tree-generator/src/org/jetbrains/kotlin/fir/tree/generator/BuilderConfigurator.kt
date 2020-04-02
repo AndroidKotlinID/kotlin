@@ -101,6 +101,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(annotationCall) {
             parents += callBuilder
+            default("argumentList") {
+                value = "FirEmptyArgumentList"
+            }
+            useTypes(emptyArgumentListType)
         }
 
         builder(arrayOfCall) {
@@ -108,9 +112,8 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         }
 
         builder(arraySetCall) {
-            parents += qualifiedAccessBuilder
-            defaultFalse("safe")
-            defaultNoReceivers()
+            default("calleeReference", "FirStubReference")
+            useTypes(stubReferenceType)
         }
 
         builder(callableReferenceAccess) {
@@ -122,6 +125,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(componentCall) {
             parents += callBuilder
+            default("argumentList") {
+                value = "FirEmptyArgumentList"
+            }
+            useTypes(emptyArgumentListType)
         }
 
         builder(whileLoop) {
@@ -140,6 +147,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(delegatedConstructorCall) {
             parents += callBuilder
+            default("argumentList") {
+                value = "FirEmptyArgumentList"
+            }
+            useTypes(emptyArgumentListType)
         }
 
         builder(functionCall) {
@@ -148,6 +159,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             defaultFalse("safe")
             defaultNoReceivers()
             openBuilder()
+            default("argumentList") {
+                value = "FirEmptyArgumentList"
+            }
+            useTypes(emptyArgumentListType)
         }
 
         builder(qualifiedAccessExpression) {
@@ -172,6 +187,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(typeOperatorCall) {
             parents += callBuilder
+            default("argumentList") {
+                value = "FirEmptyArgumentList"
+            }
+            useTypes(emptyArgumentListType)
         }
 
         builder(stringConcatenationCall) {

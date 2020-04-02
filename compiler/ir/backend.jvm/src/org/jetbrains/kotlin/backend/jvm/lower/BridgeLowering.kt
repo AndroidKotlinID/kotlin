@@ -30,7 +30,6 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.getOrPutNullable
 import org.jetbrains.org.objectweb.asm.Type
@@ -155,26 +154,18 @@ private class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass,
             if (Visibilities.isPrivate(irFunction.visibility) || irFunction.isStatic || irFunction.overriddenSymbols.isEmpty())
                 return false
 
-            // We ignore (fake overrides of) default argument stubs and methods of Any.
-            // Default argument stubs only appear in the base class and are synthetic, so there is no reason to produce
-            // bridges for them. Similarly, none of the methods of Any have type parameters and so we will not need bridges
-            // for them.
-            if (irFunction.origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER || irFunction.isMethodOfAny())
+            // None of the methods of Any have type parameters and so we will not need bridges for them.
+            if (irFunction.isMethodOfAny())
                 return false
 
             // We don't produce bridges for abstract functions in interfaces.
             if (irFunction.isJvmAbstract)
                 return !irFunction.parentAsClass.isJvmInterface
 
-            // Finally, the JVM backend also ignores concrete fake overrides which are implemented in interfaces.
+            // Finally, the JVM backend also ignores concrete fake overrides whose implementation is directly inherited from an interface.
             // This is sound, since we do not generate type-specialized versions of fake overrides and if the method
             // were to override several interface methods the frontend would require a separate implementation.
-            //
-            // In addition, there are @PlatformDependent methods which only exist on newer JDK versions
-            // (MutableMap.remove and getOrDefault). Trying to produce (special) bridges for these methods could
-            // result in incorrect bytecode on older JVM versions. However, all such methods are declared
-            // in interfaces and thus we don't need a separate check for them.
-            return !irFunction.isFakeOverride || !irFunction.resolveFakeOverride()!!.parentAsClass.isJvmInterface
+            return !irFunction.isFakeOverride || irFunction.resolvesToClass()
         })
 
         for (member in potentialBridgeTargets) {
@@ -224,15 +215,18 @@ private class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass,
                     bridgeTarget = when {
                         irFunction.isJvmAbstract -> {
                             irClass.declarations.remove(irFunction)
-                            irClass.addAbstractMethodStub(irFunction)
+                            irClass.addAbstractMethodStub(irFunction, specialBridge.methodInfo?.needsArgumentBoxing == true)
                         }
                         irFunction.modality != Modality.FINAL -> {
-                            val superTarget = irFunction.overriddenSymbols.first { !it.owner.parentAsClass.isInterface }.owner
+                            val overriddenFromClass = irFunction.overriddenFromClass()!!
                             val superBridge = SpecialBridge(
-                                irFunction, irFunction.jvmMethod, superQualifierSymbol = superTarget.parentAsClass.symbol,
+                                irFunction, irFunction.jvmMethod, superQualifierSymbol = overriddenFromClass.parentAsClass.symbol,
                                 methodInfo = specialBridge.methodInfo?.copy(argumentsToCheck = 0), // For potential argument boxing
                                 isFinal = false,
                             )
+                            // The part after ?: is needed for methods with default implementations in collection interfaces:
+                            // MutableMap.remove() and getOrDefault().
+                            val superTarget = overriddenFromClass.takeIf { !it.isFakeOverride } ?: specialBridge.overridden
                             irClass.declarations.remove(irFunction)
                             irClass.addSpecialBridge(superBridge, superTarget)
                         }
@@ -332,17 +326,16 @@ private class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass,
             it.specialBridgeOrNull?.signature?.takeIf { bridgeSignature -> bridgeSignature != it.jvmMethod }
     }
 
-    private fun IrClass.addAbstractMethodStub(irFunction: IrSimpleFunction) =
+    private fun IrClass.addAbstractMethodStub(irFunction: IrSimpleFunction, needsArgumentBoxing: Boolean) =
         addFunction {
             updateFrom(irFunction)
             modality = Modality.ABSTRACT
             origin = IrDeclarationOrigin.DEFINED
             name = irFunction.name
             returnType = irFunction.returnType
+            isFakeOverride = false
         }.apply {
-            dispatchReceiverParameter = thisReceiver?.copyTo(this, type = defaultType)
-            extensionReceiverParameter = irFunction.extensionReceiverParameter?.copyTo(this)
-            valueParameters = irFunction.valueParameters.map { it.copyTo(this) }
+            copyParametersWithErasure(this@addAbstractMethodStub, irFunction, needsArgumentBoxing)
         }
 
     private fun IrClass.addBridge(bridge: Bridge, target: IrSimpleFunction): IrSimpleFunction =
@@ -482,8 +475,19 @@ private class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass,
     private fun IrBuilderWithScope.irCastIfNeeded(expression: IrExpression, to: IrType): IrExpression =
         if (expression.type == to || to.isAny() || to.isNullableAny()) expression else irImplicitCast(expression, to)
 
+    private val signatureCache = mutableMapOf<IrFunction, Method>()
+
     private val IrFunction.jvmMethod: Method
-        get() = context.methodSignatureMapper.mapAsmMethod(this)
+        get() = signatureCache.getOrPut(this) { context.methodSignatureMapper.mapAsmMethod(this) }
 }
 
 private fun IrDeclaration.comesFromJava() = parentAsClass.origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
+
+// Check whether a fake override will resolve to an implementation in class, not an interface.
+private fun IrSimpleFunction.resolvesToClass(): Boolean {
+    val overriddenFromClass = overriddenFromClass() ?: return false
+    return overriddenFromClass.modality != Modality.ABSTRACT
+}
+
+private fun IrSimpleFunction.overriddenFromClass(): IrSimpleFunction? =
+    overriddenSymbols.singleOrNull { !it.owner.parentAsClass.isJvmInterface }?.owner

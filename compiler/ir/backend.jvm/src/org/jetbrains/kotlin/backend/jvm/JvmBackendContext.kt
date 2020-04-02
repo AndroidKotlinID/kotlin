@@ -17,10 +17,9 @@ import org.jetbrains.kotlin.backend.jvm.codegen.createFakeContinuation
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmDeclarationFactory
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmSharedVariablesManager
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
+import org.jetbrains.kotlin.backend.jvm.lower.CollectionStubComputer
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.InlineClassAbi
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.MemoizedInlineClassReplacements
-import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
-import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.codegen.inline.NameGenerator
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.ClassConstructorDescriptor
@@ -40,7 +39,6 @@ import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi2ir.PsiErrorBuilder
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
 import org.jetbrains.kotlin.resolve.jvm.JvmClassName
@@ -70,13 +68,14 @@ class JvmBackendContext(
     val methodSignatureMapper = MethodSignatureMapper(this)
 
     override val declarationFactory: JvmDeclarationFactory = JvmDeclarationFactory(methodSignatureMapper, state.languageVersionSettings)
-    override val sharedVariablesManager = JvmSharedVariablesManager(state.module, builtIns, irBuiltIns)
 
     override val mapping: Mapping = DefaultMapping()
 
     val psiErrorBuilder = PsiErrorBuilder(psiSourceManager, state.diagnostics)
 
     override val ir = JvmIr(irModuleFragment, this.symbolTable)
+
+    override val sharedVariablesManager = JvmSharedVariablesManager(state.module, ir.symbols, irBuiltIns)
 
     val irIntrinsics by lazy { IrIntrinsicMethods(irBuiltIns, ir.symbols) }
 
@@ -96,7 +95,7 @@ class JvmBackendContext(
     //      an inline function in the same module. Thus, if two inline functions happen to have the same name
     //      and call a third inline function that has an anonymous object, the one which is called last
     //      will overwrite the other's regenerated copy. (Or don't recompile the inline function for every call.)
-    internal val regeneratedObjectNameGenerators = mutableMapOf<Pair<IrClass, Name>, NameGenerator>()
+    internal val regeneratedObjectNameGenerators = mutableMapOf<Pair<IrClass, String>, NameGenerator>()
 
     internal val localDelegatedProperties = mutableMapOf<IrClass, List<IrLocalDelegatedPropertySymbol>>()
 
@@ -107,6 +106,8 @@ class JvmBackendContext(
 
     internal val hiddenConstructors = mutableMapOf<IrConstructor, IrConstructorImpl>()
 
+    internal val collectionStubComputer = CollectionStubComputer(this)
+
     override var inVerbosePhase: Boolean = false
 
     override val configuration get() = state.configuration
@@ -114,24 +115,12 @@ class JvmBackendContext(
     override val internalPackageFqn = FqName("kotlin.jvm")
 
     val suspendLambdaToOriginalFunctionMap = mutableMapOf<IrFunctionReference, IrFunction>()
-    val continuationClassBuilders = mutableMapOf<IrSimpleFunction, ClassBuilder>()
     val suspendFunctionOriginalToView = mutableMapOf<IrFunction, IrFunction>()
-    val suspendFunctionOriginalToStub = mutableMapOf<IrFunction, IrFunction>()
     val fakeContinuation: IrExpression = createFakeContinuation(this)
 
     val staticDefaultStubs = mutableMapOf<IrFunctionSymbol, IrFunction>()
 
     val inlineClassReplacements = MemoizedInlineClassReplacements()
-
-    internal fun recordSuspendFunctionView(function: IrFunction, view: IrFunction) {
-        val attribute = function.suspendFunctionOriginal()
-        suspendFunctionOriginalToStub.remove(attribute)
-        suspendFunctionOriginalToView[attribute] = view
-    }
-
-    internal fun recordSuspendFunctionViewStub(function: IrFunction, stub: IrFunction) {
-        suspendFunctionOriginalToStub[function.suspendFunctionOriginal()] = stub
-    }
 
     internal fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol =
         symbolTable.lazyWrapper.referenceClass(descriptor)

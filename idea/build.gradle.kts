@@ -62,6 +62,7 @@ dependencies {
     compile(project(":idea:formatter"))
     compile(project(":compiler:fir:fir2ir"))
     compile(project(":compiler:fir:resolve"))
+    compile(project(":compiler:fir:checkers"))
     compile(project(":compiler:fir:java"))
     compile(project(":compiler:fir:jvm"))
     compile(project(":idea:idea-core"))
@@ -87,6 +88,9 @@ dependencies {
 
     Platform[193].orHigher {
         implementation(commonDep("org.jetbrains.intellij.deps.completion", "completion-ranking-kotlin"))
+        Ide.IJ {
+            implementation(intellijPluginDep("stats-collector"))
+        }
     }
 
     compileOnly(commonDep("org.jetbrains", "markdown"))
@@ -97,6 +101,7 @@ dependencies {
     compileOnly(intellijPluginDep("java-i18n"))
     compileOnly(intellijPluginDep("gradle"))
 
+    testCompileOnly(toolsJar())
     testCompileOnly(project(":kotlin-reflect-api")) // TODO: fix import (workaround for jps build)
     testCompile(project(":kotlin-test:kotlin-test-junit"))
     testCompile(projectTests(":compiler:tests-common"))
@@ -109,8 +114,7 @@ dependencies {
     testCompile(commonDep("junit:junit"))
     testCompileOnly(intellijPluginDep("coverage"))
 
-    testRuntime(project(":native:kotlin-native-utils")) { isTransitive = false }
-
+    testRuntimeOnly(toolsJar())
     testRuntime(commonDep("org.jetbrains", "markdown"))
     testRuntime(project(":plugins:kapt3-idea")) { isTransitive = false }
     testRuntime(project(":kotlin-reflect"))
@@ -154,6 +158,10 @@ dependencies {
     if (Ide.IJ()) {
         testCompileOnly(intellijPluginDep("maven"))
         testRuntime(intellijPluginDep("maven"))
+
+        if (Ide.IJ201.orHigher()) {
+            testRuntime(intellijPluginDep("repository-search"))
+        }
     }
 
     testRuntime(intellijPluginDep("junit"))
@@ -181,15 +189,6 @@ tasks.named<Copy>("processResources") {
 projectTest(parallel = true) {
     dependsOn(":dist")
     workingDir = rootDir
-}
-
-projectTest("firTest", parallel = true) {
-    dependsOn(":dist")
-    workingDir = rootDir
-    filter {
-        includeTestsMatching("org.jetbrains.kotlin.idea.fir.*")
-        includeTestsMatching("org.jetbrains.kotlin.idea.resolve.FirReferenceResolveTestGenerated")
-    }
 }
 
 configureFormInstrumentation()

@@ -85,6 +85,12 @@ class ResolvedExpressionAtom(override val atom: ExpressionKotlinCallArgument) : 
     }
 }
 
+class ResolvedSubCallArgument(override val atom: SubKotlinCallArgument) : ResolvedAtom() {
+    init {
+        setAnalyzedResults(listOf(atom.callResult))
+    }
+}
+
 interface PostponedResolvedAtomMarker {
     val inputTypes: Collection<KotlinTypeMarker>
     val outputType: KotlinTypeMarker?
@@ -103,6 +109,7 @@ class LambdaWithTypeVariableAsExpectedTypeAtom(
 ) : PostponedResolvedAtom() {
     override val inputTypes: Collection<UnwrappedType> get() = listOf(expectedType)
     override val outputType: UnwrappedType? get() = null
+    var isReturnArgumentOfAnotherLambda: Boolean = false
 
     fun setAnalyzed(resolvedLambdaAtom: ResolvedLambdaAtom) {
         setAnalyzedResults(listOf(resolvedLambdaAtom))

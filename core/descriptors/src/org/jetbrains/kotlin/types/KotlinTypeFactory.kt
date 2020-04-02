@@ -35,7 +35,7 @@ typealias RefinedTypeFactory = (KotlinTypeRefiner) -> SimpleType?
 object KotlinTypeFactory {
     val EMPTY_REFINED_TYPE_FACTORY: RefinedTypeFactory = { _ -> null }
 
-    @UseExperimental(TypeRefinement::class)
+    @OptIn(TypeRefinement::class)
     private fun computeMemberScope(
         constructor: TypeConstructor,
         arguments: List<TypeProjection>,
@@ -56,13 +56,19 @@ object KotlinTypeFactory {
                     )
             }
             is TypeAliasDescriptor -> ErrorUtils.createErrorScope("Scope for abbreviation: ${descriptor.name}", true)
-            else -> throw IllegalStateException("Unsupported classifier: $descriptor for constructor: $constructor")
+            else -> {
+                if (constructor is IntersectionTypeConstructor) {
+                    return constructor.createScopeForKotlinType()
+                }
+
+                throw IllegalStateException("Unsupported classifier: $descriptor for constructor: $constructor")
+            }
         }
     }
 
     @JvmStatic
     @JvmOverloads
-    @UseExperimental(TypeRefinement::class)
+    @OptIn(TypeRefinement::class)
     fun simpleType(
         annotations: Annotations,
         constructor: TypeConstructor,
@@ -112,7 +118,7 @@ object KotlinTypeFactory {
     private class ExpandedTypeOrRefinedConstructor(val expandedType: SimpleType?, val refinedConstructor: TypeConstructor?)
 
     @JvmStatic
-    @UseExperimental(TypeRefinement::class)
+    @OptIn(TypeRefinement::class)
     fun simpleTypeWithNonTrivialMemberScope(
         annotations: Annotations,
         constructor: TypeConstructor,

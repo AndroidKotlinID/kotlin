@@ -7,11 +7,11 @@ package org.jetbrains.kotlin.backend.jvm.lower
 
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
+import org.jetbrains.kotlin.backend.common.ir.allParameters
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlock
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
-import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.ir.IrInlineReferenceLocator
 import org.jetbrains.kotlin.backend.jvm.ir.createJvmIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.irArray
@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
-import org.jetbrains.kotlin.ir.types.IrTypeProjection
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
@@ -78,12 +77,13 @@ internal class InlineCallableReferenceToLambdaPhase(val context: JvmBackendConte
         return irBuilder.irBlock(expression, IrStatementOrigin.LAMBDA) {
             val function = buildFun {
                 setSourceRange(expression)
-                origin = JvmLoweredDeclarationOrigin.GENERATED_MEMBER_IN_CALLABLE_REFERENCE
+                origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
                 name = Name.identifier("stub_for_inline")
                 visibility = Visibilities.LOCAL
                 returnType = field.type
                 isSuspend = false
             }.apply {
+                parent = currentDeclarationParent ?: error("No current declaration parent at ${expression.dump()}")
                 val boundReceiver = expression.dispatchReceiver ?: expression.extensionReceiver
 
                 val receiver =
@@ -117,19 +117,30 @@ internal class InlineCallableReferenceToLambdaPhase(val context: JvmBackendConte
         val irBuilder = context.createJvmIrBuilder(currentScope!!.scope.scopeOwnerSymbol, expression.startOffset, expression.endOffset)
         return irBuilder.irBlock(expression, IrStatementOrigin.LAMBDA) {
 
-            val parameterTypes = (expression.type as IrSimpleType).arguments.map { (it as IrTypeProjection).type }
-            val argumentTypes = parameterTypes.dropLast(1)
-
+            // We find the number of parameters for constructed lambda from the type of the function reference,
+            // but the actual types have to be copied from referencedFunction; function reference argument type may be too
+            // specific because of approximation. See compiler/testData/codegen/box/callableReference/function/argumentTypes.kt
             val boundReceiver: Pair<IrValueParameter, IrExpression>? = expression.getArgumentsWithIr().singleOrNull()
+            val nParams = (expression.type as IrSimpleType).arguments.size - 1
+            var toDropAtStart = 0
+            if (boundReceiver != null) toDropAtStart++
+            if (referencedFunction is IrConstructor) toDropAtStart++
+            val argumentTypes = referencedFunction.allParameters.drop(toDropAtStart).take(nParams).map { parameter ->
+                parameter.type.substitute(
+                    referencedFunction.typeParameters,
+                    referencedFunction.typeParameters.indices.map { expression.getTypeArgument(it)!! }
+                )
+            }
 
             val function = buildFun {
                 setSourceRange(expression)
-                origin = JvmLoweredDeclarationOrigin.GENERATED_MEMBER_IN_CALLABLE_REFERENCE
+                origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
                 name = Name.identifier("stub_for_inlining")
                 visibility = Visibilities.LOCAL
                 returnType = referencedFunction.returnType
                 isSuspend = referencedFunction.isSuspend
             }.apply {
+                parent = currentDeclarationParent!!
                 for ((index, argumentType) in argumentTypes.withIndex()) {
                     addValueParameter {
                         name = Name.identifier("p$index")

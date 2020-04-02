@@ -1,11 +1,11 @@
 package org.jetbrains.kotlin.tools.projectWizard.wizard.ui.secondStep.modulesEditor
 
+import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators.TargetConfigurator
-import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModuleType
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.*
 
 class NewModuleCreator {
-    private fun suggestName(name: String, modules: List<Module>): String {
+    private fun suggestName(@NonNls name: String, modules: List<Module>): String {
         val names = modules.map(Module::name).toSet()
         if (name !in names) return name
         var index = 1
@@ -27,7 +27,6 @@ class NewModuleCreator {
         SourcesetType.values().map { sourcesetType ->
             Sourceset(
                 sourcesetType,
-                configurator.moduleType,
                 dependencies = emptyList()
             )
         }
@@ -57,14 +56,12 @@ class NewModuleCreator {
                 else -> SourcesetType.values().map { sourcesetType ->
                     Sourceset(
                         sourcesetType,
-                        ModuleType.jvm,
                         dependencies = emptyList()
                     )
                 }
             }
             val createdModule = Module(
                 name,
-                configurator.moduleKind,
                 configurator,
                 template = null,
                 sourcesets = sourcesets,

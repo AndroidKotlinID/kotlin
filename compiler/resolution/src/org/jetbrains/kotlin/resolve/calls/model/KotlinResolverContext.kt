@@ -206,12 +206,12 @@ enum class KotlinCallKind(vararg resolutionPart: ResolutionPart) {
         NoTypeArguments,
         NoArguments,
         CreateFreshVariablesSubstitutor,
+        CollectionTypeVariableUsagesInfo,
         CheckExplicitReceiverKindConsistency,
         CheckReceivers,
         PostponedVariablesInitializerResolutionPart
     ),
     FUNCTION(
-        CheckInstantiationOfAbstractClass,
         CheckVisibility,
         CheckInfixResolutionPart,
         CheckOperatorResolutionPart,
@@ -220,6 +220,7 @@ enum class KotlinCallKind(vararg resolutionPart: ResolutionPart) {
         MapArguments,
         ArgumentsToCandidateParameterDescriptor,
         CreateFreshVariablesSubstitutor,
+        CollectionTypeVariableUsagesInfo,
         CheckExplicitReceiverKindConsistency,
         CheckReceivers,
         CheckArgumentsInParenthesis,

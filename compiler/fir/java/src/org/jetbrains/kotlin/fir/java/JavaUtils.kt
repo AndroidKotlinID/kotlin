@@ -15,11 +15,8 @@ import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
-import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
-import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.expressions.FirArrayOfCall
-import org.jetbrains.kotlin.fir.expressions.FirConstKind
-import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.java.declarations.buildJavaValueParameter
 import org.jetbrains.kotlin.fir.java.enhancement.readOnlyToMutable
@@ -33,7 +30,7 @@ import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.firUnsafe
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-import org.jetbrains.kotlin.fir.toFirSourceElement
+import org.jetbrains.kotlin.fir.toFirPsiSourceElement
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
@@ -63,7 +60,7 @@ internal val JavaClass.classKind: ClassKind
     }
 
 internal fun ClassId.toConeKotlinType(
-    typeArguments: Array<ConeKotlinTypeProjection>,
+    typeArguments: Array<ConeTypeProjection>,
     isNullable: Boolean
 ): ConeLookupTagBasedType {
     val lookupTag = ConeClassLikeLookupTagImpl(this)
@@ -152,8 +149,8 @@ internal fun JavaType?.toConeKotlinTypeWithoutEnhancement(
 }
 
 private fun ClassId.toConeFlexibleType(
-    typeArguments: Array<ConeKotlinTypeProjection>,
-    typeArgumentsForUpper: Array<ConeKotlinTypeProjection> = typeArguments
+    typeArguments: Array<ConeTypeProjection>,
+    typeArgumentsForUpper: Array<ConeTypeProjection> = typeArguments
 ) = ConeFlexibleType(
     toConeKotlinType(typeArguments, isNullable = false),
     toConeKotlinType(typeArgumentsForUpper, isNullable = true)
@@ -335,8 +332,10 @@ internal fun JavaAnnotation.toFirAnnotationCall(
         annotationTypeRef = buildResolvedTypeRef {
             type = ConeClassLikeTypeImpl(FirRegularClassSymbol(classId!!).toLookupTag(), emptyArray(), isNullable = false)
         }
-        for (argument in this@toFirAnnotationCall.arguments) {
-            arguments += argument.toFirExpression(session, javaTypeParameterStack)
+        argumentList = buildArgumentList {
+            for (argument in this@toFirAnnotationCall.arguments) {
+                arguments += argument.toFirExpression(session, javaTypeParameterStack)
+            }
         }
     }
 }
@@ -354,7 +353,7 @@ internal fun JavaValueParameter.toFirValueParameter(
     session: FirSession, index: Int, javaTypeParameterStack: JavaTypeParameterStack
 ): FirValueParameter {
     return buildJavaValueParameter {
-        source = (this@toFirValueParameter as? JavaElementImpl<*>)?.psi?.toFirSourceElement()
+        source = (this@toFirValueParameter as? JavaElementImpl<*>)?.psi?.toFirPsiSourceElement()
         this.session = session
         name = this@toFirValueParameter.name ?: Name.identifier("p$index")
         returnTypeRef = type.toFirJavaTypeRef(session, javaTypeParameterStack)
@@ -367,7 +366,7 @@ private fun JavaType?.toConeProjectionWithoutEnhancement(
     session: FirSession,
     javaTypeParameterStack: JavaTypeParameterStack,
     boundTypeParameter: FirTypeParameter?
-): ConeKotlinTypeProjection {
+): ConeTypeProjection {
     return when (this) {
         null -> ConeStarProjection
         is JavaWildcardType -> {
@@ -399,8 +398,10 @@ private fun JavaAnnotationArgument.toFirExpression(
             value.createConstant(session)
         }
         is JavaArrayAnnotationArgument -> buildArrayOfCall {
-            for (element in getElements()) {
-                arguments += element.toFirExpression(session, javaTypeParameterStack)
+            argumentList = buildArgumentList {
+                for (element in getElements()) {
+                    arguments += element.toFirExpression(session, javaTypeParameterStack)
+                }
             }
         }
         is JavaEnumValueAnnotationArgument -> {
@@ -422,19 +423,21 @@ private fun JavaAnnotationArgument.toFirExpression(
                 }
                 this.calleeReference = calleeReference
                     ?: buildErrorNamedReference {
-                        diagnostic = FirSimpleDiagnostic("Strange Java enum value: $classId.$entryName", DiagnosticKind.Java)
+                        diagnostic = ConeSimpleDiagnostic("Strange Java enum value: $classId.$entryName", DiagnosticKind.Java)
                     }
             }
         }
         is JavaClassObjectAnnotationArgument -> buildGetClassCall {
             val referencedType = getReferencedType()
-            arguments += buildClassReferenceExpression {
-                classTypeRef = referencedType.toFirResolvedTypeRef(session, javaTypeParameterStack)
-            }
+            argumentList = buildUnaryArgumentList(
+                buildClassReferenceExpression {
+                    classTypeRef = referencedType.toFirResolvedTypeRef(session, javaTypeParameterStack)
+                }
+            )
         }
         is JavaAnnotationAsAnnotationArgument -> getAnnotation().toFirAnnotationCall(session, javaTypeParameterStack)
         else -> buildErrorExpression {
-            diagnostic = FirSimpleDiagnostic("Unknown JavaAnnotationArgument: ${this::class.java}", DiagnosticKind.Java)
+            diagnostic = ConeSimpleDiagnostic("Unknown JavaAnnotationArgument: ${this::class.java}", DiagnosticKind.Java)
         }
     }
 }
@@ -442,8 +445,10 @@ private fun JavaAnnotationArgument.toFirExpression(
 // TODO: use kind here
 private fun <T> List<T>.createArrayOfCall(session: FirSession, @Suppress("UNUSED_PARAMETER") kind: FirConstKind<T>): FirArrayOfCall {
     return buildArrayOfCall {
-        for (element in this@createArrayOfCall) {
-            arguments += element.createConstant(session)
+        argumentList = buildArgumentList {
+            for (element in this@createArrayOfCall) {
+                arguments += element.createConstant(session)
+            }
         }
     }
 }
@@ -470,7 +475,7 @@ internal fun Any?.createConstant(session: FirSession): FirExpression {
         null -> buildConstExpression(null, FirConstKind.Null, null)
 
         else -> buildErrorExpression {
-            diagnostic = FirSimpleDiagnostic("Unknown value in JavaLiteralAnnotationArgument: $this", DiagnosticKind.Java)
+            diagnostic = ConeSimpleDiagnostic("Unknown value in JavaLiteralAnnotationArgument: $this", DiagnosticKind.Java)
         }
     }
 }

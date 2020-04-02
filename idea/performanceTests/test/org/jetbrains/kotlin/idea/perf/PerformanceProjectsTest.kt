@@ -14,11 +14,13 @@ import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.highlighter.KotlinPsiChecker
 import org.jetbrains.kotlin.idea.highlighter.KotlinPsiCheckerAndHighlightingUpdater
 import org.jetbrains.kotlin.idea.perf.Stats.Companion.TEST_KEY
+import org.jetbrains.kotlin.idea.perf.Stats.Companion.WARM_UP
 import org.jetbrains.kotlin.idea.perf.Stats.Companion.runAndMeasure
 import org.jetbrains.kotlin.idea.perf.Stats.Companion.tcSuite
 import org.jetbrains.kotlin.idea.testFramework.Fixture
 import org.jetbrains.kotlin.idea.testFramework.Fixture.Companion.cleanupCaches
 import org.jetbrains.kotlin.idea.testFramework.Fixture.Companion.isAKotlinScriptFile
+import org.jetbrains.kotlin.idea.testFramework.ProjectOpenAction.GRADLE_PROJECT
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.test.assertNotEquals
 
@@ -37,7 +39,7 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
 
         init {
             // there is no @AfterClass for junit3.8
-            Runtime.getRuntime().addShutdownHook(Thread(Runnable { hwStats.close() }))
+            Runtime.getRuntime().addShutdownHook(Thread { hwStats.close() })
         }
 
         fun resetTimestamp() {
@@ -53,13 +55,13 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
         super.setUp()
         // warm up: open simple small project
         if (!warmedUp) {
-            warmUpProject(hwStats)
-
+            warmUpProject(hwStats, "src/HelloMain.kt") { perfOpenHelloWorld(hwStats, WARM_UP) }
             warmedUp = true
         }
     }
 
     fun testHelloWorldProject() {
+
         tcSuite("Hello world project") {
             myProject = perfOpenHelloWorld(hwStats)
 
@@ -152,17 +154,6 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
                     perfOpenKotlinProjectFast(stat)
                 }
 
-//                runAndMeasure("type and autocomplete") {
-//                    perfTypeAndAutocomplete(
-//                        stat,
-//                        "build.gradle.kts",
-//                        "tasks {",
-//                        "default",
-//                        lookupElements = listOf("defaultJvmTarget"),
-//                        note = "tasks-create"
-//                    )
-//                }
-
                 runAndMeasure("type and autocomplete") {
                     perfTypeAndAutocomplete(
                         stat,
@@ -174,6 +165,16 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
                     )
                 }
 
+                runAndMeasure("type and undo") {
+                    perfTypeAndUndo(
+                        project(),
+                        stat,
+                        "build.gradle.kts",
+                        "tasks {",
+                        "register",
+                        note = "type-undo"
+                    )
+                }
 
             }
         }
@@ -205,6 +206,19 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
                 perfFileAnalysisVersionGradleKts(stat)
             }
         }
+    }
+
+    private fun perfOpenKotlinProjectFast(stats: Stats) = perfOpenKotlinProject(stats, fast = true)
+
+    private fun perfOpenKotlinProject(stats: Stats, fast: Boolean = false) {
+        myProject = perfOpenProject(
+            name = "kotlin",
+            stats = stats,
+            note = "",
+            path = "../perfTestProject",
+            openAction = GRADLE_PROJECT,
+            fast = fast
+        )
     }
 
     private fun perfScriptDependenciesBuildGradleKts(it: Stats) {
@@ -257,14 +271,14 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
                 val extraStats = Stats("${stats.name} $testName")
                 val extraTimingsNs = mutableListOf<Map<String, Any>?>()
 
-                val warmUpIterations = 3
-                val iterations = 10
+                val warmUpIterations = 20
+                val iterations = 30
 
                 performanceTest<Fixture, Pair<Long, List<HighlightInfo>>> {
                     name(testName)
                     stats(stats)
-                    warmUpIterations(warmUpIterations)
-                    iterations(iterations)
+                    warmUpIterations(30)
+                    iterations(50)
                     setUp(perfKtsFileAnalysisSetUp(project, fileName))
                     test(perfKtsFileAnalysisTest())
                     tearDown(perfKtsFileAnalysisTearDown(extraTimingsNs, project))
@@ -303,7 +317,7 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
 
             // Note: Kotlin scripts require dependencies to be loaded
             if (isAKotlinScriptFile(fileName)) {
-                ScriptConfigurationManager.updateScriptDependenciesSynchronously(fixture.psiFile, project)
+                ScriptConfigurationManager.updateScriptDependenciesSynchronously(fixture.psiFile)
             }
 
             resetTimestamp()

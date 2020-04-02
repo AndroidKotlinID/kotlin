@@ -130,8 +130,6 @@ class JsSuspendFunctionsLowering(ctx: JsIrBackendContext) : AbstractSuspendFunct
             IrBlockBodyImpl(stateMachineFunction.startOffset, stateMachineFunction.endOffset, listOf(suspendResult, rootLoop))
 
         stateMachineFunction.body = functionBody
-        // TODO: Investigate parent problems
-        stateMachineFunction.patchDeclarationParents(stateMachineFunction.parent)
 
         // Move return targets to new function
         functionBody.transformChildrenVoid(object : IrElementTransformerVoid() {
@@ -158,7 +156,9 @@ class JsSuspendFunctionsLowering(ctx: JsIrBackendContext) : AbstractSuspendFunct
                 }
             }
         }
-        simplifiedFunction.explicitParameters.forEach {
+        val isSuspendLambda = transformingFunction.parent === coroutineClass
+        val parameters = if (isSuspendLambda) simplifiedFunction.valueParameters else simplifiedFunction.explicitParameters
+        parameters.forEach {
             localToPropertyMap.getOrPut(it.symbol) {
                 argumentToPropertiesMap.getValue(it).symbol
             }

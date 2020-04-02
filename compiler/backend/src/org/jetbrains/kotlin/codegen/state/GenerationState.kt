@@ -219,7 +219,9 @@ class GenerationState private constructor(
     val samWrapperClasses: SamWrapperClasses = SamWrapperClasses(this)
     val globalInlineContext: GlobalInlineContext = GlobalInlineContext(diagnostics)
     val mappingsClassesForWhenByEnum: MappingsClassesForWhenByEnum = MappingsClassesForWhenByEnum(this)
-    val jvmRuntimeTypes: JvmRuntimeTypes = JvmRuntimeTypes(module, configuration.languageVersionSettings)
+    val jvmRuntimeTypes: JvmRuntimeTypes = JvmRuntimeTypes(
+        module, configuration.languageVersionSettings, configuration.getBoolean(JVMConfigurationKeys.NO_OPTIMIZED_CALLABLE_REFERENCES)
+    )
     val factory: ClassFileFactory
     private var duplicateSignatureFactory: BuilderFactoryForDuplicateSignatureDiagnostics? = null
 
@@ -242,6 +244,7 @@ class GenerationState private constructor(
     val assertionsMode: JVMAssertionsMode = configuration.get(JVMConfigurationKeys.ASSERTIONS_MODE, JVMAssertionsMode.DEFAULT)
     val isInlineDisabled: Boolean = configuration.getBoolean(CommonConfigurationKeys.DISABLE_INLINE)
     val useTypeTableInSerializer: Boolean = configuration.getBoolean(JVMConfigurationKeys.USE_TYPE_TABLE)
+    val unifiedNullChecks: Boolean = languageVersionSettings.apiVersion >= ApiVersion.KOTLIN_1_4
 
     val rootContext: CodegenContext<*> = RootContext(this)
 

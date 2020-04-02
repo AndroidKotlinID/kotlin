@@ -70,7 +70,7 @@ class EnumUsageLowering(val context: JsIrBackendContext) : BodyLoweringPass {
             IrFieldImpl(
                 startOffset, endOffset, origin, symbol, name, irClass.defaultType, Visibilities.PUBLIC,
                 isFinal = false, isExternal = true, isStatic = true,
-                isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE
+                isFakeOverride = entry.isFakeOverride
             ).also {
                 descriptor.bind(it)
                 it.parent = irClass
@@ -343,8 +343,7 @@ class EnumEntryInstancesLowering(val context: JsIrBackendContext) : DeclarationT
             isStatic = true
         }.apply {
             parent = irClass
-            val builder = context.createIrBuilder(irClass.symbol)
-            initializer = builder.run { irExprBody(irImplicitCast(irNull(), type)) }
+            initializer = null
         }
 
         enumEntry.correspondingField = result
@@ -407,8 +406,7 @@ class EnumClassCreateInitializerLowering(val context: JsIrBackendContext) : Decl
         isStatic = true
     }.apply {
         parent = irClass
-        val builder = context.createIrBuilder(irClass.symbol)
-        initializer = builder.run { irExprBody(irBoolean(false)) }
+        initializer = null
     }
 
     private fun createInitEntryInstancesFun(irClass: IrClass, entryInstancesInitializedField: IrField): IrSimpleFunction =

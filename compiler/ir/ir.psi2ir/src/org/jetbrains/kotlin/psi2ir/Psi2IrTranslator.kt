@@ -62,7 +62,7 @@ class Psi2IrTranslator(
         symbolTable: SymbolTable = SymbolTable(signaturer),
         extensions: GeneratorExtensions = GeneratorExtensions()
     ): GeneratorContext =
-        GeneratorContext(configuration, moduleDescriptor, bindingContext, languageVersionSettings, symbolTable, extensions, signaturer)
+        createGeneratorContext(configuration, moduleDescriptor, bindingContext, languageVersionSettings, symbolTable, extensions, signaturer)
 
     fun generateModuleFragment(
         context: GeneratorContext,
@@ -73,8 +73,8 @@ class Psi2IrTranslator(
         val moduleGenerator = ModuleGenerator(context)
         val irModule = moduleGenerator.generateModuleFragmentWithoutDependencies(ktFiles)
 
-        expectDescriptorToSymbol?.let { referenceExpectsForUsedActuals(it, context.symbolTable, irModule) }
         irModule.patchDeclarationParents()
+        expectDescriptorToSymbol?.let { referenceExpectsForUsedActuals(it, context.symbolTable, irModule) }
         postprocess(context, irModule)
         // do not generate unbound symbols before postprocessing,
         // since plugins must work with non-lazy IR

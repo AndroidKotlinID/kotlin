@@ -375,6 +375,8 @@ public fun <T> Sequence<T>.dropWhile(predicate: (T) -> Boolean): Sequence<T> {
  * Returns a sequence containing only elements matching the given [predicate].
  *
  * The operation is _intermediate_ and _stateless_.
+ * 
+ * @sample samples.collections.Collections.Filtering.filter
  */
 public fun <T> Sequence<T>.filter(predicate: (T) -> Boolean): Sequence<T> {
     return FilteringSequence(this, true, predicate)
@@ -430,6 +432,8 @@ public inline fun <reified R, C : MutableCollection<in R>> Sequence<*>.filterIsI
  * Returns a sequence containing all elements not matching the given [predicate].
  *
  * The operation is _intermediate_ and _stateless_.
+ * 
+ * @sample samples.collections.Collections.Filtering.filter
  */
 public fun <T> Sequence<T>.filterNot(predicate: (T) -> Boolean): Sequence<T> {
     return FilteringSequence(this, false, predicate)
@@ -439,6 +443,8 @@ public fun <T> Sequence<T>.filterNot(predicate: (T) -> Boolean): Sequence<T> {
  * Returns a sequence containing all elements that are not `null`.
  *
  * The operation is _intermediate_ and _stateless_.
+ * 
+ * @sample samples.collections.Collections.Filtering.filterNotNull
  */
 public fun <T : Any> Sequence<T?>.filterNotNull(): Sequence<T> {
     @Suppress("UNCHECKED_CAST")
@@ -1389,6 +1395,29 @@ public inline fun <S, T : S> Sequence<T>.reduceIndexed(operation: (index: Int, a
 }
 
 /**
+ * Accumulates value starting with the first element and applying [operation] from left to right
+ * to current accumulator value and each element with its index in the original sequence.
+ * Returns null if the sequence is empty.
+ * @param [operation] function that takes the index of an element, current accumulator value
+ * and the element itself and calculates the next accumulator value.
+ *
+ * The operation is _terminal_.
+ * 
+ * @sample samples.collections.Collections.Aggregates.reduceOrNull
+ */
+@SinceKotlin("1.4")
+public inline fun <S, T : S> Sequence<T>.reduceIndexedOrNull(operation: (index: Int, acc: S, T) -> S): S? {
+    val iterator = this.iterator()
+    if (!iterator.hasNext()) return null
+    var index = 1
+    var accumulator: S = iterator.next()
+    while (iterator.hasNext()) {
+        accumulator = operation(checkIndexOverflow(index++), accumulator, iterator.next())
+    }
+    return accumulator
+}
+
+/**
  * Accumulates value starting with the first element and applying [operation] from left to right to current accumulator value and each element. Returns null if the sequence is empty.
  *
  * The operation is _terminal_.
@@ -1694,6 +1723,8 @@ public inline fun <T> Sequence<T>.minusElement(element: T): Sequence<T> {
  * while *second* list contains elements for which [predicate] yielded `false`.
  *
  * The operation is _terminal_.
+ * 
+ * @sample samples.collections.Sequences.Transformations.partition
  */
 public inline fun <T> Sequence<T>.partition(predicate: (T) -> Boolean): Pair<List<T>, List<T>> {
     val first = ArrayList<T>()

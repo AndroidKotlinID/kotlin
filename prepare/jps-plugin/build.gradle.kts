@@ -20,7 +20,11 @@ val projectsToShadow = listOf(
     ":jps-plugin",
     ":kotlin-preloader",
     ":compiler:util",
-    ":core:util.runtime"
+    ":compiler:config",
+    ":compiler:config.jvm",
+    ":js:js.config",
+    ":core:util.runtime",
+    ":compiler:compiler.version"
 )
 
 dependencies {

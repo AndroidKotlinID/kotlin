@@ -96,7 +96,9 @@ private class FieldNameCollector : IrElementVisitorVoid {
     }
 
     override fun visitField(declaration: IrField) {
-        nameToField.getOrPut(declaration.parent to declaration.name) { mutableListOf() }.add(declaration)
+        if (!declaration.isFakeOverride) {
+            nameToField.getOrPut(declaration.parent to declaration.name) { mutableListOf() }.add(declaration)
+        }
     }
 }
 
@@ -111,7 +113,7 @@ private class FieldRenamer(private val newNames: Map<IrField, Name>) : IrElement
         return IrFieldImpl(
             declaration.startOffset, declaration.endOffset, declaration.origin, symbol, newName,
             declaration.type, declaration.visibility, declaration.isFinal, declaration.isExternal, declaration.isStatic,
-            isFakeOverride = declaration.origin == IrDeclarationOrigin.FAKE_OVERRIDE
+            isFakeOverride = declaration.isFakeOverride
         ).also {
             descriptor.bind(it)
             it.parent = declaration.parent

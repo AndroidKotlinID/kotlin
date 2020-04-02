@@ -22,7 +22,6 @@ import com.intellij.openapi.vfs.CharsetToolkit
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
-import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import com.intellij.util.ArrayUtil
 import com.intellij.util.PathUtil
 import junit.framework.ComparisonFailure
@@ -33,6 +32,7 @@ import org.jetbrains.kotlin.idea.test.DirectiveBasedActionUtils
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.withCustomCompilerOptions
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.test.Directives
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.jetbrains.kotlin.test.TestFiles
 import org.jetbrains.kotlin.test.testFramework.runWriteAction
@@ -114,7 +114,7 @@ abstract class AbstractQuickFixMultiFileTest : KotlinLightCodeInsightFixtureTest
             "single.kt",
             multiFileText,
             object : TestFiles.TestFileFactoryNoModules<TestFile>() {
-                override fun create(fileName: String, text: String, directives: Map<String, String>): TestFile {
+                override fun create(fileName: String, text: String, directives: Directives): TestFile {
                     val linesWithoutDirectives = text.lines().filter {
                         !it.startsWith("// LANGUAGE_VERSION") && !it.startsWith("// FILE")
                     }
@@ -343,7 +343,7 @@ abstract class AbstractQuickFixMultiFileTest : KotlinLightCodeInsightFixtureTest
                     TestCase.fail("Action '$text' is available (but must not) in test $testFilePath")
                 }
 
-                CodeInsightTestFixtureImpl.invokeIntention(action, file, editor, action.text)
+                invokeIntentionCompat(action, file, editor)
 
                 if (!shouldBeAvailableAfterExecution) {
                     val afterAction = findActionByPattern(pattern, getAvailableActions())

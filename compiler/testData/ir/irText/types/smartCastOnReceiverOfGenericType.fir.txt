@@ -7,7 +7,7 @@ FILE fqName:<root> fileName:/smartCastOnReceiverOfGenericType.kt
         GET_VAR 'a: kotlin.Any declared in <root>.testFunction' type=kotlin.Any origin=null
       TYPE_OP type=kotlin.String origin=CAST typeOperand=kotlin.String
         GET_VAR 'b: kotlin.Any declared in <root>.testFunction' type=kotlin.Any origin=null
-      CALL 'public abstract fun add (element: kotlin.String): kotlin.Boolean declared in kotlin.collections.MutableList' type=kotlin.Boolean origin=null
+      CALL 'public abstract fun add (element: E of kotlin.collections.MutableList): kotlin.Boolean declared in kotlin.collections.MutableList' type=kotlin.Boolean origin=null
         $this: TYPE_OP type=kotlin.collections.MutableList<kotlin.String> origin=IMPLICIT_CAST typeOperand=kotlin.collections.MutableList<kotlin.String>
           GET_VAR 'a: kotlin.Any declared in <root>.testFunction' type=kotlin.Any origin=null
         element: TYPE_OP type=kotlin.String origin=IMPLICIT_CAST typeOperand=kotlin.String
@@ -20,7 +20,11 @@ FILE fqName:<root> fileName:/smartCastOnReceiverOfGenericType.kt
         GET_VAR 'a: kotlin.Any declared in <root>.testProperty' type=kotlin.Any origin=null
       TYPE_OP type=kotlin.String origin=CAST typeOperand=kotlin.String
         GET_VAR 'b: kotlin.Any declared in <root>.testProperty' type=kotlin.Any origin=null
-      ERROR_CALL 'Unresolved reference: R|FakeOverride</Cell.value: R|kotlin/String|>|' type=IrErrorType
+      CALL 'public final fun <set-value> (<set-?>: T of <root>.Cell): kotlin.Unit declared in <root>.Cell' type=kotlin.Unit origin=EQ
+        $this: TYPE_OP type=<root>.Cell<kotlin.String> origin=IMPLICIT_CAST typeOperand=<root>.Cell<kotlin.String>
+          GET_VAR 'a: kotlin.Any declared in <root>.testProperty' type=kotlin.Any origin=null
+        <set-?>: TYPE_OP type=kotlin.String origin=IMPLICIT_CAST typeOperand=kotlin.String
+          GET_VAR 'b: kotlin.Any declared in <root>.testProperty' type=kotlin.Any origin=null
   FUN name:testInnerClass visibility:public modality:FINAL <> (a:kotlin.Any, b:kotlin.Any, c:kotlin.Any) returnType:kotlin.Unit
     VALUE_PARAMETER name:a index:0 type:kotlin.Any
     VALUE_PARAMETER name:b index:1 type:kotlin.Any
@@ -33,8 +37,10 @@ FILE fqName:<root> fileName:/smartCastOnReceiverOfGenericType.kt
       TYPE_OP type=kotlin.String origin=CAST typeOperand=kotlin.String
         GET_VAR 'c: kotlin.Any declared in <root>.testInnerClass' type=kotlin.Any origin=null
       ERROR_CALL 'Unresolved reference: <Inapplicable(INAPPLICABLE): [/Outer.Inner.use]>#' type=IrErrorType
-        GET_VAR 'b: kotlin.Any declared in <root>.testInnerClass' type=kotlin.Int origin=null
-        GET_VAR 'c: kotlin.Any declared in <root>.testInnerClass' type=kotlin.String origin=null
+        TYPE_OP type=kotlin.Int origin=IMPLICIT_CAST typeOperand=kotlin.Int
+          GET_VAR 'b: kotlin.Any declared in <root>.testInnerClass' type=kotlin.Any origin=null
+        TYPE_OP type=kotlin.String origin=IMPLICIT_CAST typeOperand=kotlin.String
+          GET_VAR 'c: kotlin.Any declared in <root>.testInnerClass' type=kotlin.Any origin=null
   FUN name:testNonSubstitutedTypeParameter visibility:public modality:FINAL <T> (a:kotlin.Any, b:kotlin.Any) returnType:kotlin.Unit
     TYPE_PARAMETER name:T index:0 variance: superTypes:[kotlin.Any?]
     VALUE_PARAMETER name:a index:0 type:kotlin.Any
@@ -44,7 +50,7 @@ FILE fqName:<root> fileName:/smartCastOnReceiverOfGenericType.kt
         GET_VAR 'a: kotlin.Any declared in <root>.testNonSubstitutedTypeParameter' type=kotlin.Any origin=null
       TYPE_OP type=kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter> origin=CAST typeOperand=kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter>
         GET_VAR 'b: kotlin.Any declared in <root>.testNonSubstitutedTypeParameter' type=kotlin.Any origin=null
-      CALL 'public abstract fun add (element: kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter>): kotlin.Boolean declared in kotlin.collections.MutableList' type=kotlin.Boolean origin=null
+      CALL 'public abstract fun add (element: E of kotlin.collections.MutableList): kotlin.Boolean declared in kotlin.collections.MutableList' type=kotlin.Boolean origin=null
         $this: TYPE_OP type=kotlin.collections.MutableList<kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter>> origin=IMPLICIT_CAST typeOperand=kotlin.collections.MutableList<kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter>>
           GET_VAR 'a: kotlin.Any declared in <root>.testNonSubstitutedTypeParameter' type=kotlin.Any origin=null
         element: TYPE_OP type=kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter> origin=IMPLICIT_CAST typeOperand=kotlin.collections.List<T of <root>.testNonSubstitutedTypeParameter>
@@ -99,7 +105,8 @@ FILE fqName:<root> fileName:/smartCastOnReceiverOfGenericType.kt
     CLASS CLASS name:Inner modality:FINAL visibility:public [inner] superTypes:[kotlin.Any]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Outer.Inner<T2 of <root>.Outer.Inner>
       TYPE_PARAMETER name:T2 index:0 variance: superTypes:[kotlin.Any?]
-      CONSTRUCTOR visibility:public <> () returnType:<root>.Outer.Inner<T2 of <root>.Outer.Inner> [primary]
+      CONSTRUCTOR visibility:public <> ($this:<root>.Outer.Inner<T2 of <root>.Outer.Inner>) returnType:<root>.Outer.Inner<T2 of <root>.Outer.Inner> [primary]
+        $outer: VALUE_PARAMETER name:<this> type:<root>.Outer.Inner<T2 of <root>.Outer.Inner>
         BLOCK_BODY
           DELEGATING_CONSTRUCTOR_CALL 'public constructor <init> () [primary] declared in kotlin.Any'
           INSTANCE_INITIALIZER_CALL classDescriptor='CLASS CLASS name:Inner modality:FINAL visibility:public [inner] superTypes:[kotlin.Any]'

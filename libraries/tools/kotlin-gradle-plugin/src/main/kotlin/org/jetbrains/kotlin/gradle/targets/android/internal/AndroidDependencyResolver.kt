@@ -12,7 +12,6 @@ import com.android.build.gradle.internal.publishing.AndroidArtifacts
 import com.android.sdklib.IAndroidTarget
 import com.android.sdklib.repository.AndroidSdkHandler
 import com.android.sdklib.repository.LoggerProgressIndicatorWrapper
-import com.intellij.openapi.util.Version
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -23,7 +22,6 @@ import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.forEachVariant
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import java.io.File
-import kotlin.reflect.full.findParameterByName
 
 data class AndroidDependency(
     val name: String? = null,
@@ -38,12 +36,7 @@ data class AndroidDependency(
 object AndroidDependencyResolver {
     private fun getAndroidSdkJar(project: Project): AndroidDependency? {
         val androidExtension = project.extensions.findByName("android") as BaseExtension? ?: return null
-        val sdkLocation = getClassOrNull("com.android.build.gradle.internal.SdkLocator")?.let { sdkLocatorClass ->
-            val sdkLocation =
-                sdkLocatorClass.getMethodOrNull("getSdkLocation", File::class.java)?.invoke(sdkLocatorClass, project.rootDir)
-            sdkLocation?.javaClass?.getMethodOrNull("getDirectory")?.invoke(sdkLocation) as? File
-        } ?: return null
-        val sdkHandler = AndroidSdkHandler.getInstance(sdkLocation)
+        val sdkHandler = AndroidSdkHandler.getInstance(androidExtension.sdkDirectory)
         val logger = LoggerProgressIndicatorWrapper(LoggerWrapper(project.logger))
         val androidTarget =
             sdkHandler.getAndroidTargetManager(logger).getTargetFromHashString(androidExtension.compileSdkVersion, logger) ?: return null
@@ -76,7 +69,8 @@ object AndroidDependencyResolver {
                 return false
             }
         } ?: return false
-        return Version.parseVersion(version)?.isOrGreaterThan(3, 6) ?: false
+        val versions = version.split('.')
+        return versions[0].toInt() >= 3 && versions[1].toInt() >= 6
     }
 
     fun getAndroidSourceSetDependencies(project: Project): Map<String, List<AndroidDependency>?> {

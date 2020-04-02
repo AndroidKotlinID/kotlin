@@ -1,5 +1,6 @@
 package org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.multiplatform
 
+import kotlinx.collections.immutable.PersistentList
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.BuildSystemIR
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.IrsOwner
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.KotlinIR
@@ -30,19 +31,21 @@ interface TargetConfigurationIR : MultiplatformIR, IrsOwner {
 }
 
 fun TargetConfigurationIR.addWithJavaIntoJvmTarget() = when {
-    this is DefaultTargetConfigurationIR && targetAccess.type == ModuleSubType.jvm ->
+    this is DefaultTargetConfigurationIR
+            && targetAccess.type == ModuleSubType.jvm
+            && irs.none { it is GradleCallIr } ->
         withIrs(GradleCallIr("withJava"))
     else -> this
 }
 
 data class DefaultTargetConfigurationIR(
     val targetAccess: TargetAccessIR,
-    override val irs: List<BuildSystemIR>
+    override val irs: PersistentList<BuildSystemIR>
 ) : TargetConfigurationIR {
     override val targetName: String
         get() = targetAccess.nonDefaultName ?: targetAccess.type.name
 
-    override fun withReplacedIrs(irs: List<BuildSystemIR>): DefaultTargetConfigurationIR =
+    override fun withReplacedIrs(irs: PersistentList<BuildSystemIR>): DefaultTargetConfigurationIR =
         copy(irs = irs)
 
     override fun GradlePrinter.renderGradle() {
@@ -59,9 +62,9 @@ data class DefaultTargetConfigurationIR(
 data class NonDefaultTargetConfigurationIR(
     val variableName: String,
     override val targetName: String,
-    override val irs: List<BuildSystemIR>
+    override val irs: PersistentList<BuildSystemIR>
 ) : TargetConfigurationIR {
-    override fun withReplacedIrs(irs: List<BuildSystemIR>): NonDefaultTargetConfigurationIR =
+    override fun withReplacedIrs(irs: PersistentList<BuildSystemIR>): NonDefaultTargetConfigurationIR =
         copy(irs = irs)
 
     override fun GradlePrinter.renderGradle() {
@@ -78,9 +81,9 @@ data class NonDefaultTargetConfigurationIR(
 
 data class CompilationIR(
     val name: String,
-    override val irs: List<BuildSystemIR>
+    override val irs: PersistentList<BuildSystemIR>
 ) : MultiplatformIR, IrsOwner {
-    override fun withReplacedIrs(irs: List<BuildSystemIR>) = copy(irs = irs)
+    override fun withReplacedIrs(irs: PersistentList<BuildSystemIR>) = copy(irs = irs)
     override fun GradlePrinter.renderGradle() {
         getting(name, "compilations") { irs.listNl() }
     }

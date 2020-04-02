@@ -110,7 +110,6 @@ enum class LanguageFeature(
     MixedNamedArgumentsInTheirOwnPosition(KOTLIN_1_4),
     ProhibitTailrecOnVirtualMember(KOTLIN_1_4, kind = BUG_FIX),
     ProperComputationOrderOfTailrecDefaultParameters(KOTLIN_1_4),
-    AllowNullableArrayArgsInMain(KOTLIN_1_4),
     TrailingCommas(KOTLIN_1_4),
     ProhibitProtectedCallFromInline(KOTLIN_1_4, kind = BUG_FIX),
     ProperFinally(KOTLIN_1_4, kind = BUG_FIX),
@@ -130,6 +129,7 @@ enum class LanguageFeature(
     ProhibitInvisibleAbstractMethodsInSuperclasses(KOTLIN_1_5, kind = BUG_FIX),
     ProhibitNonReifiedArraysAsReifiedTypeArguments(KOTLIN_1_5, kind = BUG_FIX),
     ProhibitVarargAsArrayAfterSamArgument(KOTLIN_1_5, kind = BUG_FIX),
+    CorrectSourceMappingSyntax(KOTLIN_1_5, kind = UNSTABLE_FEATURE),
 
     // Temporarily disabled, see KT-27084/KT-22379
     SoundSmartcastFromLoopConditionForLoopAssignedVariables(sinceVersion = null, kind = BUG_FIX),

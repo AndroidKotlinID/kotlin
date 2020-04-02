@@ -1,13 +1,13 @@
 /*
- * Copyright 2000-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2000-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.idea.inspections
 
-import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.codeInsight.FileModificationService
 import com.intellij.codeInsight.daemon.QuickFixBundle
+import com.intellij.codeInsight.daemon.impl.HighlightInfoType
 import com.intellij.codeInsight.daemon.impl.analysis.HighlightUtil
 import com.intellij.codeInsight.daemon.impl.analysis.JavaHighlightUtil
 import com.intellij.codeInspection.*
@@ -17,8 +17,8 @@ import com.intellij.codeInspection.ex.EntryPointsManagerBase
 import com.intellij.codeInspection.ex.EntryPointsManagerImpl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.asJava.toLightMethods
 import org.jetbrains.kotlin.config.AnalysisFlags
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.caches.project.implementingDescriptors
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.findModuleDescriptor
@@ -197,10 +198,9 @@ class UnusedSymbolInspection : AbstractKotlinInspection() {
         }
     }
 
-    override fun runForWholeFile() = true
-
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean, session: LocalInspectionToolSession): PsiElementVisitor {
         return namedDeclarationVisitor(fun(declaration) {
+            ProgressManager.checkCanceled()
             val message = declaration.describe()?.let { "$it is never used" } ?: return
 
             if (!ProjectRootsUtil.isInProjectSource(declaration)) return
@@ -250,8 +250,6 @@ class UnusedSymbolInspection : AbstractKotlinInspection() {
             holder.registerProblem(problemDescriptor)
         })
     }
-
-    override val suppressionKey: String get() = "unused"
 
     private fun classOrObjectHasTextUsages(classOrObject: KtClassOrObject): Boolean {
         var hasTextUsages = false
@@ -321,6 +319,7 @@ class UnusedSymbolInspection : AbstractKotlinInspection() {
     private val KtNamedDeclaration.isObjectOrEnum: Boolean get() = this is KtObjectDeclaration || this is KtClass && isEnum()
 
     private fun checkReference(ref: PsiReference, declaration: KtNamedDeclaration, descriptor: DeclarationDescriptor?): Boolean {
+        ProgressManager.checkCanceled()
         if (declaration.isAncestor(ref.element)) return true // usages inside element's declaration are not counted
 
         if (ref.element.parent is KtValueArgumentName) return true // usage of parameter in form of named argument is not counted
@@ -551,12 +550,12 @@ class UnusedSymbolInspection : AbstractKotlinInspection() {
 
 class SafeDeleteFix(declaration: KtDeclaration) : LocalQuickFix {
     private val name: String =
-        if (declaration is KtConstructor<*>) "Safe delete constructor"
+        if (declaration is KtConstructor<*>) KotlinBundle.message("safe.delete.constructor")
         else QuickFixBundle.message("safe.delete.text", declaration.name)
 
     override fun getName() = name
 
-    override fun getFamilyName() = "Safe delete"
+    override fun getFamilyName() = QuickFixBundle.message("safe.delete.family")
 
     override fun startInWriteAction(): Boolean = false
 

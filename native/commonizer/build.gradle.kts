@@ -20,12 +20,12 @@ dependencies {
     compileOnly(project(":compiler:frontend"))
     compileOnly(project(":native:frontend.native"))
     compileOnly(project(":kotlin-util-klib-metadata"))
+    compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
 
     // This dependency is necessary to keep the right dependency record inside of POM file:
     mavenCompileScope(project(":kotlin-compiler"))
 
     compile(kotlinStdlib())
-    compile(project(":native:kotlin-native-utils"))
 
     testCompile(commonDep("junit:junit"))
     testCompile(projectTests(":compiler:tests-common"))

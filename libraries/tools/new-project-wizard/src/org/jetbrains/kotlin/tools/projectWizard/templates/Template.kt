@@ -3,8 +3,12 @@ package org.jetbrains.kotlin.tools.projectWizard.templates
 import org.jetbrains.kotlin.tools.projectWizard.Identificator
 import org.jetbrains.kotlin.tools.projectWizard.SettingsOwner
 import org.jetbrains.kotlin.tools.projectWizard.WizardRunConfiguration
+
+
 import org.jetbrains.kotlin.tools.projectWizard.core.*
-import org.jetbrains.kotlin.tools.projectWizard.core.entity.*
+
+import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.*
+import org.jetbrains.kotlin.tools.projectWizard.enumSettingImpl
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.BuildSystemIR
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.DependencyIR
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.ModuleIR
@@ -55,7 +59,7 @@ fun <T> withSettingsOf(
 ): T = function(IdBasedTemplateEnvironment(template, identificator))
 
 
-abstract class Template : SettingsOwner {
+abstract class Template : SettingsOwner, EntitiesOwnerDescriptor, DisplayableSettingItem {
     final override fun <V : Any, T : SettingType<V>> settingDelegate(
         create: (path: String) -> SettingBuilder<V, T>
     ): ReadOnlyProperty<Any, TemplateSetting<V, T>> = cached { name ->
@@ -63,27 +67,28 @@ abstract class Template : SettingsOwner {
     }
 
     abstract val title: String
-    abstract val htmlDescription: String
+    abstract val description: String
     abstract val moduleTypes: Set<ModuleType>
+
+    override val text: String get() = title
 
     open fun isApplicableTo(module: Module): Boolean = true
 
     open val settings: List<TemplateSetting<*, *>> = emptyList()
     open val interceptionPoints: List<InterceptionPoint<Any>> = emptyList()
 
-    fun initDefaultValuesFor(module: Module, context: Context) {
+    fun SettingsWriter.initDefaultValuesFor(module: Module) {
         withSettingsOf(module) {
             settings.forEach { setting ->
-                val defaultValue = setting.defaultValue ?: return@forEach
-                context.settingContext[setting.reference] = defaultValue
+                setting.reference.setSettingValueToItsDefaultIfItIsNotSetValue()
             }
         }
     }
 
-    open fun TaskRunningContext.getRequiredLibraries(module: ModuleIR): List<DependencyIR> = emptyList()
+    open fun Writer.getRequiredLibraries(module: ModuleIR): List<DependencyIR> = emptyList()
 
     //TODO: use setting reading context
-    open fun TaskRunningContext.getIrsToAddToBuildFile(
+    open fun Writer.getIrsToAddToBuildFile(
         module: ModuleIR
     ): List<BuildSystemIR> = emptyList()
 
@@ -92,13 +97,13 @@ abstract class Template : SettingsOwner {
         targetConfigurationIR: TargetConfigurationIR
     ): TargetConfigurationIR = targetConfigurationIR
 
-    open fun TaskRunningContext.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> = emptyList()
+    open fun Writer.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> = emptyList()
 
     open fun createInterceptors(module: ModuleIR): List<TemplateInterceptor> = emptyList()
 
-    open fun ValuesReadingContext.createRunConfigurations(module: ModuleIR): List<WizardRunConfiguration> = emptyList()
+    open fun Reader.createRunConfigurations(module: ModuleIR): List<WizardRunConfiguration> = emptyList()
 
-    fun TaskRunningContext.applyToSourceset(
+    fun Writer.applyToSourceset(
         module: ModuleIR
     ): TaskResult<TemplateApplicationResult> {
         val librariesToAdd = getRequiredLibraries(module)
@@ -118,7 +123,7 @@ abstract class Template : SettingsOwner {
         return result.asSuccess()
     }
 
-    fun TaskRunningContext.settingsAsMap(module: Module): Map<String, Any> =
+    fun Writer.settingsAsMap(module: Module): Map<String, Any> =
         withSettingsOf(module) {
             settings.associate { setting ->
                 setting.path to setting.reference.settingValue
@@ -126,9 +131,14 @@ abstract class Template : SettingsOwner {
         } + createDefaultSettings()
 
 
-    private fun TaskRunningContext.createDefaultSettings() = mapOf(
+    private fun Writer.createDefaultSettings() = mapOf(
         "projectName" to StructurePlugin::name.settingValue.capitalize()
     )
+
+    override fun equals(other: Any?): Boolean =
+        other.safeAs<Template>()?.id == id
+
+    override fun hashCode(): Int = id.hashCode()
 
     @Suppress("UNCHECKED_CAST")
     final override fun <V : DisplayableSettingItem> dropDownSetting(
@@ -221,24 +231,26 @@ abstract class Template : SettingsOwner {
             init
         ) as ReadOnlyProperty<Any, TemplateSetting<Path, PathSettingType>>
 
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified E> enumSetting(
         title: String,
         neededAtPhase: GenerationPhase,
         crossinline init: DropDownSettingType.Builder<E>.() -> Unit = {}
-    ) where E : Enum<E>, E : DisplayableSettingItem = dropDownSetting<E>(title, neededAtPhase, enumParser()) {
-        values = enumValues<E>().asList()
-        init()
-    }
+    ): ReadOnlyProperty<Any, TemplateSetting<E, DropDownSettingType<E>>> where E : Enum<E>, E : DisplayableSettingItem =
+        enumSettingImpl(title, neededAtPhase, init) as ReadOnlyProperty<Any, TemplateSetting<E, DropDownSettingType<E>>>
 
     companion object {
-        fun parser(sourcesetIdentificator: Identificator): Parser<Template> = mapParser { map, path ->
+        fun parser(templateId: Identificator): Parser<Template> = mapParser { map, path ->
             val (id) = map.parseValue<String>(path, "id")
             val (template) = state.idToTemplate[id].toResult { TemplateNotFoundError(id) }
-            val (settingsWithValues) = template.settings.mapComputeM { setting ->
-                val (settingValue) = map[setting.path].toResult { ParseError("No value was found for a key `$path.${setting.path}`") }
-                val reference = withSettingsOf(sourcesetIdentificator, template) { setting.reference }
-                setting.type.parse(this, settingValue, setting.path).map { reference to it }
-            }.sequence()
+            val (settingsWithValues) = parseSettingsMap(
+                path,
+                map,
+                template.settings.map { setting ->
+                    val reference = withSettingsOf(templateId, template) { setting.reference }
+                    reference to setting
+                }
+            )
             updateState { it.withSettings(settingsWithValues) }
             template
         } or valueParserM { value, path ->
@@ -252,7 +264,7 @@ fun Template.settings(module: Module) = withSettingsOf(module) {
     settings.map { it.reference }
 }
 
-fun TaskRunningContext.applyTemplateToModule(
+fun Writer.applyTemplateToModule(
     template: Template?,
     module: ModuleIR
 ): TaskResult<TemplateApplicationResult> = when (template) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -14,10 +14,8 @@ import org.jetbrains.kotlin.backend.common.lower.irBlockBody
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
+import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.*
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.inlineClassFieldName
-import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isInlineClassFieldGetter
-import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isPrimaryInlineClassConstructor
-import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.config.ApiVersion
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrStatement
@@ -116,6 +114,17 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         }
     }
 
+    private fun createBridgeBody(source: IrSimpleFunction, target: IrSimpleFunction) {
+        source.body = context.createIrBuilder(source.symbol, source.startOffset, source.endOffset).run {
+            irExprBody(irCall(target).apply {
+                passTypeArgumentsFrom(source)
+                for ((parameter, newParameter) in source.explicitParameters.zip(target.explicitParameters)) {
+                    putArgument(newParameter, irGet(parameter))
+                }
+            })
+        }
+    }
+
     private fun transformSimpleFunctionFlat(function: IrSimpleFunction, replacement: IrSimpleFunction): List<IrDeclaration> {
         replacement.valueParameters.forEach { it.transformChildrenVoid() }
         replacement.body = function.body?.transform(this, null)?.patchDeclarationParents(replacement)
@@ -125,19 +134,25 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         if (function.overriddenSymbols.isEmpty() || replacement.dispatchReceiverParameter != null)
             return listOf(replacement)
 
-        // Replace the function body with a wrapper
-        context.createIrBuilder(function.symbol, function.startOffset, function.endOffset).run {
-            val call = irCall(replacement).apply {
-                passTypeArgumentsFrom(function)
-                for ((parameter, newParameter) in function.explicitParameters.zip(replacement.explicitParameters)) {
-                    putArgument(newParameter, irGet(parameter))
-                }
-            }
-
-            function.body = irExprBody(call)
+        // If the original function has value parameters which need mangling we still need to replace
+        // it with a mangled version.
+        val bridgeFunction = if (!function.isFakeOverride && function.fullValueParameterList.any { it.type.requiresMangling }) {
+            context.inlineClassReplacements.createMethodReplacement(function)
+        } else {
+            // Update the overridden symbols to point to their inline class replacements
+            function.overriddenSymbols = replacement.overriddenSymbols
+            function
         }
 
-        return listOf(replacement, function)
+        // Replace the function body with a wrapper
+        if (!bridgeFunction.isFakeOverride || !bridgeFunction.parentAsClass.isInline) {
+            createBridgeBody(bridgeFunction, replacement)
+        } else {
+            // Fake overrides redirect from the replacement to the original function, which is in turn replaced during interfacePhase.
+            createBridgeBody(replacement, bridgeFunction)
+        }
+
+        return listOf(replacement, bridgeFunction)
     }
 
     // Secondary constructors for boxed types get translated to static functions returning
@@ -420,6 +435,8 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
             origin = JvmLoweredDeclarationOrigin.SYNTHETIC_INLINE_CLASS_MEMBER
             returnType = irConstructor.returnType
         }.apply {
+            // Don't create a default argument stub for the primary constructor
+            irConstructor.valueParameters.forEach { it.defaultValue = null }
             copyParameterDeclarationsFrom(irConstructor)
             body = context.createIrBuilder(this.symbol).irBlockBody(this) {
                 +irDelegatingConstructorCall(context.irBuiltIns.anyClass.owner.constructors.single())
@@ -434,6 +451,7 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         // Add a static bridge method to the primary constructor.
         // This is a placeholder for null-checks and default arguments.
         val function = context.inlineClassReplacements.getReplacementFunction(irConstructor)!!
+        function.valueParameters.forEach { it.transformChildrenVoid() }
         with(context.createIrBuilder(function.symbol)) {
             val argument = function.valueParameters[0]
             function.body = irExprBody(

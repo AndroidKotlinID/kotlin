@@ -40,6 +40,7 @@ dependencies {
         compileOnly(intellijPluginDep("java"))
     }
 
+    testRuntimeOnly(toolsJar())
     testRuntime(project(":kotlin-reflect"))
     testRuntime(project(":idea:idea-jvm"))
     testRuntime(project(":idea:idea-android"))
@@ -66,6 +67,10 @@ dependencies {
     testRuntime(intellijPluginDep("coverage"))
     if (Ide.IJ()) {
         testRuntime(intellijPluginDep("maven"))
+
+        if (Ide.IJ201.orHigher()) {
+            testRuntime(intellijPluginDep("repository-search"))
+        }
     }
     testRuntime(intellijPluginDep("android"))
     testRuntime(intellijPluginDep("smali"))

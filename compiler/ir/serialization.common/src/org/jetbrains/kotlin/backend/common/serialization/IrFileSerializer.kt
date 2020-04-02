@@ -184,7 +184,7 @@ open class IrFileSerializer(
     private fun serializePublicSignature(signature: IdSignature.PublicSignature): ProtoPublicIdSignature {
         val proto = ProtoPublicIdSignature.newBuilder()
         proto.addAllPackageFqName(serializeFqName(signature.packageFqn))
-        proto.addAllClassFqName(serializeFqName(signature.classFqn))
+        proto.addAllDeclarationFqName(serializeFqName(signature.declarationFqn))
 
         signature.id?.let { proto.memberUniqId = it }
         if (signature.mask != 0L) {
@@ -199,7 +199,7 @@ open class IrFileSerializer(
 
         proto.propertySignature = protoIdSignature(signature.propertySignature)
         with(signature.accessorSignature) {
-            proto.name = serializeString(classFqn.shortName().asString())
+            proto.name = serializeString(declarationFqn.shortName().asString())
             proto.accessorHashId = id ?: error("Expected hash Id")
             if (mask != 0L) {
                 proto.flags = mask
@@ -585,8 +585,8 @@ open class IrFileSerializer(
             IrConstKind.Int -> proto.int = value.value as Int
             IrConstKind.Long -> proto.long = value.value as Long
             IrConstKind.String -> proto.string = serializeString(value.value as String)
-            IrConstKind.Float -> proto.float = value.value as Float
-            IrConstKind.Double -> proto.double = value.value as Double
+            IrConstKind.Float -> proto.floatBits = (value.value as Float).toBits()
+            IrConstKind.Double -> proto.doubleBits = (value.value as Double).toBits()
         }
         return proto.build()
     }
@@ -986,7 +986,7 @@ open class IrFileSerializer(
     }
 
     private fun serializeIrDeclarationBase(declaration: IrDeclaration, flags: Long?): ProtoDeclarationBase {
-        expectActualTable.findExpectsForActuals(declaration)
+        if (!skipExpects) expectActualTable.findExpectsForActuals(declaration)
         return with(ProtoDeclarationBase.newBuilder()) {
             symbol = serializeIrSymbol((declaration as IrSymbolOwner).symbol)
             coordinates = serializeCoordinates(declaration.startOffset, declaration.endOffset)

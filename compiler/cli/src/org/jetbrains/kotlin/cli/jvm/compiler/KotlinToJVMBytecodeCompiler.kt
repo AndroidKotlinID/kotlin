@@ -39,11 +39,11 @@ import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.checkKotlinPackageUsage
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.OUTPUT
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.WARNING
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.*
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.messages.OutputMessageUtil
 import org.jetbrains.kotlin.cli.common.output.writeAll
+import org.jetbrains.kotlin.cli.common.toLogger
 import org.jetbrains.kotlin.cli.jvm.config.*
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.state.GenerationState
@@ -60,6 +60,7 @@ import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
 import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
 import org.jetbrains.kotlin.idea.MainFunctionDetector
+import org.jetbrains.kotlin.ir.backend.jvm.jvmResolveLibraries
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmManglerDesc
 import org.jetbrains.kotlin.javac.JavacWrapper
 import org.jetbrains.kotlin.load.kotlin.ModuleVisibilityManager
@@ -547,6 +548,10 @@ object KotlinToJVMBytecodeCompiler {
         val performanceManager = environment.configuration.get(CLIConfigurationKeys.PERF_MANAGER)
         performanceManager?.notifyAnalysisStarted()
 
+        val resolvedKlibs = environment.configuration.get(JVMConfigurationKeys.KLIB_PATHS)?.let { klibPaths ->
+            jvmResolveLibraries(klibPaths, collector.toLogger())
+        }?.getFullList() ?: emptyList()
+
         val analyzerWithCompilerReport = AnalyzerWithCompilerReport(collector, environment.configuration.languageVersionSettings)
         analyzerWithCompilerReport.analyzeAndReport(sourceFiles) {
             val project = environment.project
@@ -563,7 +568,8 @@ object KotlinToJVMBytecodeCompiler {
                 NoScopeRecordCliBindingTrace(),
                 environment.configuration,
                 environment::createPackagePartProvider,
-                sourceModuleSearchScope = scope
+                sourceModuleSearchScope = scope,
+                klibList = resolvedKlibs
             )
         }
 
@@ -612,8 +618,17 @@ object KotlinToJVMBytecodeCompiler {
         sourceFiles: List<KtFile>,
         module: Module?
     ): GenerationState {
-        val isIR = configuration.getBoolean(JVMConfigurationKeys.IR) ||
-                configuration.getBoolean(CommonConfigurationKeys.USE_FIR)
+        // The IR backend does not handle .kts files yet.
+        var isIR = (configuration.getBoolean(JVMConfigurationKeys.IR) ||
+                configuration.getBoolean(CommonConfigurationKeys.USE_FIR))
+        val anyKts = sourceFiles.any { it.isScript() }
+        if (isIR && anyKts) {
+            environment.messageCollector.report(
+                STRONG_WARNING,
+                "IR backend does not support .kts scripts, switching to old JVM backend"
+            )
+            isIR = false
+        }
         val generationState = GenerationState.Builder(
             environment.project,
             ClassBuilderFactories.BINARIES,

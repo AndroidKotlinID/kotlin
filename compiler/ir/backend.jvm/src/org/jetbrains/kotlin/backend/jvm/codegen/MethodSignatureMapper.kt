@@ -112,8 +112,8 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
         val newName = JvmCodegenUtil.sanitizeNameIfNeeded(name, context.state.languageVersionSettings)
 
         if (function.isTopLevel) {
-            if (Visibilities.isPrivate(function.visibility) && newName != "<clinit>" &&
-                (function.parent as? IrClass)?.attributeOwnerId in context.multifileFacadeForPart
+            if (Visibilities.isPrivate(function.suspendFunctionOriginal().visibility) &&
+                newName != "<clinit>" && (function.parent as? IrClass)?.attributeOwnerId in context.multifileFacadeForPart
             ) {
                 return "$newName$${function.parentAsClass.name.asString()}"
             }

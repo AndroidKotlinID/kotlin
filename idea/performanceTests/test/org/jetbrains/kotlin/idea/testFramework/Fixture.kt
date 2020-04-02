@@ -61,6 +61,10 @@ class Fixture(val project: Project, val editor: Editor, val psiFile: PsiFile, va
         delegate.type(s)
     }
 
+    fun type(c: Char) {
+        delegate.type(c)
+    }
+
     fun performEditorAction(actionId: String): Boolean {
         selectEditor()
         return delegate.performEditorAction(actionId)
@@ -231,7 +235,7 @@ class Fixture(val project: Project, val editor: Editor, val psiFile: PsiFile, va
             val initialText = editor.document.text
             try {
                 if (isAKotlinScriptFile(fileName)) {
-                    ScriptConfigurationManager.updateScriptDependenciesSynchronously(fileInEditor.psiFile, project)
+                    ScriptConfigurationManager.updateScriptDependenciesSynchronously(fileInEditor.psiFile)
                 }
 
                 val tasksIdx = fileInEditor.document.text.indexOf(marker)

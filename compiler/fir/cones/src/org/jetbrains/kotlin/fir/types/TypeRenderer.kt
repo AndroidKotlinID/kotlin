@@ -50,7 +50,7 @@ fun ConeKotlinType.render(): String {
     } + nullabilitySuffix
 }
 
-private fun ConeKotlinTypeProjection.render(): String {
+private fun ConeTypeProjection.render(): String {
     return when (this) {
         ConeStarProjection -> "*"
         is ConeKotlinTypeProjectionIn -> "in ${type.render()}"
@@ -82,7 +82,7 @@ fun ConeKotlinType.renderFunctionType(kind: FunctionClassDescriptor.Kind?, isExt
     }
 }
 
-@UseExperimental(ExperimentalContracts::class)
+@OptIn(ExperimentalContracts::class)
 fun FunctionClassDescriptor.Kind?.withPrettyRender(): Boolean {
     contract {
         returns(true) implies (this@withPrettyRender != null)

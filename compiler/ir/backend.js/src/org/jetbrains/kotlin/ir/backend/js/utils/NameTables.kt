@@ -282,15 +282,7 @@ class NameTables(
     private fun generateNameForMemberFunction(declaration: IrSimpleFunction) {
         when (val signature = functionSignature(declaration)) {
             is StableNameSignature -> memberNames.declareStableName(signature, signature.name)
-            is ParameterTypeBasedSignature -> {
-                // TODO: Fix hack: Coroutines runtime currently relies on stable names
-                //       of `invoke` functions in FunctionN interfaces
-                if (declaration.name.asString().startsWith("invoke")) {
-                    memberNames.declareStableName(signature, sanitizeName(signature.mangledName))
-                } else {
-                    memberNames.declareFreshName(signature, signature.suggestedName)
-                }
-            }
+            is ParameterTypeBasedSignature -> memberNames.declareFreshName(signature, signature.suggestedName)
         }
     }
 
@@ -309,11 +301,6 @@ class NameTables(
         val global: String? = globalNames.names[declaration]
         if (global != null) return global
 
-        if (declaration is IrTypeParameter) {
-            // TODO: Fix type parameters
-            return declaration.name.identifier
-        }
-
         var parent: IrDeclarationParent = declaration.parent
         while (parent is IrDeclaration) {
             val parentLocalNames = localNames[parent]
@@ -325,7 +312,7 @@ class NameTables(
             parent = parent.parent
         }
 
-        return mappedNames[mapToKey(declaration)] ?: error("Can't find name for declaration ${declaration.fqNameWhenAvailable}")
+        return mappedNames[mapToKey(declaration)] ?: error("Can't find name for declaration ${declaration.render()}")
     }
 
     fun getNameForMemberField(field: IrField): String {
@@ -347,11 +334,6 @@ class NameTables(
         val signature = functionSignature(function)
         val name = memberNames.names[signature] ?: mappedNames[mapToKey(signature)]
 
-        // TODO: Fix hack: Coroutines runtime currently relies on stable names
-        //       of `invoke` functions in FunctionN interfaces
-        if (name == null && signature is ParameterTypeBasedSignature && signature.suggestedName.startsWith("invoke"))
-            return signature.suggestedName
-
         // TODO Add a compiler flag, which enables this behaviour
         // TODO remove in DCE
         if (name == null) {
@@ -370,7 +352,7 @@ class NameTables(
             declaration !is IrDeclarationWithName ->
                 return
 
-            declaration.isEffectivelyExternal() ->
+            declaration.isEffectivelyExternal() && (declaration.getJsModule() == null || declaration.isJsNonModule()) ->
                 globalNames.declareStableName(declaration, declaration.getJsNameOrKotlinName().identifier)
 
             else ->
@@ -388,16 +370,6 @@ class NameTables(
         private val localLoopNames = NameTable<IrLoop>()
         override fun visitElement(element: IrElement) {
             element.acceptChildrenVoid(this)
-        }
-
-        override fun visitValueParameter(declaration: IrValueParameter) {
-            val parentFunction = declaration.parent as? IrFunction
-            if ((declaration.origin == IrDeclarationOrigin.INSTANCE_RECEIVER && declaration.name.isSpecial) ||
-                (parentFunction != null && declaration == parentFunction.dispatchReceiverParameter)
-            )
-                table.declareStableName(declaration, Namer.IMPLICIT_RECEIVER_NAME)
-            else
-                super.visitValueParameter(declaration)
         }
 
         override fun visitDeclaration(declaration: IrDeclaration) {

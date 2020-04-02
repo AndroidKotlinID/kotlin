@@ -54,9 +54,10 @@ open class DefaultArgumentStubGenerator(
 
     private fun lower(irFunction: IrFunction): List<IrFunction>? {
         val visibility = defaultArgumentStubVisibility(irFunction)
-        val newIrFunction = irFunction.generateDefaultsFunction(context, skipInlineMethods, skipExternalMethods, forceSetOverrideSymbols, visibility)
-            ?: return null
-        if (newIrFunction.origin == IrDeclarationOrigin.FAKE_OVERRIDE) {
+        val newIrFunction =
+            irFunction.generateDefaultsFunction(context, skipInlineMethods, skipExternalMethods, forceSetOverrideSymbols, visibility)
+                ?: return null
+        if (newIrFunction.isFakeOverride) {
             return listOf(irFunction, newIrFunction)
         }
 
@@ -89,6 +90,8 @@ open class DefaultArgumentStubGenerator(
                 irFunction.valueParameters.associateWithTo(variables) {
                     newIrFunction.valueParameters[it.index]
                 }
+
+                generateSuperCallHandlerCheckIfNeeded(irFunction, newIrFunction)
 
                 var sourceParameterIndex = -1
                 for (valueParameter in irFunction.valueParameters) {
@@ -178,6 +181,12 @@ open class DefaultArgumentStubGenerator(
                 generateHandleCall(handlerDeclaration, irFunction, newIrFunction, params)
             )
         } else dispatchCall
+    }
+
+    protected open fun IrBlockBodyBuilder.generateSuperCallHandlerCheckIfNeeded(
+        irFunction: IrFunction,
+        newIrFunction: IrFunction) {
+        //NO-OP Stub
     }
 
     protected open fun needSpecialDispatch(irFunction: IrSimpleFunction) = false
@@ -416,7 +425,7 @@ private fun IrFunction.generateDefaultsFunction(
     if (this is IrSimpleFunction) {
         // If this is an override of a function with default arguments, produce a fake override of a default stub.
         if (overriddenSymbols.any { it.owner.findBaseFunctionWithDefaultArguments(skipInlineMethods, skipExternalMethods) != null })
-            return generateDefaultsFunctionImpl(context, IrDeclarationOrigin.FAKE_OVERRIDE, visibility).also {
+            return generateDefaultsFunctionImpl(context, IrDeclarationOrigin.FAKE_OVERRIDE, visibility, isFakeOverride = true).also {
                 context.mapping.defaultArgumentsDispatchFunction[this] = it
                 context.mapping.defaultArgumentsOriginalFunction[it] = this
 
@@ -444,7 +453,9 @@ private fun IrFunction.generateDefaultsFunction(
     // Since this bug causes the metadata serializer to write the "has default value" flag into compiled
     // binaries, it's way too late to fix it. Hence the workaround.
     if (valueParameters.any { it.defaultValue != null }) {
-        return generateDefaultsFunctionImpl(context, IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER, visibility).also {
+        return generateDefaultsFunctionImpl(
+            context, IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER, visibility, isFakeOverride = false
+        ).also {
             context.mapping.defaultArgumentsDispatchFunction[this] = it
             context.mapping.defaultArgumentsOriginalFunction[it] = this
         }
@@ -455,7 +466,8 @@ private fun IrFunction.generateDefaultsFunction(
 private fun IrFunction.generateDefaultsFunctionImpl(
     context: CommonBackendContext,
     newOrigin: IrDeclarationOrigin,
-    newVisibility: Visibility
+    newVisibility: Visibility,
+    isFakeOverride: Boolean
 ): IrFunction {
     val newFunction = when (this) {
         is IrConstructor ->
@@ -472,6 +484,7 @@ private fun IrFunction.generateDefaultsFunctionImpl(
                 updateFrom(this@generateDefaultsFunctionImpl)
                 name = Name.identifier("${this@generateDefaultsFunctionImpl.name}\$default")
                 origin = newOrigin
+                this.isFakeOverride = isFakeOverride
                 modality = Modality.FINAL
                 isExternal = false
                 isTailrec = false
@@ -506,7 +519,11 @@ private fun IrFunction.generateDefaultsFunctionImpl(
         val markerType = context.ir.symbols.defaultConstructorMarker.defaultType.makeNullable()
         newFunction.addValueParameter("marker".synthesizedString, markerType, IrDeclarationOrigin.DEFAULT_CONSTRUCTOR_MARKER)
     } else if (context.ir.shouldGenerateHandlerParameterForDefaultBodyFun()) {
-        newFunction.addValueParameter("handler".synthesizedString, context.irBuiltIns.anyNType, IrDeclarationOrigin.METHOD_HANDLER_IN_DEFAULT_FUNCTION)
+        newFunction.addValueParameter(
+            "handler".synthesizedString,
+            context.irBuiltIns.anyNType,
+            IrDeclarationOrigin.METHOD_HANDLER_IN_DEFAULT_FUNCTION
+        )
     }
 
     // TODO some annotations are needed (e.g. @JvmStatic), others need different values (e.g. @JvmName), the rest are redundant.

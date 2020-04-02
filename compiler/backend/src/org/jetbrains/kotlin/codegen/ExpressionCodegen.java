@@ -747,7 +747,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 labelElement.getReferencedName().equals(loopBlockStackElement.targetLabel.getReferencedName())) {
                 Label label = isBreak ? loopBlockStackElement.breakLabel : loopBlockStackElement.continueLabel;
                 return StackValue.operation(
-                        Type.VOID_TYPE, adapter -> {
+                        Type.VOID_TYPE,
+                        getNothingType(),
+                        adapter -> {
                             PseudoInsnsKt.fixStackAndJump(v, label);
                             v.mark(afterBreakContinueLabel);
                             return Unit.INSTANCE;
@@ -1021,7 +1023,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             @NotNull FunctionDescriptor descriptor,
             @NotNull FunctionGenerationStrategy strategy,
             @Nullable SamType samType,
-            @Nullable FunctionDescriptor functionReferenceTarget,
+            @Nullable ResolvedCall<FunctionDescriptor> functionReferenceCall,
             @Nullable StackValue functionReferenceReceiver
     ) {
         ClassBuilder cv = state.getFactory().newVisitor(
@@ -1036,8 +1038,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 descriptor, this, state.getTypeMapper()
         ) : this.context.intoClosure(descriptor, this, typeMapper);
         ClosureCodegen closureCodegen = coroutineCodegen != null ? coroutineCodegen : new ClosureCodegen(
-                state, declaration, samType, closureContext,
-                functionReferenceTarget, strategy, parentCodegen, cv
+                state, declaration, samType, closureContext, functionReferenceCall, strategy, parentCodegen, cv
         );
 
         closureCodegen.generate();
@@ -1620,9 +1621,13 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         }
     }
 
+    private KotlinType getNothingType() {
+        return state.getModule().getBuiltIns().getNothingType();
+    }
+
     @Override
     public StackValue visitReturnExpression(@NotNull KtReturnExpression expression, StackValue receiver) {
-        return StackValue.operation(Type.VOID_TYPE, adapter -> {
+        return StackValue.operation(Type.VOID_TYPE, getNothingType(), adapter -> {
             KtExpression returnedExpression = expression.getReturnedExpression();
             CallableMemberDescriptor descriptor = getContext().getContextDescriptor();
             NonLocalReturnInfo nonLocalReturn = getNonLocalReturnInfo(descriptor, expression);
@@ -1642,7 +1647,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             }
             else {
                 returnType = this.returnType;
-                returnKotlinType = this.context.getFunctionDescriptor().getReturnType();
+                returnKotlinType = typeMapper.getReturnValueType(this.context.getFunctionDescriptor());
             }
             StackValue valueToReturn = returnedExpression != null ? gen(returnedExpression) : StackValue.none();
 
@@ -1650,7 +1655,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             Label afterReturnLabel = new Label();
             generateFinallyBlocksIfNeeded(returnType, returnKotlinType, afterReturnLabel);
-
+            markLineNumber(expression, false);
             if (isNonLocalReturn) {
                 generateGlobalReturnFlag(v, nonLocalReturn.labelName);
                 v.visitInsn(returnType.getOpcode(Opcodes.IRETURN));
@@ -1695,7 +1700,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                             BindingContextUtils.getContainingFunctionSkipFunctionLiterals(descriptor, true).getFirst();
                     //FIRST_FUN_LABEL to prevent clashing with existing labels
                     return new NonLocalReturnInfo(
-                            new JvmKotlinType(typeMapper.mapReturnType(containingFunction), containingFunction.getReturnType()),
+                            new JvmKotlinType(
+                                    typeMapper.mapReturnType(containingFunction),
+                                    typeMapper.getReturnValueType(containingFunction)
+                            ),
                             FIRST_FUN_LABEL
                     );
                 } else {
@@ -1733,7 +1741,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 : returnType;
 
         KotlinType kotlinTypeForExpression =
-                isBlockedNamedFunction || isVoidCoroutineLambda ? null : context.getFunctionDescriptor().getReturnType();
+                isBlockedNamedFunction || isVoidCoroutineLambda
+                ? null
+                : typeMapper.getReturnValueType(context.getFunctionDescriptor());
 
         gen(expr, typeForExpression, kotlinTypeForExpression);
 
@@ -2797,7 +2807,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             KotlinType approximatedType =
                     CapturedTypeConstructorKt.isCaptured(type) ?
                     (KotlinType) approximator.approximateToSuperType(
-                            type, TypeApproximatorConfiguration.CapturedAndIntegerLiteralsTypesApproximation.INSTANCE
+                            type, TypeApproximatorConfiguration.InternalTypesApproximation.INSTANCE
                     ) : null;
             return approximatedType != null ? approximatedType : type;
         } else {
@@ -3250,6 +3260,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public StackValue visitCallableReferenceExpression(@NotNull KtCallableReferenceExpression expression, StackValue data) {
         ResolvedCall<?> resolvedCall = CallUtilKt.getResolvedCallWithAssert(expression.getCallableReference(), bindingContext);
 
@@ -3263,10 +3274,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                     null, false
             );
 
-            return genClosure(
-                    expression, functionDescriptor, strategy, null,
-                    (FunctionDescriptor) resolvedCall.getResultingDescriptor(), receiver
-            );
+            return genClosure(expression, functionDescriptor, strategy, null, (ResolvedCall<FunctionDescriptor>) resolvedCall, receiver);
         }
 
         return generatePropertyReference(
@@ -4250,7 +4258,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             return StackValue.operation(base.type, base.kotlinType, v -> {
                 base.put(base.type, base.kotlinType, v);
                 v.dup();
-                if (state.getLanguageVersionSettings().getApiVersion().compareTo(ApiVersion.KOTLIN_1_4) >= 0) {
+                if (state.getUnifiedNullChecks()) {
                     v.invokestatic(IntrinsicMethods.INTRINSICS_CLASS_NAME, "checkNotNull", "(Ljava/lang/Object;)V", false);
                 } else {
                     Label ok = new Label();
@@ -4587,10 +4595,16 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         // We can use the $$delegatedProperties array as in non-inline functions and upon inlining, detect elements at what indices
         // of that array are used in the inline function body, load the corresponding initializing bytecode from <clinit> of the
         // container class (where the PropertyReferenceNImpl instance is created), copy and adapt it at the call site
-        //noinspection ConstantConditions
-        StackValue value = context.getFunctionDescriptor().isInline()
-                           ? generatePropertyReference(variable.getDelegate(), variableDescriptor, variableDescriptor, null)
-                           : PropertyCodegen.getDelegatedPropertyMetadata(variableDescriptor, bindingContext);
+        StackValue value;
+        if (PropertyCodegen.isDelegatedPropertyWithOptimizedMetadata(variableDescriptor, bindingContext)) {
+            value = PropertyCodegen.getOptimizedDelegatedPropertyMetadataValue();
+        } else if (context.getFunctionDescriptor().isInline()) {
+            //noinspection ConstantConditions
+            value = generatePropertyReference(variable.getDelegate(), variableDescriptor, variableDescriptor, null);
+        }
+        else {
+            value = PropertyCodegen.getDelegatedPropertyMetadata(variableDescriptor, bindingContext);
+        }
         value.put(K_PROPERTY_TYPE, null, v);
         metadataVar.storeSelector(K_PROPERTY_TYPE, null, v);
     }
@@ -4788,7 +4802,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
     @Override
     public StackValue visitThrowExpression(@NotNull KtThrowExpression expression, StackValue receiver) {
-        return StackValue.operation(Type.VOID_TYPE, adapter -> {
+        return StackValue.operation(Type.VOID_TYPE, getNothingType(), adapter -> {
             gen(expression.getThrownExpression(), JAVA_THROWABLE_TYPE);
             v.athrow();
             return Unit.INSTANCE;

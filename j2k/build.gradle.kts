@@ -32,8 +32,8 @@ dependencies {
     testCompile(project(":idea:idea-native")) { isTransitive = false }
     testCompile(project(":idea:idea-gradle-native")) { isTransitive = false }
 
-    testRuntime(project(":native:frontend.native")) { isTransitive = false }
-    testRuntime(project(":native:kotlin-native-utils")) { isTransitive = false }
+    testRuntimeOnly(toolsJar())
+    testRuntime(project(":native:frontend.native"))
     testRuntime(project(":plugins:kapt3-idea")) { isTransitive = false }
     testRuntime(project(":idea:idea-jvm"))
     testRuntime(project(":idea:idea-android"))
@@ -50,6 +50,10 @@ dependencies {
     testRuntime(intellijPluginDep("coverage"))
     Ide.IJ {
         testRuntime(intellijPluginDep("maven"))
+
+        if (Ide.IJ201.orHigher()) {
+            testRuntime(intellijPluginDep("repository-search"))
+        }
     }
     testRuntime(intellijPluginDep("android"))
     testRuntime(intellijPluginDep("smali"))

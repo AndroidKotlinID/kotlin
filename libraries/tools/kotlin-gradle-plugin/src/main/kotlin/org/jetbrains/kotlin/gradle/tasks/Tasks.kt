@@ -37,7 +37,7 @@ import org.jetbrains.kotlin.gradle.report.BuildReportMode
 import org.jetbrains.kotlin.gradle.utils.*
 import org.jetbrains.kotlin.incremental.ChangedFiles
 import org.jetbrains.kotlin.library.impl.isKotlinLibrary
-import org.jetbrains.kotlin.utils.LibraryUtils
+import org.jetbrains.kotlin.utils.JsLibraryUtils
 import java.io.File
 import javax.inject.Inject
 
@@ -401,7 +401,7 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     override fun callCompilerAsync(args: K2JVMCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
         sourceRoots as SourceRoots.ForJvm
 
-        val messageCollector = GradlePrintingMessageCollector(logger)
+        val messageCollector = GradlePrintingMessageCollector(logger, args.allWarningsAsErrors)
         val outputItemCollector = OutputItemsCollectorImpl()
         val compilerRunner = compilerRunner()
 
@@ -562,7 +562,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         get() = kotlinOptionsImpl.sourceMapBaseDirs
 
     private fun isHybridKotlinJsLibrary(file: File): Boolean =
-        LibraryUtils.isKotlinJavascriptLibrary(file) && isKotlinLibrary(file)
+        JsLibraryUtils.isKotlinJavascriptLibrary(file) && isKotlinLibrary(file)
 
     private fun KotlinJsOptions.isPreIrBackendDisabled(): Boolean =
         listOf(
@@ -590,7 +590,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
                 ::isHybridKotlinJsLibrary
             }
         } else {
-            LibraryUtils::isKotlinJavascriptLibrary
+            JsLibraryUtils::isKotlinJavascriptLibrary
         }
 
     override fun callCompilerAsync(args: K2JSCompilerArguments, sourceRoots: SourceRoots, changedFiles: ChangedFiles) {
@@ -622,7 +622,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
 
         logger.kotlinDebug("compiling with args ${ArgumentUtils.convertArgumentsToStringList(args)}")
 
-        val messageCollector = GradlePrintingMessageCollector(logger)
+        val messageCollector = GradlePrintingMessageCollector(logger, args.allWarningsAsErrors)
         val outputItemCollector = OutputItemsCollectorImpl()
         val compilerRunner = compilerRunner()
 

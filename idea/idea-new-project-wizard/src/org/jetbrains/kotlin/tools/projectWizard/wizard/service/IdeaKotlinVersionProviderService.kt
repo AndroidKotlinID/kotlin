@@ -5,37 +5,54 @@
 
 package org.jetbrains.kotlin.tools.projectWizard.wizard.service
 
-import org.jetbrains.kotlin.idea.KotlinPluginUtil
+import com.intellij.util.text.VersionComparatorUtil
+import org.jetbrains.annotations.NonNls
+import org.jetbrains.kotlin.config.KotlinCompilerVersion
 import org.jetbrains.kotlin.idea.framework.ui.ConfigureDialogWithModulesAndVersion
+import org.jetbrains.kotlin.tools.projectWizard.Versions
 import org.jetbrains.kotlin.tools.projectWizard.core.TaskResult
 import org.jetbrains.kotlin.tools.projectWizard.core.asNullable
 import org.jetbrains.kotlin.tools.projectWizard.core.compute
 import org.jetbrains.kotlin.tools.projectWizard.core.safe
 import org.jetbrains.kotlin.tools.projectWizard.core.service.KotlinVersionProviderService
-import org.jetbrains.kotlin.tools.projectWizard.core.service.KotlinVersionProviderServiceImpl
 import org.jetbrains.kotlin.tools.projectWizard.settings.version.Version
+import org.jetbrains.kotlin.tools.projectWizard.wizard.KotlinNewProjectWizardUIBundle
+import org.jetbrains.kotlin.tools.projectWizard.wizard.ui.runWithProgressBar
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.URL
 import java.util.stream.Collectors
 
 class IdeaKotlinVersionProviderService : KotlinVersionProviderService, IdeaWizardService {
-    override fun getKotlinVersion(): Version {
-        if (KotlinPluginUtil.isSnapshotVersion()) {
-            return VersionsDownloader.getLatestEapOrStableKotlinVersion() ?: KotlinVersionProviderServiceImpl.DEFAULT
-        }
-        return KotlinPluginUtil.getPluginVersion().let { Version.fromString(it) }
+    override fun getKotlinVersion(): Version =
+        getKotlinVersionFromCompiler()
+            ?: VersionsDownloader.downloadLatestEapOrStableKotlinVersion()
+            ?: Versions.KOTLIN
+
+    private fun getKotlinVersionFromCompiler() =
+        KotlinCompilerVersion.getVersion()
+            ?.takeUnless { it.contains(SNAPSHOT_TAG, ignoreCase = true) }
+            ?.let { Version.fromString(it) }
+
+    companion object {
+        @NonNls
+        private const val SNAPSHOT_TAG = "snapshot"
     }
 }
 
+
 private object VersionsDownloader {
-    fun getLatestEapOrStableKotlinVersion(): Version? {
-        val latestEap = EapVersionDownloader.getLatestEapVersion()
-        val latestStable = getLatestStableVersion()
-        if (latestEap == null) return latestStable
-        if (latestStable == null) return latestEap
-        return if (latestEap > latestStable) latestEap else latestStable
-    }
+    fun downloadLatestEapOrStableKotlinVersion(): Version? =
+        runWithProgressBar(KotlinNewProjectWizardUIBundle.message("version.provider.downloading.kotlin.version")) {
+            val latestEap = EapVersionDownloader.getLatestEapVersion()
+            val latestStable = getLatestStableVersion()
+            when {
+                latestEap == null -> latestStable
+                latestStable == null -> latestEap
+                VersionComparatorUtil.compare(latestEap.text, latestStable.text) > 0 -> latestEap
+                else -> latestStable
+            }
+        }
 
     private fun getLatestStableVersion() = safe {
         ConfigureDialogWithModulesAndVersion.loadVersions("1.0.0")
@@ -60,6 +77,9 @@ private object EapVersionDownloader {
             .asReversed()
     }.asNullable.orEmpty()
 
+    @NonNls
     private val EAP_URL = "https://dl.bintray.com/kotlin/kotlin-eap/org/jetbrains/kotlin/jvm/org.jetbrains.kotlin.jvm.gradle.plugin/"
+
+    @NonNls
     private val versionRegexp = """href="([^"\\]+)"""".toRegex()
 }

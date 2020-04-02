@@ -5,10 +5,12 @@
 
 package org.jetbrains.kotlin.idea.configuration
 
+import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.components.JBCheckBox
 import org.jdesktop.swingx.VerticalLayout
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
+import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.PlatformVersion
 import org.jetbrains.kotlin.idea.projectWizard.WizardStatsService
 import org.jetbrains.kotlin.idea.util.isDev
@@ -18,39 +20,50 @@ import javax.swing.JCheckBox
 import javax.swing.JPanel
 
 object ExperimentalFeatures {
-    val NewJ2k = ExperimentalFeature(
-        title = "New Java to Kotlin converter",
+    val NewJ2k = RegistryExperimentalFeature(
+        title = KotlinBundle.message("configuration.feature.text.new.java.to.kotlin.converter"),
         registryKey = "kotlin.experimental.new.j2k",
         enabledByDefault = true
     )
 
-    val NewWizard = ExperimentalFeature(
-        title = "New Kotlin project wizard",
+    val NewWizard = object : RegistryExperimentalFeature(
+        title = KotlinBundle.message("configuration.feature.text.new.experimental.project.wizard"),
         registryKey = "kotlin.experimental.project.wizard",
-        enabledByDefault = false,
-        shouldBeShown = {
-            val platformVersion = PlatformVersion.getCurrent() ?: return@ExperimentalFeature true
-            platformVersion.platform != PlatformVersion.Platform.ANDROID_STUDIO
-        },
-        onFeatureStatusChanged = { enabled ->
+        enabledByDefault = false
+    ) {
+        override fun shouldBeShown(): Boolean {
+            val platformVersion = PlatformVersion.getCurrent() ?: return true
+            return platformVersion.platform != PlatformVersion.Platform.ANDROID_STUDIO
+        }
+
+        override fun onFeatureStatusChanged(enabled: Boolean) {
             WizardStatsService.logWizardStatusChanged(isEnabled = enabled)
         }
-    )
+    }
 
     val allFeatures: List<ExperimentalFeature> = listOf(
         NewJ2k,
         NewWizard
-    )
+    ) + ExperimentalFeature.EP_NAME.extensionList
 }
 
-class ExperimentalFeature(
-    val title: String,
+abstract class ExperimentalFeature {
+    abstract val title: String
+    abstract var isEnabled: Boolean
+    open fun shouldBeShown(): Boolean = true
+    open fun onFeatureStatusChanged(enabled: Boolean) {}
+
+    companion object {
+        internal var EP_NAME = ExtensionPointName<ExperimentalFeature>("org.jetbrains.kotlin.experimentalFeature")
+    }
+}
+
+open class RegistryExperimentalFeature(
+    override val title: String,
     private val registryKey: String,
-    private val enabledByDefault: Boolean,
-    val shouldBeShown: () -> Boolean = { true },
-    val onFeatureStatusChanged: (enabled: Boolean) -> Unit = {}
-) {
-    var isEnabled
+    private val enabledByDefault: Boolean
+) : ExperimentalFeature() {
+    final override var isEnabled
         get() = Registry.`is`(registryKey, enabledByDefault)
         set(value) {
             Registry.get(registryKey).setValue(value)
