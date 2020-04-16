@@ -20,8 +20,9 @@ import org.jetbrains.kotlin.fir.firEffectiveVisibility
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
+import org.jetbrains.kotlin.fir.visitors.transformSingle
 
-@Deprecated("Should be used just once from createTransformerByPhase", level = DeprecationLevel.WARNING)
+@AdapterForResolvePhase
 class FirStatusResolveTransformerAdapter : FirTransformer<Nothing?>() {
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         error("Should not be called for ${element::class}, only for files")
@@ -71,7 +72,7 @@ private class FirStatusResolveTransformer(override val session: FirSession) :
     override fun transformRegularClass(regularClass: FirRegularClass, data: FirDeclarationStatus?): CompositeTransformResult<FirStatement> {
         regularClass.transformStatus(this, regularClass.resolveStatus(regularClass.status, containingClass, isLocal = false))
         return storeClass(regularClass) {
-            regularClass.typeParameters.forEach { transformDeclaration(it, data) }
+            regularClass.typeParameters.forEach { it.transformSingle(this, data) }
             transformDeclaration(regularClass, data)
         } as CompositeTransformResult<FirStatement>
     }
@@ -117,6 +118,13 @@ private class FirStatusResolveTransformer(override val session: FirSession) :
         data: FirDeclarationStatus?
     ): CompositeTransformResult<FirStatement> {
         return transformDeclaration(valueParameter, data) as CompositeTransformResult<FirStatement>
+    }
+
+    override fun transformTypeParameter(
+        typeParameter: FirTypeParameter,
+        data: FirDeclarationStatus?
+    ): CompositeTransformResult<FirDeclaration> {
+        return transformDeclaration(typeParameter, data)
     }
 
     override fun transformBlock(block: FirBlock, data: FirDeclarationStatus?): CompositeTransformResult<FirStatement> {

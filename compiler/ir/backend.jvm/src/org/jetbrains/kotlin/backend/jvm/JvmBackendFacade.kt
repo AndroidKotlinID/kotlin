@@ -13,8 +13,11 @@ import org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
 import org.jetbrains.kotlin.codegen.state.GenerationState
-import org.jetbrains.kotlin.idea.MainFunctionDetector
+import org.jetbrains.kotlin.descriptors.konan.DeserializedKlibModuleOrigin
 import org.jetbrains.kotlin.descriptors.konan.KlibModuleOrigin
+import org.jetbrains.kotlin.descriptors.konan.klibModuleOrigin
+import org.jetbrains.kotlin.descriptors.konan.kotlinLibrary
+import org.jetbrains.kotlin.idea.MainFunctionDetector
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.EmptyLoggingContext
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmIrLinker
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmManglerDesc
@@ -33,8 +36,9 @@ object JvmBackendFacade {
         val signaturer = JvmIdSignatureDescriptor(mangler)
         val psi2ir = Psi2IrTranslator(state.languageVersionSettings, signaturer = signaturer)
         val psi2irContext = psi2ir.createGeneratorContext(state.module, state.bindingContext, extensions = extensions)
+        val pluginExtensions = IrGenerationExtension.getInstances(state.project)
 
-        for (extension in IrGenerationExtension.getInstances(state.project)) {
+        for (extension in pluginExtensions) {
             psi2ir.addPostprocessingStep { module ->
                 extension.generate(
                     module,
@@ -53,22 +57,22 @@ object JvmBackendFacade {
         val stubGenerator = DeclarationStubGenerator(
             psi2irContext.moduleDescriptor, psi2irContext.symbolTable, psi2irContext.irBuiltIns.languageVersionSettings, extensions
         )
-        val deserializer = JvmIrLinker(
-            EmptyLoggingContext, psi2irContext.irBuiltIns, psi2irContext.symbolTable
-        )
-        psi2irContext.moduleDescriptor.allDependencyModules.filter { it.getCapability(KlibModuleOrigin.CAPABILITY) != null }.forEach {
-            deserializer.deserializeIrModuleHeader(it)
+        val irLinker = JvmIrLinker(psi2irContext.moduleDescriptor, EmptyLoggingContext, psi2irContext.irBuiltIns, psi2irContext.symbolTable, stubGenerator, mangler)
+        val dependencies = psi2irContext.moduleDescriptor.allDependencyModules.map {
+            val kotlinLibrary = (it.getCapability(KlibModuleOrigin.CAPABILITY) as? DeserializedKlibModuleOrigin)?.library
+            irLinker.deserializeIrModuleHeader(it, kotlinLibrary)
         }
-        val irProviders = listOf(deserializer, stubGenerator)
+        val irProviders = listOf(irLinker)
+
         stubGenerator.setIrProviders(irProviders)
 
-        val irModuleFragment = psi2ir.generateModuleFragment(
-            psi2irContext, files,
-            irProviders = irProviders,
-            expectDescriptorToSymbol = null
-        )
+        val irModuleFragment = psi2ir.generateModuleFragment(psi2irContext, files, irProviders, expectDescriptorToSymbol = null, pluginExtensions)
+        irLinker.postProcess()
+
+        stubGenerator.unboundSymbolGeneration = true
+
         // We need to compile all files we reference in Klibs
-        irModuleFragment.files.addAll(deserializer.getAllIrFiles())
+        irModuleFragment.files.addAll(dependencies.flatMap { it.files })
 
         doGenerateFilesInternal(
             state, irModuleFragment, psi2irContext.symbolTable, psi2irContext.sourceManager, phaseConfig, irProviders, extensions
@@ -88,7 +92,7 @@ object JvmBackendFacade {
             state, sourceManager, irModuleFragment.irBuiltins, irModuleFragment, symbolTable, phaseConfig, extensions.classNameOverride
         )
         /* JvmBackendContext creates new unbound symbols, have to resolve them. */
-        ExternalDependenciesGenerator(symbolTable, irProviders).generateUnboundSymbolsAsDependencies()
+        ExternalDependenciesGenerator(symbolTable, irProviders, state.languageVersionSettings).generateUnboundSymbolsAsDependencies()
 
         state.irBasedMapAsmMethod = { descriptor ->
             context.methodSignatureMapper.mapAsmMethod(context.referenceFunction(descriptor).owner)
@@ -112,14 +116,15 @@ object JvmBackendFacade {
                         if (loweredClass !is IrClass) {
                             throw AssertionError("File-level declaration should be IrClass after JvmLower, got: " + loweredClass.render())
                         }
-
-                        ClassCodegen.generate(loweredClass, context)
+                        ClassCodegen.getOrCreate(loweredClass, context).generate()
                     }
-                    state.afterIndependentPart()
                 } catch (e: Throwable) {
                     CodegenUtil.reportBackendException(e, "code generation", irFile.fileEntry.name)
                 }
             }
         }
+        // TODO: split classes into groups connected by inline calls; call this after every group
+        //       and clear `JvmBackendContext.classCodegens`
+        state.afterIndependentPart()
     }
 }

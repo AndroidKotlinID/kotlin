@@ -16,6 +16,7 @@ import kotlin.collections.CollectionsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.builtins.FunctionTypesKt;
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns;
 import org.jetbrains.kotlin.builtins.ReflectionTypes;
 import org.jetbrains.kotlin.cfg.WhenChecker;
 import org.jetbrains.kotlin.codegen.*;
@@ -32,7 +33,7 @@ import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor;
 import org.jetbrains.kotlin.descriptors.impl.LocalVariableDescriptor;
 import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil;
 import org.jetbrains.kotlin.load.java.JvmAbi;
-import org.jetbrains.kotlin.load.java.sam.SamConstructorDescriptor;
+import org.jetbrains.kotlin.resolve.sam.SamConstructorDescriptor;
 import org.jetbrains.kotlin.name.ClassId;
 import org.jetbrains.kotlin.name.Name;
 import org.jetbrains.kotlin.psi.*;
@@ -357,6 +358,30 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
         classStack.pop();
     }
 
+    private boolean isAdaptedCallableReference(
+            @NotNull KtCallableReferenceExpression expression,
+            @NotNull ResolvedCall<?> resolvedCall
+    ) {
+        CallableDescriptor resultingDescriptor = resolvedCall.getResultingDescriptor();
+        if (!(resultingDescriptor instanceof FunctionDescriptor)) return false;
+        FunctionDescriptor functionDescriptor = (FunctionDescriptor) resultingDescriptor;
+
+        // Callable reference is adapted if:
+        // - adapter arguments mapping is present in value arguments of corresponding resolved call;
+        // - return type is not Unit, and expected return type is Unit.
+
+        if (!resolvedCall.getValueArguments().isEmpty()) return true;
+
+        KotlinType callableReferenceType = bindingContext.getType(expression);
+        if (callableReferenceType != null) {
+            KotlinType callableReferenceReturnType = CollectionsKt.last(callableReferenceType.getArguments()).getType();
+            KotlinType functionReturnType = functionDescriptor.getReturnType();
+            return functionReturnType != null &&
+                   KotlinBuiltIns.isUnit(callableReferenceReturnType) && !KotlinBuiltIns.isUnit(functionReturnType);
+        }
+        return false;
+    }
+
     @Override
     public void visitCallableReferenceExpression(@NotNull KtCallableReferenceExpression expression) {
         ResolvedCall<?> referencedFunction = CallUtilKt.getResolvedCall(expression.getCallableReference(), bindingContext);
@@ -380,7 +405,8 @@ class CodegenAnnotatingVisitor extends KtVisitorVoid {
             if (callableDescriptor == null) return;
 
             supertypes = runtimeTypes.getSupertypesForFunctionReference(
-                    (FunctionDescriptor) target, (AnonymousFunctionDescriptor) callableDescriptor, receiverType != null
+                    (FunctionDescriptor) target, (AnonymousFunctionDescriptor) callableDescriptor, receiverType != null,
+                    isAdaptedCallableReference(expression, referencedFunction)
             );
         }
         else if (target instanceof PropertyDescriptor) {

@@ -142,6 +142,7 @@ val reducedRuntimeSources by task<Sync> {
                 "libraries/stdlib/js/src/kotlin/promise.kt",
                 "libraries/stdlib/js/src/kotlin/regexp.kt",
                 "libraries/stdlib/js/src/kotlin/sequence.kt",
+                "libraries/stdlib/js/src/kotlin/throwableExtensions.kt",
                 "libraries/stdlib/js/src/kotlin/text/**",
                 "libraries/stdlib/js/src/kotlin/reflect/KTypeHelpers.kt",
                 "libraries/stdlib/js/src/kotlin/reflect/KTypeParameterImpl.kt",
@@ -350,7 +351,7 @@ val runMocha by task<NodeTask> {
     val allArgs = getArgs().toList() + listOf(testOutputFile/*, kotlinTestTestOutputFile*/)
     setArgs(allArgs)
 
-    setIgnoreExitValue(rootProject.getBooleanProperty("ignoreTestFailures") ?: false)
+    setIgnoreExitValue(kotlinBuildProperties.ignoreTestFailures)
     setWorkingDir(buildDir)
 }
 

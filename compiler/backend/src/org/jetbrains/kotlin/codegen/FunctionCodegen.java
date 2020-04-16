@@ -19,7 +19,6 @@ import org.jetbrains.kotlin.codegen.binding.CodegenBinding;
 import org.jetbrains.kotlin.codegen.context.*;
 import org.jetbrains.kotlin.codegen.coroutines.CoroutineCodegenUtilKt;
 import org.jetbrains.kotlin.codegen.coroutines.SuspendFunctionGenerationStrategy;
-import org.jetbrains.kotlin.codegen.coroutines.SuspendInlineFunctionGenerationStrategy;
 import org.jetbrains.kotlin.codegen.state.GenerationState;
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper;
 import org.jetbrains.kotlin.codegen.state.TypeMapperUtilsKt;
@@ -48,6 +47,7 @@ import org.jetbrains.kotlin.resolve.inline.InlineOnlyKt;
 import org.jetbrains.kotlin.resolve.inline.InlineUtil;
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes;
 import org.jetbrains.kotlin.resolve.jvm.RuntimeAssertionInfo;
+import org.jetbrains.kotlin.resolve.jvm.annotations.JvmAnnotationUtilKt;
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin;
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOriginKind;
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOriginKt;
@@ -81,11 +81,9 @@ import static org.jetbrains.kotlin.descriptors.ModalityKt.isOverridable;
 import static org.jetbrains.kotlin.load.java.JvmAbi.LOCAL_VARIABLE_INLINE_ARGUMENT_SYNTHETIC_LINE_NUMBER;
 import static org.jetbrains.kotlin.resolve.DescriptorToSourceUtils.getSourceFromDescriptor;
 import static org.jetbrains.kotlin.resolve.DescriptorUtils.*;
-import static org.jetbrains.kotlin.resolve.inline.InlineOnlyKt.isEffectivelyInlineOnly;
 import static org.jetbrains.kotlin.resolve.inline.InlineOnlyKt.isInlineOnlyPrivateInBytecode;
 import static org.jetbrains.kotlin.resolve.jvm.AsmTypes.OBJECT_TYPE;
 import static org.jetbrains.kotlin.resolve.jvm.InlineClassManglingRulesKt.shouldHideConstructorDueToInlineClassTypeValueParameters;
-import static org.jetbrains.kotlin.resolve.jvm.annotations.JvmAnnotationUtilKt.hasJvmDefaultAnnotation;
 import static org.jetbrains.kotlin.types.expressions.ExpressionTypingUtils.*;
 import static org.jetbrains.org.objectweb.asm.Opcodes.*;
 
@@ -125,27 +123,14 @@ public class FunctionCodegen {
         if (owner.getContextKind() != OwnerKind.DEFAULT_IMPLS || function.hasBody()) {
             FunctionGenerationStrategy strategy;
             if (functionDescriptor.isSuspend()) {
-                if (isEffectivelyInlineOnly(functionDescriptor)) {
-                    strategy = new FunctionGenerationStrategy.FunctionDefault(state, function);
-                } else if (!functionDescriptor.isInline()) {
-                    strategy = new SuspendFunctionGenerationStrategy(
-                            state,
-                            CoroutineCodegenUtilKt.<FunctionDescriptor>unwrapInitialDescriptorForSuspendFunction(functionDescriptor),
-                            function,
-                            v.getThisName(),
-                            state.getConstructorCallNormalizationMode(),
-                            this
-                    );
-                } else {
-                    strategy = new SuspendInlineFunctionGenerationStrategy(
-                            state,
-                            CoroutineCodegenUtilKt.<FunctionDescriptor>unwrapInitialDescriptorForSuspendFunction(functionDescriptor),
-                            function,
-                            v.getThisName(),
-                            state.getConstructorCallNormalizationMode(),
-                            this
-                    );
-                }
+                strategy = new SuspendFunctionGenerationStrategy(
+                        state,
+                        CoroutineCodegenUtilKt.<FunctionDescriptor>unwrapInitialDescriptorForSuspendFunction(functionDescriptor),
+                        function,
+                        v.getThisName(),
+                        state.getConstructorCallNormalizationMode(),
+                        this
+                );
             } else {
                 strategy = new FunctionGenerationStrategy.FunctionDefault(state, function);
             }
@@ -462,7 +447,7 @@ public class FunctionCodegen {
     ) {
         OwnerKind contextKind = methodContext.getContextKind();
         if (!state.getClassBuilderMode().generateBodies
-            || isAbstractMethod(functionDescriptor, contextKind)
+            || isAbstractMethod(functionDescriptor, contextKind, state.getJvmDefaultMode())
             || shouldSkipMethodBodyInAbiMode(state.getClassBuilderMode(), origin)
         ) {
             generateLocalVariableTable(
@@ -747,7 +732,9 @@ public class FunctionCodegen {
             @NotNull JvmDefaultMode jvmDefaultMode
     ) {
         return OwnerKind.DEFAULT_IMPLS == context.getContextKind() &&
-               hasJvmDefaultAnnotation(functionDescriptor) &&
+               JvmAnnotationUtilKt
+                       .isCompiledToJvmDefault(DescriptorUtils.unwrapFakeOverrideToAnyDeclaration(functionDescriptor),
+                                               jvmDefaultMode) &&
                jvmDefaultMode.isCompatibility();
     }
 
@@ -1015,7 +1002,7 @@ public class FunctionCodegen {
     public void generateBridges(@NotNull FunctionDescriptor descriptor) {
         if (descriptor instanceof ConstructorDescriptor) return;
         if (owner.getContextKind() == OwnerKind.DEFAULT_IMPLS) return;
-        if (JvmBridgesImplKt.isAbstractOnJvmIgnoringActualModality(descriptor)) return;
+        if (JvmBridgesImplKt.isAbstractOnJvmIgnoringActualModality(descriptor, state.getJvmDefaultMode())) return;
 
         // equals(Any?), hashCode(), toString() never need bridges
         if (isMethodOfAny(descriptor)) return;
@@ -1051,7 +1038,7 @@ public class FunctionCodegen {
                 }
             }
 
-            if (!descriptor.getKind().isReal() && isAbstractMethod(descriptor, OwnerKind.IMPLEMENTATION)) {
+            if (!descriptor.getKind().isReal() && isAbstractMethod(descriptor, OwnerKind.IMPLEMENTATION, state.getJvmDefaultMode())) {
                 CallableDescriptor overridden = SpecialBuiltinMembers.getOverriddenBuiltinReflectingJvmDescriptor(descriptor);
                 assert overridden != null;
 
@@ -1475,7 +1462,8 @@ public class FunctionCodegen {
             iv.invokespecial(parentInternalName, delegateTo.getName(), delegateTo.getDescriptor(), false);
         }
         else {
-            if (hasJvmDefaultAnnotation(descriptor)) {
+            if (isInterface(descriptor.getContainingDeclaration()) &&
+                JvmAnnotationUtilKt.isCompiledToJvmDefault(descriptor, state.getJvmDefaultMode())) {
                 iv.invokeinterface(v.getThisName(), delegateTo.getName(), delegateTo.getDescriptor());
             }
             else {
@@ -1665,7 +1653,7 @@ public class FunctionCodegen {
         assert isInterface(containingDeclaration) : "'processInterfaceMethod' method should be called only for interfaces, but: " +
                                                     containingDeclaration;
 
-        if (hasJvmDefaultAnnotation(memberDescriptor)) {
+        if (JvmAnnotationUtilKt.isCompiledToJvmDefault(memberDescriptor, mode)) {
             return (kind != OwnerKind.DEFAULT_IMPLS && !isSynthetic) ||
                    (kind == OwnerKind.DEFAULT_IMPLS && (isSynthetic || mode.isCompatibility()));
         } else {

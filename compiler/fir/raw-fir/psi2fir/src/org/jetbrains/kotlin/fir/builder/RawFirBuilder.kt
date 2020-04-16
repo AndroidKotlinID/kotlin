@@ -7,11 +7,15 @@ package org.jetbrains.kotlin.fir.builder
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.tree.IElementType
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.mutate
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.*
+import org.jetbrains.kotlin.fir.contracts.FirContractDescription
+import org.jetbrains.kotlin.fir.contracts.builder.buildRawContractDescription
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
@@ -24,6 +28,7 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirModifiableQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
+import org.jetbrains.kotlin.fir.expressions.impl.FirStubStatement
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.builder.*
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
@@ -40,10 +45,24 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
+import org.jetbrains.kotlin.psi.psiUtil.isContractDescriptionCallPsiCheck
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
+import kotlin.collections.MutableList
+import kotlin.collections.any
+import kotlin.collections.contains
+import kotlin.collections.filterIsInstance
+import kotlin.collections.first
+import kotlin.collections.firstOrNull
+import kotlin.collections.forEach
+import kotlin.collections.isNotEmpty
+import kotlin.collections.lastOrNull
+import kotlin.collections.plusAssign
+import kotlin.collections.reverse
+import kotlin.collections.withIndex
+import kotlin.collections.zip
 
 class RawFirBuilder(
     session: FirSession, val baseScopeProvider: FirScopeProvider, val stubMode: Boolean
@@ -156,7 +175,11 @@ class RawFirBuilder(
             convert()
 
         private fun KtDeclaration.toFirDeclaration(
-            delegatedSuperType: FirTypeRef, delegatedSelfType: FirResolvedTypeRef, owner: KtClassOrObject, hasPrimaryConstructor: Boolean,
+            delegatedSuperType: FirTypeRef,
+            delegatedSelfType: FirResolvedTypeRef,
+            owner: KtClassOrObject,
+            ownerClassBuilder: FirClassBuilder, hasPrimaryConstructor: Boolean,
+            ownerTypeParameters: List<FirTypeParameterRef>
         ): FirDeclaration {
             return when (this) {
                 is KtSecondaryConstructor -> {
@@ -165,6 +188,7 @@ class RawFirBuilder(
                         delegatedSelfType,
                         owner,
                         hasPrimaryConstructor,
+                        ownerTypeParameters
                     )
                 }
                 is KtEnumEntry -> {
@@ -174,6 +198,9 @@ class RawFirBuilder(
                             constructors.isEmpty() || constructors.any { it.valueParameters.isEmpty() }
                         }
                     toFirEnumEntry(delegatedSelfType, ownerClassHasDefaultConstructor)
+                }
+                is KtProperty -> {
+                    toFirProperty(ownerClassBuilder)
                 }
                 else -> convert()
             }
@@ -189,19 +216,20 @@ class RawFirBuilder(
                     FirSingleExpressionBlock(convert())
             }
 
-        private fun KtDeclarationWithBody.buildFirBody(): FirBlock? =
+        private fun KtDeclarationWithBody.buildFirBody(): Pair<FirBlock?, FirContractDescription?> =
             when {
                 !hasBody() ->
-                    null
+                    null to null
                 hasBlockBody() -> if (!stubMode) {
-                    bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
+                    val block = bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
+                    block.extractContractDescriptionIfPossible()
                 } else {
-                    FirSingleExpressionBlock(buildExpressionStub { source = this@buildFirBody.toFirSourceElement() }.toReturn())
+                    FirSingleExpressionBlock(buildExpressionStub { source = this@buildFirBody.toFirSourceElement() }.toReturn()) to null
                 }
                 else -> {
                     val result = { bodyExpression }.toFirExpression("Function has no body (but should)")
                     // basePsi is null, because 'return' is synthetic & should not be bound to some PSI
-                    FirSingleExpressionBlock(result.toReturn(baseSource = null))
+                    FirSingleExpressionBlock(result.toReturn(baseSource = null)) to null
                 }
             }
 
@@ -279,7 +307,11 @@ class RawFirBuilder(
                     }
                 }
                 symbol = FirPropertyAccessorSymbol()
-                body = this@toFirPropertyAccessor.buildFirBody()
+                val (body, contractDescription) = this@toFirPropertyAccessor.buildFirBody()
+                this.body = body
+                contractDescription?.let {
+                    this.contractDescription = it
+                }
             }.also {
                 accessorTarget.bind(it)
                 this@RawFirBuilder.context.firFunctionTargets.removeLast()
@@ -362,6 +394,12 @@ class RawFirBuilder(
             extractAnnotationsTo(container.annotations)
         }
 
+        private fun KtTypeParameterListOwner.extractTypeParametersTo(container: FirTypeParameterRefsOwnerBuilder) {
+            for (typeParameter in typeParameters) {
+                container.typeParameters += typeParameter.convert<FirTypeParameter>()
+            }
+        }
+
         private fun KtTypeParameterListOwner.extractTypeParametersTo(container: FirTypeParametersOwnerBuilder) {
             for (typeParameter in typeParameters) {
                 container.typeParameters += typeParameter.convert<FirTypeParameter>()
@@ -398,6 +436,7 @@ class RawFirBuilder(
             delegatedSelfTypeRef: FirTypeRef?,
             delegatedEnumSuperTypeRef: FirTypeRef?,
             classKind: ClassKind,
+            containerTypeParameters: List<FirTypeParameterRef>
         ): FirTypeRef {
             var superTypeCallEntry: KtSuperTypeCallEntry? = null
             var delegatedSuperTypeRef: FirTypeRef? = null
@@ -465,6 +504,7 @@ class RawFirBuilder(
                 delegatedSuperTypeRef,
                 delegatedSelfTypeRef ?: delegatedSuperTypeRef,
                 owner = this,
+                containerTypeParameters
             )
             container.declarations += firPrimaryConstructor
             return delegatedSuperTypeRef
@@ -475,6 +515,7 @@ class RawFirBuilder(
             delegatedSuperTypeRef: FirTypeRef,
             delegatedSelfTypeRef: FirTypeRef,
             owner: KtClassOrObject,
+            ownerTypeParameters: List<FirTypeParameterRef>
         ): FirConstructor {
             val constructorCallee = superTypeCallEntry?.calleeExpression?.toFirSourceElement()
             val constructorSource = (this ?: owner).toFirSourceElement()
@@ -509,7 +550,7 @@ class RawFirBuilder(
                 this.status = status
                 symbol = FirConstructorSymbol(callableIdForClassConstructor())
                 delegatedConstructor = firDelegatedCall
-                typeParameters += typeParametersFromSelfType(delegatedSelfTypeRef)
+                typeParameters += constructorTypeParametersFromConstructedClass(ownerTypeParameters)
                 this@toFirConstructor?.extractAnnotationsTo(this)
                 this@toFirConstructor?.extractValueParametersTo(this)
             }
@@ -582,13 +623,16 @@ class RawFirBuilder(
                             correctedEnumSelfTypeRef,
                             delegatedEntrySelfType,
                             owner = ktEnumEntry,
+                            typeParameters
                         )
                         for (declaration in ktEnumEntry.declarations) {
                             declarations += declaration.toFirDeclaration(
                                 correctedEnumSelfTypeRef,
                                 delegatedSelfType = delegatedEntrySelfType,
                                 ktEnumEntry,
+                                ownerClassBuilder = this,
                                 hasPrimaryConstructor = true,
+                                ownerTypeParameters = emptyList()
                             )
                         }
                     }
@@ -620,60 +664,74 @@ class RawFirBuilder(
                     isData = (classOrObject as? KtClass)?.isData() == true
                     isInline = classOrObject.hasModifier(INLINE_KEYWORD)
                 }
-                val classBuilder = if (status.modality == Modality.SEALED) FirSealedClassBuilder() else FirClassImplBuilder()
-                classBuilder.apply {
-                    source = classOrObject.toFirSourceElement()
-                    session = baseSession
-                    name = classOrObject.nameAsSafeName
-                    this.status = status
-                    this.classKind = classKind
-                    scopeProvider = baseScopeProvider
-                    symbol = FirRegularClassSymbol(context.currentClassId)
+                withCapturedTypeParameters {
+                    if (!status.isInner) context.capturedTypeParameters = context.capturedTypeParameters.clear()
 
-                    classOrObject.extractAnnotationsTo(this)
-                    classOrObject.extractTypeParametersTo(this)
+                    val classBuilder = if (status.modality == Modality.SEALED) FirSealedClassBuilder() else FirClassImplBuilder()
+                    classBuilder.apply {
+                        source = classOrObject.toFirSourceElement()
+                        session = baseSession
+                        name = classOrObject.nameAsSafeName
+                        this.status = status
+                        this.classKind = classKind
+                        scopeProvider = baseScopeProvider
+                        symbol = FirRegularClassSymbol(context.currentClassId)
 
-                    val delegatedSelfType = classOrObject.toDelegatedSelfType(this)
-                    val delegatedSuperType = classOrObject.extractSuperTypeListEntriesTo(this, delegatedSelfType, null, classKind)
+                        classOrObject.extractAnnotationsTo(this)
+                        classOrObject.extractTypeParametersTo(this)
+                        typeParameters += context.capturedTypeParameters.map { buildOuterClassTypeParameterRef { symbol = it } }
 
-                    val primaryConstructor = classOrObject.primaryConstructor
-                    val firPrimaryConstructor = declarations.firstOrNull() as? FirConstructor
-                    if (primaryConstructor != null && firPrimaryConstructor != null) {
-                        primaryConstructor.valueParameters.zip(
-                            firPrimaryConstructor.valueParameters
-                        ).forEach { (ktParameter, firParameter) ->
-                            if (ktParameter.hasValOrVar()) {
-                                addDeclaration(ktParameter.toFirProperty(firParameter))
+                        addCapturedTypeParameters(typeParameters.take(classOrObject.typeParameters.size))
+
+                        val delegatedSelfType = classOrObject.toDelegatedSelfType(this)
+                        val delegatedSuperType =
+                            classOrObject.extractSuperTypeListEntriesTo(this, delegatedSelfType, null, classKind, typeParameters)
+
+                        val primaryConstructor = classOrObject.primaryConstructor
+                        val firPrimaryConstructor = declarations.firstOrNull() as? FirConstructor
+                        if (primaryConstructor != null && firPrimaryConstructor != null) {
+                            primaryConstructor.valueParameters.zip(
+                                firPrimaryConstructor.valueParameters
+                            ).forEach { (ktParameter, firParameter) ->
+                                if (ktParameter.hasValOrVar()) {
+                                    addDeclaration(ktParameter.toFirProperty(firParameter))
+                                }
                             }
                         }
-                    }
 
-                    for (declaration in classOrObject.declarations) {
-                        addDeclaration(
-                            declaration.toFirDeclaration(
-                                delegatedSuperType, delegatedSelfType, classOrObject, hasPrimaryConstructor = primaryConstructor != null,
-                            ),
-                        )
-                    }
+                        for (declaration in classOrObject.declarations) {
+                            addDeclaration(
+                                declaration.toFirDeclaration(
+                                    delegatedSuperType,
+                                    delegatedSelfType,
+                                    classOrObject,
+                                    classBuilder, hasPrimaryConstructor = primaryConstructor != null,
+                                    typeParameters
+                                ),
+                            )
+                        }
 
-                    if (classOrObject.hasModifier(DATA_KEYWORD) && firPrimaryConstructor != null) {
-                        val zippedParameters = classOrObject.primaryConstructorParameters.zip(
-                            declarations.filterIsInstance<FirProperty>(),
-                        )
-                        zippedParameters.generateComponentFunctions(
-                            baseSession, this, context.packageFqName, context.className, firPrimaryConstructor,
-                        )
-                        zippedParameters.generateCopyFunction(
-                            baseSession, classOrObject, this, context.packageFqName, context.className, firPrimaryConstructor,
-                        )
-                        // TODO: equals, hashCode, toString
-                    }
+                        if (classOrObject.hasModifier(DATA_KEYWORD) && firPrimaryConstructor != null) {
+                            val zippedParameters = classOrObject.primaryConstructorParameters.zip(
+                                declarations.filterIsInstance<FirProperty>(),
+                            )
+                            DataClassMembersGenerator(
+                                baseSession,
+                                classOrObject,
+                                this,
+                                firPrimaryConstructor,
+                                zippedParameters,
+                                context.packageFqName,
+                                context.className
+                            ).generate()
+                        }
 
-                    if (classOrObject.hasModifier(ENUM_KEYWORD)) {
-                        generateValuesFunction(baseSession, context.packageFqName, context.className)
-                        generateValueOfFunction(baseSession, context.packageFqName, context.className)
-                    }
-                }.build()
+                        if (classOrObject.hasModifier(ENUM_KEYWORD)) {
+                            generateValuesFunction(baseSession, context.packageFqName, context.className)
+                            generateValueOfFunction(baseSession, context.packageFqName, context.className)
+                        }
+                    }.build()
+                }
             }
         }
 
@@ -686,17 +744,27 @@ class RawFirBuilder(
                     classKind = ClassKind.OBJECT
                     scopeProvider = baseScopeProvider
                     symbol = FirAnonymousObjectSymbol()
+                    typeParameters += context.capturedTypeParameters.map { buildOuterClassTypeParameterRef { symbol = it } }
                     val delegatedSelfType = objectDeclaration.toDelegatedSelfType(this)
                     objectDeclaration.extractAnnotationsTo(this)
-                    val delegatedSuperType = objectDeclaration.extractSuperTypeListEntriesTo(this, delegatedSelfType, null, ClassKind.CLASS)
+                    val delegatedSuperType = objectDeclaration.extractSuperTypeListEntriesTo(
+                        this,
+                        delegatedSelfType,
+                        null,
+                        ClassKind.CLASS,
+                        containerTypeParameters = emptyList()
+                    )
                     typeRef = delegatedSelfType
+
 
                     for (declaration in objectDeclaration.declarations) {
                         declarations += declaration.toFirDeclaration(
                             delegatedSuperType,
                             delegatedSelfType,
                             owner = objectDeclaration,
+                            ownerClassBuilder = this,
                             hasPrimaryConstructor = false,
+                            ownerTypeParameters = emptyList()
                         )
                     }
                 }
@@ -776,7 +844,17 @@ class RawFirBuilder(
                 for (valueParameter in function.valueParameters) {
                     valueParameters += valueParameter.convert<FirValueParameter>()
                 }
-                body = function.buildFirBody()
+                withCapturedTypeParameters {
+                    if (this is FirSimpleFunctionBuilder) addCapturedTypeParameters(this.typeParameters)
+                    val (body, contractDescription) = function.buildFirBody()
+                    this.body = body
+                    contractDescription?.let {
+                        // TODO: add error reporting for contracts on lambdas
+                        if (this is FirSimpleFunctionBuilder) {
+                            this.contractDescription = it
+                        }
+                    }
+                }
                 context.firFunctionTargets.removeLast()
             }.build().also {
                 target.bind(it)
@@ -871,6 +949,7 @@ class RawFirBuilder(
             delegatedSelfTypeRef: FirTypeRef,
             owner: KtClassOrObject,
             hasPrimaryConstructor: Boolean,
+            ownerTypeParameters: List<FirTypeParameterRef>
         ): FirConstructor {
             val target = FirFunctionTarget(labelName = null, isLambda = false)
             return buildConstructor {
@@ -893,9 +972,10 @@ class RawFirBuilder(
                 )
                 this@RawFirBuilder.context.firFunctionTargets += target
                 extractAnnotationsTo(this)
-                typeParameters += typeParametersFromSelfType(delegatedSelfTypeRef)
+                typeParameters += constructorTypeParametersFromConstructedClass(ownerTypeParameters)
                 extractValueParametersTo(this)
-                body = buildFirBody()
+                val (body, _) = buildFirBody()
+                this.body = body
                 this@RawFirBuilder.context.firFunctionTargets.removeLast()
             }.also {
                 target.bind(it)
@@ -923,23 +1003,15 @@ class RawFirBuilder(
             }
         }
 
-        override fun visitAnonymousInitializer(initializer: KtAnonymousInitializer, data: Unit): FirElement {
-            return buildAnonymousInitializer {
-                source = initializer.toFirSourceElement()
-                session = baseSession
-                body = if (stubMode) buildEmptyExpressionBlock() else initializer.body.toFirBlock()
-            }
-        }
-
-        override fun visitProperty(property: KtProperty, data: Unit): FirElement {
-            val propertyType = property.typeReference.toFirOrImplicitType()
-            val propertyName = property.nameAsSafeName
-            val isVar = property.isVar
-            val propertyInitializer = if (property.hasInitializer()) {
-                { property.initializer }.toFirExpression("Should have initializer")
+        private fun KtProperty.toFirProperty(ownerClassBuilder: FirClassBuilder?): FirProperty {
+            val propertyType = typeReference.toFirOrImplicitType()
+            val propertyName = nameAsSafeName
+            val isVar = isVar
+            val propertyInitializer = if (hasInitializer()) {
+                { initializer }.toFirExpression("Should have initializer")
             } else null
-            val delegateExpression by lazy { property.delegate?.expression }
-            val propertySource = property.toFirSourceElement()
+            val delegateExpression by lazy { delegate?.expression }
+            val propertySource = toFirSourceElement()
 
             return buildProperty {
                 source = propertySource
@@ -947,9 +1019,10 @@ class RawFirBuilder(
                 returnTypeRef = propertyType
                 name = propertyName
                 this.isVar = isVar
+
                 initializer = propertyInitializer
 
-                if (property.isLocal) {
+                if (this@toFirProperty.isLocal) {
                     isLocal = true
                     symbol = FirPropertySymbol(propertyName)
                     val delegateBuilder = delegateExpression?.let {
@@ -959,44 +1032,63 @@ class RawFirBuilder(
                         }
                     }
 
-                    status = FirDeclarationStatusImpl(Visibilities.LOCAL, Modality.FINAL)
+                    status = FirDeclarationStatusImpl(Visibilities.LOCAL, Modality.FINAL).apply {
+                        isLateInit = hasModifier(LATEINIT_KEYWORD)
+                    }
 
                     val receiver = delegateExpression?.toFirExpression("Incorrect delegate expression")
-                    generateAccessorsByDelegate(delegateBuilder, baseSession, member = false, extension = false, stubMode, receiver)
+                    generateAccessorsByDelegate(delegateBuilder, null, baseSession, isExtension = false, stubMode, receiver)
                 } else {
                     isLocal = false
-                    receiverTypeRef = property.receiverTypeReference.convertSafe()
+                    receiverTypeRef = receiverTypeReference.convertSafe()
                     symbol = FirPropertySymbol(callableIdForName(propertyName))
-                    val delegateBuilder = if (property.hasDelegate()) {
-                        FirWrappedDelegateExpressionBuilder().apply {
-                            source = if (stubMode) null else delegateExpression?.toFirSourceElement()
-                            expression = { delegateExpression }.toFirExpression("Should have delegate")
+                    extractTypeParametersTo(this)
+                    withCapturedTypeParameters {
+                        addCapturedTypeParameters(this.typeParameters)
+                        val delegateBuilder = if (hasDelegate()) {
+                            FirWrappedDelegateExpressionBuilder().apply {
+                                source = if (stubMode) null else delegateExpression?.toFirSourceElement()
+                                expression = { delegateExpression }.toFirExpression("Should have delegate")
+                            }
+                        } else null
+                        status = FirDeclarationStatusImpl(visibility, modality).apply {
+                            isExpect = hasExpectModifier()
+                            isActual = hasActualModifier()
+                            isOverride = hasModifier(OVERRIDE_KEYWORD)
+                            isConst = hasModifier(CONST_KEYWORD)
+                            isLateInit = hasModifier(LATEINIT_KEYWORD)
                         }
-                    } else null
-                    status = FirDeclarationStatusImpl(property.visibility, property.modality).apply {
-                        isExpect = property.hasExpectModifier()
-                        isActual = property.hasActualModifier()
-                        isOverride = property.hasModifier(OVERRIDE_KEYWORD)
-                        isConst = property.hasModifier(CONST_KEYWORD)
-                        isLateInit = property.hasModifier(LATEINIT_KEYWORD)
+
+                        getter = this@toFirProperty.getter.toFirPropertyAccessor(this@toFirProperty, propertyType, isGetter = true)
+                        setter = if (isVar) {
+                            this@toFirProperty.setter.toFirPropertyAccessor(this@toFirProperty, propertyType, isGetter = false)
+                        } else null
+
+                        val receiver = delegateExpression?.toFirExpression("Should have delegate")
+                        generateAccessorsByDelegate(
+                            delegateBuilder,
+                            ownerClassBuilder,
+                            baseSession,
+                            isExtension = receiverTypeReference != null,
+                            stubMode,
+                            receiver
+                        )
                     }
-                    property.extractTypeParametersTo(this)
-
-                    getter = property.getter.toFirPropertyAccessor(property, propertyType, isGetter = true)
-                    setter = if (isVar) property.setter.toFirPropertyAccessor(property, propertyType, isGetter = false) else null
-
-                    val receiver = delegateExpression?.toFirExpression("Should have delegate")
-                    generateAccessorsByDelegate(
-                        delegateBuilder,
-                        baseSession,
-                        member = !property.isTopLevel,
-                        extension = property.receiverTypeReference != null,
-                        stubMode,
-                        receiver
-                    )
                 }
-                property.extractAnnotationsTo(this)
+                extractAnnotationsTo(this)
             }
+        }
+
+        override fun visitAnonymousInitializer(initializer: KtAnonymousInitializer, data: Unit): FirElement {
+            return buildAnonymousInitializer {
+                source = initializer.toFirSourceElement()
+                session = baseSession
+                body = if (stubMode) buildEmptyExpressionBlock() else initializer.body.toFirBlock()
+            }
+        }
+
+        override fun visitProperty(property: KtProperty, data: Unit): FirElement {
+            return property.toFirProperty(ownerClassBuilder = null)
         }
 
         override fun visitTypeReference(typeReference: KtTypeReference, data: Unit): FirElement {

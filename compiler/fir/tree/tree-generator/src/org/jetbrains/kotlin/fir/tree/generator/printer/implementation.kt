@@ -97,10 +97,13 @@ fun SmartPrinter.printImplementation(implementation: Implementation) {
                 }
             }
 
+
             element.allFields.filter { it.type.contains("Symbol") && it !is FieldList }
                 .takeIf {
                     it.isNotEmpty() && !isInterface && !isAbstract &&
-                            !element.type.contains("Reference") && !element.type.contains("ResolvedQualifier")
+                            !element.type.contains("Reference")
+                            && !element.type.contains("ResolvedQualifier")
+                            && !element.type.endsWith("Ref")
                 }
                 ?.let { symbolFields ->
                     println("init {")
@@ -144,9 +147,6 @@ fun SmartPrinter.printImplementation(implementation: Implementation) {
                                 }
 
                                 else -> {
-                                    if (type in setOf("FirClassImpl", "FirSealedClassImpl") && field.name == "declarations") {
-                                        println("(declarations.firstOrNull { it is FirConstructorImpl } as? FirConstructorImpl)?.typeParameters?.forEach { it.accept(visitor, data) }")
-                                    }
                                     if (type == "FirWhenExpressionImpl" && field.name == "subject") {
                                         println(
                                             """
@@ -218,17 +218,14 @@ fun SmartPrinter.printImplementation(implementation: Implementation) {
 
                             field.name in setOf("dispatchReceiver", "extensionReceiver") -> {}
 
-                            type in setOf("FirClassImpl", "FirSealedClassImpl") && field.name == "declarations" -> {
-                                println("(declarations.firstOrNull { it is FirConstructorImpl } as? FirConstructorImpl)?.typeParameters?.transformInplace(transformer, data)")
-                                println("declarations.transformInplace(transformer, data)")
-                            }
-
                             field.name == "companionObject" -> {
                                 println("companionObject = declarations.asSequence().filterIsInstance<FirRegularClass>().firstOrNull { it.status.isCompanion }")
                             }
 
                             field.needsSeparateTransform -> {
-                                println("transform${field.name.capitalize()}(transformer, data)")
+                                if (!(element.needTransformOtherChildren && field.needTransformInOtherChildren)) {
+                                    println("transform${field.name.capitalize()}(transformer, data)")
+                                }
                             }
 
                             !element.needTransformOtherChildren -> {
@@ -294,6 +291,9 @@ fun SmartPrinter.printImplementation(implementation: Implementation) {
                             if (!field.isMutable || !field.isFirType || field.name == "subjectVariable") continue
                             if (!field.needsSeparateTransform) {
                                 field.transform()
+                            }
+                            if (field.needTransformInOtherChildren) {
+                                println("transform${field.name.capitalize()}(transformer, data)")
                             }
                         }
                         println("return this")

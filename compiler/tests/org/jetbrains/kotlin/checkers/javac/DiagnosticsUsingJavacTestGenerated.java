@@ -6977,11 +6977,6 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/duplicateJvmSignature/specialNames/dataClassCopy.kt");
                 }
 
-                @TestMetadata("defaults.kt")
-                public void testDefaults() throws Exception {
-                    runTest("compiler/testData/diagnostics/tests/duplicateJvmSignature/specialNames/defaults.kt");
-                }
-
                 @TestMetadata("delegationBy.kt")
                 public void testDelegationBy() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/duplicateJvmSignature/specialNames/delegationBy.kt");
@@ -9161,9 +9156,24 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/generics/projectionsScope/typeParameterBounds.kt");
                 }
 
+                @TestMetadata("unsafeVarianceInAliasedFunctionalType.kt")
+                public void testUnsafeVarianceInAliasedFunctionalType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/projectionsScope/unsafeVarianceInAliasedFunctionalType.kt");
+                }
+
+                @TestMetadata("unsafeVarianceOnInputTypeOfFunctionalType.kt")
+                public void testUnsafeVarianceOnInputTypeOfFunctionalType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/projectionsScope/unsafeVarianceOnInputTypeOfFunctionalType.kt");
+                }
+
                 @TestMetadata("unsafeVarianceStar.kt")
                 public void testUnsafeVarianceStar() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/generics/projectionsScope/unsafeVarianceStar.kt");
+                }
+
+                @TestMetadata("unsafeVarianceWithRecursiveGenerics.kt")
+                public void testUnsafeVarianceWithRecursiveGenerics() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/generics/projectionsScope/unsafeVarianceWithRecursiveGenerics.kt");
                 }
 
                 @TestMetadata("varargs.kt")
@@ -11483,6 +11493,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt37043_2.kt")
                 public void testKt37043_2() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt37043_2.kt");
+                }
+
+                @TestMetadata("kt37419.kt")
+                public void testKt37419() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt37419.kt");
                 }
 
                 @TestMetadata("kt37650.kt")
@@ -22958,6 +22973,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 public void testOnPropertyAccessor() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/suppress/oneWarning/onPropertyAccessor.kt");
                 }
+
+                @TestMetadata("onTypeParameter.kt")
+                public void testOnTypeParameter() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/suppress/oneWarning/onTypeParameter.kt");
+                }
             }
         }
 
@@ -24028,6 +24048,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("typeAliasInvisibleObject.kt")
             public void testTypeAliasInvisibleObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typealias/typeAliasInvisibleObject.kt");
+            }
+
+            @TestMetadata("typeAliasIsUsedAsATypeArgumentInOtherAlias.kt")
+            public void testTypeAliasIsUsedAsATypeArgumentInOtherAlias() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typealias/typeAliasIsUsedAsATypeArgumentInOtherAlias.kt");
             }
 
             @TestMetadata("typeAliasNotNull.kt")

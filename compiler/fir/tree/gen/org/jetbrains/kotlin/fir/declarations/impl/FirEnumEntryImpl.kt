@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirEnumEntry
 import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
@@ -35,7 +35,7 @@ internal class FirEnumEntryImpl(
     override val symbol: FirVariableSymbol<FirEnumEntry>,
     override var initializer: FirExpression?,
     override val annotations: MutableList<FirAnnotationCall>,
-    override val typeParameters: MutableList<FirTypeParameter>,
+    override val typeParameters: MutableList<FirTypeParameterRef>,
     override var status: FirDeclarationStatus,
     override val containerSource: DeserializedContainerSource?,
 ) : FirEnumEntry() {
@@ -94,13 +94,18 @@ internal class FirEnumEntryImpl(
         return this
     }
 
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirEnumEntryImpl {
+        annotations.transformInplace(transformer, data)
+        return this
+    }
+
     override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirEnumEntryImpl {
         status = status.transformSingle(transformer, data)
         return this
     }
 
     override fun <D> transformOtherChildren(transformer: FirTransformer<D>, data: D): FirEnumEntryImpl {
-        annotations.transformInplace(transformer, data)
+        transformAnnotations(transformer, data)
         typeParameters.transformInplace(transformer, data)
         return this
     }

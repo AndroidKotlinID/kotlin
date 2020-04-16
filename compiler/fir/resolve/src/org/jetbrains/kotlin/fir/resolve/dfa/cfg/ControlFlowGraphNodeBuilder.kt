@@ -11,15 +11,22 @@ import org.jetbrains.kotlin.fir.expressions.*
 
 fun ControlFlowGraphBuilder.createStubNode(): StubNode = StubNode(graph, levelCounter, createId())
 
+fun ControlFlowGraphBuilder.createContractDescriptionEnterNode(): ContractDescriptionEnterNode =
+    ContractDescriptionEnterNode(graph, levelCounter, createId())
+
 fun ControlFlowGraphBuilder.createLoopExitNode(fir: FirLoop): LoopExitNode = LoopExitNode(graph, fir, levelCounter, createId())
 
 fun ControlFlowGraphBuilder.createLoopEnterNode(fir: FirLoop): LoopEnterNode = LoopEnterNode(graph, fir, levelCounter, createId())
 
-fun ControlFlowGraphBuilder.createInitBlockExitNode(fir: FirAnonymousInitializer): InitBlockExitNode =
-    InitBlockExitNode(graph, fir, levelCounter, createId())
-
 fun ControlFlowGraphBuilder.createInitBlockEnterNode(fir: FirAnonymousInitializer): InitBlockEnterNode =
-    InitBlockEnterNode(graph, fir, levelCounter, createId())
+    InitBlockEnterNode(graph, fir, levelCounter, createId()).also {
+        graph.enterNode = it
+    }
+
+fun ControlFlowGraphBuilder.createInitBlockExitNode(fir: FirAnonymousInitializer): InitBlockExitNode =
+    InitBlockExitNode(graph, fir, levelCounter, createId()).also {
+        graph.exitNode = it
+    }
 
 fun ControlFlowGraphBuilder.createTypeOperatorCallNode(fir: FirTypeOperatorCall): TypeOperatorCallNode =
     TypeOperatorCallNode(graph, fir, levelCounter, createId())
@@ -52,18 +59,14 @@ fun ControlFlowGraphBuilder.createPropertyInitializerExitNode(fir: FirProperty):
 fun ControlFlowGraphBuilder.createPropertyInitializerEnterNode(fir: FirProperty): PropertyInitializerEnterNode =
     PropertyInitializerEnterNode(graph, fir, levelCounter, createId())
 
-fun ControlFlowGraphBuilder.createFunctionEnterNode(fir: FirFunction<*>, isInPlace: Boolean): FunctionEnterNode =
+fun ControlFlowGraphBuilder.createFunctionEnterNode(fir: FirFunction<*>): FunctionEnterNode =
     FunctionEnterNode(graph, fir, levelCounter, createId()).also {
-        if (!isInPlace) {
-            graph.enterNode = it
-        }
+        graph.enterNode = it
     }
 
-fun ControlFlowGraphBuilder.createFunctionExitNode(fir: FirFunction<*>, isInPlace: Boolean): FunctionExitNode =
+fun ControlFlowGraphBuilder.createFunctionExitNode(fir: FirFunction<*>): FunctionExitNode =
     FunctionExitNode(graph, fir, levelCounter, createId()).also {
-        if (!isInPlace) {
-            graph.exitNode = it
-        }
+        graph.exitNode = it
     }
 
 fun ControlFlowGraphBuilder.createBinaryOrEnterNode(fir: FirBinaryLogicExpression): BinaryOrEnterNode =
@@ -129,10 +132,10 @@ fun ControlFlowGraphBuilder.createAnnotationEnterNode(fir: FirAnnotationCall): A
 fun ControlFlowGraphBuilder.createVariableDeclarationNode(fir: FirProperty): VariableDeclarationNode =
     VariableDeclarationNode(graph, fir, levelCounter, createId())
 
-fun ControlFlowGraphBuilder.createExitContractNode(fir: FirFunctionCall): ExitContractNode =
+fun ControlFlowGraphBuilder.createExitContractNode(fir: FirQualifiedAccess): ExitContractNode =
     ExitContractNode(graph, fir, levelCounter, createId())
 
-fun ControlFlowGraphBuilder.createEnterContractNode(fir: FirFunctionCall): EnterContractNode =
+fun ControlFlowGraphBuilder.createEnterContractNode(fir: FirQualifiedAccess): EnterContractNode =
     EnterContractNode(graph, fir, levelCounter, createId())
 
 fun ControlFlowGraphBuilder.createConstExpressionNode(fir: FirConstExpression<*>): ConstExpressionNode =
@@ -197,3 +200,16 @@ fun ControlFlowGraphBuilder.createAnonymousObjectExitNode(fir: FirAnonymousObjec
 
 fun ControlFlowGraphBuilder.createUnionFunctionCallArgumentsNode(fir: FirElement): UnionFunctionCallArgumentsNode =
     UnionFunctionCallArgumentsNode(graph, fir, levelCounter, createId())
+
+fun ControlFlowGraphBuilder.createClassEnterNode(fir: FirClass<*>): ClassEnterNode =
+    ClassEnterNode(graph, fir, levelCounter, createId()).also {
+        graph.enterNode = it
+    }
+
+fun ControlFlowGraphBuilder.createClassExitNode(fir: FirClass<*>): ClassExitNode =
+    ClassExitNode(graph, fir, levelCounter, createId()).also {
+        graph.exitNode = it
+    }
+
+fun ControlFlowGraphBuilder.createLocalClassExitNode(fir: FirRegularClass): LocalClassExitNode =
+    LocalClassExitNode(graph, fir, levelCounter, createId())

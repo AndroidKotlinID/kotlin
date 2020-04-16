@@ -21,6 +21,8 @@ public abstract interface annotation class kotlin/DslMarker : java/lang/annotati
 public final class kotlin/ExceptionsKt {
 	public static final fun addSuppressed (Ljava/lang/Throwable;Ljava/lang/Throwable;)V
 	public static final fun getStackTrace (Ljava/lang/Throwable;)[Ljava/lang/StackTraceElement;
+	public static final fun getSuppressedExceptions (Ljava/lang/Throwable;)Ljava/util/List;
+	public static final fun stackTraceToString (Ljava/lang/Throwable;)Ljava/lang/String;
 }
 
 public abstract interface annotation class kotlin/Experimental : java/lang/annotation/Annotation {
@@ -1573,10 +1575,32 @@ public final class kotlin/collections/ArraysKt {
 	public static final fun reversedArray ([Ljava/lang/Object;)[Ljava/lang/Object;
 	public static final fun reversedArray ([S)[S
 	public static final fun reversedArray ([Z)[Z
+	public static final fun runningFold ([Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningFoldIndexed ([Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
+	public static final fun runningReduce ([Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningReduceIndexed ([Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scan ([Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
 	public static final fun scanIndexed ([Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scanReduce ([Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
 	public static final fun scanReduceIndexed ([Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
+	public static final fun shuffle ([B)V
+	public static final fun shuffle ([BLkotlin/random/Random;)V
+	public static final fun shuffle ([C)V
+	public static final fun shuffle ([CLkotlin/random/Random;)V
+	public static final fun shuffle ([D)V
+	public static final fun shuffle ([DLkotlin/random/Random;)V
+	public static final fun shuffle ([F)V
+	public static final fun shuffle ([FLkotlin/random/Random;)V
+	public static final fun shuffle ([I)V
+	public static final fun shuffle ([ILkotlin/random/Random;)V
+	public static final fun shuffle ([J)V
+	public static final fun shuffle ([JLkotlin/random/Random;)V
+	public static final fun shuffle ([Ljava/lang/Object;)V
+	public static final fun shuffle ([Ljava/lang/Object;Lkotlin/random/Random;)V
+	public static final fun shuffle ([S)V
+	public static final fun shuffle ([SLkotlin/random/Random;)V
+	public static final fun shuffle ([Z)V
+	public static final fun shuffle ([ZLkotlin/random/Random;)V
 	public static final fun single ([B)B
 	public static final fun single ([BLkotlin/jvm/functions/Function1;)B
 	public static final fun single ([C)C
@@ -2134,6 +2158,7 @@ public final class kotlin/collections/CollectionsKt {
 	public static final fun none (Ljava/lang/Iterable;)Z
 	public static final fun none (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun onEach (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function1;)Ljava/lang/Iterable;
+	public static final fun onEachIndexed (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function2;)Ljava/lang/Iterable;
 	public static final fun partition (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function1;)Lkotlin/Pair;
 	public static final fun plus (Ljava/lang/Iterable;Ljava/lang/Iterable;)Ljava/util/List;
 	public static final fun plus (Ljava/lang/Iterable;Ljava/lang/Object;)Ljava/util/List;
@@ -2171,6 +2196,10 @@ public final class kotlin/collections/CollectionsKt {
 	public static final fun retainAll (Ljava/util/List;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun reverse (Ljava/util/List;)V
 	public static final fun reversed (Ljava/lang/Iterable;)Ljava/util/List;
+	public static final fun runningFold (Ljava/lang/Iterable;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningFoldIndexed (Ljava/lang/Iterable;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
+	public static final fun runningReduce (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningReduceIndexed (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scan (Ljava/lang/Iterable;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
 	public static final fun scanIndexed (Ljava/lang/Iterable;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scanReduce (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
@@ -2351,6 +2380,7 @@ public final class kotlin/collections/MapsKt {
 	public static final fun none (Ljava/util/Map;)Z
 	public static final fun none (Ljava/util/Map;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun onEach (Ljava/util/Map;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
+	public static final fun onEachIndexed (Ljava/util/Map;Lkotlin/jvm/functions/Function2;)Ljava/util/Map;
 	public static final fun plus (Ljava/util/Map;Ljava/lang/Iterable;)Ljava/util/Map;
 	public static final fun plus (Ljava/util/Map;Ljava/util/Map;)Ljava/util/Map;
 	public static final fun plus (Ljava/util/Map;Lkotlin/Pair;)Ljava/util/Map;
@@ -2553,6 +2583,14 @@ public final class kotlin/collections/unsigned/UArraysKt {
 	public static final fun reversed-GBYM_sE ([B)Ljava/util/List;
 	public static final fun reversed-QwZRm1k ([J)Ljava/util/List;
 	public static final fun reversed-rL5Bavg ([S)Ljava/util/List;
+	public static final fun shuffle--ajY-9A ([I)V
+	public static final fun shuffle-2D5oskM ([ILkotlin/random/Random;)V
+	public static final fun shuffle-GBYM_sE ([B)V
+	public static final fun shuffle-JzugnMA ([JLkotlin/random/Random;)V
+	public static final fun shuffle-QwZRm1k ([J)V
+	public static final fun shuffle-oSF2wD8 ([BLkotlin/random/Random;)V
+	public static final fun shuffle-rL5Bavg ([S)V
+	public static final fun shuffle-s5X_as8 ([SLkotlin/random/Random;)V
 	public static final fun singleOrNull--ajY-9A ([I)Lkotlin/UInt;
 	public static final fun singleOrNull-GBYM_sE ([B)Lkotlin/UByte;
 	public static final fun singleOrNull-QwZRm1k ([J)Lkotlin/ULong;
@@ -3017,6 +3055,9 @@ public final class kotlin/io/TextStreamsKt {
 	public static final fun useLines (Ljava/io/Reader;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 }
 
+public abstract interface annotation class kotlin/js/ExperimentalJsExport : java/lang/annotation/Annotation {
+}
+
 public final class kotlin/jvm/JvmClassMappingKt {
 	public static final fun getAnnotationClass (Ljava/lang/annotation/Annotation;)Lkotlin/reflect/KClass;
 	public static final fun getJavaClass (Ljava/lang/Object;)Ljava/lang/Class;
@@ -3178,6 +3219,17 @@ public abstract interface class kotlin/jvm/functions/Function9 : kotlin/Function
 public abstract interface class kotlin/jvm/functions/FunctionN : kotlin/Function, kotlin/jvm/internal/FunctionBase {
 	public abstract fun getArity ()I
 	public abstract fun invoke ([Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public class kotlin/jvm/internal/AdaptedFunctionReference : java/io/Serializable, kotlin/jvm/internal/FunctionBase {
+	protected final field receiver Ljava/lang/Object;
+	public fun <init> (ILjava/lang/Class;Ljava/lang/String;Ljava/lang/String;I)V
+	public fun <init> (ILjava/lang/Object;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;I)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getArity ()I
+	public fun getOwner ()Lkotlin/reflect/KDeclarationContainer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class kotlin/jvm/internal/ArrayIteratorKt {
@@ -4687,6 +4739,7 @@ public final class kotlin/sequences/SequencesKt {
 	public static final fun none (Lkotlin/sequences/Sequence;)Z
 	public static final fun none (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun onEach (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function1;)Lkotlin/sequences/Sequence;
+	public static final fun onEachIndexed (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
 	public static final fun partition (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function1;)Lkotlin/Pair;
 	public static final fun plus (Lkotlin/sequences/Sequence;Ljava/lang/Iterable;)Lkotlin/sequences/Sequence;
 	public static final fun plus (Lkotlin/sequences/Sequence;Ljava/lang/Object;)Lkotlin/sequences/Sequence;
@@ -4697,12 +4750,18 @@ public final class kotlin/sequences/SequencesKt {
 	public static final fun reduceIndexedOrNull (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function3;)Ljava/lang/Object;
 	public static final fun reduceOrNull (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function2;)Ljava/lang/Object;
 	public static final fun requireNoNulls (Lkotlin/sequences/Sequence;)Lkotlin/sequences/Sequence;
+	public static final fun runningFold (Lkotlin/sequences/Sequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
+	public static final fun runningFoldIndexed (Lkotlin/sequences/Sequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Lkotlin/sequences/Sequence;
+	public static final fun runningReduce (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
+	public static final fun runningReduceIndexed (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function3;)Lkotlin/sequences/Sequence;
 	public static final fun scan (Lkotlin/sequences/Sequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
 	public static final fun scanIndexed (Lkotlin/sequences/Sequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Lkotlin/sequences/Sequence;
 	public static final fun scanReduce (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
 	public static final fun scanReduceIndexed (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function3;)Lkotlin/sequences/Sequence;
 	public static final fun sequence (Lkotlin/jvm/functions/Function2;)Lkotlin/sequences/Sequence;
 	public static final fun sequenceOf ([Ljava/lang/Object;)Lkotlin/sequences/Sequence;
+	public static final fun shuffled (Lkotlin/sequences/Sequence;)Lkotlin/sequences/Sequence;
+	public static final fun shuffled (Lkotlin/sequences/Sequence;Lkotlin/random/Random;)Lkotlin/sequences/Sequence;
 	public static final fun single (Lkotlin/sequences/Sequence;)Ljava/lang/Object;
 	public static final fun single (Lkotlin/sequences/Sequence;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun singleOrNull (Lkotlin/sequences/Sequence;)Ljava/lang/Object;
@@ -5077,6 +5136,7 @@ public final class kotlin/text/StringsKt {
 	public static final fun none (Ljava/lang/CharSequence;)Z
 	public static final fun none (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun onEach (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function1;)Ljava/lang/CharSequence;
+	public static final fun onEachIndexed (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function2;)Ljava/lang/CharSequence;
 	public static final fun padEnd (Ljava/lang/CharSequence;IC)Ljava/lang/CharSequence;
 	public static final fun padEnd (Ljava/lang/String;IC)Ljava/lang/String;
 	public static synthetic fun padEnd$default (Ljava/lang/CharSequence;ICILjava/lang/Object;)Ljava/lang/CharSequence;
@@ -5145,6 +5205,10 @@ public final class kotlin/text/StringsKt {
 	public static final fun replaceRange (Ljava/lang/CharSequence;IILjava/lang/CharSequence;)Ljava/lang/CharSequence;
 	public static final fun replaceRange (Ljava/lang/CharSequence;Lkotlin/ranges/IntRange;Ljava/lang/CharSequence;)Ljava/lang/CharSequence;
 	public static final fun reversed (Ljava/lang/CharSequence;)Ljava/lang/CharSequence;
+	public static final fun runningFold (Ljava/lang/CharSequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningFoldIndexed (Ljava/lang/CharSequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
+	public static final fun runningReduce (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
+	public static final fun runningReduceIndexed (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scan (Ljava/lang/CharSequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)Ljava/util/List;
 	public static final fun scanIndexed (Ljava/lang/CharSequence;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)Ljava/util/List;
 	public static final fun scanReduce (Ljava/lang/CharSequence;Lkotlin/jvm/functions/Function2;)Ljava/util/List;

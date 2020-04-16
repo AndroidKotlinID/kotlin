@@ -37,7 +37,7 @@ abstract class FirEnumEntry : FirVariable<FirEnumEntry>(), FirCallableMemberDecl
     abstract override val getter: FirPropertyAccessor?
     abstract override val setter: FirPropertyAccessor?
     abstract override val annotations: List<FirAnnotationCall>
-    abstract override val typeParameters: List<FirTypeParameter>
+    abstract override val typeParameters: List<FirTypeParameterRef>
     abstract override val status: FirDeclarationStatus
     abstract override val containerSource: DeserializedContainerSource?
 
@@ -54,6 +54,8 @@ abstract class FirEnumEntry : FirVariable<FirEnumEntry>(), FirCallableMemberDecl
     abstract override fun <D> transformGetter(transformer: FirTransformer<D>, data: D): FirEnumEntry
 
     abstract override fun <D> transformSetter(transformer: FirTransformer<D>, data: D): FirEnumEntry
+
+    abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirEnumEntry
 
     abstract override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirEnumEntry
 

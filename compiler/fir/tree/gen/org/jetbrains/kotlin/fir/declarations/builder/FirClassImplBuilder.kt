@@ -15,10 +15,12 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.builder.AbstractFirRegularClassBuilder
 import org.jetbrains.kotlin.fir.declarations.impl.FirClassImpl
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
+import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
+import org.jetbrains.kotlin.fir.references.impl.FirEmptyControlFlowGraphReference
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -36,7 +38,7 @@ open class FirClassImplBuilder : AbstractFirRegularClassBuilder, FirAnnotationCo
     override lateinit var session: FirSession
     override var resolvePhase: FirResolvePhase = FirResolvePhase.RAW_FIR
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
-    override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
+    override val typeParameters: MutableList<FirTypeParameterRef> = mutableListOf()
     override lateinit var status: FirDeclarationStatus
     override lateinit var classKind: ClassKind
     override val declarations: MutableList<FirDeclaration> = mutableListOf()
@@ -67,6 +69,13 @@ open class FirClassImplBuilder : AbstractFirRegularClassBuilder, FirAnnotationCo
 
     @Deprecated("Modification of 'hasLazyNestedClassifiers' has no impact for FirClassImplBuilder", level = DeprecationLevel.HIDDEN)
     override var hasLazyNestedClassifiers: Boolean
+        get() = throw IllegalStateException()
+        set(value) {
+            throw IllegalStateException()
+        }
+
+    @Deprecated("Modification of 'controlFlowGraphReference' has no impact for FirClassImplBuilder", level = DeprecationLevel.HIDDEN)
+    override var controlFlowGraphReference: FirControlFlowGraphReference
         get() = throw IllegalStateException()
         set(value) {
             throw IllegalStateException()

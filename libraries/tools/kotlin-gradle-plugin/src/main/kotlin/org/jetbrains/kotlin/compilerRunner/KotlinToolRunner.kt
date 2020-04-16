@@ -25,7 +25,7 @@ internal abstract class KotlinToolRunner(
     open val environmentBlacklist: Set<String> = emptySet()
 
     open val systemProperties: Map<String, String> = emptyMap()
-    open val systemPropertiesBlacklist: Set<String> = emptySet()
+    open val systemPropertiesBlacklist: Set<String> = setOf("java.endorsed.dirs")
 
     abstract val classpath: Set<File>
     open fun checkClasspath(): Unit = check(classpath.isNotEmpty()) { "Classpath of the tool is empty: $displayName" }
@@ -90,7 +90,8 @@ internal abstract class KotlinToolRunner(
         }
     }
 
-    private fun runInProcess(args: List<String>) {
+    // TODO: Make it private again once KT-37550 is fixed.
+    protected open fun runInProcess(args: List<String>) {
         val oldProperties = setUpSystemProperties()
 
         try {

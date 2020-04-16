@@ -26,6 +26,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             fields from typeParametersOwner
         }
 
+        val typeParameterRefsOwnerBuilder by builder {
+            fields from typeParameterRefsOwner
+        }
+
         val classBuilder by builder {
             parents += annotationContainerBuilder
             fields from klass without listOf("symbol", "resolvePhase")
@@ -33,7 +37,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         val regularClassBuilder by builder("AbstractFirRegularClassBuilder") {
             parents += classBuilder
-            parents += typeParametersOwnerBuilder
+            parents += typeParameterRefsOwnerBuilder
             fields from regularClass
         }
 
@@ -51,7 +55,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         val functionBuilder by builder {
             parents += annotationContainerBuilder
-            fields from function without listOf("symbol", "resolvePhase", "controlFlowGraphReference", "receiverTypeRef")
+            fields from function without listOf("symbol", "resolvePhase", "controlFlowGraphReference", "receiverTypeRef", "typeParameters")
         }
 
         val loopJumpBuilder by builder {
@@ -125,6 +129,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(componentCall) {
             parents += callBuilder
+            defaultNoReceivers(notNullExplicitReceiver = true)
             default("argumentList") {
                 value = "FirEmptyArgumentList"
             }
@@ -216,6 +221,8 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         builder(propertyAccessor) {
             parents += functionBuilder
             defaultNull("body")
+            default("contractDescription", "FirEmptyContractDescription")
+            useTypes(emptyContractDescriptionType)
         }
 
         builder(whenExpression) {
@@ -250,6 +257,8 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             parents += functionBuilder
             parents += typeParametersOwnerBuilder
             defaultNull("body")
+            default("contractDescription", "FirEmptyContractDescription")
+            useTypes(emptyContractDescriptionType)
             openBuilder()
         }
 
@@ -261,6 +270,10 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         builder(checkNotNullCall) {
             default("calleeReference", "FirStubReference")
             useTypes(stubReferenceType)
+        }
+
+        builder(anonymousInitializer) {
+            default("symbol", "FirAnonymousInitializerSymbol()")
         }
 
         val elementsWithDefaultTypeRef = listOf(

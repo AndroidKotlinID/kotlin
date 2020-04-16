@@ -308,19 +308,17 @@ class FirCallResolver(
         val candidateFactory = CandidateFactory(this, callInfo)
         val candidates = mutableListOf<Candidate>()
 
-        scope.processFunctionsByName(className) {
-            if (it is FirConstructorSymbol) {
-                val candidate = candidateFactory.createCandidate(it, ExplicitReceiverKind.NO_EXPLICIT_RECEIVER)
-                candidate.typeArgumentMapping = TypeArgumentMapping.Mapped(typeArguments)
-                candidates += candidate
-            }
+        scope.processDeclaredConstructors {
+            val candidate = candidateFactory.createCandidate(it, ExplicitReceiverKind.NO_EXPLICIT_RECEIVER)
+            candidate.typeArgumentMapping = TypeArgumentMapping.Mapped(typeArguments)
+            candidates += candidate
         }
-        return callResolver.selectCandidateFromGivenCandidates(delegatedConstructorCall, className, candidates)
+        return callResolver.selectDelegatingConstructorCall(delegatedConstructorCall, className, candidates)
     }
 
-    private fun <T> selectCandidateFromGivenCandidates(
-        call: T, name: Name, candidates: Collection<Candidate>,
-    ): T where T : FirResolvable, T : FirCall {
+    private fun selectDelegatingConstructorCall(
+        call: FirDelegatedConstructorCall, name: Name, candidates: Collection<Candidate>,
+    ): FirDelegatedConstructorCall {
         val result = CandidateCollector(this, resolutionStageRunner)
         candidates.forEach { result.consumeCandidate(TowerGroup.Start, it) }
         val bestCandidates = result.bestCandidates()
@@ -337,7 +335,7 @@ class FirCallResolver(
             result.currentApplicability,
         )
 
-        return call.transformCalleeReference(StoreNameReference, nameReference) as T
+        return call.transformCalleeReference(StoreNameReference, nameReference)
     }
 
     private fun createCallableReferencesInfoForLHS(

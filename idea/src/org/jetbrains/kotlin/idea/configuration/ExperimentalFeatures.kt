@@ -29,15 +29,11 @@ object ExperimentalFeatures {
     val NewWizard = object : RegistryExperimentalFeature(
         title = KotlinBundle.message("configuration.feature.text.new.experimental.project.wizard"),
         registryKey = "kotlin.experimental.project.wizard",
-        enabledByDefault = false
+        enabledByDefault = true
     ) {
         override fun shouldBeShown(): Boolean {
             val platformVersion = PlatformVersion.getCurrent() ?: return true
             return platformVersion.platform != PlatformVersion.Platform.ANDROID_STUDIO
-        }
-
-        override fun onFeatureStatusChanged(enabled: Boolean) {
-            WizardStatsService.logWizardStatusChanged(isEnabled = enabled)
         }
     }
 

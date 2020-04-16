@@ -65,58 +65,38 @@ class Fir2IrClassifierStorage(
         }
     }
 
-    internal fun IrDeclaration.declareThisReceiverParameter(
-        parent: IrDeclarationParent,
-        thisType: IrType,
-        thisOrigin: IrDeclarationOrigin,
-        startOffset: Int = this.startOffset,
-        endOffset: Int = this.endOffset
-    ): IrValueParameter {
-        val receiverDescriptor = WrappedReceiverParameterDescriptor()
-        return symbolTable.declareValueParameter(
-            startOffset, endOffset, thisOrigin, receiverDescriptor, thisType
-        ) { symbol ->
-            IrValueParameterImpl(
-                startOffset, endOffset, thisOrigin, symbol,
-                Name.special("<this>"), -1, thisType,
-                varargElementType = null, isCrossinline = false, isNoinline = false
-            ).apply {
-                this.parent = parent
-                receiverDescriptor.bind(this)
-            }
-        }
-    }
-
-    private fun IrClass.setThisReceiver() {
+    private fun IrClass.setThisReceiver(typeParameters: List<FirTypeParameterRef>) {
         symbolTable.enterScope(descriptor)
-        val typeArguments = this.typeParameters.map {
-            IrSimpleTypeImpl(it.symbol, false, emptyList(), emptyList())
+        val typeArguments = typeParameters.map {
+            IrSimpleTypeImpl(getCachedIrTypeParameter(it.symbol.fir)!!.symbol, false, emptyList(), emptyList())
         }
         thisReceiver = declareThisReceiverParameter(
-            parent = this,
+            symbolTable,
             thisType = IrSimpleTypeImpl(symbol, false, typeArguments, emptyList()),
             thisOrigin = IrDeclarationOrigin.INSTANCE_RECEIVER
         )
         symbolTable.leaveScope(descriptor)
     }
 
-    internal fun preCacheTypeParameters(owner: FirTypeParametersOwner) {
-        owner.typeParameters.mapIndexed { index, typeParameter ->
-            getCachedIrTypeParameter(typeParameter, index)
-                ?: createIrTypeParameterWithoutBounds(typeParameter, index)
+    internal fun preCacheTypeParameters(owner: FirTypeParameterRefsOwner) {
+        for ((index, typeParameter) in owner.typeParameters.withIndex()) {
+            val original = typeParameter.symbol.fir
+            getCachedIrTypeParameter(original, index)
+                ?: createIrTypeParameterWithoutBounds(original, index)
             if (owner is FirProperty && owner.isVar) {
                 val context = ConversionTypeContext.DEFAULT.inSetter()
-                getCachedIrTypeParameter(typeParameter, index, context)
-                    ?: createIrTypeParameterWithoutBounds(typeParameter, index, context)
+                getCachedIrTypeParameter(original, index, context)
+                    ?: createIrTypeParameterWithoutBounds(original, index, context)
             }
         }
     }
 
     internal fun IrTypeParametersContainer.setTypeParameters(
-        owner: FirTypeParametersOwner,
+        owner: FirTypeParameterRefsOwner,
         typeContext: ConversionTypeContext = ConversionTypeContext.DEFAULT
     ) {
-        typeParameters = owner.typeParameters.mapIndexed { index, typeParameter ->
+        typeParameters = owner.typeParameters.mapIndexedNotNull { index, typeParameter ->
+            if (typeParameter !is FirTypeParameter) return@mapIndexedNotNull null
             getIrTypeParameter(typeParameter, index, typeContext).apply {
                 parent = this@setTypeParameters
                 if (superTypes.isEmpty()) {
@@ -173,7 +153,7 @@ class Fir2IrClassifierStorage(
 
     fun processClassHeader(regularClass: FirRegularClass, irClass: IrClass = getCachedIrClass(regularClass)!!): IrClass {
         irClass.declareSupertypesAndTypeParameters(regularClass)
-        irClass.setThisReceiver()
+        irClass.setThisReceiver(regularClass.typeParameters)
         return irClass
     }
 
@@ -208,6 +188,7 @@ class Fir2IrClassifierStorage(
                     isExpect = regularClass.isExpect,
                     isFun = false // TODO FirRegularClass.isFun
                 ).apply {
+                    metadata = MetadataSource.Class(descriptor)
                     descriptor.bind(this)
                 }
             }
@@ -242,8 +223,9 @@ class Fir2IrClassifierStorage(
                     isCompanion = false, isInner = false, isData = false,
                     isExternal = false, isInline = false, isExpect = false, isFun = false
                 ).apply {
+                    metadata = MetadataSource.Class(descriptor)
                     descriptor.bind(this)
-                    setThisReceiver()
+                    setThisReceiver(anonymousObject.typeParameters)
                     if (irParent != null) {
                         this.parent = irParent
                     }

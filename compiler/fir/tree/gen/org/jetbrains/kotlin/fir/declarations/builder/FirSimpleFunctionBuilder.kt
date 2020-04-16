@@ -43,14 +43,15 @@ open class FirSimpleFunctionBuilder : FirFunctionBuilder, FirTypeParametersOwner
     open var resolvePhase: FirResolvePhase = FirResolvePhase.RAW_FIR
     override lateinit var returnTypeRef: FirTypeRef
     open var receiverTypeRef: FirTypeRef? = null
-    override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
     override val valueParameters: MutableList<FirValueParameter> = mutableListOf()
     override var body: FirBlock? = null
     open lateinit var status: FirDeclarationStatus
     open var containerSource: DeserializedContainerSource? = null
+    open var contractDescription: FirContractDescription = FirEmptyContractDescription
     open lateinit var name: Name
     open lateinit var symbol: FirFunctionSymbol<FirSimpleFunction>
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
+    override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
 
     @OptIn(FirImplementationDetail::class)
     override fun build(): FirSimpleFunction {
@@ -60,14 +61,15 @@ open class FirSimpleFunctionBuilder : FirFunctionBuilder, FirTypeParametersOwner
             resolvePhase,
             returnTypeRef,
             receiverTypeRef,
-            typeParameters,
             valueParameters,
             body,
             status,
             containerSource,
+            contractDescription,
             name,
             symbol,
             annotations,
+            typeParameters,
         )
     }
 

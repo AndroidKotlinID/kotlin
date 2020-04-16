@@ -476,6 +476,10 @@ fun main(args: Array<String>) {
             model("codeInsight/expressionType")
         }
 
+        testClass<AbstractRenderingKDocTest> {
+            model("codeInsight/renderingKDoc")
+        }
+
         testClass<AbstractBackspaceHandlerTest> {
             model("editor/backspaceHandler")
         }
@@ -1206,6 +1210,10 @@ fun main(args: Array<String>) {
         }
         testClass<AbstractJsLookupTrackerTest> {
             model("incremental/lookupTracker/js", extension = null, recursive = false)
+        }
+        testClass<AbstractJsKlibLookupTrackerTest> {
+            // todo: investigate why lookups are different from non-klib js
+            model("incremental/lookupTracker/jsKlib", extension = null, recursive = false)
         }
 
         testClass<AbstractIncrementalLazyCachesTest> {

@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.fir.declarations.builder.AbstractFirRegularClassBuil
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.java.JavaTypeParameterStack
+import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
+import org.jetbrains.kotlin.fir.references.impl.FirEmptyControlFlowGraphReference
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -41,11 +43,12 @@ class FirJavaClass @FirImplementationDetail internal constructor(
     override val scopeProvider: FirScopeProvider,
     override val symbol: FirRegularClassSymbol,
     override val superTypeRefs: MutableList<FirTypeRef>,
-    override val typeParameters: MutableList<FirTypeParameter>,
+    override val typeParameters: MutableList<FirTypeParameterRef>,
     internal val javaTypeParameterStack: JavaTypeParameterStack,
     internal val existingNestedClassifierNames: List<Name>
 ) : FirRegularClass() {
     override val hasLazyNestedClassifiers: Boolean get() = true
+    override val controlFlowGraphReference: FirControlFlowGraphReference get() = FirEmptyControlFlowGraphReference
 
     init {
         symbol.bind(this)
@@ -73,16 +76,34 @@ class FirJavaClass @FirImplementationDetail internal constructor(
     }
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirJavaClass {
-        declarations.transformInplace(transformer, data)
-        annotations.transformInplace(transformer, data)
         typeParameters.transformInplace(transformer, data)
+        transformDeclarations(transformer, data)
         status = status.transformSingle(transformer, data)
         superTypeRefs.transformInplace(transformer, data)
+        transformAnnotations(transformer, data)
         return this
     }
 
     override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirJavaClass {
         status = status.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformControlFlowGraphReference(transformer: FirTransformer<D>, data: D): FirRegularClass {
+        return this
+    }
+
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirJavaClass {
+        annotations.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformDeclarations(transformer: FirTransformer<D>, data: D): FirJavaClass {
+        declarations.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformCompanionObject(transformer: FirTransformer<D>, data: D): FirJavaClass {
         return this
     }
 }
@@ -102,7 +123,7 @@ internal class FirJavaClassBuilder : AbstractFirRegularClassBuilder, FirAnnotati
     override var resolvePhase: FirResolvePhase = FirResolvePhase.RAW_FIR
     override lateinit var name: Name
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
-    override val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
+    override val typeParameters: MutableList<FirTypeParameterRef> = mutableListOf()
     override lateinit var status: FirDeclarationStatus
     override lateinit var classKind: ClassKind
     override val declarations: MutableList<FirDeclaration> = mutableListOf()
@@ -147,6 +168,13 @@ internal class FirJavaClassBuilder : AbstractFirRegularClassBuilder, FirAnnotati
 
     @Deprecated("Modification of 'hasLazyNestedClassifiers' has no impact for FirClassImplBuilder", level = DeprecationLevel.HIDDEN)
     override var hasLazyNestedClassifiers: Boolean
+        get() = throw IllegalStateException()
+        set(value) {
+            throw IllegalStateException()
+        }
+
+    @Deprecated("Modification of 'controlFlowGraphReference' has no impact for FirClassImplBuilder", level = DeprecationLevel.HIDDEN)
+    override var controlFlowGraphReference: FirControlFlowGraphReference
         get() = throw IllegalStateException()
         set(value) {
             throw IllegalStateException()

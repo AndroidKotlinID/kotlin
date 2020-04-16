@@ -26,11 +26,13 @@ interface FirCallableMemberDeclaration<F : FirCallableMemberDeclaration<F>> : Fi
     override val returnTypeRef: FirTypeRef
     override val receiverTypeRef: FirTypeRef?
     override val symbol: FirCallableSymbol<F>
-    override val typeParameters: List<FirTypeParameter>
+    override val typeParameters: List<FirTypeParameterRef>
     override val status: FirDeclarationStatus
     val containerSource: DeserializedContainerSource?
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitCallableMemberDeclaration(this, data)
+
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirCallableMemberDeclaration<F>
 
     override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirCallableMemberDeclaration<F>
 

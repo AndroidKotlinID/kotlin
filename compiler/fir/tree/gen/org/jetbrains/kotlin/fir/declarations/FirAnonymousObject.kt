@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousObjectSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -24,6 +25,7 @@ abstract class FirAnonymousObject : FirClass<FirAnonymousObject>, FirExpression(
     abstract override val source: FirSourceElement?
     abstract override val session: FirSession
     abstract override val resolvePhase: FirResolvePhase
+    abstract override val typeParameters: List<FirTypeParameterRef>
     abstract override val classKind: ClassKind
     abstract override val superTypeRefs: List<FirTypeRef>
     abstract override val declarations: List<FirDeclaration>
@@ -31,6 +33,13 @@ abstract class FirAnonymousObject : FirClass<FirAnonymousObject>, FirExpression(
     abstract override val scopeProvider: FirScopeProvider
     abstract override val typeRef: FirTypeRef
     abstract override val symbol: FirAnonymousObjectSymbol
+    abstract val controlFlowGraphReference: FirControlFlowGraphReference
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitAnonymousObject(this, data)
+
+    abstract override fun <D> transformDeclarations(transformer: FirTransformer<D>, data: D): FirAnonymousObject
+
+    abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirAnonymousObject
+
+    abstract fun <D> transformControlFlowGraphReference(transformer: FirTransformer<D>, data: D): FirAnonymousObject
 }

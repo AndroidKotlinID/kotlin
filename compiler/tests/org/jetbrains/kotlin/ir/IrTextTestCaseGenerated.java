@@ -1086,6 +1086,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/expressions/kt37570.kt");
         }
 
+        @TestMetadata("kt37779.kt")
+        public void testKt37779() throws Exception {
+            runTest("compiler/testData/ir/irText/expressions/kt37779.kt");
+        }
+
         @TestMetadata("lambdaInCAO.kt")
         public void testLambdaInCAO() throws Exception {
             runTest("compiler/testData/ir/irText/expressions/lambdaInCAO.kt");
@@ -1387,6 +1392,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             @TestMetadata("adaptedExtensionFunctions.kt")
             public void testAdaptedExtensionFunctions() throws Exception {
                 runTest("compiler/testData/ir/irText/expressions/callableReferences/adaptedExtensionFunctions.kt");
+            }
+
+            @TestMetadata("adaptedWithCoercionToUnit.kt")
+            public void testAdaptedWithCoercionToUnit() throws Exception {
+                runTest("compiler/testData/ir/irText/expressions/callableReferences/adaptedWithCoercionToUnit.kt");
             }
 
             public void testAllFilesPresentInCallableReferences() throws Exception {
@@ -1722,6 +1732,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("typeAliasCtorForGenericClass.kt")
         public void testTypeAliasCtorForGenericClass() throws Exception {
             runTest("compiler/testData/ir/irText/regressions/typeAliasCtorForGenericClass.kt");
+        }
+
+        @TestMetadata("typeParametersInImplicitCast.kt")
+        public void testTypeParametersInImplicitCast() throws Exception {
+            runTest("compiler/testData/ir/irText/regressions/typeParametersInImplicitCast.kt");
         }
 
         @TestMetadata("compiler/testData/ir/irText/regressions/newInference")

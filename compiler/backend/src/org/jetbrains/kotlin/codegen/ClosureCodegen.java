@@ -74,7 +74,9 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
     protected final Type asmType;
     protected final int visibilityFlag;
     private final boolean shouldHaveBoundReferenceReceiver;
+    private final boolean isLegacyFunctionReference;
     private final boolean isOptimizedFunctionReference;
+    private final boolean isAdaptedFunctionReference;
 
     private Method constructor;
     protected Type superClassAsmType;
@@ -125,9 +127,17 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
         assert closure != null : "Closure must be calculated for class: " + classDescriptor;
 
         this.shouldHaveBoundReferenceReceiver = CallableReferenceUtilKt.isForBoundCallableReference(closure);
+
+        ClassifierDescriptor superClassDescriptor = superClassType.getConstructor().getDeclarationDescriptor();
+        this.isLegacyFunctionReference =
+                functionReferenceTarget != null &&
+                superClassDescriptor == state.getJvmRuntimeTypes().getFunctionReference();
         this.isOptimizedFunctionReference =
                 functionReferenceTarget != null &&
-                superClassType.getConstructor().getDeclarationDescriptor() == state.getJvmRuntimeTypes().getFunctionReferenceImpl();
+                superClassDescriptor == state.getJvmRuntimeTypes().getFunctionReferenceImpl();
+        this.isAdaptedFunctionReference =
+                functionReferenceTarget != null &&
+                superClassDescriptor == state.getJvmRuntimeTypes().getAdaptedFunctionReference();
 
         this.asmType = typeMapper.mapClass(classDescriptor);
 
@@ -189,7 +199,7 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
     protected void generateClosureBody() {
         functionCodegen.generateMethod(JvmDeclarationOriginKt.OtherOrigin(element, funDescriptor), funDescriptor, strategy);
 
-        if (functionReferenceTarget != null && !isOptimizedFunctionReference) {
+        if (isLegacyFunctionReference) {
             generateFunctionReferenceMethods(functionReferenceTarget);
         }
 
@@ -498,9 +508,9 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
             iv.load(0, superClassAsmType);
 
             List<Type> superCtorArgTypes = new ArrayList<>();
-            if (superClassAsmType.equals(LAMBDA) || superClassAsmType.equals(FUNCTION_REFERENCE) ||
-                superClassAsmType.equals(FUNCTION_REFERENCE_IMPL) ||
-                CoroutineCodegenUtilKt.isCoroutineSuperClass(state.getLanguageVersionSettings(), superClassAsmType.getInternalName())) {
+            if (superClassAsmType.equals(LAMBDA) || functionReferenceTarget != null ||
+                CoroutineCodegenUtilKt.isCoroutineSuperClass(state.getLanguageVersionSettings(), superClassAsmType.getInternalName())
+            ) {
                 int arity = calculateArity();
                 iv.iconst(arity);
                 superCtorArgTypes.add(Type.INT_TYPE);
@@ -510,7 +520,7 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
                     );
                     superCtorArgTypes.add(OBJECT_TYPE);
                 }
-                if (isOptimizedFunctionReference) {
+                if (isOptimizedFunctionReference || isAdaptedFunctionReference) {
                     assert functionReferenceTarget != null : "No function reference target: " + funDescriptor;
                     generateCallableReferenceDeclarationContainerClass(iv, functionReferenceTarget, state);
                     iv.aconst(functionReferenceTarget.getName().asString());
@@ -551,8 +561,13 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
         for (int i = shift;
              i < anonymousAdaptedFunction.getValueParameters().size() && i - shift < target.getValueParameters().size();
              i++) {
-            KotlinType varargElementType = target.getValueParameters().get(i - shift).getVarargElementType();
-            if (varargElementType != null && !varargElementType.equals(anonymousAdaptedFunction.getValueParameters().get(i).getType())) {
+            ValueParameterDescriptor targetParameter = target.getValueParameters().get(i - shift);
+            ValueParameterDescriptor adaptedParameter = anonymousAdaptedFunction.getValueParameters().get(i);
+
+            // Vararg to element conversion is happening if the target parameter is vararg (e.g. `vararg xs: Int`),
+            // but the adapted parameter's type is not equal to the target parameter's type (which is `IntArray`).
+            if (targetParameter.getVarargElementType() != null &&
+                !targetParameter.getType().equals(adaptedParameter.getType())) {
                 hasVarargMappedToElement = true;
                 break;
             }

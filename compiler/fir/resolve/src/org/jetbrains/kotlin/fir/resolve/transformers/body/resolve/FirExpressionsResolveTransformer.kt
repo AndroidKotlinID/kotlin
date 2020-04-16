@@ -7,7 +7,8 @@ package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
 import com.intellij.openapi.progress.ProcessCanceledException
 import org.jetbrains.kotlin.fir.*
-import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.ConeStubDiagnostic
@@ -15,10 +16,7 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.buildErrorExpression
 import org.jetbrains.kotlin.fir.expressions.builder.buildFunctionCall
 import org.jetbrains.kotlin.fir.expressions.builder.buildVariableAssignment
-import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
-import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
-import org.jetbrains.kotlin.fir.references.FirSuperReference
-import org.jetbrains.kotlin.fir.references.FirThisReference
+import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.references.builder.buildErrorNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildSimpleNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
@@ -293,6 +291,10 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
                                     source = operatorCall.argument.source
                                     diagnostic = ConeVariableExpectedError()
                                 }
+                            (leftArgument as? FirQualifiedAccess)?.let {
+                                dispatchReceiver = it.dispatchReceiver
+                                extensionReceiver = it.extensionReceiver
+                            }
                         }
                     assignment.transform(transformer, ResolutionMode.ContextIndependent)
                 }
@@ -313,7 +315,7 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
             type is ConeTypeParameterType ||
             baseTypeArguments?.isEmpty() != false ||
             (type is ConeClassLikeType &&
-                    (type.lookupTag.toSymbol(session)?.fir as? FirTypeParametersOwner)?.typeParameters?.isEmpty() == true)
+                    (type.lookupTag.toSymbol(session)?.fir as? FirTypeParameterRefsOwner)?.typeParameters?.isEmpty() == true)
         ) {
             this
         } else {
@@ -479,7 +481,7 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
                 val symbol = lhs.symbol
                 val typeRef =
                     symbol?.constructType(
-                        Array((symbol.phasedFir as? FirTypeParametersOwner)?.typeParameters?.size ?: 0) {
+                        Array((symbol.phasedFir as? FirTypeParameterRefsOwner)?.typeParameters?.size ?: 0) {
                             ConeStarProjection
                         },
                         isNullable = false,
@@ -563,10 +565,12 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
     }
 
     override fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: ResolutionMode): CompositeTransformResult<FirStatement> {
+        if (annotationCall.resolved) return annotationCall.compose()
         dataFlowAnalyzer.enterAnnotationCall(annotationCall)
         return (annotationCall.transformChildren(transformer, data) as FirAnnotationCall).also {
             // TODO: it's temporary incorrect solution until we design resolve and completion for annotation calls
             it.argumentList.transformArguments(integerLiteralTypeApproximator, null)
+            it.replaceResolved(true)
             dataFlowAnalyzer.exitAnnotationCall(it)
         }.compose()
     }
@@ -597,6 +601,9 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
         data: ResolutionMode,
     ): CompositeTransformResult<FirStatement> {
         if (transformer.implicitTypeOnly) return delegatedConstructorCall.compose()
+        when (delegatedConstructorCall.calleeReference) {
+            is FirResolvedNamedReference, is FirErrorNamedReference -> return delegatedConstructorCall.compose()
+        }
         dataFlowAnalyzer.enterCall(delegatedConstructorCall)
         var callCompleted = true
         var result = delegatedConstructorCall
@@ -630,7 +637,8 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
                     val expandedSupertype = supertype.fullyExpandedType(session)
                     val symbol =
                         expandedSupertype.lookupTag.toSymbol(session) as? FirClassSymbol<*> ?: return delegatedConstructorCall.compose()
-                    val classTypeParametersCount = (symbol.fir as? FirTypeParametersOwner)?.typeParameters?.size ?: 0
+                    val classTypeParametersCount =
+                        (symbol.fir as? FirTypeParameterRefsOwner)?.typeParameters?.count { it is FirTypeParameter } ?: 0
                     typeArguments = expandedSupertype.typeArguments
                         .takeLast(classTypeParametersCount) // Hack for KT-37525
                         .takeIf { it.isNotEmpty() }

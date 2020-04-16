@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.*
+import org.jetbrains.kotlin.fir.contracts.impl.FirEmptyContractDescription
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
@@ -81,9 +82,6 @@ class FirIntegerLiteralTypeScope(private val session: FirSession, val isUnsigned
         resolvePhase = FirResolvePhase.BODY_RESOLVE
     }
 
-    override fun processClassifiersByName(name: Name, processor: (FirClassifierSymbol<*>) -> Unit) {
-
-    }
 
     override fun processFunctionsByName(name: Name, processor: (FirFunctionSymbol<*>) -> Unit) {
         val symbol = BINARY_OPERATOR_SYMBOLS[name]
@@ -116,6 +114,7 @@ class FirIntegerOperator @FirImplementationDetail constructor(
     body = null,
     status,
     containerSource = null,
+    contractDescription = FirEmptyContractDescription,
     kind.operatorName,
     symbol,
     annotations = mutableListOf(),
@@ -147,6 +146,10 @@ class FirILTTypeRefPlaceHolder(isUnsigned: Boolean) : FirResolvedTypeRef() {
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {}
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {
+        return this
+    }
+
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirResolvedTypeRef {
         return this
     }
 }

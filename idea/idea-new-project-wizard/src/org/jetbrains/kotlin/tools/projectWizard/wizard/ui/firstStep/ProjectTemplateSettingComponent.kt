@@ -1,6 +1,8 @@
 package org.jetbrains.kotlin.tools.projectWizard.wizard.ui.firstStep
 
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import org.jetbrains.kotlin.tools.projectWizard.core.Context
@@ -53,7 +55,10 @@ class ProjectTemplateSettingComponent(
         super.onValueUpdated(reference)
         if (reference == ProjectTemplatesPlugin::template.reference) {
             applySelectedTemplate()
-            value?.let(templateDescriptionComponent::setTemplate)
+            value?.let { template ->
+                list.setSelectedValue(template, true)
+                templateDescriptionComponent.setTemplate(template)
+            }
         }
     }
 
@@ -71,10 +76,8 @@ class ProjectTemplateSettingComponent(
 }
 
 class TemplateDescriptionComponent : Component() {
-    private val descriptionLabel = label("") {
-        fontColor = UIUtil.FontColor.BRIGHTER
+    private val descriptionLabel = CommentLabel().apply {
         preferredSize = Dimension(preferredSize.width, 45)
-        verticalAlignment = SwingConstants.TOP
     }
 
     fun setTemplate(template: ProjectTemplate) {

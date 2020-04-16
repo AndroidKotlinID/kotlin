@@ -8,9 +8,21 @@ repositories {
     mavenCentral()
 }
 
-kotlin.js {
-    binaries.executable()
-    nodejs()
+kotlin {
+    js {
+        nodejs()
+        binaries.executable()
+    }
+}
+kotlin {
+    js {
+        browser()
+        binaries.executable()
+    }
+}
+
+tasks.named("browserTest") {
+    enabled = false
 }
 
 rootProject.tasks

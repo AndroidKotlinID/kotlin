@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.tools.projectWizard.settings.version.Version
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.TemplateInterceptor
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.interceptTemplate
 import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
+import org.jetbrains.kotlin.tools.projectWizard.Versions
 
 class SimpleJsClientTemplate : Template() {
     override val title: String = KotlinNewProjectWizardBundle.message("module.template.js.simple.title")
@@ -70,7 +71,7 @@ class SimpleJsClientTemplate : Template() {
         buildList {
             +ArtifactBasedLibraryDependencyIR(
                 MavenArtifact(DefaultRepository.JCENTER, "org.jetbrains.kotlinx", "kotlinx-html-js"),
-                Version.fromString("0.6.12"),
+                Versions.KOTLINX.KOTLINX_HTML,
                 DependencyType.MAIN
             )
 
@@ -90,7 +91,7 @@ class SimpleJsClientTemplate : Template() {
     }
 
 
-    override fun Writer.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> =
+    override fun Reader.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> =
         withSettingsOf(module.originalModule) {
             buildList {
                 val hasKtorServNeighbourTarget = module.safeAs<MultiplatformModuleIR>()
@@ -116,6 +117,9 @@ class SimpleJsClientTemplate : Template() {
             }
         }
 
+    override fun Reader.getAdditionalSettings(module: Module): Map<String, Any> = withSettingsOf(module) {
+        mapOf("useStyledComponents" to (renderEngine.reference.settingValue == RenderEngine.REACT_WITH_STYLED))
+    }
 
     override fun createInterceptors(module: ModuleIR): List<TemplateInterceptor> = buildList {
         +interceptTemplate(KtorServerTemplate()) {
@@ -243,43 +247,43 @@ class SimpleJsClientTemplate : Template() {
     private object Dependencies {
         val KOTLIN_REACT = ArtifactBasedLibraryDependencyIR(
             MavenArtifact(Repositories.KOTLIN_JS_WRAPPERS_BINTRAY, "org.jetbrains", "kotlin-react"),
-            Version.fromString("16.9.0-pre.89-kotlin-1.3.60"),
+            Versions.JS_WRAPPERS.KOTLIN_REACT,
             DependencyType.MAIN
         )
         val KOTLIN_REACT_DOM = ArtifactBasedLibraryDependencyIR(
             MavenArtifact(Repositories.KOTLIN_JS_WRAPPERS_BINTRAY, "org.jetbrains", "kotlin-react-dom"),
-            Version.fromString("16.9.0-pre.89-kotlin-1.3.60"),
+            Versions.JS_WRAPPERS.KOTLIN_REACT_DOM,
             DependencyType.MAIN
         )
         val KOTLIN_STYLED = ArtifactBasedLibraryDependencyIR(
             MavenArtifact(Repositories.KOTLIN_JS_WRAPPERS_BINTRAY, "org.jetbrains", "kotlin-styled"),
-            Version.fromString("1.0.0-pre.89-kotlin-1.3.60"),
+            Versions.JS_WRAPPERS.KOTLIN_STYLED,
             DependencyType.MAIN
         )
 
         val NPM_REACT = ArtifactBasedLibraryDependencyIR(
             NpmArtifact("react"),
-            Version.fromString("16.12.0"),
+            Versions.NPM.REACT,
             DependencyType.MAIN
         )
         val NPM_REACT_DOM = ArtifactBasedLibraryDependencyIR(
             NpmArtifact("react-dom"),
-            Version.fromString("16.12.0"),
+            Versions.NPM.REACT_DOM,
             DependencyType.MAIN
         )
         val NPM_REACT_IS = ArtifactBasedLibraryDependencyIR(
             NpmArtifact("react-is"),
-            Version.fromString("16.12.0"),
+            Versions.NPM.REACT_IS,
             DependencyType.MAIN
         )
         val NPM_STYLED_COMPONENTS = ArtifactBasedLibraryDependencyIR(
             NpmArtifact("styled-components"),
-            Version.fromString("5.0.0"),
+            Versions.NPM.STYLED_COMPONENTS,
             DependencyType.MAIN
         )
         val NPM_INLINE_STYLE_PREFIXER = ArtifactBasedLibraryDependencyIR(
             NpmArtifact("inline-style-prefixer"),
-            Version.fromString("5.1.0"),
+            Versions.NPM.INLINE_STYLE_PREFIXER,
             DependencyType.MAIN
         )
     }

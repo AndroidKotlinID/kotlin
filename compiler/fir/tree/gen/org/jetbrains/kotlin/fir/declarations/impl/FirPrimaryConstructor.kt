@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirConstructor
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirBlock
@@ -33,7 +33,7 @@ internal class FirPrimaryConstructor(
     override var resolvePhase: FirResolvePhase,
     override var returnTypeRef: FirTypeRef,
     override var receiverTypeRef: FirTypeRef?,
-    override val typeParameters: MutableList<FirTypeParameter>,
+    override val typeParameters: MutableList<FirTypeParameterRef>,
     override val valueParameters: MutableList<FirValueParameter>,
     override var status: FirDeclarationStatus,
     override val containerSource: DeserializedContainerSource?,
@@ -52,6 +52,7 @@ internal class FirPrimaryConstructor(
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         returnTypeRef.accept(visitor, data)
         receiverTypeRef?.accept(visitor, data)
+        typeParameters.forEach { it.accept(visitor, data) }
         controlFlowGraphReference.accept(visitor, data)
         valueParameters.forEach { it.accept(visitor, data) }
         status.accept(visitor, data)
@@ -63,10 +64,11 @@ internal class FirPrimaryConstructor(
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirPrimaryConstructor {
         transformReturnTypeRef(transformer, data)
         transformReceiverTypeRef(transformer, data)
+        typeParameters.transformInplace(transformer, data)
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
         transformStatus(transformer, data)
-        annotations.transformInplace(transformer, data)
+        transformAnnotations(transformer, data)
         delegatedConstructor = delegatedConstructor?.transformSingle(transformer, data)
         body = body?.transformSingle(transformer, data)
         return this
@@ -94,6 +96,11 @@ internal class FirPrimaryConstructor(
 
     override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirPrimaryConstructor {
         status = status.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirPrimaryConstructor {
+        annotations.transformInplace(transformer, data)
         return this
     }
 

@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirTypePlaceholderProjection
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
@@ -637,6 +638,7 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
         classKind(klass.classKind)
         ws
         anchoredName(klass.name, klass.classId.asString())
+        generateTypeParameters(klass)
         if (klass.superTypeRefs.isNotEmpty()) {
             +": "
             generateList(klass.superTypeRefs) {
@@ -703,6 +705,9 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
                         simpleName(type.lookupTag.name)
                     }
                     generateTypeArguments(type)
+                    if (type.isMarkedNullable) {
+                        +"?"
+                    }
                     +" = "
                     val directlyExpanded = type.directExpansionType(session)
                     if (directlyExpanded != null) {
@@ -716,6 +721,9 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
                         fqn(type.lookupTag.classId.relativeClassName)
                     }
                     generateTypeArguments(type)
+                    if (type.isMarkedNullable) {
+                        +"?"
+                    }
                 }
             }
         }
@@ -784,9 +792,21 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
                 +value.toString()
                 keyword("L")
             }
+            FirConstKind.UnsignedByte -> {
+                +(value as Long).toUByte().toString()
+                keyword("uB")
+            }
+            FirConstKind.UnsignedShort -> {
+                +(value as Long).toUShort().toString()
+                keyword("uS")
+            }
+            FirConstKind.UnsignedInt -> {
+                +(value as Long).toUInt().toString()
+                keyword("uI")
+            }
             FirConstKind.UnsignedLong -> {
-                +value.toString()
-                keyword("UL")
+                +(value as Long).toULong().toString()
+                keyword("uL")
             }
             FirConstKind.Float -> {
                 +value.toString()
@@ -795,6 +815,16 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
             FirConstKind.Double -> {
                 +value.toString()
                 keyword("D")
+            }
+            FirConstKind.IntegerLiteral -> {
+                +"IL<"
+                +value.toString()
+                +">"
+            }
+            FirConstKind.UnsignedIntegerLiteral -> {
+                +"UIL<"
+                +value.toString()
+                +">"
             }
         }
 
@@ -897,21 +927,36 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
         }
     }
 
-    private fun FlowContent.generateTypeParameters(typeParameterContainer: FirTypeParametersOwner) {
+    private fun FlowContent.generateTypeParameters(typeParameterContainer: FirTypeParameterRefsOwner, describe: Boolean = false) {
         if (typeParameterContainer.typeParameters.isEmpty()) return
         +"<"
-        generateList(typeParameterContainer.typeParameters) {
-            generate(it.variance)
-            if (it.isReified) {
+        fun generateTypeParameter(typeParameter: FirTypeParameter, describe: Boolean) {
+            generate(typeParameter.variance)
+            if (typeParameter.isReified) {
                 keyword("reified ")
             }
-            symbolAnchor(it.symbol) {
-                simpleName(it.name)
-            }
-            if (it.bounds.isNotEmpty()) {
+            if (describe)
+                symbolRef(typeParameter.symbol) {
+                    simpleName(typeParameter.name)
+                }
+            else
+                symbolAnchor(typeParameter.symbol) {
+                    simpleName(typeParameter.name)
+                }
+            if (typeParameter.bounds.isNotEmpty()) {
                 +": "
-                generateList(it.bounds) { bound ->
+                generateList(typeParameter.bounds) { bound ->
                     generate(bound)
+                }
+            }
+        }
+        generateList(typeParameterContainer.typeParameters) {
+            if (it is FirTypeParameter) {
+                generateTypeParameter(it, describe)
+            } else {
+                symbolRef(it.symbol) {
+                    +"^"
+                    simpleName(it.symbol.fir.name)
                 }
             }
         }
@@ -1009,6 +1054,25 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
         }
     }
 
+    private fun FlowContent.generate(delegatedConstructorCall: FirDelegatedConstructorCall) {
+        generateMultiLineExpression(isStatement = true) {
+            iline {
+                exprType(delegatedConstructorCall.constructedTypeRef) {
+                    if (delegatedConstructorCall.isSuper) keyword("super")
+                    if (delegatedConstructorCall.isThis) keyword("this")
+                    +"<"
+                    generate(delegatedConstructorCall.calleeReference)
+                    +">"
+                    +"("
+                    generateList(delegatedConstructorCall.arguments) {
+                        generate(it)
+                    }
+                    +")"
+                }
+            }
+        }
+    }
+
     private fun FlowContent.generate(variable: FirVariable<*>) {
         if (variable.isVal) {
             keyword("val ")
@@ -1044,6 +1108,7 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
         return when (this) {
             is FirClassLikeSymbol<*> -> classId.asString()
             is FirCallableSymbol<*> -> callableId.toString()
+            is FirTypeParameterSymbol -> name.asString()
             else -> ""
         }
     }
@@ -1082,26 +1147,8 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
         generate(fir.returnTypeRef)
     }
 
-    private fun FlowContent.describeTypeParameters(typeParameterContainer: FirTypeParametersOwner) {
-        if (typeParameterContainer.typeParameters.isEmpty()) return
-        +"<"
-        generateList(typeParameterContainer.typeParameters) {
-            generate(it.variance)
-            if (it.isReified) {
-                keyword("reified ")
-            }
-
-            simpleName(it.name)
-
-            if (it.bounds.isNotEmpty()) {
-                +": "
-                generateList(it.bounds) { bound ->
-                    generate(bound)
-                }
-            }
-        }
-        +"> "
-    }
+    private fun FlowContent.describeTypeParameters(typeParameterContainer: FirTypeParameterRefsOwner) =
+        generateTypeParameters(typeParameterContainer, describe = true)
 
     private fun FlowContent.describeVerbose(symbol: FirBasedSymbol<*>) {
         when (symbol) {
@@ -1193,11 +1240,12 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
                         when (callDiagnostic) {
                             is NewConstraintError -> {
                                 ident()
-                                +"Lower: "
+
                                 generate(callDiagnostic.lowerType as ConeKotlinType)
-                                br
-                                ident()
-                                +"Upper: "
+
+                                ws
+                                span(classes = "subtype-error") { +"<:" }
+                                ws
                                 generate(callDiagnostic.upperType as ConeKotlinType)
                             }
                             else -> {
@@ -1663,7 +1711,19 @@ class HtmlFirDump internal constructor(private var linkResolver: FirLinkResolver
             }
             +"): "
             generate(function.returnTypeRef)
-            generateBlockIfAny(function.body)
+
+            val delegatedConstructorCall = function.delegatedConstructor
+            val body = function.body
+            if (delegatedConstructorCall != null || body != null) {
+                +" {"
+                generateMultiLineExpression(isStatement = false) {
+                    if (delegatedConstructorCall != null) {
+                        generate(delegatedConstructorCall)
+                    }
+                    if (body != null) generateBlockContent(body)
+                }
+                +"}"
+            }
         }
     }
 

@@ -22,14 +22,14 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-interface FirFunction<F : FirFunction<F>> : FirCallableDeclaration<F>, FirTargetElement, FirAnnotationContainer, FirTypeParametersOwner, FirStatement {
+interface FirFunction<F : FirFunction<F>> : FirCallableDeclaration<F>, FirTargetElement, FirAnnotationContainer, FirTypeParameterRefsOwner, FirStatement {
     override val source: FirSourceElement?
     override val session: FirSession
     override val resolvePhase: FirResolvePhase
     override val annotations: List<FirAnnotationCall>
     override val returnTypeRef: FirTypeRef
     override val receiverTypeRef: FirTypeRef?
-    override val typeParameters: List<FirTypeParameter>
+    override val typeParameters: List<FirTypeParameterRef>
     val controlFlowGraphReference: FirControlFlowGraphReference
     override val symbol: FirFunctionSymbol<F>
     val valueParameters: List<FirValueParameter>
@@ -38,6 +38,8 @@ interface FirFunction<F : FirFunction<F>> : FirCallableDeclaration<F>, FirTarget
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitFunction(this, data)
 
     fun replaceValueParameters(newValueParameters: List<FirValueParameter>)
+
+    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirFunction<F>
 
     override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirFunction<F>
 

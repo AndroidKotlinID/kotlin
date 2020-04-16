@@ -19,18 +19,14 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
     private fun configure() = with(FirTreeBuilder) {
         impl(constructor) {
             defaultFalse("isPrimary", withGetter = true)
-            default("typeParameters") {
-                needAcceptAndTransform = false
-            }
         }
 
         impl(constructor, "FirPrimaryConstructor") {
             defaultTrue("isPrimary", withGetter = true)
-            default("typeParameters") {
-                needAcceptAndTransform = false
-            }
         }
 
+        impl(typeParameterRef, "FirOuterClassTypeParameterRef")
+        impl(typeParameterRef, "FirConstructedClassTypeParameterRef")
 
         noImpl(declarationStatus)
         noImpl(resolvedDeclarationStatus)
@@ -78,6 +74,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 value = "annotationTypeRef"
                 withGetter = true
             }
+
+            defaultFalse("resolved")
         }
 
         impl(arrayOfCall)
@@ -95,14 +93,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 value = "false"
                 withGetter = true
             }
-            listOf("dispatchReceiver", "extensionReceiver").forEach {
-                default(it) {
-                    value = "FirNoReceiverExpression"
-                    withGetter = true
-                }
-            }
             default("calleeReference", "FirSimpleNamedReference(source, Name.identifier(\"component\$componentIndex\"), null)")
-            useTypes(simpleNamedReferenceType, nameType, noReceiverExpressionType)
+            useTypes(simpleNamedReferenceType, nameType)
             optInToInternals()
         }
 
@@ -302,8 +294,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 value = "!isGetter"
                 withGetter = true
             }
-            default("contractDescription", "FirEmptyContractDescription")
-            useTypes(modalityType, emptyContractDescriptionType)
+            useTypes(modalityType)
             kind = OpenClass
         }
 
@@ -455,8 +446,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(simpleFunction) {
             kind = OpenClass
-            default("contractDescription", "FirEmptyContractDescription")
-            useTypes(emptyContractDescriptionType)
         }
 
         impl(delegatedTypeRef) {

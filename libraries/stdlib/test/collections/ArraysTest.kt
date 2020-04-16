@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -1142,6 +1142,27 @@ class ArraysTest {
     }
 
     @Test
+    fun runningFold() {
+        for (size in 0 until 4) {
+            val expected = listOf("", "0", "01", "012", "0123").take(size + 1)
+            // Array<T>
+            assertEquals(expected, Array(size) { it }.runningFold("") { acc, e -> acc + e })
+            // Primitive Arrays
+            assertEquals(expected, ByteArray(size) { it.toByte() }.runningFold("") { acc, e -> acc + e })
+            assertEquals(expected, CharArray(size) { '0' + it }.runningFold("") { acc, e -> acc + e })
+            assertEquals(expected, ShortArray(size) { it.toShort() }.runningFold("") { acc, e -> acc + e })
+            assertEquals(expected, IntArray(size) { it }.runningFold("") { acc, e -> acc + e })
+            assertEquals(expected, LongArray(size) { it.toLong() }.runningFold("") { acc, e -> acc + e })
+            assertEquals(expected, FloatArray(size) { it.toFloat() }.runningFold("") { acc, e -> acc + e.toInt() })
+            assertEquals(expected, DoubleArray(size) { it.toDouble() }.runningFold("") { acc, e -> acc + e.toInt() })
+            assertEquals(
+                expected.map { it.map { c -> c.toInt() % 2 == 0 }.joinToString(separator = "") },
+                BooleanArray(size) { it % 2 == 0 }.runningFold("") { acc, e -> acc + e }
+            )
+        }
+    }
+
+    @Test
     fun scanIndexed() {
         for (size in 0 until 4) {
             val expected = listOf("+", "+[0: a]", "+[0: a][1: b]", "+[0: a][1: b][2: c]", "+[0: a][1: b][2: c][3: d]").take(size + 1)
@@ -1185,92 +1206,137 @@ class ArraysTest {
             )
         }
     }
-
+    
     @Test
-    fun scanReduce() {
+    fun runningFoldIndexed() {
         for (size in 0 until 4) {
-            val expected = listOf(0, 1, 3, 6).take(size)
+            val expected = listOf("+", "+[0: a]", "+[0: a][1: b]", "+[0: a][1: b][2: c]", "+[0: a][1: b][2: c][3: d]").take(size + 1)
             // Array<T>
             assertEquals(
                 expected,
-                Array(size) { it }.scanReduce { acc, e -> acc + e }
+                Array(size) { 'a' + it }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: $e]" }
             )
             // Primitive Arrays
             assertEquals(
-                expected.map { it.toByte() },
-                ByteArray(size) { it.toByte() }.scanReduce { acc, e -> (acc + e).toByte() }
-            )
-            assertEquals(
-                expected.map { it.toChar() },
-                CharArray(size) { it.toChar() }.scanReduce { acc, e -> acc + e.toInt() }
-            )
-            assertEquals(
-                expected.map { it.toShort() },
-                ShortArray(size) { it.toShort() }.scanReduce { acc, e -> (acc + e).toShort() }
+                expected,
+                ByteArray(size) { it.toByte() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
             )
             assertEquals(
                 expected,
-                IntArray(size) { it }.scanReduce { acc, e -> acc + e }
+                CharArray(size) { it.toChar() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
             )
             assertEquals(
-                expected.map { it.toLong() },
-                LongArray(size) { it.toLong() }.scanReduce { acc, e -> acc + e }
+                expected,
+                ShortArray(size) { it.toShort() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
             )
             assertEquals(
-                expected.map { it.toFloat() },
-                FloatArray(size) { it.toFloat() }.scanReduce { acc, e -> acc + e.toInt() }
+                expected,
+                IntArray(size) { it }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e}]" }
             )
             assertEquals(
-                expected.map { it.toDouble() },
-                DoubleArray(size) { it.toDouble() }.scanReduce { acc, e -> acc + e.toInt() }
+                expected,
+                LongArray(size) { it.toLong() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
             )
             assertEquals(
-                expected.indices.map { it % 2 == 0 },
-                BooleanArray(size) { true }.scanReduce { acc, e -> acc != e }
+                expected,
+                FloatArray(size) { it.toFloat() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
+            )
+            assertEquals(
+                expected,
+                DoubleArray(size) { it.toDouble() }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: ${'a' + e.toInt()}]" }
+            )
+            assertEquals(
+                expected.map { it.map { c -> if (c.isAsciiLetter()) c.toInt() % 2 != 0 else c }.joinToString(separator = "") },
+                BooleanArray(size) { it % 2 == 0 }.runningFoldIndexed("+") { index, acc, e -> "$acc[$index: $e]" }
             )
         }
     }
 
     @Test
-    fun scanReduceIndexed() {
+    fun runningReduce() {
+        for (size in 0 until 4) {
+            val expected = listOf(0, 1, 3, 6).take(size)
+            // Array<T>
+            assertEquals(
+                expected,
+                Array(size) { it }.runningReduce { acc, e -> acc + e }
+            )
+            // Primitive Arrays
+            assertEquals(
+                expected.map { it.toByte() },
+                ByteArray(size) { it.toByte() }.runningReduce { acc, e -> (acc + e).toByte() }
+            )
+            assertEquals(
+                expected.map { it.toChar() },
+                CharArray(size) { it.toChar() }.runningReduce { acc, e -> acc + e.toInt() }
+            )
+            assertEquals(
+                expected.map { it.toShort() },
+                ShortArray(size) { it.toShort() }.runningReduce { acc, e -> (acc + e).toShort() }
+            )
+            assertEquals(
+                expected,
+                IntArray(size) { it }.runningReduce { acc, e -> acc + e }
+            )
+            assertEquals(
+                expected.map { it.toLong() },
+                LongArray(size) { it.toLong() }.runningReduce { acc, e -> acc + e }
+            )
+            assertEquals(
+                expected.map { it.toFloat() },
+                FloatArray(size) { it.toFloat() }.runningReduce { acc, e -> acc + e.toInt() }
+            )
+            assertEquals(
+                expected.map { it.toDouble() },
+                DoubleArray(size) { it.toDouble() }.runningReduce { acc, e -> acc + e.toInt() }
+            )
+            assertEquals(
+                expected.indices.map { it % 2 == 0 },
+                BooleanArray(size) { true }.runningReduce { acc, e -> acc != e }
+            )
+        }
+    }
+
+    @Test
+    fun runningReduceIndexed() {
         for (size in 0 until 4) {
             val expected = listOf(0, 1, 6, 27).take(size)
             // Array<T>
             assertEquals(
                 expected,
-                Array(size) { it }.scanReduceIndexed { index, acc, e -> index * (acc + e) }
+                Array(size) { it }.runningReduceIndexed { index, acc, e -> index * (acc + e) }
             )
             // Primitive Arrays
             assertEquals(
                 expected.map { it.toByte() },
-                ByteArray(size) { it.toByte() }.scanReduceIndexed { index, acc, e -> (index * (acc + e)).toByte() })
+                ByteArray(size) { it.toByte() }.runningReduceIndexed { index, acc, e -> (index * (acc + e)).toByte() })
             assertEquals(
                 expected.map { it.toChar() },
-                CharArray(size) { it.toChar() }.scanReduceIndexed { index, acc, e -> (index * (acc.toInt() + e.toInt())).toChar() }
+                CharArray(size) { it.toChar() }.runningReduceIndexed { index, acc, e -> (index * (acc.toInt() + e.toInt())).toChar() }
             )
             assertEquals(
                 expected.map { it.toShort() },
-                ShortArray(size) { it.toShort() }.scanReduceIndexed { index, acc, e -> (index * (acc + e)).toShort() }
+                ShortArray(size) { it.toShort() }.runningReduceIndexed { index, acc, e -> (index * (acc + e)).toShort() }
             )
             assertEquals(
                 expected,
-                IntArray(size) { it }.scanReduceIndexed { index, acc, e -> index * (acc + e) }
+                IntArray(size) { it }.runningReduceIndexed { index, acc, e -> index * (acc + e) }
             )
             assertEquals(
                 expected.map { it.toLong() },
-                LongArray(size) { it.toLong() }.scanReduceIndexed { index, acc, e -> index * (acc + e) }
+                LongArray(size) { it.toLong() }.runningReduceIndexed { index, acc, e -> index * (acc + e) }
             )
             assertEquals(
                 expected.map { it.toFloat() },
-                FloatArray(size) { it.toFloat() }.scanReduceIndexed { index, acc, e -> index * (acc + e) }
+                FloatArray(size) { it.toFloat() }.runningReduceIndexed { index, acc, e -> index * (acc + e) }
             )
             assertEquals(
                 expected.map { it.toDouble() },
-                DoubleArray(size) { it.toDouble() }.scanReduceIndexed { index, acc, e -> index * (acc + e) }
+                DoubleArray(size) { it.toDouble() }.runningReduceIndexed { index, acc, e -> index * (acc + e) }
             )
             assertEquals(
                 expected.indices.map { it % 2 == 0 },
-                BooleanArray(size) { true }.scanReduceIndexed { index, acc, e -> acc != e && index % 2 == 0 }
+                BooleanArray(size) { true }.runningReduceIndexed { index, acc, e -> acc != e && index % 2 == 0 }
             )
         }
     }
@@ -1414,6 +1480,48 @@ class ArraysTest {
         assertArrayNotSameButEquals(booleanArrayOf(false, false, true), booleanArrayOf(true, false, false).reversedArray())
         assertArrayNotSameButEquals(arrayOf("3", "2", "1"), arrayOf("1", "2", "3").reversedArray())
         assertArrayNotSameButEquals(arrayOf("3", "2", "1"), (arrayOf("1", "2", "3") as Array<out String>).reversedArray())
+    }
+
+    @Test fun onEach() {
+        var count = 0
+        val data = intArrayOf(1, 2, 3)
+        val newData = data.onEach { count += it }
+        assertEquals(6, count)
+        assertSame(newData, data)
+
+        var concat = ""
+        val strings = arrayOf("a", "b", "c")
+        val newStrings = strings.onEach { concat += it }
+        assertEquals("abc", concat)
+        assertSame(newStrings, strings)
+
+        assertEquals(listOf("a", "b", "c"), mutableListOf<String>().apply { arrayOf("a", "b", "c").onEach { add(it) } })
+
+        assertEquals(listOf(1, 2, 3), mutableListOf<Int>().apply { intArrayOf(1, 2, 3).onEach { add(it) } })
+        assertEquals(listOf<Byte>(1, 2, 3), mutableListOf<Byte>().apply { byteArrayOf(1, 2, 3).onEach { add(it) } })
+        assertEquals(listOf<Short>(1, 2, 3), mutableListOf<Short>().apply { shortArrayOf(1, 2, 3).onEach { add(it) } })
+        assertEquals(listOf<Long>(1, 2, 3), mutableListOf<Long>().apply { longArrayOf(1, 2, 3).onEach { add(it) } })
+        assertEquals(listOf(1f, 2f, 3f), mutableListOf<Float>().apply { floatArrayOf(1f, 2f, 3f).onEach { add(it) } })
+        assertEquals(listOf(1.0, 2.0, 3.0), mutableListOf<Double>().apply { doubleArrayOf(1.0, 2.0, 3.0).onEach { add(it) } })
+        assertEquals(listOf(true, false, false), mutableListOf<Boolean>().apply { booleanArrayOf(true, false, false).onEach { add(it) } })
+        assertEquals(listOf('1', '2', '3'), mutableListOf<Char>().apply { charArrayOf('1', '2', '3').onEach { add(it) } })
+    }
+
+    @Test fun onEachIndexed() {
+        assertEquals(listOf(1, 3, 5), mutableListOf<Int>().apply { intArrayOf(1, 2, 3).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf(1, 3, 5), mutableListOf<Int>().apply { byteArrayOf(1, 2, 3).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf(1, 3, 5), mutableListOf<Int>().apply { shortArrayOf(1, 2, 3).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf<Long>(1, 3, 5), mutableListOf<Long>().apply { longArrayOf(1, 2, 3).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf(1f, 3f, 5f), mutableListOf<Float>().apply { floatArrayOf(1f, 2f, 3f).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf(1.0, 3.0, 5.0), mutableListOf<Double>().apply { doubleArrayOf(1.0, 2.0, 3.0).onEachIndexed { i, e -> add(i + e) } })
+        assertEquals(listOf(true, false, true), mutableListOf<Boolean>().apply { booleanArrayOf(true, false, false).onEachIndexed { i, e -> add(i % 2 == 0 || e) } })
+        assertEquals(listOf('1', '3', '5'), mutableListOf<Char>().apply { charArrayOf('1', '2', '3').onEachIndexed { i, e -> add(e + i) } })
+        assertEquals(listOf("a0", "b1", "c2"), mutableListOf<String>().apply { arrayOf("a", "b", "c").onEachIndexed { i, e -> add(e + i) } })
+
+        val empty = arrayOf<Int>()
+        assertSame(empty, empty.onEachIndexed { i, e -> fail("Should be unreachable: $i, $e") })
+        val nonEmpty = longArrayOf(1, 2, 3)
+        assertSame(nonEmpty, nonEmpty.onEachIndexed { _, _ -> })
     }
 
     @Test fun drop() {
@@ -1829,6 +1937,64 @@ class ArraysTest {
         val array = Array(6) { it }
         array.sortWith(comparator)
         array.iterator().assertSorted { a, b -> comparator.compare(a, b) <= 0 }
+    }
+
+    private inline fun <T> testShuffle(array: T, shuffle: T.() -> Unit, toList: T.() -> List<*>) {
+        val original = array.toList()
+        array.shuffle()
+        val shuffled = array.toList()
+        assertNotEquals(original, shuffled)
+        assertEquals(original.groupBy { it }, shuffled.groupBy { it })
+    }
+
+    @Test
+    fun shuffle() {
+        val numbers = List(100) { it }
+        testShuffle(numbers.map(Int::toInt).toIntArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toLong).toLongArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toByte).toByteArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toShort).toShortArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toFloat).toFloatArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toDouble).toDoubleArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toChar).toCharArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map { it % 2 == 0 }.toBooleanArray(), { shuffle() }, { toList() })
+
+        testShuffle(numbers.map(Int::toUInt).toUIntArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toULong).toULongArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toUByte).toUByteArray(), { shuffle() }, { toList() })
+        testShuffle(numbers.map(Int::toUShort).toUShortArray(), { shuffle() }, { toList() })
+
+        testShuffle(arrayOf(1, "x", null, Any(), 'a', 2u, 5.0), { shuffle() }, { toList() })
+    }
+
+    private inline fun <T> testShuffleR(array: T, shuffle: T.(Random) -> Unit, toList: T.() -> List<*>) {
+        val seed = Random.nextInt()
+        val original = array.toList()
+        val originalShuffled = original.shuffled(Random(seed))
+        array.shuffle(Random(seed))
+        val shuffled = array.toList()
+        assertNotEquals(original, shuffled)
+        assertEquals(originalShuffled, shuffled)
+    }
+
+    @Test
+    fun shufflePredictably() {
+        val numbers = List(16) { it }
+        testShuffleR(numbers.map(Int::toInt).toIntArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toLong).toLongArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toByte).toByteArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toShort).toShortArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toFloat).toFloatArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toDouble).toDoubleArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toChar).toCharArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map { it % 2 == 0 }.toBooleanArray(), { r -> shuffle(r) }, { toList() })
+
+        testShuffleR(numbers.map(Int::toUInt).toUIntArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toULong).toULongArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toUByte).toUByteArray(), { r -> shuffle(r) }, { toList() })
+        testShuffleR(numbers.map(Int::toUShort).toUShortArray(), { r -> shuffle(r) }, { toList() })
+
+        testShuffleR(arrayOf(1, "x", null, Any(), 'a', 2u, 5.0), { r -> shuffle(r) }, { toList() })
     }
 
     @Test

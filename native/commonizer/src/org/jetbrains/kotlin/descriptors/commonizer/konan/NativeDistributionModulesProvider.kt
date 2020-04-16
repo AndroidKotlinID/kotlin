@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.descriptors.commonizer.BuiltInsProvider
 import org.jetbrains.kotlin.descriptors.commonizer.ModulesProvider
 import org.jetbrains.kotlin.descriptors.commonizer.utils.NativeFactories
 import org.jetbrains.kotlin.descriptors.commonizer.utils.createKotlinNativeForwardDeclarationsModule
+import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.konan.library.KONAN_STDLIB_NAME
 import org.jetbrains.kotlin.storage.StorageManager
 
@@ -42,7 +43,8 @@ internal class NativeDistributionModulesProvider(
                 languageVersionSettings = LanguageVersionSettingsImpl.DEFAULT,
                 storageManager = storageManager,
                 builtIns = builtIns,
-                packageAccessHandler = null
+                packageAccessHandler = null,
+                lookupTracker = LookupTracker.DO_NOTHING
             )
 
             name to module
@@ -54,9 +56,7 @@ internal class NativeDistributionModulesProvider(
         )
 
         platformModulesMap.forEach { (name, module) ->
-            val dependencies = libraries.index
-                .getValue(name)
-                .manifestData
+            val dependencies = libraries.getManifest(name)
                 .dependencies
                 .map { if (it == KONAN_STDLIB_NAME) stdlib else platformModulesMap.getValue(it) }
 

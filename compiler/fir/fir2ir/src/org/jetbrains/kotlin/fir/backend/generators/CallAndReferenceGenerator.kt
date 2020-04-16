@@ -5,19 +5,17 @@
 
 package org.jetbrains.kotlin.fir.backend.generators
 
-import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.backend.*
-import org.jetbrains.kotlin.fir.backend.convertWithOffsets
-import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
 import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
+import org.jetbrains.kotlin.fir.psi
+import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.render
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
@@ -35,7 +33,9 @@ import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.makeNotNull
-import org.jetbrains.kotlin.ir.util.defaultType
+import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.psi.KtPropertyDelegate
+import org.jetbrains.kotlin.psi2ir.generators.hasNoSideEffects
 
 internal class CallAndReferenceGenerator(
     private val components: Fir2IrComponents,
@@ -47,8 +47,11 @@ internal class CallAndReferenceGenerator(
 
     private fun ConeKotlinType.toIrType(): IrType = with(typeConverter) { toIrType() }
 
-    fun convertToIrCallableReference(callableReferenceAccess: FirCallableReferenceAccess): IrExpression {
-        val symbol = callableReferenceAccess.calleeReference.toSymbol(session, classifierStorage, declarationStorage)
+    fun convertToIrCallableReference(
+        callableReferenceAccess: FirCallableReferenceAccess,
+        explicitReceiverExpression: IrExpression?
+    ): IrExpression {
+        val symbol = callableReferenceAccess.calleeReference.toSymbol(session, classifierStorage, declarationStorage, conversionScope)
         val type = callableReferenceAccess.typeRef.toIrType()
         return callableReferenceAccess.convertWithOffsets { startOffset, endOffset ->
             when (symbol) {
@@ -59,12 +62,17 @@ internal class CallAndReferenceGenerator(
                         referencedPropertyGetter != null -> null
                         else -> referencedProperty.backingField?.symbol
                     }
+                    val origin = when (callableReferenceAccess.source?.psi?.parent) {
+                        is KtPropertyDelegate -> IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE
+                        else -> null
+                    }
                     IrPropertyReferenceImpl(
                         startOffset, endOffset, type, symbol,
                         typeArgumentsCount = referencedPropertyGetter?.typeParameters?.size ?: 0,
                         backingFieldSymbol,
                         referencedPropertyGetter?.symbol,
-                        referencedProperty.setter?.symbol
+                        referencedProperty.setter?.symbol,
+                        origin
                     )
                 }
                 is IrConstructorSymbol -> {
@@ -89,57 +97,72 @@ internal class CallAndReferenceGenerator(
                     )
                 }
             }
-        }.applyTypeArguments(callableReferenceAccess).applyReceivers(callableReferenceAccess)
+        }.applyTypeArguments(callableReferenceAccess).applyReceivers(callableReferenceAccess, explicitReceiverExpression)
     }
 
-    fun convertToIrCall(qualifiedAccess: FirQualifiedAccess, typeRef: FirTypeRef): IrExpression {
+    fun convertToIrCall(
+        qualifiedAccess: FirQualifiedAccess,
+        typeRef: FirTypeRef,
+        explicitReceiverExpression: IrExpression?
+    ): IrExpression {
         val explicitReceiver = qualifiedAccess.explicitReceiver
         if (!qualifiedAccess.safe || explicitReceiver == null) {
-            return convertToUnsafeIrCall(qualifiedAccess, typeRef)
+            return convertToUnsafeIrCall(qualifiedAccess, typeRef, explicitReceiverExpression)
         }
         return qualifiedAccess.convertWithOffsets { startOffset, endOffset ->
-            val type = typeRef.toIrType()
             val callableSymbol = (qualifiedAccess.calleeReference as? FirResolvedNamedReference)?.resolvedSymbol as? FirCallableSymbol<*>
             val typeShouldBeNotNull = callableSymbol?.fir?.returnTypeRef?.coneTypeSafe<ConeKotlinType>()?.isNullable == false
-            val unsafeIrCall = convertToUnsafeIrCall(qualifiedAccess, typeRef, makeNotNull = typeShouldBeNotNull)
-            IrBlockImpl(startOffset, endOffset, type, IrStatementOrigin.SAFE_CALL).apply {
-                val receiver = visitor.convertToIrExpression(explicitReceiver)
-                val receiverVariable = declarationStorage.declareTemporaryVariable(receiver).apply {
-                    parent = conversionScope.parentFromStack()
+            val unsafeIrCall =
+                convertToUnsafeIrCall(qualifiedAccess, typeRef, explicitReceiverExpression, makeNotNull = typeShouldBeNotNull)
+
+            convertToSafeIrCall(
+                unsafeIrCall,
+                explicitReceiverExpression!!,
+                isDispatch = explicitReceiver == qualifiedAccess.dispatchReceiver
+            )
+        }
+    }
+
+    internal fun convertToSafeIrCall(call: IrExpression, explicitReceiverExpression: IrExpression, isDispatch: Boolean): IrExpression {
+        val startOffset = call.startOffset
+        val endOffset = call.endOffset
+        val receiverVariable = declarationStorage.declareTemporaryVariable(explicitReceiverExpression, "safe_receiver").apply {
+            parent = conversionScope.parentFromStack()
+        }
+        val variableSymbol = symbolTable.referenceValue(receiverVariable.descriptor)
+
+        val resultType = call.type.makeNullable()
+        return IrBlockImpl(startOffset, endOffset, resultType, IrStatementOrigin.SAFE_CALL).apply {
+            statements += receiverVariable
+            statements += IrWhenImpl(startOffset, endOffset, resultType).apply {
+                val condition = IrCallImpl(
+                    startOffset, endOffset, irBuiltIns.booleanType, irBuiltIns.eqeqSymbol, origin = IrStatementOrigin.EQEQ
+                ).apply {
+                    putValueArgument(0, IrGetValueImpl(startOffset, endOffset, variableSymbol))
+                    putValueArgument(1, IrConstImpl.constNull(startOffset, endOffset, irBuiltIns.nothingNType))
                 }
-                statements += receiverVariable
-                statements += IrWhenImpl(startOffset, endOffset, type).apply {
-                    val variableSymbol = symbolTable.referenceValue(receiverVariable.descriptor)
-                    val condition = IrCallImpl(
-                        startOffset, endOffset, irBuiltIns.booleanType, irBuiltIns.eqeqSymbol, origin = IrStatementOrigin.EQEQ
-                    ).apply {
-                        putValueArgument(0, IrGetValueImpl(startOffset, endOffset, variableSymbol))
-                        putValueArgument(1, IrConstImpl.constNull(startOffset, endOffset, irBuiltIns.nothingNType))
-                    }
-                    branches += IrBranchImpl(
-                        condition, IrConstImpl.constNull(startOffset, endOffset, irBuiltIns.nothingNType)
-                    )
-                    val newReceiver = IrGetValueImpl(startOffset, endOffset, variableSymbol)
-                    val replacedCall = unsafeIrCall.replaceReceiver(
-                        newReceiver, isDispatch = explicitReceiver == qualifiedAccess.dispatchReceiver
-                    )
-                    branches += IrElseBranchImpl(
-                        IrConstImpl.boolean(startOffset, endOffset, irBuiltIns.booleanType, true),
-                        replacedCall
-                    )
-                }
+                branches += IrBranchImpl(
+                    condition, IrConstImpl.constNull(startOffset, endOffset, irBuiltIns.nothingNType)
+                )
+                val newReceiver = IrGetValueImpl(startOffset, endOffset, variableSymbol)
+                val replacedCall = call.replaceReceiver(newReceiver, isDispatch)
+                branches += IrElseBranchImpl(
+                    IrConstImpl.boolean(startOffset, endOffset, irBuiltIns.booleanType, true),
+                    replacedCall
+                )
             }
         }
     }
 
     private fun convertToUnsafeIrCall(
-        qualifiedAccess: FirQualifiedAccess, typeRef: FirTypeRef, makeNotNull: Boolean = false
+        qualifiedAccess: FirQualifiedAccess, typeRef: FirTypeRef, explicitReceiverExpression: IrExpression?, makeNotNull: Boolean = false
     ): IrExpression {
         val type = typeRef.toIrType().let { if (makeNotNull) it.makeNotNull() else it }
         val symbol = qualifiedAccess.calleeReference.toSymbol(
             session,
             classifierStorage,
-            declarationStorage
+            declarationStorage,
+            conversionScope
         )
         return typeRef.convertWithOffsets { startOffset, endOffset ->
             if (qualifiedAccess.calleeReference is FirSuperReference) {
@@ -167,7 +190,10 @@ internal class CallAndReferenceGenerator(
                         )
                     }
                 }
-                is IrFieldSymbol -> IrGetFieldImpl(startOffset, endOffset, symbol, type, origin = IrStatementOrigin.GET_PROPERTY)
+                is IrFieldSymbol -> IrGetFieldImpl(
+                    startOffset, endOffset, symbol, type,
+                    origin = IrStatementOrigin.GET_PROPERTY.takeIf { qualifiedAccess.calleeReference !is FirDelegateFieldReference }
+                )
                 is IrValueSymbol -> IrGetValueImpl(
                     startOffset, endOffset, type, symbol,
                     origin = qualifiedAccess.calleeReference.statementOrigin()
@@ -175,13 +201,14 @@ internal class CallAndReferenceGenerator(
                 is IrEnumEntrySymbol -> IrGetEnumValueImpl(startOffset, endOffset, type, symbol)
                 else -> generateErrorCallExpression(startOffset, endOffset, qualifiedAccess.calleeReference, type)
             }
-        }.applyCallArguments(qualifiedAccess as? FirCall).applyTypeArguments(qualifiedAccess).applyReceivers(qualifiedAccess)
+        }.applyCallArguments(qualifiedAccess as? FirCall)
+            .applyTypeArguments(qualifiedAccess).applyReceivers(qualifiedAccess, explicitReceiverExpression)
     }
 
-    fun convertToIrSetCall(variableAssignment: FirVariableAssignment): IrExpression {
+    fun convertToIrSetCall(variableAssignment: FirVariableAssignment, explicitReceiverExpression: IrExpression?): IrExpression {
         val type = irBuiltIns.unitType
         val calleeReference = variableAssignment.calleeReference
-        val symbol = calleeReference.toSymbol(session, classifierStorage, declarationStorage)
+        val symbol = calleeReference.toSymbol(session, classifierStorage, declarationStorage, conversionScope, preferGetter = false)
         val origin = IrStatementOrigin.EQ
         return variableAssignment.convertWithOffsets { startOffset, endOffset ->
             val assignedValue = visitor.convertToIrExpression(variableAssignment.rValue)
@@ -204,10 +231,15 @@ internal class CallAndReferenceGenerator(
                         else -> generateErrorCallExpression(startOffset, endOffset, calleeReference)
                     }
                 }
+                is IrSimpleFunctionSymbol -> {
+                    IrCallImpl(startOffset, endOffset, type, symbol, origin).apply {
+                        putValueArgument(0, assignedValue)
+                    }
+                }
                 is IrVariableSymbol -> IrSetVariableImpl(startOffset, endOffset, type, symbol, assignedValue, origin)
                 else -> generateErrorCallExpression(startOffset, endOffset, calleeReference)
             }
-        }.applyReceivers(variableAssignment)
+        }.applyTypeArguments(variableAssignment).applyReceivers(variableAssignment, explicitReceiverExpression)
     }
 
     fun convertToIrConstructorCall(annotationCall: FirAnnotationCall): IrExpression {
@@ -246,7 +278,7 @@ internal class CallAndReferenceGenerator(
         return convertToGetObject(qualifier, callableReferenceMode = false)!!
     }
 
-    private fun convertToGetObject(qualifier: FirResolvedQualifier, callableReferenceMode: Boolean): IrExpression? {
+    internal fun convertToGetObject(qualifier: FirResolvedQualifier, callableReferenceMode: Boolean): IrExpression? {
         val typeRef = qualifier.typeRef as? FirResolvedTypeRef
         val classSymbol = (typeRef?.type as? ConeClassLikeType)?.lookupTag?.toSymbol(session)
         if (callableReferenceMode && classSymbol is FirRegularClassSymbol) {
@@ -270,7 +302,7 @@ internal class CallAndReferenceGenerator(
         }
     }
 
-    private fun IrExpression.applyCallArguments(call: FirCall?): IrExpression {
+    internal fun IrExpression.applyCallArguments(call: FirCall?): IrExpression {
         if (call == null) return this
         return when (this) {
             is IrCallWithIndexedArgumentsBase -> {
@@ -279,16 +311,16 @@ internal class CallAndReferenceGenerator(
                     apply {
                         val argumentMapping = call.argumentMapping
                         if (argumentMapping != null && argumentMapping.isNotEmpty()) {
-                            require(call is FirFunctionCall)
-                            val function =
-                                ((call.calleeReference as? FirResolvedNamedReference)?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
+                            val calleeReference = when (call) {
+                                is FirFunctionCall -> call.calleeReference
+                                is FirDelegatedConstructorCall -> call.calleeReference
+                                else -> throw IllegalArgumentException("Unsupported call: ${call.render()}")
+                            } as? FirResolvedNamedReference
+                            val function = (calleeReference?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
                             val valueParameters = function?.valueParameters
+
                             if (valueParameters != null) {
-                                for ((argument, parameter) in argumentMapping) {
-                                    val argumentExpression = visitor.convertToIrExpression(argument)
-                                    putValueArgument(valueParameters.indexOf(parameter), argumentExpression)
-                                }
-                                return this
+                                return applyArgumentsWithReorderingIfNeeded(argumentMapping, valueParameters)
                             }
                         }
                         for ((index, argument) in call.arguments.withIndex()) {
@@ -317,6 +349,51 @@ internal class CallAndReferenceGenerator(
         }
     }
 
+    private fun IrCallWithIndexedArgumentsBase.applyArgumentsWithReorderingIfNeeded(
+        argumentMapping: Map<FirExpression, FirValueParameter>,
+        valueParameters: List<FirValueParameter>,
+    ): IrExpressionBase {
+        if (needArgumentReordering(argumentMapping.values, valueParameters)) {
+            return IrBlockImpl(startOffset, endOffset, type, IrStatementOrigin.ARGUMENTS_REORDERING_FOR_CALL).apply {
+                for ((argument, parameter) in argumentMapping) {
+                    val parameterIndex = valueParameters.indexOf(parameter)
+                    val irArgument = visitor.convertToIrExpression(argument)
+                    if (irArgument.hasNoSideEffects()) {
+                        putValueArgument(parameterIndex, irArgument)
+                    } else {
+                        val tempVar = declarationStorage.declareTemporaryVariable(irArgument, parameter.name.asString()).apply {
+                            parent = conversionScope.parentFromStack()
+                        }
+                        this.statements.add(tempVar)
+                        putValueArgument(parameterIndex, IrGetValueImpl(startOffset, endOffset, tempVar.symbol, null))
+                    }
+                }
+                this.statements.add(this@applyArgumentsWithReorderingIfNeeded)
+            }
+        } else {
+            for ((argument, parameter) in argumentMapping) {
+                val argumentExpression = visitor.convertToIrExpression(argument)
+                putValueArgument(valueParameters.indexOf(parameter), argumentExpression)
+            }
+            return this
+        }
+    }
+
+    private fun needArgumentReordering(
+        parametersInActualOrder: Collection<FirValueParameter>,
+        valueParameters: List<FirValueParameter>
+    ): Boolean {
+        var lastValueParameterIndex = -1
+        for (parameter in parametersInActualOrder) {
+            val index = valueParameters.indexOf(parameter)
+            if (index < lastValueParameterIndex) {
+                return true
+            }
+            lastValueParameterIndex = index
+        }
+        return false
+    }
+
     private fun IrExpression.applyTypeArguments(access: FirQualifiedAccess): IrExpression {
         return when (this) {
             is IrMemberAccessExpressionBase -> {
@@ -336,77 +413,83 @@ internal class CallAndReferenceGenerator(
                     )
                 }
             }
+            is IrBlockImpl -> apply {
+                if (statements.isNotEmpty()) {
+                    val lastStatement = statements.last()
+                    if (lastStatement is IrExpression) {
+                        statements[statements.size - 1] = lastStatement.applyTypeArguments(access)
+                    }
+                }
+            }
             else -> this
         }
     }
 
-    private fun FirQualifiedAccess.findIrDispatchReceiver(): IrExpression? = findIrReceiver(isDispatch = true)
+    private fun FirQualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression: IrExpression?): IrExpression? =
+        findIrReceiver(explicitReceiverExpression, isDispatch = true)
 
-    private fun FirQualifiedAccess.findIrExtensionReceiver(): IrExpression? = findIrReceiver(isDispatch = false)
+    private fun FirQualifiedAccess.findIrExtensionReceiver(explicitReceiverExpression: IrExpression?): IrExpression? =
+        findIrReceiver(explicitReceiverExpression, isDispatch = false)
 
-    private fun FirQualifiedAccess.findIrReceiver(isDispatch: Boolean): IrExpression? {
+    private fun FirQualifiedAccess.findIrReceiver(explicitReceiverExpression: IrExpression?, isDispatch: Boolean): IrExpression? {
         val firReceiver = if (isDispatch) dispatchReceiver else extensionReceiver
+        if (firReceiver == explicitReceiver) {
+            // TODO: remove after fix of KT-35730 (temporary hack to prevent receiver duplication)
+            if (!isDispatch && dispatchReceiver is FirNoReceiverExpression) {
+                return visitor.convertToIrExpression(firReceiver)
+            }
+            return explicitReceiverExpression
+        }
         if (firReceiver is FirResolvedQualifier) {
             return convertToGetObject(firReceiver, callableReferenceMode = this is FirCallableReferenceAccess)
         }
         return firReceiver.takeIf { it !is FirNoReceiverExpression }?.let { visitor.convertToIrExpression(it) }
-            ?: explicitReceiver?.let {
-                if (it is FirResolvedQualifier) {
-                    return convertToGetObject(it, callableReferenceMode = this is FirCallableReferenceAccess)
-                }
-                visitor.convertToIrExpression(it)
-            }
+            ?: explicitReceiverExpression
             ?: run {
-                // Object case
-                val callableReference = calleeReference as? FirResolvedNamedReference
-                val ownerClassId = (callableReference?.resolvedSymbol as? FirCallableSymbol<*>)?.callableId?.classId
-                val ownerClassSymbol =
-                    ownerClassId?.takeUnless { it.isLocal }?.let { session.firSymbolProvider.getClassLikeSymbolByFqName(it) }
-                val firClass = (ownerClassSymbol?.fir as? FirClass)?.takeIf {
-                    it is FirAnonymousObject || it is FirRegularClass && it.classKind == ClassKind.OBJECT
-                }
-                firClass?.convertWithOffsets { startOffset, endOffset ->
-                    val irClass = classifierStorage.getCachedIrClass(firClass)!!
-                    IrGetObjectValueImpl(startOffset, endOffset, irClass.defaultType, irClass.symbol)
-                }
+                if (this is FirCallableReferenceAccess) return null
+                val name = if (isDispatch) "Dispatch" else "Extension"
+                throw AssertionError(
+                    "$name receiver expected: ${render()} to ${calleeReference.render()}"
+                )
             }
-        // TODO: uncomment after fixing KT-35730
-//            ?: run {
-//                val name = if (isDispatch) "Dispatch" else "Extension"
-//                throw AssertionError(
-//                    "$name receiver expected: ${render()} to ${calleeReference.render()}"
-//                )
-//            }
     }
 
-    private fun IrExpression.applyReceivers(qualifiedAccess: FirQualifiedAccess): IrExpression {
+    private fun IrExpression.applyReceivers(qualifiedAccess: FirQualifiedAccess, explicitReceiverExpression: IrExpression?): IrExpression {
         return when (this) {
             is IrCallWithIndexedArgumentsBase -> {
                 val ownerFunction = symbol.owner as? IrFunction
                 if (ownerFunction?.dispatchReceiverParameter != null) {
-                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver()
+                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression)
                 }
                 if (ownerFunction?.extensionReceiverParameter != null) {
-                    extensionReceiver = qualifiedAccess.findIrExtensionReceiver()
+                    extensionReceiver = qualifiedAccess.findIrExtensionReceiver(explicitReceiverExpression)
                 }
                 this
             }
             is IrNoArgumentsCallableReferenceBase -> {
                 val ownerPropertyGetter = (symbol.owner as? IrProperty)?.getter
                 if (ownerPropertyGetter?.dispatchReceiverParameter != null) {
-                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver()
+                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression)
                 }
                 if (ownerPropertyGetter?.extensionReceiverParameter != null) {
-                    extensionReceiver = qualifiedAccess.findIrExtensionReceiver()
+                    extensionReceiver = qualifiedAccess.findIrExtensionReceiver(explicitReceiverExpression)
                 }
                 this
             }
             is IrFieldExpressionBase -> {
                 val ownerField = symbol.owner
                 if (!ownerField.isStatic) {
-                    receiver = qualifiedAccess.findIrDispatchReceiver()
+                    receiver = qualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression)
                 }
                 this
+            }
+            is IrBlockImpl -> apply {
+                if (statements.isNotEmpty()) {
+                    val lastStatement = statements.last()
+                    if (lastStatement is IrExpression) {
+                        statements[statements.size - 1] = lastStatement.applyReceivers(qualifiedAccess, explicitReceiverExpression)
+                    }
+                }
             }
             else -> this
         }
@@ -440,3 +523,4 @@ internal class CallAndReferenceGenerator(
         )
     }
 }
+

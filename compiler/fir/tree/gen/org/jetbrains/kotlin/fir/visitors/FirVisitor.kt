@@ -23,7 +23,9 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousInitializer
 import org.jetbrains.kotlin.fir.declarations.FirTypedDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
@@ -120,6 +122,8 @@ import org.jetbrains.kotlin.fir.types.FirResolvedFunctionTypeRef
 import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
 import org.jetbrains.kotlin.fir.types.FirComposedSuperTypeRef
 import org.jetbrains.kotlin.fir.contracts.FirContractDescription
+import org.jetbrains.kotlin.fir.contracts.FirRawContractDescription
+import org.jetbrains.kotlin.fir.contracts.FirResolvedContractDescription
 
 /*
  * This file was generated automatically
@@ -163,7 +167,11 @@ abstract class FirVisitor<out R, in D> {
 
     open fun <F : FirCallableDeclaration<F>> visitCallableDeclaration(callableDeclaration: FirCallableDeclaration<F>, data: D): R  = visitElement(callableDeclaration, data)
 
+    open fun visitTypeParameterRef(typeParameterRef: FirTypeParameterRef, data: D): R  = visitElement(typeParameterRef, data)
+
     open fun visitTypeParameter(typeParameter: FirTypeParameter, data: D): R  = visitElement(typeParameter, data)
+
+    open fun visitTypeParameterRefsOwner(typeParameterRefsOwner: FirTypeParameterRefsOwner, data: D): R  = visitElement(typeParameterRefsOwner, data)
 
     open fun visitTypeParametersOwner(typeParametersOwner: FirTypeParametersOwner, data: D): R  = visitElement(typeParametersOwner, data)
 
@@ -356,5 +364,9 @@ abstract class FirVisitor<out R, in D> {
     open fun visitComposedSuperTypeRef(composedSuperTypeRef: FirComposedSuperTypeRef, data: D): R  = visitElement(composedSuperTypeRef, data)
 
     open fun visitContractDescription(contractDescription: FirContractDescription, data: D): R  = visitElement(contractDescription, data)
+
+    open fun visitRawContractDescription(rawContractDescription: FirRawContractDescription, data: D): R  = visitElement(rawContractDescription, data)
+
+    open fun visitResolvedContractDescription(resolvedContractDescription: FirResolvedContractDescription, data: D): R  = visitElement(resolvedContractDescription, data)
 
 }

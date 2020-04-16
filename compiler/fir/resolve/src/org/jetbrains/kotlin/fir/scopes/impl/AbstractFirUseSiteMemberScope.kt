@@ -11,10 +11,8 @@ import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.declarations.builder.FirSimpleFunctionBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.FirValueParameterBuilder
-import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
-import org.jetbrains.kotlin.fir.declarations.impl.FirSimpleFunctionImpl
-import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.FirOverrideChecker
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -118,12 +116,12 @@ abstract class AbstractFirUseSiteMemberScope(
             isVararg = parameter.isVararg
         }
 
+    override fun processClassifiersByNameWithSubstitution(name: Name, processor: (FirClassifierSymbol<*>, ConeSubstitutor) -> Unit) {
+        declaredMemberScope.processClassifiersByNameWithSubstitution(name, processor)
+        superTypesScope.processClassifiersByNameWithSubstitution(name, processor)
+    }
 
-    override fun processClassifiersByName(
-        name: Name,
-        processor: (FirClassifierSymbol<*>) -> Unit
-    ) {
-        declaredMemberScope.processClassifiersByName(name, processor)
-        superTypesScope.processClassifiersByName(name, processor)
+    override fun processDeclaredConstructors(processor: (FirConstructorSymbol) -> Unit) {
+        declaredMemberScope.processDeclaredConstructors(processor)
     }
 }

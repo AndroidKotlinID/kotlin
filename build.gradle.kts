@@ -28,7 +28,7 @@ buildscript {
         bootstrapCompilerClasspath(kotlin("compiler-embeddable", bootstrapKotlinVersion))
 
         classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.17")
-        classpath("com.gradle.publish:plugin-publish-plugin:0.9.7")
+        classpath("com.gradle.publish:plugin-publish-plugin:0.11.0")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
     }
@@ -54,9 +54,7 @@ pill {
 }
 
 val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild
-val includeStdlibJsIr by extra(
-    findProperty("include.stdlib.js.ir")?.let { it.toString().toBoolean() } ?: isTeamcityBuild
-)
+val includeStdlibJsIr by extra(project.kotlinBuildProperties.includeStdlibJsIr)
 
 val configuredJdks: List<JdkId> =
     getConfiguredJdks().also {
@@ -175,13 +173,15 @@ extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
 extra["versions.completion-ranking-kotlin"] = "0.1.2"
 extra["versions.r8"] = "1.5.70"
-extra["versions.kotlinx-collections-immutable"] = "0.3.1"
+val immutablesVersion = "0.3.1"
+extra["versions.kotlinx-collections-immutable"] = immutablesVersion
+extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
 
 // NOTE: please, also change KTOR_NAME in pathUtil.kt and all versions in corresponding jar names in daemon tests.
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.4-M2-dev-15076"
+    extra["versions.kotlin-native"] = "1.4-M2-dev-15123"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
@@ -327,7 +327,7 @@ fun Task.listConfigurationContents(configName: String) {
 
 val defaultJvmTarget = "1.8"
 val defaultJavaHome = jdkPath(defaultJvmTarget)
-val ignoreTestFailures by extra(project.findProperty("ignoreTestFailures")?.toString()?.toBoolean() ?: project.hasProperty("teamcity"))
+val ignoreTestFailures by extra(project.kotlinBuildProperties.ignoreTestFailures)
 
 allprojects {
 
@@ -455,7 +455,7 @@ allprojects {
 
         // Aggregate task for build related checks
         tasks.register("checkBuild")
-        
+
         apply(from = "$rootDir/gradle/cacheRedirector.gradle.kts")
     }
 }
@@ -714,7 +714,6 @@ tasks {
         dependsOn("dist")
         dependsOn(
             ":kotlin-annotation-processing:test",
-            ":kotlin-source-sections-compiler-plugin:test",
             ":kotlin-allopen-compiler-plugin:test",
             ":kotlin-noarg-compiler-plugin:test",
             ":kotlin-sam-with-receiver-compiler-plugin:test",
@@ -802,18 +801,15 @@ val zipPlugin by task<Zip> {
     }
     val destPath = project.findProperty("pluginZipPath") as String?
     val dest = File(destPath ?: "$buildDir/kotlin-plugin.zip")
-    destinationDir = dest.parentFile
-    archiveName = dest.name
-    doFirst {
-        if (destPath == null) throw GradleException("Specify target zip path with 'pluginZipPath' property")
-    }
+    destinationDirectory.set(dest.parentFile)
+    archiveFileName.set(dest.name)
 
     from(src)
     into("Kotlin")
     setExecutablePermissions()
 
     doLast {
-        logger.lifecycle("Plugin artifacts packed to $archivePath")
+        logger.lifecycle("Plugin artifacts packed to $archiveFile")
     }
 }
 

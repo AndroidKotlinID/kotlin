@@ -126,7 +126,9 @@ class FirCallCompletionResultsWriterTransformer(
                 resolvedSymbol = calleeReference.candidateSymbol
                 inferredTypeArguments.addAll(computeTypeArgumentTypes(calleeReference.candidate))
             },
-        ).compose()
+        ).transformDispatchReceiver(StoreReceiver, subCandidate.dispatchReceiverExpression())
+            .transformExtensionReceiver(StoreReceiver, subCandidate.extensionReceiverExpression())
+            .compose()
     }
 
     override fun transformVariableAssignment(
@@ -135,6 +137,7 @@ class FirCallCompletionResultsWriterTransformer(
     ): CompositeTransformResult<FirStatement> {
         val calleeReference = variableAssignment.calleeReference as? FirNamedReferenceWithCandidate
             ?: return variableAssignment.compose()
+        val typeArguments = computeTypeArguments(variableAssignment, calleeReference.candidate)
         return variableAssignment.transformCalleeReference(
             StoreCalleeReference,
             buildResolvedNamedReference {
@@ -142,7 +145,9 @@ class FirCallCompletionResultsWriterTransformer(
                 name = calleeReference.name
                 resolvedSymbol = calleeReference.candidateSymbol
             },
-        ).compose()
+        ).apply {
+            replaceTypeArguments(typeArguments)
+        }.compose()
     }
 
     override fun transformFunctionCall(functionCall: FirFunctionCall, data: ExpectedArgumentType?): CompositeTransformResult<FirStatement> {
@@ -255,10 +260,9 @@ class FirCallCompletionResultsWriterTransformer(
 
     private fun Candidate.createArgumentsMapping(): ExpectedArgumentType? {
         return argumentMapping?.map { (argument, valueParameter) ->
-                val expectedType = valueParameter.returnTypeRef.substitute(this)
-                argument.unwrapArgument() to expectedType
-            }
-            ?.toMap()?.toExpectedType()
+            val expectedType = valueParameter.returnTypeRef.substitute(this)
+            argument.unwrapArgument() to expectedType
+        }?.toMap()?.toExpectedType()
     }
 
     override fun transformDelegatedConstructorCall(
@@ -267,8 +271,12 @@ class FirCallCompletionResultsWriterTransformer(
     ): CompositeTransformResult<FirStatement> {
         val calleeReference =
             delegatedConstructorCall.calleeReference as? FirNamedReferenceWithCandidate ?: return delegatedConstructorCall.compose()
+        val subCandidate = calleeReference.candidate
 
         delegatedConstructorCall.argumentList.transformArguments(this, calleeReference.candidate.createArgumentsMapping())
+        subCandidate.argumentMapping?.let {
+            delegatedConstructorCall.replaceArgumentList(buildResolvedArgumentList(it))
+        }
         return delegatedConstructorCall.transformCalleeReference(
             StoreCalleeReference,
             buildResolvedNamedReference {

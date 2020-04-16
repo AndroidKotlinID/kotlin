@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirConstructor
 import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.FirVariable
+import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
 import org.jetbrains.kotlin.fir.expressions.FirConstExpression
 import org.jetbrains.kotlin.fir.expressions.FirConstKind
 import org.jetbrains.kotlin.fir.psi
@@ -26,11 +27,18 @@ import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
+import org.jetbrains.kotlin.ir.descriptors.WrappedReceiverParameterDescriptor
+import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrErrorType
+import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
+import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffsetSkippingComments
@@ -92,15 +100,15 @@ fun FirClassifierSymbol<*>.toSymbol(
 fun FirReference.toSymbol(
     session: FirSession,
     classifierStorage: Fir2IrClassifierStorage,
-    declarationStorage: Fir2IrDeclarationStorage
+    declarationStorage: Fir2IrDeclarationStorage,
+    conversionScope: Fir2IrConversionScope,
+    preferGetter: Boolean = true
 ): IrSymbol? {
     return when (this) {
         is FirResolvedNamedReference -> {
             when (val resolvedSymbol = resolvedSymbol) {
                 is FirCallableSymbol<*> -> {
-                    val originalCallableSymbol =
-                        resolvedSymbol.overriddenSymbol?.takeIf { it.callableId == resolvedSymbol.callableId } ?: resolvedSymbol
-                    originalCallableSymbol.toSymbol(declarationStorage)
+                    resolvedSymbol.deepestMatchingOverriddenSymbol().toSymbol(declarationStorage, preferGetter)
                 }
                 is FirClassifierSymbol<*> -> {
                     resolvedSymbol.toSymbol(session, classifierStorage)
@@ -114,6 +122,10 @@ fun FirReference.toSymbol(
             when (val boundSymbol = boundSymbol) {
                 is FirClassSymbol<*> -> classifierStorage.getIrClassSymbol(boundSymbol).owner.thisReceiver?.symbol
                 is FirFunctionSymbol -> declarationStorage.getIrFunctionSymbol(boundSymbol).owner.extensionReceiverParameter?.symbol
+                is FirPropertySymbol -> {
+                    val property = declarationStorage.getIrPropertyOrFieldSymbol(boundSymbol).owner as? IrProperty
+                    property?.let { conversionScope.parentAccessorOfPropertyFromStack(it) }?.symbol
+                }
                 else -> null
             }
         }
@@ -121,8 +133,17 @@ fun FirReference.toSymbol(
     }
 }
 
-private fun FirCallableSymbol<*>.toSymbol(declarationStorage: Fir2IrDeclarationStorage): IrSymbol? = when (this) {
+private fun FirCallableSymbol<*>.toSymbol(declarationStorage: Fir2IrDeclarationStorage, preferGetter: Boolean): IrSymbol? = when (this) {
     is FirFunctionSymbol<*> -> declarationStorage.getIrFunctionSymbol(this)
+    is SyntheticPropertySymbol -> {
+        (fir as? FirSyntheticProperty)?.let { syntheticProperty ->
+            if (preferGetter) {
+                syntheticProperty.getter.delegate.symbol.toSymbol(declarationStorage, preferGetter)
+            } else {
+                syntheticProperty.setter!!.delegate.symbol.toSymbol(declarationStorage, preferGetter)
+            }
+        } ?: if (fir.isLocal) declarationStorage.getIrValueSymbol(this) else declarationStorage.getIrPropertyOrFieldSymbol(this)
+    }
     is FirPropertySymbol -> {
         if (fir.isLocal) declarationStorage.getIrValueSymbol(this) else declarationStorage.getIrPropertyOrFieldSymbol(this)
     }
@@ -139,6 +160,30 @@ fun FirConstExpression<*>.getIrConstKind(): IrConstKind<*> = when (kind) {
         type.getApproximatedType().toConstKind()!!.toIrConstKind()
     }
     else -> kind.toIrConstKind()
+}
+
+fun <T> FirConstExpression<T>.toIrConst(irType: IrType): IrConst<T> {
+    return convertWithOffsets { startOffset, endOffset ->
+        @Suppress("UNCHECKED_CAST")
+        val kind = getIrConstKind() as IrConstKind<T>
+
+        @Suppress("UNCHECKED_CAST")
+        val value = (value as? Long)?.let {
+            when (kind) {
+                IrConstKind.Byte -> it.toByte()
+                IrConstKind.Short -> it.toShort()
+                IrConstKind.Int -> it.toInt()
+                IrConstKind.Float -> it.toFloat()
+                IrConstKind.Double -> it.toDouble()
+                else -> it
+            }
+        } as T ?: value
+        IrConstImpl(
+            startOffset, endOffset,
+            irType,
+            kind, value
+        )
+    }
 }
 
 private fun FirConstKind<*>.toIrConstKind(): IrConstKind<*> = when (this) {
@@ -202,6 +247,11 @@ internal tailrec fun FirCallableSymbol<*>.deepestOverriddenSymbol(): FirCallable
     return overriddenSymbol.deepestOverriddenSymbol()
 }
 
+internal tailrec fun FirCallableSymbol<*>.deepestMatchingOverriddenSymbol(root: FirCallableSymbol<*> = this): FirCallableSymbol<*> {
+    val overriddenSymbol = overriddenSymbol?.takeIf { it.callableId == root.callableId } ?: return this
+    return overriddenSymbol.deepestMatchingOverriddenSymbol(this)
+}
+
 private val nameToOperationConventionOrigin = mutableMapOf(
     OperatorNameConventions.PLUS to IrStatementOrigin.PLUS,
     OperatorNameConventions.MINUS to IrStatementOrigin.MINUS,
@@ -239,3 +289,26 @@ internal fun FirReference.statementOrigin(): IrStatementOrigin? {
 
 fun FirClass<*>.getPrimaryConstructorIfAny(): FirConstructor? =
     declarations.filterIsInstance<FirConstructor>().firstOrNull()?.takeIf { it.isPrimary }
+
+internal fun IrDeclarationParent.declareThisReceiverParameter(
+    symbolTable: SymbolTable,
+    thisType: IrType,
+    thisOrigin: IrDeclarationOrigin,
+    startOffset: Int = this.startOffset,
+    endOffset: Int = this.endOffset
+): IrValueParameter {
+    val receiverDescriptor = WrappedReceiverParameterDescriptor()
+    return symbolTable.declareValueParameter(
+        startOffset, endOffset, thisOrigin, receiverDescriptor, thisType
+    ) { symbol ->
+        IrValueParameterImpl(
+            startOffset, endOffset, thisOrigin, symbol,
+            Name.special("<this>"), -1, thisType,
+            varargElementType = null, isCrossinline = false, isNoinline = false
+        ).apply {
+            this.parent = this@declareThisReceiverParameter
+            receiverDescriptor.bind(this)
+        }
+    }
+}
+

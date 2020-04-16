@@ -95,7 +95,6 @@ val distLibraryProjects = listOfNotNull(
     ":kotlin-scripting-jvm",
     ":kotlin-scripting-js",
     ":js:js.engines",
-    ":kotlin-source-sections-compiler-plugin",
     ":kotlin-test:kotlin-test-junit",
     ":kotlin-test:kotlin-test-junit5",
     ":kotlin-test:kotlin-test-jvm",
@@ -198,6 +197,7 @@ dependencies {
     fatJarContents(commonDep("com.google.code.findbugs", "jsr305"))
     fatJarContents(commonDep("io.javaslang", "javaslang"))
     fatJarContents(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-core")) { isTransitive = false }
+    fatJarContents(commonDep("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm")) { isTransitive = false }
 
     fatJarContents(intellijCoreDep()) { includeJars("intellij-core") }
     fatJarContents(intellijDep()) { includeJars("jna-platform") }

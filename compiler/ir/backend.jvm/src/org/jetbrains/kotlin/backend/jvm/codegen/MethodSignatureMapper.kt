@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.ir.isMethodOfAny
 import org.jetbrains.kotlin.backend.common.ir.isTopLevel
 import org.jetbrains.kotlin.backend.common.lower.allOverridden
 import org.jetbrains.kotlin.backend.common.lower.parentsWithSelf
@@ -12,6 +13,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.ir.getJvmNameFromAnnotation
 import org.jetbrains.kotlin.backend.jvm.ir.hasJvmDefault
+import org.jetbrains.kotlin.backend.jvm.ir.isCompiledToJvmDefault
 import org.jetbrains.kotlin.backend.jvm.ir.propertyIfAccessor
 import org.jetbrains.kotlin.backend.jvm.lower.*
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
@@ -159,7 +161,9 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
         }
 
         val typeMappingModeFromAnnotation =
-            typeSystem.extractTypeMappingModeFromAnnotation(declaration.suppressWildcardsMode(), returnType, isAnnotationMethod)
+            typeSystem.extractTypeMappingModeFromAnnotation(
+                declaration.suppressWildcardsMode(), returnType, isAnnotationMethod, mapTypeAliases = false
+            )
         if (typeMappingModeFromAnnotation != null) {
             return typeMapper.mapType(returnType, typeMappingModeFromAnnotation, sw)
         }
@@ -179,8 +183,8 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
     private fun forceBoxedReturnType(function: IrFunction): Boolean {
         if (isBoxMethodForInlineClass(function)) return true
 
-        return isJvmPrimitive(function.returnType) &&
-                function is IrSimpleFunction && function.allOverridden().any { !isJvmPrimitive(it.returnType) }
+        return isJvmPrimitiveOrInlineClass(function.returnType) &&
+                function is IrSimpleFunction && function.allOverridden().any { !isJvmPrimitiveOrInlineClass(it.returnType) }
     }
 
     private fun isBoxMethodForInlineClass(function: IrFunction): Boolean =
@@ -188,10 +192,8 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
                 function.origin == JvmLoweredDeclarationOrigin.SYNTHETIC_INLINE_CLASS_MEMBER &&
                 function.name.asString() == "box-impl"
 
-    private fun isJvmPrimitive(type: IrType): Boolean {
-        if (type.isPrimitiveType()) return true
-        return type.getClass()?.isInline == true && AsmUtil.isPrimitive(typeMapper.mapType(type))
-    }
+    private fun isJvmPrimitiveOrInlineClass(type: IrType): Boolean =
+        type.isPrimitiveType() || type.getClass()?.isInline == true
 
     fun mapSignatureSkipGeneric(function: IrFunction): JvmMethodSignature =
         mapSignature(function, true)
@@ -259,7 +261,9 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
         }
 
         val mode = with(typeSystem) {
-            extractTypeMappingModeFromAnnotation(declaration.suppressWildcardsMode(), type, isForAnnotationParameter = false)
+            extractTypeMappingModeFromAnnotation(
+                declaration.suppressWildcardsMode(), type, isForAnnotationParameter = false, mapTypeAliases = false
+            )
                 ?: if (declaration.isMethodWithDeclarationSiteWildcards && type.argumentsCount() != 0) {
                     TypeMappingMode.GENERIC_ARGUMENT // Render all wildcards
                 } else {
@@ -354,7 +358,11 @@ class MethodSignatureMapper(private val context: JvmBackendContext) {
                 current = classCallable
                 continue
             }
-            if (isSuperCall && !current.hasJvmDefault() && !current.parentAsClass.isInterface) {
+            if (isSuperCall && !current.parentAsClass.isInterface &&
+                current.resolveFakeOverride()?.run {
+                    isMethodOfAny() || !isCompiledToJvmDefault(context.state.jvmDefaultMode)
+                } == true
+            ) {
                 return current
             }
 

@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.klib
 
+import com.intellij.ide.highlighter.ArchiveFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileFactory
@@ -18,6 +19,7 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentProvider
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.KotlinLanguage
+import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.library.*
 import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
 import org.jetbrains.kotlin.platform.TargetPlatform
@@ -34,9 +36,9 @@ import java.util.*
 fun VirtualFile.isKlibLibraryRootForPlatform(targetPlatform: TargetPlatform): Boolean {
     // The virtual file for a library packed in a ZIP file will have path like "/some/path/to/the/file.klib!/",
     // and therefore will be recognized by VFS as a directory (isDirectory == true).
-    // So, first, let's check the extension.
-    val extension = extension
-    if (!extension.isNullOrEmpty() && extension != KLIB_FILE_EXTENSION) return false
+    // So, first, let's check the file type and file extension.
+    if ((fileType == ArchiveFileType.INSTANCE && extension != KLIB_FILE_EXTENSION) || !isDirectory)
+        return false
 
     // run check for library root too
     // this is necessary to recognize old style KLIBs that do not have components, and report tem to user appropriately
@@ -105,7 +107,8 @@ fun KotlinLibrary.createKlibPackageFragmentProvider(
     storageManager: StorageManager,
     metadataModuleDescriptorFactory: KlibMetadataModuleDescriptorFactory,
     languageVersionSettings: LanguageVersionSettings,
-    moduleDescriptor: ModuleDescriptor
+    moduleDescriptor: ModuleDescriptor,
+    lookupTracker: LookupTracker
 ): PackageFragmentProvider? {
     if (!getCompatibilityInfo().isCompatible) return null
 
@@ -118,6 +121,7 @@ fun KotlinLibrary.createKlibPackageFragmentProvider(
         storageManager = storageManager,
         moduleDescriptor = moduleDescriptor,
         configuration = CompilerDeserializationConfiguration(languageVersionSettings),
-        compositePackageFragmentAddend = null
+        compositePackageFragmentAddend = null,
+        lookupTracker = lookupTracker
     )
 }

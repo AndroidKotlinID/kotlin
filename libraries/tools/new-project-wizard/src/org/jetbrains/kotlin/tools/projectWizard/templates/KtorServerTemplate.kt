@@ -21,9 +21,13 @@ import org.jetbrains.kotlin.tools.projectWizard.settings.DisplayableSettingItem
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.DefaultRepository
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.Repositories
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.SourcesetType
-import org.jetbrains.kotlin.tools.projectWizard.settings.version.Version
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.InterceptionPoint
 import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
+import org.jetbrains.kotlin.tools.projectWizard.Versions
+import org.jetbrains.kotlin.tools.projectWizard.WizardGradleRunConfiguration
+import org.jetbrains.kotlin.tools.projectWizard.WizardRunConfiguration
+import org.jetbrains.kotlin.tools.projectWizard.core.Reader
+import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.ModuleKind
 
 class KtorServerTemplate : Template() {
     override val title: String = KotlinNewProjectWizardBundle.message("module.template.ktor.server.title")
@@ -40,7 +44,7 @@ class KtorServerTemplate : Template() {
                 +ktorArtifactDependency("ktor-html-builder")
                 +ArtifactBasedLibraryDependencyIR(
                     MavenArtifact(DefaultRepository.JCENTER, "org.jetbrains.kotlinx", "kotlinx-html-jvm"),
-                    Version.fromString("0.6.12"),
+                    Versions.KOTLINX.KOTLINX_HTML,
                     DependencyType.MAIN
                 )
             }
@@ -52,10 +56,14 @@ class KtorServerTemplate : Template() {
         +runTaskIrs(mainClass = "ServerKt")
     }
 
+    override fun Reader.createRunConfigurations(module: ModuleIR): List<WizardRunConfiguration> = buildList {
+        +WizardGradleRunConfiguration("Run", "run", emptyList())
+    }
+
     override fun updateTargetIr(module: ModuleIR, targetConfigurationIR: TargetConfigurationIR): TargetConfigurationIR =
         targetConfigurationIR.addWithJavaIntoJvmTarget()
 
-    override fun Writer.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> = listOf(
+    override fun Reader.getFileTemplates(module: ModuleIR): List<FileTemplateDescriptorWithPath> = listOf(
         FileTemplateDescriptor("$id/server.kt.vm", "server.kt".asPath()) asSrcOf SourcesetType.main
     )
 
@@ -74,7 +82,7 @@ class KtorServerTemplate : Template() {
 
 private fun ktorArtifactDependency(@NonNls name: String) = ArtifactBasedLibraryDependencyIR(
     MavenArtifact(Repositories.KTOR_BINTRAY, "io.ktor", name),
-    Version.fromString("1.2.6"),
+    Versions.KTOR,
     DependencyType.MAIN
 )
 

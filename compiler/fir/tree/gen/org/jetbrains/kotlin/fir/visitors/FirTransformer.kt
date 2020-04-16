@@ -23,7 +23,9 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousInitializer
 import org.jetbrains.kotlin.fir.declarations.FirTypedDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
@@ -120,6 +122,8 @@ import org.jetbrains.kotlin.fir.types.FirResolvedFunctionTypeRef
 import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
 import org.jetbrains.kotlin.fir.types.FirComposedSuperTypeRef
 import org.jetbrains.kotlin.fir.contracts.FirContractDescription
+import org.jetbrains.kotlin.fir.contracts.FirRawContractDescription
+import org.jetbrains.kotlin.fir.contracts.FirResolvedContractDescription
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 
 /*
@@ -199,8 +203,16 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformElement(callableDeclaration, data)
     }
 
+    open fun transformTypeParameterRef(typeParameterRef: FirTypeParameterRef, data: D): CompositeTransformResult<FirTypeParameterRef> {
+        return transformElement(typeParameterRef, data)
+    }
+
     open fun transformTypeParameter(typeParameter: FirTypeParameter, data: D): CompositeTransformResult<FirDeclaration> {
         return transformElement(typeParameter, data)
+    }
+
+    open fun transformTypeParameterRefsOwner(typeParameterRefsOwner: FirTypeParameterRefsOwner, data: D): CompositeTransformResult<FirTypeParameterRefsOwner> {
+        return transformElement(typeParameterRefsOwner, data)
     }
 
     open fun transformTypeParametersOwner(typeParametersOwner: FirTypeParametersOwner, data: D): CompositeTransformResult<FirTypeParametersOwner> {
@@ -587,6 +599,14 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformElement(contractDescription, data)
     }
 
+    open fun transformRawContractDescription(rawContractDescription: FirRawContractDescription, data: D): CompositeTransformResult<FirContractDescription> {
+        return transformElement(rawContractDescription, data)
+    }
+
+    open fun transformResolvedContractDescription(resolvedContractDescription: FirResolvedContractDescription, data: D): CompositeTransformResult<FirContractDescription> {
+        return transformElement(resolvedContractDescription, data)
+    }
+
     final override fun visitElement(element: FirElement, data: D): CompositeTransformResult<FirElement> {
         return transformElement(element, data)
     }
@@ -659,8 +679,16 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
         return transformCallableDeclaration(callableDeclaration, data)
     }
 
+    final override fun visitTypeParameterRef(typeParameterRef: FirTypeParameterRef, data: D): CompositeTransformResult<FirTypeParameterRef> {
+        return transformTypeParameterRef(typeParameterRef, data)
+    }
+
     final override fun visitTypeParameter(typeParameter: FirTypeParameter, data: D): CompositeTransformResult<FirDeclaration> {
         return transformTypeParameter(typeParameter, data)
+    }
+
+    final override fun visitTypeParameterRefsOwner(typeParameterRefsOwner: FirTypeParameterRefsOwner, data: D): CompositeTransformResult<FirTypeParameterRefsOwner> {
+        return transformTypeParameterRefsOwner(typeParameterRefsOwner, data)
     }
 
     final override fun visitTypeParametersOwner(typeParametersOwner: FirTypeParametersOwner, data: D): CompositeTransformResult<FirTypeParametersOwner> {
@@ -1045,6 +1073,14 @@ abstract class FirTransformer<in D> : FirVisitor<CompositeTransformResult<FirEle
 
     final override fun visitContractDescription(contractDescription: FirContractDescription, data: D): CompositeTransformResult<FirContractDescription> {
         return transformContractDescription(contractDescription, data)
+    }
+
+    final override fun visitRawContractDescription(rawContractDescription: FirRawContractDescription, data: D): CompositeTransformResult<FirContractDescription> {
+        return transformRawContractDescription(rawContractDescription, data)
+    }
+
+    final override fun visitResolvedContractDescription(resolvedContractDescription: FirResolvedContractDescription, data: D): CompositeTransformResult<FirContractDescription> {
+        return transformResolvedContractDescription(resolvedContractDescription, data)
     }
 
 }

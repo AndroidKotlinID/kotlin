@@ -907,6 +907,19 @@ public fun <T> Iterable<T>.reversed(): List<T> {
 }
 
 /**
+ * Randomly shuffles elements in this list in-place using the specified [random] instance as the source of randomness.
+ * 
+ * See: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm
+ */
+@SinceKotlin("1.3")
+public fun <T> MutableList<T>.shuffle(random: Random): Unit {
+    for (i in lastIndex downTo 1) {
+        val j = random.nextInt(i + 1)
+        this[j] = this.set(i, this[j])
+    }
+}
+
+/**
  * Sorts elements in the list in-place according to natural sort order of the value returned by specified [selector] function.
  * 
  * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.
@@ -1653,7 +1666,7 @@ public inline fun <T> Iterable<T>.forEach(action: (T) -> Unit): Unit {
 /**
  * Performs the given [action] on each element, providing sequential index with the element.
  * @param [action] function that takes the index of an element and the element itself
- * and performs the desired action on the element.
+ * and performs the action on the element.
  */
 public inline fun <T> Iterable<T>.forEachIndexed(action: (index: Int, T) -> Unit): Unit {
     var index = 0
@@ -1866,6 +1879,17 @@ public inline fun <T, C : Iterable<T>> C.onEach(action: (T) -> Unit): C {
 }
 
 /**
+ * Performs the given [action] on each element, providing sequential index with the element,
+ * and returns the collection itself afterwards.
+ * @param [action] function that takes the index of an element and the element itself
+ * and performs the action on the element.
+ */
+@SinceKotlin("1.4")
+public inline fun <T, C : Iterable<T>> C.onEachIndexed(action: (index: Int, T) -> Unit): C {
+    return apply { forEachIndexed(action) }
+}
+
+/**
  * Accumulates value starting with the first element and applying [operation] from left to right to current accumulator value and each element.
  * 
  * @sample samples.collections.Collections.Aggregates.reduce
@@ -2022,11 +2046,10 @@ public inline fun <S, T : S> List<T>.reduceRightOrNull(operation: (T, acc: S) ->
  * 
  * @param [operation] function that takes current accumulator value and an element, and calculates the next accumulator value.
  * 
- * @sample samples.collections.Collections.Aggregates.scan
+ * @sample samples.collections.Collections.Aggregates.runningFold
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
-public inline fun <T, R> Iterable<T>.scan(initial: R, operation: (acc: R, T) -> R): List<R> {
+@SinceKotlin("1.4")
+public inline fun <T, R> Iterable<T>.runningFold(initial: R, operation: (acc: R, T) -> R): List<R> {
     val estimatedSize = collectionSizeOrDefault(9)
     if (estimatedSize == 0) return listOf(initial)
     val result = ArrayList<R>(estimatedSize + 1).apply { add(initial) }
@@ -2048,11 +2071,10 @@ public inline fun <T, R> Iterable<T>.scan(initial: R, operation: (acc: R, T) -> 
  * @param [operation] function that takes the index of an element, current accumulator value
  * and the element itself, and calculates the next accumulator value.
  * 
- * @sample samples.collections.Collections.Aggregates.scan
+ * @sample samples.collections.Collections.Aggregates.runningFold
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
-public inline fun <T, R> Iterable<T>.scanIndexed(initial: R, operation: (index: Int, acc: R, T) -> R): List<R> {
+@SinceKotlin("1.4")
+public inline fun <T, R> Iterable<T>.runningFoldIndexed(initial: R, operation: (index: Int, acc: R, T) -> R): List<R> {
     val estimatedSize = collectionSizeOrDefault(9)
     if (estimatedSize == 0) return listOf(initial)
     val result = ArrayList<R>(estimatedSize + 1).apply { add(initial) }
@@ -2074,11 +2096,11 @@ public inline fun <T, R> Iterable<T>.scanIndexed(initial: R, operation: (index: 
  * 
  * @param [operation] function that takes current accumulator value and the element, and calculates the next accumulator value.
  * 
- * @sample samples.collections.Collections.Aggregates.scanReduce
+ * @sample samples.collections.Collections.Aggregates.runningReduce
  */
 @SinceKotlin("1.3")
 @ExperimentalStdlibApi
-public inline fun <S, T : S> Iterable<T>.scanReduce(operation: (acc: S, T) -> S): List<S> {
+public inline fun <S, T : S> Iterable<T>.runningReduce(operation: (acc: S, T) -> S): List<S> {
     val iterator = this.iterator()
     if (!iterator.hasNext()) return emptyList()
     var accumulator: S = iterator.next()
@@ -2100,11 +2122,10 @@ public inline fun <S, T : S> Iterable<T>.scanReduce(operation: (acc: S, T) -> S)
  * @param [operation] function that takes the index of an element, current accumulator value
  * and the element itself, and calculates the next accumulator value.
  * 
- * @sample samples.collections.Collections.Aggregates.scanReduce
+ * @sample samples.collections.Collections.Aggregates.runningReduce
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
-public inline fun <S, T : S> Iterable<T>.scanReduceIndexed(operation: (index: Int, acc: S, T) -> S): List<S> {
+@SinceKotlin("1.4")
+public inline fun <S, T : S> Iterable<T>.runningReduceIndexed(operation: (index: Int, acc: S, T) -> S): List<S> {
     val iterator = this.iterator()
     if (!iterator.hasNext()) return emptyList()
     var accumulator: S = iterator.next()
@@ -2115,6 +2136,55 @@ public inline fun <S, T : S> Iterable<T>.scanReduceIndexed(operation: (index: In
         result.add(accumulator)
     }
     return result
+}
+
+/**
+ * Returns a list containing successive accumulation values generated by applying [operation] from left to right
+ * to each element and current accumulator value that starts with [initial] value.
+ * 
+ * Note that `acc` value passed to [operation] function should not be mutated;
+ * otherwise it would affect the previous value in resulting list.
+ * 
+ * @param [operation] function that takes current accumulator value and an element, and calculates the next accumulator value.
+ * 
+ * @sample samples.collections.Collections.Aggregates.scan
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public inline fun <T, R> Iterable<T>.scan(initial: R, operation: (acc: R, T) -> R): List<R> {
+    return runningFold(initial, operation)
+}
+
+/**
+ * Returns a list containing successive accumulation values generated by applying [operation] from left to right
+ * to each element, its index in the original collection and current accumulator value that starts with [initial] value.
+ * 
+ * Note that `acc` value passed to [operation] function should not be mutated;
+ * otherwise it would affect the previous value in resulting list.
+ * 
+ * @param [operation] function that takes the index of an element, current accumulator value
+ * and the element itself, and calculates the next accumulator value.
+ * 
+ * @sample samples.collections.Collections.Aggregates.scan
+ */
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public inline fun <T, R> Iterable<T>.scanIndexed(initial: R, operation: (index: Int, acc: R, T) -> R): List<R> {
+    return runningFoldIndexed(initial, operation)
+}
+
+@Deprecated("Use runningReduce instead.", ReplaceWith("runningReduce(operation)"))
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public inline fun <S, T : S> Iterable<T>.scanReduce(operation: (acc: S, T) -> S): List<S> {
+    return runningReduce(operation)
+}
+
+@Deprecated("Use runningReduceIndexed instead.", ReplaceWith("runningReduceIndexed(operation)"))
+@SinceKotlin("1.3")
+@ExperimentalStdlibApi
+public inline fun <S, T : S> Iterable<T>.scanReduceIndexed(operation: (index: Int, acc: S, T) -> S): List<S> {
+    return runningReduceIndexed(operation)
 }
 
 /**

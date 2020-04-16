@@ -199,8 +199,9 @@ private class ConvertGettersAndSettersToPropertyStatefulProcessing(
 
     private fun KtParameter.rename(newName: String) {
         val renamer = RenamePsiElementProcessor.forElement(this)
+        val findReferences = findReferences(renamer)
         val usageInfos =
-            renamer.findReferences(this, false).mapNotNull { reference ->
+            findReferences.mapNotNull { reference ->
                 val element = reference.element
                 val isBackingField = element is KtNameReferenceExpression &&
                         element.text == KtTokens.FIELD_KEYWORD.value
