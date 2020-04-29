@@ -33,7 +33,7 @@ internal class ClassMemberGenerator(
 ) : Fir2IrComponents by components {
 
     private val fakeOverrideGenerator = FakeOverrideGenerator(
-        session, components.scopeSession, declarationStorage, conversionScope, fakeOverrideMode
+        session, components.scopeSession, classifierStorage, declarationStorage, conversionScope, fakeOverrideMode
     )
 
     private fun FirTypeRef.toIrType(): IrType = with(typeConverter) { toIrType() }
@@ -65,7 +65,7 @@ internal class ClassMemberGenerator(
             // Add synthetic members *before* fake override generations.
             // Otherwise, redundant members, e.g., synthetic toString _and_ fake override toString, will be added.
             if (irClass.isData && klass.getPrimaryConstructorIfAny() != null) {
-                processedCallableNames += DataClassMembersGenerator(components).generateDataClassMembers(irClass)
+                processedCallableNames += DataClassMembersGenerator(components).generateDataClassMembers(klass, irClass)
             }
             with(fakeOverrideGenerator) { irClass.addFakeOverrides(klass, processedCallableNames) }
             klass.declarations.forEach {
@@ -120,11 +120,25 @@ internal class ClassMemberGenerator(
                     irFunction.body = body
                 }
             } else if (irFunction !is IrConstructor) {
-                if (irFunction.origin == IrDeclarationOrigin.ENUM_CLASS_SPECIAL_MEMBER) {
-                    val kind = Fir2IrDeclarationStorage.ENUM_SYNTHETIC_NAMES.getValue(irFunction.name)
-                    irFunction.body = IrSyntheticBodyImpl(startOffset, endOffset, kind)
-                } else {
-                    irFunction.body = firFunction?.body?.let { visitor.convertToIrBlockBody(it) }
+                when {
+                    irFunction.origin == IrDeclarationOrigin.ENUM_CLASS_SPECIAL_MEMBER -> {
+                        val kind = Fir2IrDeclarationStorage.ENUM_SYNTHETIC_NAMES.getValue(irFunction.name)
+                        irFunction.body = IrSyntheticBodyImpl(startOffset, endOffset, kind)
+                    }
+                    irFunction.parent is IrClass && irFunction.parentAsClass.isData -> {
+                        val classId = firFunction?.symbol?.callableId?.classId
+                        when {
+                            DataClassMembersGenerator.isComponentN(irFunction) ->
+                                DataClassMembersGenerator(components).generateDataClassComponentBody(irFunction, classId!!)
+                            DataClassMembersGenerator.isCopy(irFunction) ->
+                                DataClassMembersGenerator(components).generateDataClassCopyBody(irFunction, classId!!)
+                            else ->
+                                irFunction.body = firFunction?.body?.let { visitor.convertToIrBlockBody(it) }
+                        }
+                    }
+                    else -> {
+                        irFunction.body = firFunction?.body?.let { visitor.convertToIrBlockBody(it) }
+                    }
                 }
             }
             if (irFunction !is IrConstructor || !irFunction.isPrimary) {

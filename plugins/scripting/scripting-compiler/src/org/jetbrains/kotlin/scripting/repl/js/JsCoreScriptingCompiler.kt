@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.ir.util.generateTypicalIrProviderList
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
-import org.jetbrains.kotlin.scripting.compiler.plugin.repl.ReplCodeAnalyzer
+import org.jetbrains.kotlin.scripting.compiler.plugin.repl.ReplCodeAnalyzerBase
 import org.jetbrains.kotlin.serialization.js.ModuleKind
 import kotlin.script.experimental.api.valueOr
 import kotlin.script.experimental.host.StringScriptSource
@@ -35,7 +35,7 @@ class JsCoreScriptingCompiler(
     private val nameTables: NameTables,
     private val symbolTable: SymbolTable,
     private val dependencyDescriptors: List<ModuleDescriptor>,
-    private val replState: ReplCodeAnalyzer.ResettableAnalyzerState = ReplCodeAnalyzer.ResettableAnalyzerState()
+    private val replState: ReplCodeAnalyzerBase.ResettableAnalyzerState = ReplCodeAnalyzerBase.ResettableAnalyzerState()
 ) {
     fun compile(codeLine: ReplCodeLine): ReplCompileResult {
         val snippet = codeLine.code
@@ -63,7 +63,7 @@ class JsCoreScriptingCompiler(
         val mangler = JsManglerDesc
         val signaturer = IdSignatureDescriptor(mangler)
         val psi2ir = Psi2IrTranslator(environment.configuration.languageVersionSettings, signaturer = signaturer)
-        val psi2irContext = psi2ir.createGeneratorContext(module, bindingContext, symbolTable)
+        val psi2irContext = psi2ir.createGeneratorContext(module, bindingContext, symbolTable = symbolTable)
         val providers = generateTypicalIrProviderList(module, psi2irContext.irBuiltIns, psi2irContext.symbolTable)
         val irModuleFragment = psi2ir.generateModuleFragment(psi2irContext, files, providers, null) // TODO: deserializer
 
@@ -91,6 +91,6 @@ class JsCoreScriptingCompiler(
 
         val code = generateJsCode(context, irModuleFragment, nameTables)
 
-        return createCompileResult(LineId(codeLine), code)
+        return createCompileResult(LineId(codeLine.no, 0, codeLine.hashCode()), code)
     }
 }

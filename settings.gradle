@@ -69,6 +69,7 @@ include ":kotlin-build-common",
         ":kotlin-daemon",
         ":kotlin-daemon-client",
         ":kotlin-daemon-client-new",
+        ":kotlin-daemon-tests",
         ":kotlin-preloader",
         ":kotlin-runner",
         ":compiler:container",
@@ -88,6 +89,7 @@ include ":kotlin-build-common",
         ":compiler:fir:fir2ir",
         ":compiler:fir:fir2ir:jvm-backend",
         ":compiler:fir:resolve",
+        ":compiler:fir:fir-serialization",
         ":compiler:fir:java",
         ":compiler:fir:modularized-tests",
         ":compiler:fir:dump",
@@ -267,6 +269,9 @@ include ":kotlin-build-common",
         ":kotlin-scripting-compiler-embeddable",
         ":kotlin-scripting-compiler-impl",
         ":kotlin-scripting-compiler-impl-embeddable",
+        ":kotlin-scripting-ide-services",
+        ":kotlin-scripting-ide-services-test",
+        ":kotlin-scripting-ide-services-embeddable",
         ":kotlin-scripting-dependencies",
         ":kotlin-scripting-dependencies-maven",
         ":kotlin-scripting-jsr223",
@@ -403,6 +408,7 @@ project(':daemon-common').projectDir = "$rootDir/compiler/daemon/daemon-common" 
 project(':daemon-common-new').projectDir = "$rootDir/compiler/daemon/daemon-common-new" as File
 project(':kotlin-daemon-client').projectDir = "$rootDir/compiler/daemon/daemon-client" as File
 project(':kotlin-daemon-client-new').projectDir = "$rootDir/compiler/daemon/daemon-client-new" as File
+project(':kotlin-daemon-tests').projectDir = "$rootDir/compiler/daemon/daemon-tests" as File
 project(':kotlin-compiler-runner').projectDir = "$rootDir/compiler/compiler-runner" as File
 project(':kotlin-ant').projectDir = "$rootDir/ant" as File
 project(':compiler:ir.tree').projectDir = "$rootDir/compiler/ir/ir.tree" as File
@@ -478,6 +484,9 @@ project(':kotlin-scripting-compiler').projectDir = "$rootDir/plugins/scripting/s
 project(':kotlin-scripting-compiler-embeddable').projectDir = "$rootDir/plugins/scripting/scripting-compiler-embeddable" as File
 project(':kotlin-scripting-compiler-impl').projectDir = "$rootDir/plugins/scripting/scripting-compiler-impl" as File
 project(':kotlin-scripting-compiler-impl-embeddable').projectDir = "$rootDir/plugins/scripting/scripting-compiler-impl-embeddable" as File
+project(':kotlin-scripting-ide-services').projectDir = "$rootDir/plugins/scripting/scripting-ide-services" as File
+project(':kotlin-scripting-ide-services-test').projectDir = "$rootDir/plugins/scripting/scripting-ide-services-test" as File
+project(':kotlin-scripting-ide-services-embeddable').projectDir = "$rootDir/plugins/scripting/scripting-ide-services-embeddable" as File
 project(':kotlin-scripting-idea').projectDir = "$rootDir/plugins/scripting/scripting-idea" as File
 project(':kotlin-main-kts').projectDir = "$rootDir/libraries/tools/kotlin-main-kts" as File
 project(':kotlin-main-kts-test').projectDir = "$rootDir/libraries/tools/kotlin-main-kts-test" as File

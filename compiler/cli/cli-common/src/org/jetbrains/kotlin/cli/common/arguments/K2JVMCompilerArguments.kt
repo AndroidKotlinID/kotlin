@@ -70,7 +70,7 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(
         value = "-jvm-target",
         valueDescription = "<version>",
-        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12 or 13), default is 1.6"
+        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13 or 14), default is 1.6"
     )
     var jvmTarget: String? by NullableStringFreezableVar(JvmTarget.DEFAULT.description)
 
@@ -346,6 +346,12 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         description = "Do not use optimized callable reference superclasses available from 1.4"
     )
     var noOptimizedCallableReferences: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xno-kotlin-nothing-value-exception",
+        description = "Do not use KotlinNothingValueException available since 1.4"
+    )
+    var noKotlinNothingValueException: Boolean by FreezableVar(false)
 
     override fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> {
         val result = super.configureAnalysisFlags(collector)

@@ -2,11 +2,11 @@ internal open class My
 
 abstract class Your {
     // invalid, List<My> is effectively internal
-    abstract fun give(): List<My>
+    abstract fun <!EXPOSED_FUNCTION_RETURN_TYPE!>give<!>(): List<My>
 }
 
 // invalid, List<My> is effectively internal
-interface His: List<My>
+interface His: <!EXPOSED_SUPER_INTERFACE!>List<My><!>
 
 // invalid, My is internal
 interface Generic<E: My>

@@ -7,15 +7,12 @@ package org.jetbrains.kotlin.fir.builder
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.tree.IElementType
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.collections.immutable.mutate
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.contracts.FirContractDescription
-import org.jetbrains.kotlin.fir.contracts.builder.buildRawContractDescription
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
@@ -28,7 +25,6 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirModifiableQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
-import org.jetbrains.kotlin.fir.expressions.impl.FirStubStatement
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.builder.*
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
@@ -45,7 +41,6 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
-import org.jetbrains.kotlin.psi.psiUtil.isContractDescriptionCallPsiCheck
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
@@ -479,18 +474,21 @@ class RawFirBuilder(
                 }
                 this is KtClass && classKind == ClassKind.ANNOTATION_CLASS -> {
                     container.superTypeRefs += implicitAnnotationType
+                    delegatedSuperTypeRef = implicitAnyType
                 }
             }
 
             val defaultDelegatedSuperTypeRef =
                 when {
                     classKind == ClassKind.ENUM_ENTRY && this is KtClass -> delegatedEnumSuperTypeRef ?: implicitAnyType
-                    else -> implicitAnyType
+                    container.superTypeRefs.isEmpty() -> implicitAnyType
+                    else -> buildImplicitTypeRef()
                 }
 
 
             if (container.superTypeRefs.isEmpty()) {
-                container.superTypeRefs += defaultDelegatedSuperTypeRef
+                container.superTypeRefs += implicitAnyType
+                delegatedSuperTypeRef = implicitAnyType
             }
             if (this is KtClass && this.isInterface()) return delegatedSuperTypeRef ?: implicitAnyType
 
@@ -913,7 +911,7 @@ class RawFirBuilder(
                     }
                 }
                 val expressionSource = expression.toFirSourceElement()
-                label = context.firLabels.pop() ?: context.firFunctionCalls.lastOrNull()?.calleeReference?.name?.let {
+                label = context.firLabels.pop() ?: context.calleeNamesForLambda.lastOrNull()?.let {
                     buildLabel {
                         source = expressionSource
                         name = it.asString()
@@ -929,7 +927,13 @@ class RawFirBuilder(
                 } else {
                     configureBlockWithoutBuilding(ktBody).apply {
                         if (statements.isEmpty()) {
-                            statements.add(buildUnitExpression { source = expressionSource })
+                            statements.add(
+                                buildReturnExpression {
+                                    source = expressionSource
+                                    this.target = target
+                                    result = buildUnitExpression { source = expressionSource }
+                                }
+                            )
                         }
                         if (destructuringBlock is FirBlock) {
                             for ((index, statement) in destructuringBlock.statements.withIndex()) {
@@ -1135,6 +1139,7 @@ class RawFirBuilder(
                     FirFunctionTypeRefBuilder().apply {
                         this.source = source
                         isMarkedNullable = isNullable
+                        isSuspend = typeReference.hasModifier(SUSPEND_KEYWORD)
                         receiverTypeRef = unwrappedElement.receiverTypeReference.convertSafe()
                         // TODO: probably implicit type should not be here
                         returnTypeRef = unwrappedElement.returnTypeReference.toFirOrErrorType()
@@ -1467,9 +1472,21 @@ class RawFirBuilder(
 
         override fun visitBinaryExpression(expression: KtBinaryExpression, data: Unit): FirElement {
             val operationToken = expression.operationToken
+
+            if (operationToken == IDENTIFIER) {
+                context.calleeNamesForLambda += expression.operationReference.getReferencedNameAsName()
+            }
+
             val leftArgument = expression.left.toFirExpression("No left operand")
             val rightArgument = expression.right.toFirExpression("No right operand")
+
+            if (operationToken == IDENTIFIER) {
+                // No need for the callee name since arguments are already generated
+                context.calleeNamesForLambda.removeLast()
+            }
+
             val source = expression.toFirSourceElement()
+
             when (operationToken) {
                 ELVIS ->
                     return leftArgument.generateNotNullOrOther(baseSession, rightArgument, "elvis", source)
@@ -1612,9 +1629,9 @@ class RawFirBuilder(
                 FirFunctionCallBuilder().apply {
                     this.source = source
                     this.calleeReference = calleeReference
-                    context.firFunctionCalls += this
+                    context.calleeNamesForLambda += calleeReference.name
                     expression.extractArgumentsTo(this)
-                    context.firFunctionCalls.removeLast()
+                    context.calleeNamesForLambda.removeLast()
                 }
             }
 

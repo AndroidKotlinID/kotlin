@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.gradle.plugin
@@ -19,7 +8,6 @@ package org.jetbrains.kotlin.gradle.plugin
 import org.gradle.api.Project
 import org.jetbrains.kotlin.gradle.dsl.Coroutines
 import org.jetbrains.kotlin.gradle.dsl.NativeCacheKind
-import org.jetbrains.kotlin.gradle.dsl.NativeDistributionType
 import org.jetbrains.kotlin.gradle.plugin.KotlinJsCompilerType.Companion.jsCompilerProperty
 import org.jetbrains.kotlin.gradle.targets.native.DisabledNativeTargetsReporter
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
@@ -126,27 +114,17 @@ internal class PropertiesProvider private constructor(private val project: Proje
 
     /**
      * Allow a user to choose distribution type. The following distribution types are available:
-     *  - regular - The default distribution. Includes all platform libraries in 1.3 and generates them at the user side in 1.4.
-     *  - restricted - Doesn't include Apple platform libraries. Available for MacOS only and in 1.3 only.
-     *  - prebuilt - Includes all platform libraries. Available in 1.4 only. Used to workaround possible problems with library generation at the use side.
+     *  - light - Doesn't include platform libraries and generates them at the user side. For 1.3 corresponds to the restricted distribution.
+     *  - prebuilt - Includes all platform libraries.
      */
-    val nativeDistributionType: NativeDistributionType?
-        get() {
-            var result = property("kotlin.native.distribution.type")?.let {
-                NativeDistributionType.byCompilerArgument(it)
-            }
+    val nativeDistributionType: String?
+        get() = property("kotlin.native.distribution.type")
 
-            val deprecatedRestricted = booleanProperty("kotlin.native.restrictedDistribution")
-            if (result == null && deprecatedRestricted != null) {
-                SingleWarningPerBuild.show(
-                    project,
-                    "Project property 'kotlin.native.restrictedDistribution' is deprecated. Please use 'kotlin.native.distribution.type=restricted' instead"
-                )
-                result = if (deprecatedRestricted) NativeDistributionType.RESTRICTED else NativeDistributionType.REGULAR
-            }
-
-            return result
-        }
+    /**
+     * A property that was used to choose a restricted distribution in 1.3.
+     */
+    val nativeDeprecatedRestricted: Boolean?
+        get() = booleanProperty("kotlin.native.restrictedDistribution")
 
     /**
      * Allows a user to force a particular cinterop mode for platform libraries generation. Available modes: sourcecode, metadata.
@@ -217,7 +195,7 @@ internal class PropertiesProvider private constructor(private val project: Proje
      * Use Kotlin/JS backend compiler type
      */
     val jsCompiler: KotlinJsCompilerType
-        get() = property(jsCompilerProperty)?.let { KotlinJsCompilerType.byArgument(it) } ?: KotlinJsCompilerType.LEGACY
+        get() = property(jsCompilerProperty)?.let { KotlinJsCompilerType.byArgumentOrNull(it) } ?: KotlinJsCompilerType.LEGACY
 
     private fun propertyWithDeprecatedVariant(propName: String, deprecatedPropName: String): String? {
         val deprecatedProperty = property(deprecatedPropName)

@@ -427,11 +427,14 @@ class DeclarationsConverter(
                         }
                         modifiers.isAnnotation() && (classKind == ClassKind.ANNOTATION_CLASS) -> {
                             superTypeRefs += implicitAnnotationType
+                            delegatedSuperTypeRef = implicitAnyType
                         }
                     }
-                    val defaultDelegatedSuperTypeRef = implicitAnyType
 
-                    superTypeRefs.ifEmpty { superTypeRefs += defaultDelegatedSuperTypeRef }
+                    superTypeRefs.ifEmpty {
+                        superTypeRefs += implicitAnyType
+                        delegatedSuperTypeRef = implicitAnyType
+                    }
 
                     this.superTypeRefs += superTypeRefs
 
@@ -443,7 +446,7 @@ class DeclarationsConverter(
                         hasDefaultConstructor = if (primaryConstructor != null) !primaryConstructor!!.hasValueParameters()
                         else secondaryConstructors.isEmpty() || secondaryConstructors.any { !it.hasValueParameters() },
                         delegatedSelfTypeRef = selfType,
-                        delegatedSuperTypeRef = delegatedSuperTypeRef ?: defaultDelegatedSuperTypeRef,
+                        delegatedSuperTypeRef = delegatedSuperTypeRef ?: buildImplicitTypeRef(),
                         superTypeCallEntry = superTypeCallEntry
                     )
                     //parse primary constructor
@@ -514,8 +517,11 @@ class DeclarationsConverter(
             }
         }
 
-        superTypeRefs.ifEmpty { superTypeRefs += implicitAnyType }
-        val delegatedSuperType = delegatedSuperTypeRef ?: implicitAnyType
+        superTypeRefs.ifEmpty {
+            superTypeRefs += implicitAnyType
+            delegatedSuperTypeRef = implicitAnyType
+        }
+        val delegatedSuperType = delegatedSuperTypeRef ?: buildImplicitTypeRef()
 
         return withChildClassName(ANONYMOUS_OBJECT_NAME) {
             buildAnonymousObject {
@@ -1399,7 +1405,7 @@ class DeclarationsConverter(
         if (type.asText.isEmpty()) {
             return buildErrorTypeRef { diagnostic = ConeSimpleDiagnostic("Unwrapped type is null", DiagnosticKind.Syntax) }
         }
-        var typeModifiers = TypeModifier() //TODO what with suspend?
+        var typeModifiers = TypeModifier()
         var firType: FirTypeRef = buildErrorTypeRef { diagnostic = ConeSimpleDiagnostic("Incomplete code", DiagnosticKind.Syntax) }
         var afterLPar = false
         type.forEachChildren {
@@ -1409,7 +1415,7 @@ class DeclarationsConverter(
                 MODIFIER_LIST -> if (!afterLPar || typeModifiers.hasNoAnnotations()) typeModifiers = convertTypeModifierList(it)
                 USER_TYPE -> firType = convertUserType(it)
                 NULLABLE_TYPE -> firType = convertNullableType(it)
-                FUNCTION_TYPE -> firType = convertFunctionType(it)
+                FUNCTION_TYPE -> firType = convertFunctionType(it, isSuspend = typeModifiers.hasSuspend)
                 DYNAMIC_TYPE -> firType = buildDynamicTypeRef {
                     source = type.toFirSourceElement()
                     isMarkedNullable = false
@@ -1523,7 +1529,7 @@ class DeclarationsConverter(
     /**
      * @see org.jetbrains.kotlin.parsing.KotlinParsing.parseFunctionType
      */
-    private fun convertFunctionType(functionType: LighterASTNode, isNullable: Boolean = false): FirTypeRef {
+    private fun convertFunctionType(functionType: LighterASTNode, isNullable: Boolean = false, isSuspend: Boolean = false): FirTypeRef {
         var receiverTypeReference: FirTypeRef? = null
         lateinit var returnTypeReference: FirTypeRef
         val valueParametersList = mutableListOf<ValueParameter>()
@@ -1544,6 +1550,7 @@ class DeclarationsConverter(
             if (receiverTypeReference != null) {
                 annotations += extensionFunctionAnnotation
             }
+            this.isSuspend = isSuspend
         }
     }
 
