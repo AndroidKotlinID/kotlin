@@ -6,17 +6,17 @@
 package org.jetbrains.kotlin.fir.analysis.diagnostics
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.descriptors.DescriptorWithRelation
+import org.jetbrains.kotlin.descriptors.EffectiveVisibility
+import org.jetbrains.kotlin.diagnostics.DiagnosticFactory3
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.fir.DeclarationWithRelation
 import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
-import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
-import org.jetbrains.kotlin.psi.KtParameter
-import org.jetbrains.kotlin.psi.KtSuperTypeListEntry
-import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.*
 
 object FirErrors {
     val UNRESOLVED_REFERENCE by error1<FirSourceElement, PsiElement, String?>()
@@ -53,6 +53,11 @@ object FirErrors {
     val NON_PRIVATE_CONSTRUCTOR_IN_ENUM by existing<FirSourceElement, PsiElement>(Errors.NON_PRIVATE_CONSTRUCTOR_IN_ENUM)
     val NON_PRIVATE_CONSTRUCTOR_IN_SEALED by existing<FirSourceElement, PsiElement>(Errors.NON_PRIVATE_CONSTRUCTOR_IN_SEALED)
 
+    val ANNOTATION_CLASS_MEMBER by existing<FirSourceElement, PsiElement>(Errors.ANNOTATION_CLASS_MEMBER)
+    val LOCAL_ANNOTATION_CLASS_ERROR by existing<FirSourceElement, KtClassOrObject>(Errors.LOCAL_ANNOTATION_CLASS_ERROR)
+    val MISSING_VAL_ON_ANNOTATION_PARAMETER by existing<FirSourceElement, KtParameter>(Errors.MISSING_VAL_ON_ANNOTATION_PARAMETER)
+    val VAR_ANNOTATION_PARAMETER by existing<FirSourceElement, KtParameter>(Errors.VAR_ANNOTATION_PARAMETER)
+
     // Exposed visibility group
     val EXPOSED_TYPEALIAS_EXPANDED_TYPE by error3<FirSourceElement, PsiElement, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
     val EXPOSED_FUNCTION_RETURN_TYPE by error3<FirSourceElement, PsiElement, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
@@ -61,6 +66,7 @@ object FirErrors {
     val EXPOSED_PARAMETER_TYPE by error3<FirSourceElement, KtParameter, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
     val EXPOSED_SUPER_INTERFACE by error3<FirSourceElement, KtSuperTypeListEntry, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
     val EXPOSED_SUPER_CLASS by error3<FirSourceElement, KtSuperTypeListEntry, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
+    val EXPOSED_TYPE_PARAMETER_BOUND by error3<FirSourceElement, KtTypeParameter, FirEffectiveVisibility, DeclarationWithRelation, FirEffectiveVisibility>()
 
     val REPEATED_MODIFIER by error1<FirSourceElement, PsiElement, KtModifierKeywordToken>()
     val REDUNDANT_MODIFIER by error2<FirSourceElement, PsiElement, KtModifierKeywordToken, KtModifierKeywordToken>()

@@ -811,6 +811,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/diagnostics"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("annotationClassMember.kt")
+        public void testAnnotationClassMember() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/annotationClassMember.kt");
+        }
+
         @TestMetadata("incompatibleModifiers.kt")
         public void testIncompatibleModifiers() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/incompatibleModifiers.kt");
@@ -819,6 +824,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("infixFunctions.kt")
         public void testInfixFunctions() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/infixFunctions.kt");
+        }
+
+        @TestMetadata("localAnnotationClass.kt")
+        public void testLocalAnnotationClass() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/localAnnotationClass.kt");
         }
 
         @TestMetadata("notASupertype.kt")
@@ -854,6 +864,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("superclassNotAccessibleFromInterface.kt")
         public void testSuperclassNotAccessibleFromInterface() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/superclassNotAccessibleFromInterface.kt");
+        }
+
+        @TestMetadata("valOnAnnotationParameter.kt")
+        public void testValOnAnnotationParameter() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/valOnAnnotationParameter.kt");
         }
     }
 
@@ -2191,6 +2206,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("exposedTypeAlias.kt")
         public void testExposedTypeAlias() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/visibility/exposedTypeAlias.kt");
+        }
+
+        @TestMetadata("exposedTypeParameters.kt")
+        public void testExposedTypeParameters() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/visibility/exposedTypeParameters.kt");
         }
 
         @TestMetadata("protectedInCompanion.kt")
