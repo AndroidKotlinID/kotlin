@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.*
-import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
 import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.types.*
@@ -94,7 +93,20 @@ internal fun FirValueParameter.transformVarargTypeToArrayType() {
         val returnType = returnTypeRef.coneTypeUnsafe<ConeKotlinType>()
         transformReturnTypeRef(
             StoreType,
-            returnTypeRef.withReplacedConeType(ConeKotlinTypeProjectionOut(returnType).createArrayOf(session))
+            returnTypeRef.withReplacedConeType(ConeKotlinTypeProjectionOut(returnType).createArrayOf())
         )
+    }
+}
+
+inline fun <T> withScopeCleanup(scopes: MutableList<*>, crossinline l: () -> T): T {
+    val sizeBefore = scopes.size
+    return try {
+        l()
+    } finally {
+        val size = scopes.size
+        assert(size >= sizeBefore)
+        repeat(size - sizeBefore) {
+            scopes.let { it.removeAt(it.size - 1) }
+        }
     }
 }

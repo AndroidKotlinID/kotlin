@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.backend
 
 import com.intellij.psi.PsiCompiledElement
 import org.jetbrains.kotlin.KtNodeTypes
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirElement
@@ -39,7 +40,9 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrClassSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
 import org.jetbrains.kotlin.ir.util.SymbolTable
+import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.isFakeOverride
+import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffsetSkippingComments
@@ -288,12 +291,13 @@ internal tailrec fun FirCallableSymbol<*>.deepestMatchingOverriddenSymbol(root: 
 internal fun IrClass.findMatchingOverriddenSymbolsFromSupertypes(
     irBuiltIns: IrBuiltIns,
     target: IrDeclaration,
-    result: MutableList<IrSymbol> = mutableListOf()
+    result: MutableList<IrSymbol> = mutableListOf(),
+    visited: MutableSet<IrClass> = mutableSetOf()
 ): List<IrSymbol> {
     for (superType in superTypes) {
         val superTypeClass = superType.classOrNull
         if (superTypeClass is IrClassSymbolImpl) {
-            superTypeClass.owner.findMatchingOverriddenSymbolsFromThisAndSupertypes(irBuiltIns, target, result)
+            superTypeClass.owner.findMatchingOverriddenSymbolsFromThisAndSupertypes(irBuiltIns, target, result, visited)
         }
     }
     return result
@@ -302,8 +306,13 @@ internal fun IrClass.findMatchingOverriddenSymbolsFromSupertypes(
 private fun IrClass.findMatchingOverriddenSymbolsFromThisAndSupertypes(
     irBuiltIns: IrBuiltIns,
     target: IrDeclaration,
-    result: MutableList<IrSymbol>
+    result: MutableList<IrSymbol>,
+    visited: MutableSet<IrClass>
 ): List<IrSymbol> {
+    if (this in visited) {
+        return result
+    }
+    visited += this
     val targetIsPropertyAccessor = target is IrFunction && target.isPropertyAccessor
     for (declaration in declarations) {
         if (declaration.isFakeOverride || declaration is IrConstructor) {
@@ -354,7 +363,7 @@ private fun IrClass.findMatchingOverriddenSymbolsFromThisAndSupertypes(
     if (result.isNotEmpty()) {
         return result
     }
-    return findMatchingOverriddenSymbolsFromSupertypes(irBuiltIns, target, result)
+    return findMatchingOverriddenSymbolsFromSupertypes(irBuiltIns, target, result, visited)
 }
 
 fun isOverriding(
@@ -453,3 +462,19 @@ internal fun IrDeclarationParent.declareThisReceiverParameter(
     }
 }
 
+fun FirClass<*>.irOrigin(firProvider: FirProvider): IrDeclarationOrigin = when {
+    firProvider.getFirClassifierContainerFileIfAny(symbol) != null -> IrDeclarationOrigin.DEFINED
+    origin == FirDeclarationOrigin.Java -> IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
+    else -> IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
+}
+
+fun FirClass<*>.getSamIfAny(): FirSimpleFunction? =
+    declarations.filterIsInstance<FirSimpleFunction>().singleOrNull { it.modality == Modality.ABSTRACT }
+
+val IrType.isSamType: Boolean
+    get() {
+        val irClass = classOrNull ?: return false
+        if (irClass.owner.kind != ClassKind.INTERFACE) return false
+        val am = irClass.functions.singleOrNull { it.owner.modality == Modality.ABSTRACT }
+        return am != null
+    }

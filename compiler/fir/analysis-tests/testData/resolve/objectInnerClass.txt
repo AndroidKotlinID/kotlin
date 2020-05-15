@@ -6,7 +6,7 @@ FILE: objectInnerClass.kt
 
         local final inner class Child : R|<anonymous>.Base| {
             public[local] constructor(property: R|B|): R|<anonymous>.Child| {
-                super<R|<anonymous>.Base|>(R|<local>/property|)
+                this@R|/anonymous|.super<R|<anonymous>.Base|>(R|<local>/property|)
             }
 
             public[local] final fun R|<anonymous>.Base|.zoo(): R|kotlin/Unit| {
@@ -69,7 +69,7 @@ FILE: objectInnerClass.kt
 
         public final val x: R|anonymous| = object : R|Case2.Base| {
             private constructor(): R|anonymous| {
-                super<R|Case2.Base|>(R|/B.B|())
+                this@R|/Case2|.super<R|Case2.Base|>(R|/B.B|())
             }
 
             public[local] final fun R|Case2.Base|.zoo(): R|kotlin/Unit| {
@@ -131,7 +131,7 @@ FILE: objectInnerClass.kt
 
             local final inner class Child : R|Case3.<anonymous>.Base| {
                 public[local] constructor(property: R|B|): R|Case3.<anonymous>.Child| {
-                    super<R|Case3.<anonymous>.Base|>(R|<local>/property|)
+                    this@R|/anonymous|.super<R|Case3.<anonymous>.Base|>(R|<local>/property|)
                 }
 
                 public[local] final fun R|Case3.<anonymous>.Base|.zoo(): R|kotlin/Unit| {
@@ -169,14 +169,14 @@ FILE: objectInnerClass.kt
             }
 
             public[local] final fun caseForBase(): R|kotlin/Unit| {
-                lval base: R|Case3.<anonymous>.Base| = R|/Case3.<anonymous>.Base.Base|(R|/B.B|())
+                lval base: R|Case3.<anonymous>.Base| = this@R|/anonymous|.R|/Case3.<anonymous>.Base.Base|(R|/B.B|())
                 R|<local>/base|.R|/Case3.<anonymous>.Base.baseFun|()
                 R|<local>/base|.R|/Case3.<anonymous>.Base.property|
                 (this@R|/anonymous|, R|<local>/base|).R|/anonymous.hoo|()
             }
 
             public[local] final fun caseForChild(): R|kotlin/Unit| {
-                lval child: R|Case3.<anonymous>.Child| = R|/Case3.<anonymous>.Child.Child|(R|/B.B|())
+                lval child: R|Case3.<anonymous>.Child| = this@R|/anonymous|.R|/Case3.<anonymous>.Child.Child|(R|/B.B|())
                 R|<local>/child|.R|/Case3.<anonymous>.Base.baseFun|()
                 R|<local>/child|.R|/Case3.<anonymous>.Base.property|
                 R|<local>/child|.R|/Case3.<anonymous>.Child.foo|()

@@ -8,13 +8,19 @@ package org.jetbrains.kotlin.codegen.inline
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.coroutines.continuationAsmType
 import org.jetbrains.kotlin.codegen.inline.FieldRemapper.Companion.foldName
-import org.jetbrains.kotlin.codegen.inline.coroutines.*
-import org.jetbrains.kotlin.codegen.intrinsics.IntrinsicMethods
+import org.jetbrains.kotlin.codegen.inline.coroutines.CoroutineTransformer
+import org.jetbrains.kotlin.codegen.inline.coroutines.isSuspendLambdaCapturedByOuterObjectOrLambda
+import org.jetbrains.kotlin.codegen.inline.coroutines.markNoinlineLambdaIfSuspend
+import org.jetbrains.kotlin.codegen.inline.coroutines.surroundInvokesWithSuspendMarkersIfNeeded
 import org.jetbrains.kotlin.codegen.optimization.ApiVersionCallsPreprocessingMethodTransformer
 import org.jetbrains.kotlin.codegen.optimization.FixStackWithLabelNormalizationMethodTransformer
-import org.jetbrains.kotlin.codegen.optimization.common.*
+import org.jetbrains.kotlin.codegen.optimization.common.ControlFlowGraph
+import org.jetbrains.kotlin.codegen.optimization.common.InsnSequence
+import org.jetbrains.kotlin.codegen.optimization.common.asSequence
+import org.jetbrains.kotlin.codegen.optimization.common.isMeaningful
 import org.jetbrains.kotlin.codegen.optimization.fixStack.peek
 import org.jetbrains.kotlin.codegen.optimization.fixStack.top
+import org.jetbrains.kotlin.codegen.optimization.nullCheck.isCheckParameterIsNotNull
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ParameterDescriptor
@@ -34,7 +40,9 @@ import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 import org.jetbrains.org.objectweb.asm.commons.LocalVariablesSorter
 import org.jetbrains.org.objectweb.asm.commons.MethodRemapper
 import org.jetbrains.org.objectweb.asm.tree.*
-import org.jetbrains.org.objectweb.asm.tree.analysis.*
+import org.jetbrains.org.objectweb.asm.tree.analysis.BasicInterpreter
+import org.jetbrains.org.objectweb.asm.tree.analysis.BasicValue
+import org.jetbrains.org.objectweb.asm.tree.analysis.Frame
 import org.jetbrains.org.objectweb.asm.util.Printer
 import java.util.*
 import kotlin.math.max
@@ -495,9 +503,9 @@ class MethodInliner(
 
         replaceContinuationAccessesWithFakeContinuationsIfNeeded(processingNode)
 
-        val sources = analyzeMethodNodeBeforeInline(processingNode)
-
         val toDelete = SmartSet.create<AbstractInsnNode>()
+
+        val sources = analyzeMethodNodeWithInterpreter(processingNode, FunctionalArgumentInterpreter(this, toDelete))
         val instructions = processingNode.instructions
 
         var awaitClassReification = false
@@ -524,9 +532,7 @@ class MethodInliner(
                         val firstParameterIndex = frame.stackSize - paramCount
                         if (isInvokeOnLambda(owner, name) /*&& methodInsnNode.owner.equals(INLINE_RUNTIME)*/) {
                             val sourceValue = frame.getStack(firstParameterIndex)
-                            val functionalArgument =
-                                getFunctionalArgumentIfExistsAndMarkInstructions(sourceValue, true, instructions, sources, toDelete)
-                            invokeCalls.add(InvokeCall(functionalArgument, currentFinallyDeep))
+                            invokeCalls.add(InvokeCall(sourceValue.functionalArgument, currentFinallyDeep))
                         } else if (isSamWrapperConstructorCall(owner, name)) {
                             recordTransformation(SamWrapperTransformationInfo(owner, inliningContext, isAlreadyRegenerated(owner)))
                         } else if (isAnonymousConstructorCall(owner, name)) {
@@ -536,11 +542,9 @@ class MethodInliner(
                             var capturesAnonymousObjectThatMustBeRegenerated = false
                             for (i in 0 until paramCount) {
                                 val sourceValue = frame.getStack(firstParameterIndex + i)
-                                val functionalArgument = getFunctionalArgumentIfExistsAndMarkInstructions(
-                                    sourceValue, false, instructions, sources, toDelete
-                                )
+                                val functionalArgument = sourceValue.functionalArgument
                                 if (functionalArgument != null) {
-                                    functionalArgumentMapping.put(offset, functionalArgument)
+                                    functionalArgumentMapping[offset] = functionalArgument
                                 } else if (i < argTypes.size && isAnonymousClassThatMustBeRegenerated(argTypes[i])) {
                                     capturesAnonymousObjectThatMustBeRegenerated = true
                                 }
@@ -550,7 +554,11 @@ class MethodInliner(
 
                             recordTransformation(
                                 buildConstructorInvocation(
-                                    owner, cur.desc, functionalArgumentMapping, awaitClassReification, capturesAnonymousObjectThatMustBeRegenerated
+                                    owner,
+                                    cur.desc,
+                                    functionalArgumentMapping,
+                                    awaitClassReification,
+                                    capturesAnonymousObjectThatMustBeRegenerated
                                 )
                             )
                             awaitClassReification = false
@@ -598,14 +606,8 @@ class MethodInliner(
                         }
                     }
 
-                    cur.opcode == Opcodes.POP -> getFunctionalArgumentIfExistsAndMarkInstructions(
-                        frame.top()!!,
-                        true,
-                        instructions,
-                        sources,
-                        toDelete
-                    )?.let {
-                        if (it is LambdaInfo) {
+                    cur.opcode == Opcodes.POP -> {
+                        if (frame.top().functionalArgument is LambdaInfo) {
                             toDelete.add(cur)
                         }
                     }
@@ -624,8 +626,7 @@ class MethodInliner(
                             nodeRemapper.originalLambdaInternalName == fieldInsn.owner
                         ) {
                             val stackTransformations = mutableSetOf<AbstractInsnNode>()
-                            val lambdaInfo =
-                                getFunctionalArgumentIfExistsAndMarkInstructions(frame.peek(1)!!, false, instructions, sources, stackTransformations)
+                            val lambdaInfo = frame.peek(1)?.functionalArgument
                             if (lambdaInfo is LambdaInfo && stackTransformations.all { it is VarInsnNode }) {
                                 assert(lambdaInfo.lambdaClassType.internalName == nodeRemapper.originalLambdaInternalName) {
                                     "Wrong bytecode template for contract template: ${lambdaInfo.lambdaClassType.internalName} != ${nodeRemapper.originalLambdaInternalName}"
@@ -673,7 +674,7 @@ class MethodInliner(
         if (inliningContext.state.isIrBackend) return
         val lambdaInfo = inliningContext.lambdaInfo ?: return
         if (!lambdaInfo.isSuspend) return
-        val sources = analyzeMethodNodeBeforeInline(processingNode)
+        val sources = analyzeMethodNodeWithInterpreter(processingNode, Aload0Interpreter(processingNode))
         val cfg = ControlFlowGraph.build(processingNode)
         val aload0s = processingNode.instructions.asSequence().filter { it.opcode == Opcodes.ALOAD && it.safeAs<VarInsnNode>()?.`var` == 0 }
 
@@ -728,10 +729,17 @@ class MethodInliner(
                     "${suspensionPoint.name}${suspensionPoint.desc} shall have 1+ parameters"
                 }
             }
-            paramTypes.reversed().asSequence().withIndex()
-                .filter { it.value == languageVersionSettings.continuationAsmType() || it.value == OBJECT_TYPE }
-                .flatMap { frame.getStack(frame.stackSize - it.index - 1).insns.asSequence() }
-                .filter { it in aload0s }.let { toReplace.addAll(it) }
+
+            for ((index, param) in paramTypes.reversed().withIndex()) {
+                if (param != languageVersionSettings.continuationAsmType() && param != OBJECT_TYPE) continue
+                val sourceIndices = (frame.getStack(frame.stackSize - index - 1) as? Aload0BasicValue)?.indices ?: continue
+                for (sourceIndex in sourceIndices) {
+                    val src = processingNode.instructions[sourceIndex]
+                    if (src in aload0s) {
+                        toReplace.add(src)
+                    }
+                }
+            }
         }
 
         // Expected pattern here:
@@ -766,14 +774,6 @@ class MethodInliner(
         }
     }
 
-    private fun isSuspendCall(invoke: AbstractInsnNode?): Boolean {
-        if (invoke !is MethodInsnNode) return false
-        // We can't have suspending constructors.
-        assert(invoke.opcode != Opcodes.INVOKESPECIAL)
-        if (Type.getReturnType(invoke.desc) != OBJECT_TYPE) return false
-        return Type.getArgumentTypes(invoke.desc).let { it.isNotEmpty() && it.last() == languageVersionSettings.continuationAsmType() }
-    }
-
     private fun preprocessNodeBeforeInline(node: MethodNode, returnLabelOwner: ReturnLabelOwner) {
         try {
             FixStackWithLabelNormalizationMethodTransformer().transform("fake", node)
@@ -786,7 +786,7 @@ class MethodInliner(
             ApiVersionCallsPreprocessingMethodTransformer(targetApiVersion).transform("fake", node)
         }
 
-        val frames = analyzeMethodNodeBeforeInline(node)
+        val frames = analyzeMethodNodeWithInterpreter(node, BasicInterpreter())
 
         val localReturnsNormalizer = LocalReturnsNormalizer()
 
@@ -937,7 +937,7 @@ class MethodInliner(
         private class LocalReturn(
             private val returnInsn: AbstractInsnNode,
             private val insertBeforeInsn: AbstractInsnNode,
-            private val frame: Frame<SourceValue>
+            private val frame: Frame<BasicValue>
         ) {
 
             fun transform(insnList: InsnList, returnVariableIndex: Int) {
@@ -955,7 +955,7 @@ class MethodInliner(
                 }
 
                 while (stackSize > 0) {
-                    val stackElementSize = frame.getStack(stackSize - 1).getSize()
+                    val stackElementSize = frame.getStack(stackSize - 1).size
                     val popOpcode = if (stackElementSize == 1) Opcodes.POP else Opcodes.POP2
                     insnList.insertBefore(insertBeforeInsn, InsnNode(popOpcode))
                     stackSize--
@@ -976,7 +976,7 @@ class MethodInliner(
         internal fun addLocalReturnToTransform(
             returnInsn: AbstractInsnNode,
             insertBeforeInsn: AbstractInsnNode,
-            sourceValueFrame: Frame<SourceValue>
+            sourceValueFrame: Frame<BasicValue>
         ) {
             assert(isReturnOpcode(returnInsn.opcode)) { "return instruction expected" }
             assert(returnOpcode < 0 || returnOpcode == returnInsn.opcode) { "Return op should be " + Printer.OPCODES[returnOpcode] + ", got " + Printer.OPCODES[returnInsn.opcode] }
@@ -1026,29 +1026,6 @@ class MethodInliner(
             )
         }
 
-        private fun analyzeMethodNodeBeforeInline(node: MethodNode): Array<Frame<SourceValue>?> {
-            val analyzer = object : Analyzer<SourceValue>(SourceInterpreter()) {
-                override fun newFrame(nLocals: Int, nStack: Int): Frame<SourceValue> {
-
-                    return object : Frame<SourceValue>(nLocals, nStack) {
-                        @Throws(AnalyzerException::class)
-                        override fun execute(insn: AbstractInsnNode, interpreter: Interpreter<SourceValue>) {
-                            // This can be a void non-local return from a non-void method; Frame#execute would throw and do nothing else.
-                            if (insn.opcode == Opcodes.RETURN) return
-                            super.execute(insn, interpreter)
-                        }
-                    }
-                }
-            }
-
-            try {
-                return analyzer.analyze("fake", node)
-            } catch (e: AnalyzerException) {
-                throw RuntimeException(e)
-            }
-
-        }
-
         //remove next template:
         //      aload x
         //      LDC paramName
@@ -1056,9 +1033,7 @@ class MethodInliner(
         private fun removeClosureAssertions(node: MethodNode) {
             val toDelete = arrayListOf<AbstractInsnNode>()
             InsnSequence(node.instructions).filterIsInstance<MethodInsnNode>().forEach { methodInsnNode ->
-                if (methodInsnNode.owner == IntrinsicMethods.INTRINSICS_CLASS_NAME &&
-                    (methodInsnNode.name == "checkParameterIsNotNull" || methodInsnNode.name == "checkNotNullParameter")
-                ) {
+                if (methodInsnNode.isCheckParameterIsNotNull()) {
                     val prev = methodInsnNode.previous
                     assert(Opcodes.LDC == prev?.opcode) { "'${methodInsnNode.name}' should go after LDC but $prev" }
                     val prevPev = methodInsnNode.previous.previous

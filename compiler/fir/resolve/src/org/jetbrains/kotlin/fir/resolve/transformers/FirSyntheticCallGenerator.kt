@@ -158,7 +158,7 @@ class FirSyntheticCallGenerator(
         typeArguments = emptyList(),
         session = session,
         containingFile = file,
-        implicitReceiverStack = implicitReceiverStack
+        containingDeclarations = containingDeclarations
     )
 
     private fun generateSyntheticSelectTypeParameter(): Pair<FirTypeParameter, FirResolvedTypeRef> {
@@ -166,6 +166,7 @@ class FirSyntheticCallGenerator(
         val typeParameter =
             buildTypeParameter {
                 session = this@FirSyntheticCallGenerator.session
+                origin = FirDeclarationOrigin.Library
                 name = Name.identifier("K")
                 symbol = typeParameterSymbol
                 variance = Variance.INVARIANT
@@ -185,7 +186,7 @@ class FirSyntheticCallGenerator(
 
         val (typeParameter, returnType) = generateSyntheticSelectTypeParameter()
 
-        val argumentType = buildResolvedTypeRef { type = returnType.coneTypeUnsafe<ConeKotlinType>().createArrayOf(session) }
+        val argumentType = buildResolvedTypeRef { type = returnType.coneTypeUnsafe<ConeKotlinType>().createArrayOf() }
         val typeArgument = buildTypeProjectionWithVariance {
             typeRef = returnType
             variance = Variance.INVARIANT
@@ -230,6 +231,7 @@ class FirSyntheticCallGenerator(
     ): FirSimpleFunctionBuilder {
         return FirSimpleFunctionBuilder().apply {
             session = this@FirSyntheticCallGenerator.session
+            origin = FirDeclarationOrigin.Synthetic
             this.symbol = symbol
             this.name = name
             status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
@@ -254,6 +256,7 @@ class FirSyntheticCallGenerator(
         val name = Name.identifier(nameAsString)
         return buildValueParameter {
             session = this@FirSyntheticCallGenerator.session
+            origin = FirDeclarationOrigin.Library
             this.name = name
             returnTypeRef = this@toValueParameter
             isCrossinline = false

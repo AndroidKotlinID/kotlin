@@ -1111,6 +1111,11 @@ public class BlackBoxInlineCodegenTestGenerated extends AbstractBlackBoxInlineCo
             runTest("compiler/testData/codegen/boxInline/complexStack/asCheck2.kt");
         }
 
+        @TestMetadata("breakContinueInInlineLambdaArgument.kt")
+        public void testBreakContinueInInlineLambdaArgument() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/complexStack/breakContinueInInlineLambdaArgument.kt");
+        }
+
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/testData/codegen/boxInline/complexStack/simple.kt");
@@ -1134,6 +1139,11 @@ public class BlackBoxInlineCodegenTestGenerated extends AbstractBlackBoxInlineCo
         @TestMetadata("simpleExtension.kt")
         public void testSimpleExtension() throws Exception {
             runTest("compiler/testData/codegen/boxInline/complexStack/simpleExtension.kt");
+        }
+
+        @TestMetadata("spillConstructorArgumentsAndInlineLambdaParameter.kt")
+        public void testSpillConstructorArgumentsAndInlineLambdaParameter() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/complexStack/spillConstructorArgumentsAndInlineLambdaParameter.kt");
         }
     }
 
@@ -3694,6 +3704,16 @@ public class BlackBoxInlineCodegenTestGenerated extends AbstractBlackBoxInlineCo
         @TestMetadata("nonLocalReturn3.kt")
         public void testNonLocalReturn3() throws Exception {
             runTest("compiler/testData/codegen/boxInline/stackOnReturn/nonLocalReturn3.kt");
+        }
+
+        @TestMetadata("poppedLocalReturn.kt")
+        public void testPoppedLocalReturn() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/stackOnReturn/poppedLocalReturn.kt");
+        }
+
+        @TestMetadata("poppedLocalReturn2.kt")
+        public void testPoppedLocalReturn2() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/stackOnReturn/poppedLocalReturn2.kt");
         }
 
         @TestMetadata("returnLong.kt")

@@ -42,6 +42,14 @@ import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 
+/**
+ * A generator that generates synthetic members of data class as well as part of inline class.
+ *
+ * This one uses [DataClassMembersGenerator] to generate function bodies, shared with the counterpart in psi. But, there are two main
+ * differences. Unlike the counterpart in psi, which uses descriptor-based logic to determine which members to synthesize, this one uses
+ * fir own logic that traverses class hierarchies in fir elements. Also, this one creates and passes IR elements, instead of providing how
+ * to declare them, to [DataClassMembersGenerator].
+ */
 class DataClassMembersGenerator(val components: Fir2IrComponents) {
 
     fun generateInlineClassMembers(klass: FirClass<*>, irClass: IrClass): List<Name> =
@@ -231,6 +239,7 @@ class DataClassMembersGenerator(val components: Fir2IrComponents) {
                     }
                     metadata = FirMetadataSource.Function(
                         buildSimpleFunction {
+                            origin = FirDeclarationOrigin.Synthetic
                             this.name = name
                             this.symbol = FirNamedFunctionSymbol(CallableId(classId.packageFqName, classId.relativeClassName, name))
                             this.status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL)
@@ -245,6 +254,7 @@ class DataClassMembersGenerator(val components: Fir2IrComponents) {
                                 this.valueParameters.add(
                                     buildValueParameter {
                                         this.name = irValueParameter.name
+                                        origin = FirDeclarationOrigin.Synthetic
                                         this.session = components.session
                                         this.returnTypeRef = FirImplicitNullableAnyTypeRef(null)
                                         this.symbol = FirVariableSymbol(irValueParameter.name)

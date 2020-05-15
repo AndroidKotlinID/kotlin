@@ -36,6 +36,13 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             sibling
         }
 
+        if (next != null) {
+            val afterNext = firstNonWhiteSibling(next, true)
+            if (afterNext?.node?.elementType == KtTokens.RPAR &&
+                getElementLine(afterNext, editor, true) == getElementLine(next, editor, false)
+            ) return null
+        }
+
         return next?.takeIf { it is KtParameter || it is KtValueArgument }?.let { LineRange(it, it, editor.document) }?.also {
             parametersOrArgsToMove = elementToCheck to next
         }
@@ -91,7 +98,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         val psiRange = StatementUpDownMover.getElementRange(editor, file, oldRange) ?: return false
         val firstElement = getMovableElement(psiRange.getFirst(), false) ?: return false
         var lastElement = getMovableElement(psiRange.getSecond(), true) ?: return false
-        if (isForbiddenMove(firstElement, down) || isForbiddenMove(lastElement, down)) {
+        if (isForbiddenMove(editor, firstElement, down) || isForbiddenMove(editor, lastElement, down)) {
             info.toMove2 = null
             return true
         }
@@ -282,6 +289,19 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             element: PsiElement,
             down: Boolean
         ): KtBlockExpression? {
+            if (element is KtIfExpression ||
+                element is KtWhenExpression ||
+                element is KtWhenEntry ||
+                element is KtTryExpression ||
+                element is KtFinallySection ||
+                element is KtCatchClause ||
+                element is KtLoopExpression
+            ) return null
+
+            (element as? KtQualifiedExpression)?.selectorExpression?.let {
+                return getDSLLambdaBlock(editor, it, down)
+            }
+
             val callExpression =
                 KtPsiUtil.getOutermostDescendantElement(element, down, IS_CALL_EXPRESSION) as KtCallExpression? ?: return null
             val functionLiterals = callExpression.lambdaArguments
@@ -499,11 +519,16 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         private fun isLastOfItsKind(element: PsiElement, down: Boolean): Boolean =
             getSiblingOfType(element, down, element.javaClass) == null
 
-        private fun isForbiddenMove(element: PsiElement, down: Boolean): Boolean =
-            if (element is KtParameter || element is KtValueArgument)
-                isLastOfItsKind(element, down)
-            else
-                false
+        private fun isForbiddenMove(editor: Editor, element: PsiElement, down: Boolean): Boolean {
+            if (element is KtParameter || element is KtValueArgument) {
+                val next = firstNonWhiteSibling(element, true)
+                if (next?.node?.elementType == KtTokens.RPAR &&
+                    getElementLine(next, editor, true) == getElementLine(element, editor, false)
+                ) return true
+                return isLastOfItsKind(element, down)
+            }
+            return false
+        }
 
         private fun isBracelessBlock(element: PsiElement): Boolean =
             if (element !is KtBlockExpression)

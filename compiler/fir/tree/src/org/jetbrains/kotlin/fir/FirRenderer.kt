@@ -763,6 +763,11 @@ class FirRenderer(builder: StringBuilder, private val mode: RenderMode = RenderM
     }
 
     override fun visitDelegatedConstructorCall(delegatedConstructorCall: FirDelegatedConstructorCall) {
+        val dispatchReceiver = delegatedConstructorCall.dispatchReceiver
+        if (dispatchReceiver !is FirNoReceiverExpression) {
+            dispatchReceiver.accept(this)
+            print(".")
+        }
         if (delegatedConstructorCall.isSuper) {
             print("super<")
         } else if (delegatedConstructorCall.isThis) {
@@ -962,6 +967,9 @@ class FirRenderer(builder: StringBuilder, private val mode: RenderMode = RenderM
         print("super<")
         superReference.superTypeRef.accept(this)
         print(">")
+        superReference.labelName?.let {
+            print("@$it#")
+        }
     }
 
     override fun visitQualifiedAccess(qualifiedAccess: FirQualifiedAccess) {

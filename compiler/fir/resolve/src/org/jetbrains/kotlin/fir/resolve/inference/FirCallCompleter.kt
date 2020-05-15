@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.resolve.inference
 
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
+import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
@@ -159,6 +160,7 @@ class FirCallCompleter(
                     val itType = parameters.single()
                     buildValueParameter {
                         session = this@FirCallCompleter.session
+                        origin = FirDeclarationOrigin.Source
                         returnTypeRef = buildResolvedTypeRef { type = itType.approximateLambdaInputType() }
                         this.name = name
                         symbol = FirVariableSymbol(name)
@@ -188,8 +190,8 @@ class FirCallCompleter(
             lambdaArgument.replaceValueParameters(lambdaArgument.valueParameters + listOfNotNull(itParam))
             lambdaArgument.replaceReturnTypeRef(expectedReturnTypeRef ?: noExpectedType)
 
-            val localContext = localContextForAnonymousFunctions.getValue(lambdaArgument.symbol)
-            transformer.context.withLocalContext(localContext) {
+            val localContext = towerDataContextForAnonymousFunctions.getValue(lambdaArgument.symbol)
+            transformer.context.withTowerDataContext(localContext) {
                 lambdaArgument.transformSingle(transformer, ResolutionMode.LambdaResolution(expectedReturnTypeRef))
             }
             transformer.context.dropContextForAnonymousFunction(lambdaArgument)

@@ -255,6 +255,7 @@ internal class PropertyReferenceLowering(val context: JvmBackendContext) : Class
                     currentScope?.scope?.scopeOwnerSymbol ?: irClass.symbol, expression.startOffset, expression.endOffset
                 )
                     .irBlock {
+                        // TODO: Move this to the enclosing class, right now the parent field is wrong!
                         +referenceClass
                         +irCall(referenceClass.constructors.single()).apply {
                             var index = 0
@@ -393,7 +394,7 @@ internal class PropertyReferenceLowering(val context: JvmBackendContext) : Class
                                 putValueArgument(index++, kClassToJavaClass(owner, backendContext))
                                 putValueArgument(index++, irString(expression.symbol.descriptor.name.asString()))
                                 putValueArgument(index++, computeSignatureString(expression))
-                                putValueArgument(index, irInt(if (callee.parent.let { it is IrClass && it.isFileClass }) 1 else 0))
+                                putValueArgument(index, irInt(FunctionReferenceLowering.getCallableReferenceTopLevelFlag(callee)))
                             }
                             +IrInstanceInitializerCallImpl(startOffset, endOffset, referenceClass.symbol, context.irBuiltIns.unitType)
                         }

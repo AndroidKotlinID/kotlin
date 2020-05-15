@@ -20,11 +20,13 @@ import org.jetbrains.kotlin.android.synthetic.test.AbstractAndroidSyntheticPrope
 import org.jetbrains.kotlin.asJava.classes.AbstractUltraLightClassLoadingTest
 import org.jetbrains.kotlin.asJava.classes.AbstractUltraLightClassSanityTest
 import org.jetbrains.kotlin.asJava.classes.AbstractUltraLightFacadeClassTest
+import org.jetbrains.kotlin.asJava.classes.AbstractUltraLightScriptLoadingTest
 import org.jetbrains.kotlin.checkers.*
 import org.jetbrains.kotlin.copyright.AbstractUpdateKotlinCopyrightTest
 import org.jetbrains.kotlin.findUsages.AbstractFindUsagesTest
 import org.jetbrains.kotlin.findUsages.AbstractFindUsagesWithDisableComponentSearchTest
 import org.jetbrains.kotlin.findUsages.AbstractKotlinFindUsagesWithLibraryTest
+import org.jetbrains.kotlin.fir.plugin.AbstractFirAllOpenDiagnosticTest
 import org.jetbrains.kotlin.formatter.AbstractFormatterTest
 import org.jetbrains.kotlin.formatter.AbstractTypingIndentationTestBase
 import org.jetbrains.kotlin.generators.tests.generator.TestGroup
@@ -1015,7 +1017,9 @@ fun main(args: Array<String>) {
         testClass<AbstractUltraLightClassLoadingTest> {
             model("asJava/ultraLightClasses", pattern = KT_OR_KTS)
         }
-
+        testClass<AbstractUltraLightScriptLoadingTest> {
+            model("asJava/ultraLightScripts", pattern = KT_OR_KTS)
+        }
         testClass<AbstractUltraLightFacadeClassTest> {
             model("asJava/ultraLightFacades", pattern = KT_OR_KTS)
         }
@@ -1443,6 +1447,12 @@ fun main(args: Array<String>) {
 
         testClass<AbstractSerializationIrBytecodeListingTest> {
             model("codegen")
+        }
+    }
+
+    testGroup("plugins/fir/fir-plugin-prototype/tests", "plugins/fir/fir-plugin-prototype/testData") {
+        testClass<AbstractFirAllOpenDiagnosticTest> {
+            model("")
         }
     }
 

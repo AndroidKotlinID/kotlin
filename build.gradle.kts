@@ -38,6 +38,7 @@ if (kotlinBuildProperties.buildScanServer != null) {
 }
 
 plugins {
+    base
     idea
     id("jps-compatible")
     id("org.jetbrains.gradle.plugin.idea-ext")
@@ -53,7 +54,6 @@ pill {
 }
 
 val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild
-val includeStdlibJsIr by extra(project.kotlinBuildProperties.includeStdlibJsIr)
 
 val configuredJdks: List<JdkId> =
     getConfiguredJdks().also {
@@ -280,9 +280,7 @@ val coreLibProjects = listOfNotNull(
     ":kotlin-stdlib",
     ":kotlin-stdlib-common",
     ":kotlin-stdlib-js",
-    // Exclude JS IR from core libs because it depends on local compiler build, which
-    // in turn depends on local JVM stdlib. It slows down library testing.
-    ":kotlin-stdlib-js-ir".takeIf { includeStdlibJsIr },
+    ":kotlin-stdlib-js-ir",
     ":kotlin-stdlib-jdk7",
     ":kotlin-stdlib-jdk8",
     ":kotlin-test:kotlin-test-annotations-common",
@@ -292,6 +290,7 @@ val coreLibProjects = listOfNotNull(
     ":kotlin-test:kotlin-test-junit5",
     ":kotlin-test:kotlin-test-testng",
     ":kotlin-test:kotlin-test-js".takeIf { !kotlinBuildProperties.isInJpsBuildIdeaSync },
+    ":kotlin-test:kotlin-test-js-ir".takeIf { !kotlinBuildProperties.isInJpsBuildIdeaSync },
     ":kotlin-reflect",
     ":kotlin-coroutines-experimental-compat"
 )
@@ -497,7 +496,7 @@ val ideaPlugin by task<Task> {
 }
 
 tasks {
-    register("clean") {
+    named("clean") {
         doLast {
             delete("$buildDir/repo")
             delete(distDir)
@@ -579,11 +578,13 @@ tasks {
 
     register("firAllTest") {
         dependsOn(
+            ":dist",
             ":compiler:fir:raw-fir:psi2fir:test",
             ":compiler:fir:raw-fir:light-tree2fir:test",
             ":compiler:fir:analysis-tests:test",
             ":compiler:fir:fir2ir:test",
-            ":idea:idea-fir:test"
+            ":idea:idea-fir:test",
+            ":plugins:fir:fir-plugin-prototype:test"
         )
     }
 
@@ -606,6 +607,7 @@ tasks {
         dependsOn(":kotlin-scripting-jsr223-test:embeddableTest")
         dependsOn(":kotlin-main-kts-test:test")
         dependsOn(":kotlin-scripting-ide-services-test:test")
+        dependsOn(":kotlin-scripting-js-test:test")
     }
 
     register("compilerTest") {
@@ -750,7 +752,7 @@ tasks {
         }
     }
 
-    register("check") {
+    named("check") {
         dependsOn("test")
     }
 

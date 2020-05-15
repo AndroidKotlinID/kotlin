@@ -268,7 +268,7 @@ fun IrBuilderWithScope.irCall(callee: IrFunctionSymbol, descriptor: FunctionDesc
 fun IrBuilderWithScope.irCall(callee: IrFunction): IrFunctionAccessExpression =
     irCall(callee.symbol)
 
-fun IrBuilderWithScope.irCall(callee: IrFunction, origin: IrStatementOrigin, superQualifierSymbol: IrClassSymbol? = null): IrCall =
+fun IrBuilderWithScope.irCall(callee: IrFunction, origin: IrStatementOrigin? = null, superQualifierSymbol: IrClassSymbol? = null): IrCall =
     IrCallImpl(
         startOffset, endOffset, callee.returnType,
         callee.symbol as IrSimpleFunctionSymbol,
@@ -332,16 +332,6 @@ fun IrBuilderWithScope.irString(value: String) =
 fun IrBuilderWithScope.irConcat() =
     IrStringConcatenationImpl(startOffset, endOffset, context.irBuiltIns.stringType)
 
-
-fun IrBuilderWithScope.irSetField(receiver: IrExpression, irField: IrField, value: IrExpression): IrExpression =
-    IrSetFieldImpl(
-        startOffset,
-        endOffset,
-        irField.symbol,
-        receiver = receiver,
-        value = value,
-        type = context.irBuiltIns.unitType
-    )
 
 inline fun IrBuilderWithScope.irBlock(
     startOffset: Int = this.startOffset,

@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.common.lower.loops.forLoopsPhase
 import org.jetbrains.kotlin.backend.common.lower.optimizations.foldConstantLoweringPhase
 import org.jetbrains.kotlin.backend.common.phaser.*
+import org.jetbrains.kotlin.backend.jvm.codegen.shouldContainSuspendMarkers
 import org.jetbrains.kotlin.backend.jvm.lower.*
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
@@ -45,13 +46,13 @@ private fun makePatchParentsPhase(number: Int) = namedIrFilePhase(
 )
 
 private val validateIrBeforeLowering = makeCustomPhase<JvmBackendContext, IrModuleFragment>(
-    { context, module -> validationCallback(context, module) },
+    { context, module -> validationCallback(context, module, checkProperties = true) },
     name = "ValidateIrBeforeLowering",
     description = "Validate IR before lowering"
 )
 
 private val validateIrAfterLowering = makeCustomPhase<JvmBackendContext, IrModuleFragment>(
-    { context, module -> validationCallback(context, module) },
+    { context, module -> validationCallback(context, module, checkProperties = true) },
     name = "ValidateIrAfterLowering",
     description = "Validate IR after lowering"
 )
@@ -75,8 +76,8 @@ private val arrayConstructorPhase = makeIrFilePhase(
     description = "Transform `Array(size) { index -> value }` into a loop"
 )
 
-private val expectDeclarationsRemovingPhase = makeIrModulePhase<JvmBackendContext>(
-    { context -> ExpectDeclarationsRemoveLowering(context, keepOptionalAnnotations = true) },
+private val expectDeclarationsRemovingPhase = makeIrModulePhase(
+    ::ExpectDeclarationsRemoveLowering,
     name = "ExpectDeclarationsRemoving",
     description = "Remove expect declaration from module fragment"
 )
@@ -99,10 +100,11 @@ private val lateinitUsageLoweringPhase = makeIrFilePhase(
     description = "Insert checks for lateinit field references"
 )
 
-private val propertiesPhase = makeIrFilePhase(
+internal val propertiesPhase = makeIrFilePhase(
     ::JvmPropertiesLowering,
     name = "Properties",
-    description = "Move fields and accessors for properties to their classes, and create synthetic methods for property annotations",
+    description = "Move fields and accessors for properties to their classes, replace calls to default property accessors " +
+            "with field accesses, remove unused accessors and create synthetic methods for property annotations",
     stickyPostconditions = setOf((PropertiesLowering)::checkNoProperties)
 )
 
@@ -262,8 +264,8 @@ private val tailrecPhase = makeIrFilePhase(
     description = "Handle tailrec calls"
 )
 
-private val kotlinNothingValueExceptionPhase = makeIrFilePhase(
-    ::KotlinNothingValueExceptionLowering,
+private val kotlinNothingValueExceptionPhase = makeIrFilePhase<CommonBackendContext>(
+    { context -> KotlinNothingValueExceptionLowering(context) { it is IrFunction && !it.shouldContainSuspendMarkers() } },
     name = "KotlinNothingValueException",
     description = "Throw proper exception for calls returning value of type 'kotlin.Nothing'"
 )
@@ -293,12 +295,12 @@ private val jvmFilePhases =
         inlineCallableReferenceToLambdaPhase then
         propertyReferencePhase then
         constPhase then
-        propertiesToFieldsPhase then
-        remapObjectFieldAccesses then
         propertiesPhase then
+        remapObjectFieldAccesses then
         anonymousObjectSuperConstructorPhase then
         tailrecPhase then
 
+        forLoopsPhase then
         jvmInlineClassPhase then
 
         sharedVariablesPhase then
@@ -318,7 +320,6 @@ private val jvmFilePhases =
 
         jvmDefaultConstructorPhase then
 
-        forLoopsPhase then
         flattenStringConcatenationPhase then
         foldConstantLoweringPhase then
         computeStringTrimPhase then
@@ -375,6 +376,7 @@ val jvmPhases = namedIrModulePhase(
     name = "IrLowering",
     description = "IR lowering",
     lower = validateIrBeforeLowering then
+            processOptionalAnnotationsPhase then
             expectDeclarationsRemovingPhase then
             fileClassPhase then
             performByIrFile(lower = jvmFilePhases) then

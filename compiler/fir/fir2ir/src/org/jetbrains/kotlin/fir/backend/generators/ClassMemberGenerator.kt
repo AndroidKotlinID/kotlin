@@ -12,11 +12,11 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFieldAccessExpression
 import org.jetbrains.kotlin.ir.expressions.impl.*
@@ -31,6 +31,8 @@ internal class ClassMemberGenerator(
     private val callGenerator: CallAndReferenceGenerator,
     fakeOverrideMode: FakeOverrideMode
 ) : Fir2IrComponents by components {
+
+    private val annotationGenerator = AnnotationGenerator(visitor)
 
     private val fakeOverrideGenerator = FakeOverrideGenerator(
         session, components.scopeSession, classifierStorage, declarationStorage, conversionScope, fakeOverrideMode
@@ -76,9 +78,7 @@ internal class ClassMemberGenerator(
                     it.accept(visitor, null)
                 }
             }
-            annotations = klass.annotations.mapNotNull {
-                it.accept(visitor, null) as? IrConstructorCall
-            }
+            annotationGenerator.generate(irClass, klass)
             if (irPrimaryConstructor != null) {
                 declarationStorage.leaveScope(irPrimaryConstructor.descriptor)
             }
@@ -100,7 +100,9 @@ internal class ClassMemberGenerator(
                 }
                 for ((valueParameter, firValueParameter) in valueParameters.zip(firFunction.valueParameters)) {
                     valueParameter.setDefaultValue(firValueParameter)
+                    annotationGenerator.generate(valueParameter, firValueParameter, irFunction is IrConstructor)
                 }
+                annotationGenerator.generate(irFunction, firFunction)
             }
             if (firFunction is FirConstructor && irFunction is IrConstructor && !parentAsClass.isAnnotationClass) {
                 val body = IrBlockBodyImpl(startOffset, endOffset)
@@ -157,22 +159,24 @@ internal class ClassMemberGenerator(
         val initializer = property.initializer
         val delegate = property.delegate
         val propertyType = property.returnTypeRef.toIrType()
-        irProperty.initializeBackingField(descriptor, initializerExpression = initializer ?: delegate)
+        irProperty.initializeBackingField(property, descriptor, initializerExpression = initializer ?: delegate)
         irProperty.getter?.setPropertyAccessorContent(
-            property.getter, irProperty, propertyType, property.getter is FirDefaultPropertyGetter
+            property, property.getter, irProperty, propertyType, property.getter is FirDefaultPropertyGetter
         )
         if (property.isVar) {
             irProperty.setter?.setPropertyAccessorContent(
-                property.setter, irProperty, propertyType, property.setter is FirDefaultPropertySetter
+                property, property.setter, irProperty, propertyType, property.setter is FirDefaultPropertySetter
             )
         }
-        irProperty.annotations = property.annotations.mapNotNull {
-            it.accept(visitor, null) as? IrConstructorCall
-        }
+        annotationGenerator.generate(irProperty, property)
         return irProperty
     }
 
-    private fun IrProperty.initializeBackingField(descriptor: PropertyDescriptor, initializerExpression: FirExpression?) {
+    private fun IrProperty.initializeBackingField(
+        property: FirProperty,
+        descriptor: PropertyDescriptor,
+        initializerExpression: FirExpression?
+    ) {
         val irField = backingField ?: return
         conversionScope.withParent(irField) {
             declarationStorage.enterScope(descriptor)
@@ -182,9 +186,11 @@ internal class ClassMemberGenerator(
             }
             declarationStorage.leaveScope(descriptor)
         }
+        annotationGenerator.generate(irField, property)
     }
 
     private fun IrFunction.setPropertyAccessorContent(
+        property: FirProperty,
         propertyAccessor: FirPropertyAccessor?,
         correspondingProperty: IrProperty,
         propertyType: IrType,
@@ -221,6 +227,7 @@ internal class ClassMemberGenerator(
                 }
             }
         }
+        annotationGenerator.generate(this, property)
     }
 
     private fun IrFieldAccessExpression.setReceiver(declaration: IrDeclaration): IrFieldAccessExpression {
@@ -241,6 +248,7 @@ internal class ClassMemberGenerator(
                     startOffset, endOffset, constructedIrType, "Cannot find delegated constructor call"
                 )
             }
+        val firDispatchReceiver = dispatchReceiver
         return convertWithOffsets { startOffset, endOffset ->
             val irConstructorSymbol = declarationStorage.getIrFunctionSymbol(constructorSymbol) as IrConstructorSymbol
             if (constructorSymbol.fir.isFromEnumClass || constructorSymbol.fir.returnTypeRef.isEnum) {
@@ -262,6 +270,9 @@ internal class ClassMemberGenerator(
                     irConstructorSymbol
                 )
             }.let {
+                if (firDispatchReceiver !is FirNoReceiverExpression) {
+                    it.dispatchReceiver = visitor.convertToIrExpression(firDispatchReceiver)
+                }
                 with(callGenerator) {
                     it.applyCallArguments(this@toIrDelegatingConstructorCall)
                 }

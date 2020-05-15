@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.backend.generators
 
 import org.jetbrains.kotlin.fir.backend.*
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.*
@@ -16,6 +17,9 @@ import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.fir.resolve.calls.isExtensionFunctionType
+import org.jetbrains.kotlin.fir.resolve.calls.isFunctional
+import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
@@ -25,15 +29,10 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrProperty
-import org.jetbrains.kotlin.ir.expressions.IrErrorCallExpression
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
-import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.classifierOrNull
-import org.jetbrains.kotlin.ir.types.makeNotNull
-import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.psi.KtPropertyDelegate
 import org.jetbrains.kotlin.psi2ir.generators.hasNoSideEffects
 
@@ -164,18 +163,16 @@ internal class CallAndReferenceGenerator(
             declarationStorage,
             conversionScope
         )
-        return typeRef.convertWithOffsets { startOffset, endOffset ->
+        return qualifiedAccess.convertWithOffsets { startOffset, endOffset ->
+            val dispatchReceiver = qualifiedAccess.dispatchReceiver
             if (qualifiedAccess.calleeReference is FirSuperReference) {
-                if (typeRef !is FirComposedSuperTypeRef) {
-                    val dispatchReceiver = conversionScope.lastDispatchReceiverParameter()
-                    if (dispatchReceiver != null) {
-                        return@convertWithOffsets IrGetValueImpl(startOffset, endOffset, dispatchReceiver.type, dispatchReceiver.symbol)
-                    }
+                if (typeRef !is FirComposedSuperTypeRef && dispatchReceiver !is FirNoReceiverExpression) {
+                    return@convertWithOffsets visitor.convertToIrExpression(dispatchReceiver)
                 }
             }
             var superQualifierSymbol: IrClassSymbol? = null
-            if (qualifiedAccess.dispatchReceiver is FirQualifiedAccess) {
-                val dispatchReceiverReference = (qualifiedAccess.dispatchReceiver as FirQualifiedAccess).calleeReference
+            if (dispatchReceiver is FirQualifiedAccess) {
+                val dispatchReceiverReference = dispatchReceiver.calleeReference
                 if (dispatchReceiverReference is FirSuperReference) {
                     val coneSuperType = dispatchReceiverReference.superTypeRef.coneTypeSafe<ConeClassLikeType>()
                     (coneSuperType?.lookupTag?.toSymbol(session) as? FirClassSymbol<*>)?.let {
@@ -330,22 +327,22 @@ internal class CallAndReferenceGenerator(
                 val argumentsCount = call.arguments.size
                 if (argumentsCount <= valueArgumentsCount) {
                     apply {
+                        val calleeReference = when (call) {
+                            is FirFunctionCall -> call.calleeReference
+                            is FirDelegatedConstructorCall -> call.calleeReference
+                            else -> null
+                        } as? FirResolvedNamedReference
+                        val function = (calleeReference?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
+                        val valueParameters = function?.valueParameters
                         val argumentMapping = call.argumentMapping
                         if (argumentMapping != null && argumentMapping.isNotEmpty()) {
-                            val calleeReference = when (call) {
-                                is FirFunctionCall -> call.calleeReference
-                                is FirDelegatedConstructorCall -> call.calleeReference
-                                else -> throw IllegalArgumentException("Unsupported call: ${call.render()}")
-                            } as? FirResolvedNamedReference
-                            val function = (calleeReference?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
-                            val valueParameters = function?.valueParameters
-
                             if (valueParameters != null) {
                                 return applyArgumentsWithReorderingIfNeeded(argumentMapping, valueParameters)
                             }
                         }
                         for ((index, argument) in call.arguments.withIndex()) {
-                            val argumentExpression = visitor.convertToIrExpression(argument)
+                            val argumentExpression =
+                                visitor.convertToIrExpression(argument).applySamConversionIfNeeded(argument, valueParameters?.get(index))
                             putValueArgument(index, argumentExpression)
                         }
                     }
@@ -378,7 +375,7 @@ internal class CallAndReferenceGenerator(
             return IrBlockImpl(startOffset, endOffset, type, IrStatementOrigin.ARGUMENTS_REORDERING_FOR_CALL).apply {
                 for ((argument, parameter) in argumentMapping) {
                     val parameterIndex = valueParameters.indexOf(parameter)
-                    val irArgument = visitor.convertToIrExpression(argument)
+                    val irArgument = visitor.convertToIrExpression(argument).applySamConversionIfNeeded(argument, parameter)
                     if (irArgument.hasNoSideEffects()) {
                         putValueArgument(parameterIndex, irArgument)
                     } else {
@@ -393,7 +390,7 @@ internal class CallAndReferenceGenerator(
             }
         } else {
             for ((argument, parameter) in argumentMapping) {
-                val argumentExpression = visitor.convertToIrExpression(argument)
+                val argumentExpression = visitor.convertToIrExpression(argument).applySamConversionIfNeeded(argument, parameter)
                 putValueArgument(valueParameters.indexOf(parameter), argumentExpression)
             }
             return this
@@ -413,6 +410,28 @@ internal class CallAndReferenceGenerator(
             lastValueParameterIndex = index
         }
         return false
+    }
+
+    private fun IrExpression.applySamConversionIfNeeded(
+        argument: FirExpression,
+        parameter: FirValueParameter?
+    ): IrExpression {
+        if (parameter == null || !needSamConversion(argument, parameter)) {
+            return this
+        }
+        val samType = parameter.returnTypeRef.toIrType()
+        // Make sure the converted IrType owner indeed has a single abstract method, since FunctionReferenceLowering relies on it.
+        if (!samType.isSamType) return this
+        return IrTypeOperatorCallImpl(this.startOffset, this.endOffset, samType, IrTypeOperator.SAM_CONVERSION, samType, this)
+    }
+
+    private fun needSamConversion(argument: FirExpression, parameter: FirValueParameter): Boolean {
+        // If the expected type is a built-in functional type, we don't need SAM conversion.
+        if (parameter.returnTypeRef.coneTypeSafe<ConeKotlinType>()?.isBuiltinFunctionalType(session) == true) {
+            return false
+        }
+        // On the other hand, the actual type should be a functional type.
+        return argument.isFunctional(session)
     }
 
     private fun IrExpression.applyTypeArguments(access: FirQualifiedAccess): IrExpression {

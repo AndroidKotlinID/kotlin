@@ -5,13 +5,15 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
-import org.jetbrains.kotlin.fir.*
+import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirFunctionTarget
+import org.jetbrains.kotlin.fir.copy
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
-import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.buildReturnExpression
 import org.jetbrains.kotlin.fir.expressions.builder.buildUnitExpression
@@ -19,10 +21,12 @@ import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirEmptyControlFlowGraphReference
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
+import org.jetbrains.kotlin.fir.resolve.calls.ImplicitExtensionReceiverValue
 import org.jetbrains.kotlin.fir.resolve.inference.FirDelegatedPropertyInferenceSession
 import org.jetbrains.kotlin.fir.resolve.inference.extractLambdaInfoFromFunctionalType
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.*
+import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirMemberTypeParameterScope
 import org.jetbrains.kotlin.fir.symbols.constructStarProjectedType
@@ -35,8 +39,6 @@ import org.jetbrains.kotlin.fir.visitors.*
 import org.jetbrains.kotlin.name.Name
 
 open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) : FirPartialBodyResolveTransformer(transformer) {
-    private var primaryConstructorParametersScope: FirLocalScope? = null
-
     private var containingClass: FirRegularClass? = null
 
     private fun transformDeclarationContent(
@@ -66,22 +68,23 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         }
     }
 
-    protected inline fun <T> withTypeParametersOf(declaration: FirMemberDeclaration, crossinline l: () -> T): T {
-        if (declaration.typeParameters.isEmpty()) return l()
+    protected fun createTypeParameterScope(declaration: FirMemberDeclaration): FirMemberTypeParameterScope? {
+        if (declaration.typeParameters.isEmpty()) return null
 
         for (typeParameter in declaration.typeParameters) {
             (typeParameter as? FirTypeParameter)?.replaceResolvePhase(FirResolvePhase.STATUS)
             typeParameter.transformChildren(transformer, ResolutionMode.ContextIndependent)
         }
 
-        val before = context.typeParametersScopes
-        @OptIn(PrivateForInline::class)
-        context.typeParametersScopes = context.typeParametersScopes.add(FirMemberTypeParameterScope(declaration))
-        return try {
+        return FirMemberTypeParameterScope(declaration)
+    }
+
+    protected inline fun <T> withTypeParametersOf(declaration: FirMemberDeclaration, crossinline l: () -> T): T {
+        val scope = createTypeParameterScope(declaration) ?: return l()
+
+        return context.withTowerDataCleanup {
+            context.addNonLocalTowerDataElement(scope.asTowerDataElement(isLocal = false))
             l()
-        } finally {
-            @OptIn(PrivateForInline::class)
-            context.typeParametersScopes = before
         }
     }
 
@@ -111,11 +114,11 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 withLocalScopeCleanup {
                     context.withContainer(property) {
                         if (property.delegate != null) {
-                            addLocalScope(primaryConstructorParametersScope)
+                            addLocalScope(context.getPrimaryConstructorParametersScope())
                             transformPropertyWithDelegate(property)
                         } else {
                             withLocalScopeCleanup {
-                                addLocalScope(primaryConstructorParametersScope)
+                                addLocalScope(context.getPrimaryConstructorParametersScope())
                                 property.transformChildrenWithoutAccessors(returnTypeRef)
                                 property.transformInitializer(integerLiteralTypeApproximator, null)
                             }
@@ -317,47 +320,52 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
     }
 
     override fun transformRegularClass(regularClass: FirRegularClass, data: ResolutionMode): CompositeTransformResult<FirStatement> {
-        context.storeClass(regularClass)
+        context.storeClassIfNotNested(regularClass)
 
         if (regularClass.isLocal && regularClass !in context.targetedLocalClasses) {
             return regularClass.runAllPhasesForLocalClass(transformer, components, data).compose()
         }
 
+        return context.withTowerDataCleanup {
+            if (!regularClass.isInner && context.containerIfAny is FirRegularClass) {
+                context.replaceTowerDataContext(
+                    context.getTowerDataContextForStaticNestedClassesUnsafe()
+                )
+            }
+
+            doTransformRegularClass(regularClass, data)
+        }
+    }
+
+    private fun doTransformRegularClass(
+        regularClass: FirRegularClass,
+        data: ResolutionMode
+    ): CompositeTransformResult.Single<FirRegularClass> {
         val notAnalyzed = regularClass.resolvePhase < transformerPhase
 
-        return withTypeParametersOf(regularClass) {
-            if (notAnalyzed) {
-                dataFlowAnalyzer.enterClass()
-            }
-            val oldConstructorScope = primaryConstructorParametersScope
-            val oldContainingClass = containingClass
-            primaryConstructorParametersScope = null
-            containingClass = regularClass
-            val type = regularClass.defaultType()
-            val result = withLabelAndReceiverType(regularClass.name, regularClass, type) {
-                val constructor = regularClass.declarations.firstOrNull() as? FirConstructor
-                if (constructor?.isPrimary == true) {
-                    primaryConstructorParametersScope = FirLocalScope().let {
-                        var scope = it
-                        constructor.valueParameters.forEach { scope = scope.storeVariable(it) }
-                        scope
-                    }
-                }
-                transformDeclarationContent(regularClass, data).single as FirRegularClass
-            }
-            if (notAnalyzed) {
-                if (!implicitTypeOnly) {
-                    val controlFlowGraph = dataFlowAnalyzer.exitRegularClass(result)
-                    result.transformControlFlowGraphReference(ControlFlowGraphReferenceTransformer, controlFlowGraph)
-                } else {
-                    dataFlowAnalyzer.exitClass()
-                }
-            }
-            containingClass = oldContainingClass
-            primaryConstructorParametersScope = oldConstructorScope
-            @Suppress("UNCHECKED_CAST")
-            result.compose()
+        if (notAnalyzed) {
+            dataFlowAnalyzer.enterClass()
         }
+
+        val oldContainingClass = containingClass
+        containingClass = regularClass
+        val type = regularClass.defaultType()
+        val result = withScopesForClass(regularClass.name, regularClass, type) {
+            transformDeclarationContent(regularClass, data).single as FirRegularClass
+        }
+
+        if (notAnalyzed) {
+            if (!implicitTypeOnly) {
+                val controlFlowGraph = dataFlowAnalyzer.exitRegularClass(result)
+                result.transformControlFlowGraphReference(ControlFlowGraphReferenceTransformer, controlFlowGraph)
+            } else {
+                dataFlowAnalyzer.exitClass()
+            }
+        }
+
+        containingClass = oldContainingClass
+        return (@Suppress("UNCHECKED_CAST")
+        result.compose())
     }
 
     override fun transformAnonymousObject(
@@ -375,7 +383,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 this.type = type
             }
         }
-        var result = withLabelAndReceiverType(null, anonymousObject, type) {
+        var result = withScopesForClass(null, anonymousObject, type) {
             transformDeclarationContent(anonymousObject, data).single as FirAnonymousObject
         }
         if (!implicitTypeOnly && result.controlFlowGraphReference == FirEmptyControlFlowGraphReference) {
@@ -428,6 +436,10 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             return simpleFunction.compose()
         }
 
+        if (context.containerIfAny !is FirClass<*>) {
+            context.storeFunction(simpleFunction)
+        }
+
         return withTypeParametersOf(simpleFunction) {
             val containingDeclaration = context.containerIfAny
             if (containingDeclaration != null && containingDeclaration !is FirClass<*>) {
@@ -453,9 +465,6 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         function: F,
         resolutionMode: ResolutionMode,
     ): CompositeTransformResult<F> {
-        if (function is FirSimpleFunction && context.containerIfAny !is FirClass<*>) {
-            context.storeFunction(function)
-        }
 
         @Suppress("UNCHECKED_CAST")
         val result = transformFunction(function, resolutionMode).single as F
@@ -479,8 +488,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         function: FirFunction<F>,
         data: ResolutionMode
     ): CompositeTransformResult<FirStatement> {
-        return withLocalScopeCleanup {
-            addLocalScope(FirLocalScope())
+        return withNewLocalScope {
             val functionIsNotAnalyzed = transformerPhase != function.resolvePhase
             if (functionIsNotAnalyzed) {
                 dataFlowAnalyzer.enterFunction(function)
@@ -509,9 +517,10 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         if (implicitTypeOnly) return anonymousInitializer.compose()
         return withLocalScopeCleanup {
             dataFlowAnalyzer.enterInitBlock(anonymousInitializer)
-            addLocalScope(primaryConstructorParametersScope)
-            addLocalScope(FirLocalScope())
-            val result = transformDeclarationContent(anonymousInitializer, ResolutionMode.ContextIndependent).single as FirAnonymousInitializer
+            addLocalScope(context.getPrimaryConstructorParametersScope())
+            addNewLocalScope()
+            val result =
+                transformDeclarationContent(anonymousInitializer, ResolutionMode.ContextIndependent).single as FirAnonymousInitializer
             val graph = dataFlowAnalyzer.exitInitBlock(result)
             result.transformControlFlowGraphReference(ControlFlowGraphReferenceTransformer, graph).compose()
         }
@@ -566,6 +575,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                                 val name = Name.identifier("it")
                                 buildValueParameter {
                                     session = this@FirDeclarationsResolveTransformer.session
+                                    origin = FirDeclarationOrigin.Source
                                     returnTypeRef = buildResolvedTypeRef { type = singleParameterType }
                                     this.name = name
                                     symbol = FirVariableSymbol(name)
@@ -670,27 +680,79 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         return this
     }
 
+    private inline fun <T> withScopesForClass(
+        labelName: Name?,
+        owner: FirClass<*>,
+        type: ConeKotlinType,
+        block: () -> T
+    ): T = context.withTowerDataCleanup {
+        val towerElementsForClass = components.collectTowerDataElementsForClass(owner, type)
+
+        val staticsAndCompanion =
+            context.towerDataContext
+                .addNonLocalTowerDataElements(towerElementsForClass.superClassesStaticsAndCompanionReceivers)
+                .run {
+                    if (towerElementsForClass.companionReceiver != null)
+                        addReceiver(null, towerElementsForClass.companionReceiver)
+                    else
+                        this
+                }
+                .addNonLocalScopeIfNotNull(towerElementsForClass.companionStaticScope)
+                .addNonLocalScopeIfNotNull(towerElementsForClass.staticScope)
+
+        val typeParameterScope = (owner as? FirRegularClass)?.let(this::createTypeParameterScope)
+
+        val forMembersResolution =
+            staticsAndCompanion
+                .addReceiver(labelName, towerElementsForClass.thisReceiver)
+                .addNonLocalScopeIfNotNull(typeParameterScope)
+
+        val scopeForConstructorHeader =
+            staticsAndCompanion.addNonLocalScopeIfNotNull(typeParameterScope)
+
+        val newTowerDataContextForStaticNestedClasses =
+            if ((owner as? FirRegularClass)?.classKind?.isSingleton == true)
+                forMembersResolution
+            else
+                staticsAndCompanion
+
+        val constructor = (owner as? FirRegularClass)?.declarations?.firstOrNull() as? FirConstructor
+        val primaryConstructorParametersScope =
+            if (constructor?.isPrimary == true) {
+                constructor.valueParameters.fold(FirLocalScope()) { acc, param -> acc.storeVariable(param) }
+            } else null
+
+        components.context.replaceTowerDataContext(forMembersResolution)
+
+        val newContexts =
+            FirTowerDataContextsForClassParts(
+                newTowerDataContextForStaticNestedClasses,
+                scopeForConstructorHeader,
+                primaryConstructorParametersScope
+            )
+
+        context.withNewTowerDataForClassParts(newContexts) {
+            block()
+        }
+    }
+
     protected inline fun <T> withLabelAndReceiverType(
         labelName: Name?,
-        owner: FirDeclaration,
+        owner: FirCallableDeclaration<*>,
         type: ConeKotlinType?,
         block: () -> T
-    ): T {
-        val (implicitReceiverValue, implicitCompanionValues) = components.collectImplicitReceivers(type, owner)
-        implicitCompanionValues.forEach { value ->
-            context.implicitReceiverStack.add(null, value)
+    ): T = context.withTowerDataCleanup {
+        if (type != null) {
+            val receiver = ImplicitExtensionReceiverValue(
+                owner.symbol,
+                type,
+                components.session,
+                components.scopeSession
+            )
+            context.addReceiver(labelName, receiver)
         }
-        implicitReceiverValue?.let { context.implicitReceiverStack.add(labelName, it) }
 
-        try {
-            return block()
-        } finally {
-            if (type != null) {
-                context.implicitReceiverStack.pop(labelName)
-                for (i in implicitCompanionValues.indices)
-                    context.implicitReceiverStack.pop(null)
-            }
-        }
+        block()
     }
 
     private fun storeVariableReturnType(variable: FirVariable<*>) {
