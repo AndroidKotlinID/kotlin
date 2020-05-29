@@ -27,6 +27,8 @@ object GenerateSteppedRangesCodegenTestData {
         "zeroToMaxValueStepMaxValue.kt"
     )
 
+    private val JVM_IR_FAILING_FOR_UNSIGNED_FILENAMES = setOf<String>()
+
     private enum class Type(val type: String, val isLong: Boolean = false, val isUnsigned: Boolean = false) {
         INT("Int"),
         LONG("Long", isLong = true),
@@ -170,12 +172,16 @@ object GenerateSteppedRangesCodegenTestData {
         extraCode: String?,
         fullSubdir: File,
         asLiteral: Boolean,
-        shouldIgnoreForFIR: Boolean = false
+        shouldIgnoreForFIR: Boolean = false,
+        shouldIgnoreForJvmIR: Boolean = false
     ) {
         fullSubdir.mkdirs()
         PrintWriter(File(fullSubdir, fileName)).use {
             with(it) {
                 println("// $PREAMBLE_MESSAGE")
+                if (shouldIgnoreForJvmIR) {
+                    println("// IGNORE_BACKEND: JVM_IR")
+                }
                 if (shouldIgnoreForFIR) {
                     println("// IGNORE_BACKEND_FIR: JVM_IR")
                 }
@@ -209,12 +215,13 @@ object GenerateSteppedRangesCodegenTestData {
         subdir: String? = null,
         asLiteral: Boolean
     ) {
-        val fullSubdirPath = StringBuilder((if (asLiteral) "literal" else "expression"))
-        fullSubdirPath.append("/").append(function.subdir)
-        if (subdir != null) {
-            fullSubdirPath.append("/").append(subdir)
+        val fullSubdirPath = buildString {
+            if (asLiteral) append("literal") else append("expression")
+            append("/").append(function.subdir)
+            if (subdir != null) {
+                append("/").append(subdir)
+            }
         }
-
         val (unsignedTests, signedTests) = typeToBuilderMap.asSequence().partition { (type, _) -> type.isUnsigned }
         if (unsignedTests.isNotEmpty()) {
             generateTestsForFunction(
@@ -222,9 +229,10 @@ object GenerateSteppedRangesCodegenTestData {
                 unsignedTests.associate { it.toPair() },
                 function,
                 extraCode,
-                File(UNSIGNED_TEST_DATA_DIR, fullSubdirPath.toString()),
+                File(UNSIGNED_TEST_DATA_DIR, fullSubdirPath),
                 asLiteral,
-                fileName in FIR_FAILING_FOR_UNSIGNED_FILENAMES
+                shouldIgnoreForFIR = fileName in FIR_FAILING_FOR_UNSIGNED_FILENAMES,
+                shouldIgnoreForJvmIR = fileName in JVM_IR_FAILING_FOR_UNSIGNED_FILENAMES,
             )
         }
         if (signedTests.isNotEmpty()) {
@@ -233,7 +241,7 @@ object GenerateSteppedRangesCodegenTestData {
                 signedTests.associate { it.toPair() },
                 function,
                 extraCode,
-                File(TEST_DATA_DIR, fullSubdirPath.toString()),
+                File(TEST_DATA_DIR, fullSubdirPath),
                 asLiteral
             )
         }

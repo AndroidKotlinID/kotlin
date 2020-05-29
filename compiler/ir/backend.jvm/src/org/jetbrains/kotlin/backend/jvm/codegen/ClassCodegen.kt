@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.ir.descriptors.WrappedClassDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -60,13 +61,16 @@ abstract class ClassCodegen protected constructor(
     private val classOrigin = run {
         // The descriptor associated with an IrClass is never modified in lowerings, so it
         // doesn't reflect the state of the lowered class. To make the diagnostics work we
-        // pass in a wrapped descriptor instead.
+        // pass in a wrapped descriptor instead, except for lambdas where we use the descriptor
+        // of the original function.
         // TODO: Migrate class builders away from descriptors
         val descriptor = WrappedClassDescriptor().apply { bind(irClass) }
         val psiElement = context.psiSourceManager.findPsiElement(irClass)
         when (irClass.origin) {
             IrDeclarationOrigin.FILE_CLASS ->
                 JvmDeclarationOrigin(JvmDeclarationOriginKind.PACKAGE_PART, psiElement, descriptor)
+            JvmLoweredDeclarationOrigin.LAMBDA_IMPL, JvmLoweredDeclarationOrigin.FUNCTION_REFERENCE_IMPL ->
+                OtherOrigin(psiElement, irClass.attributeOwnerId.safeAs<IrFunctionReference>()?.symbol?.descriptor ?: descriptor)
             else ->
                 OtherOrigin(psiElement, descriptor)
         }
@@ -79,7 +83,7 @@ abstract class ClassCodegen protected constructor(
             throw IllegalStateException("Generating class with invalid name '${type.className}': ${irClass.dump()}")
         }
         defineClass(
-            irClass.descriptor.psiElement,
+            irClass.psiElement,
             state.classFileVersion,
             irClass.flags,
             signature.name,
@@ -88,8 +92,6 @@ abstract class ClassCodegen protected constructor(
             signature.interfaces.toTypedArray()
         )
     }
-
-    internal var writeSourceMap: Boolean = withinInline
 
     private var regeneratedObjectNameGenerators = mutableMapOf<String, NameGenerator>()
 
@@ -145,10 +147,10 @@ abstract class ClassCodegen protected constructor(
 
         generateInnerAndOuterClasses()
 
-        if (writeSourceMap) {
+        if (withinInline || !smap.isTrivial) {
             visitor.visitSMAP(smap, !context.state.languageVersionSettings.supportsFeature(LanguageFeature.CorrectSourceMappingSyntax))
         } else {
-            visitor.visitSource(smap.sourceInfo.source, null)
+            visitor.visitSource(smap.sourceInfo!!.source, null)
         }
 
         visitor.done()
@@ -269,7 +271,7 @@ abstract class ClassCodegen protected constructor(
 
     protected abstract fun bindMethodMetadata(method: IrFunction, signature: Method)
 
-    private fun generateMethod(method: IrFunction, classSMAP: DefaultSourceMapper) {
+    private fun generateMethod(method: IrFunction, classSMAP: SourceMapper) {
         if (method.isFakeOverride) {
             jvmSignatureClashDetector.trackFakeOverrideMethod(method)
             return
@@ -281,7 +283,7 @@ abstract class ClassCodegen protected constructor(
             method.origin == JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE
         )
         val mv = with(node) { visitor.newMethod(method.OtherOrigin, access, name, desc, signature, exceptions.toTypedArray()) }
-        val smapCopier = NestedSourceMapper(classSMAP, smap, sameFile = true)
+        val smapCopier = SourceMapCopier(classSMAP, smap)
         val smapCopyingVisitor = object : MethodVisitor(Opcodes.API_VERSION, mv) {
             override fun visitLineNumber(line: Int, start: Label) =
                 super.visitLineNumber(smapCopier.mapLineNumber(line), start)
@@ -371,7 +373,19 @@ private val Visibility.flags: Int
     get() = AsmUtil.getVisibilityAccessFlag(this) ?: throw AssertionError("Unsupported visibility $this")
 
 internal val IrDeclaration.OtherOrigin: JvmDeclarationOrigin
-    get() = OtherOrigin(descriptor)
+    get() {
+        val klass = (this as? IrClass) ?: parentAsClass
+        return OtherOrigin(
+            // For declarations inside lambdas, produce a descriptor which refers back to the original function.
+            // This is needed for plugins which check for lambdas inside of inline functions using the descriptor
+            // contained in JvmDeclarationOrigin. This matches the behavior of the JVM backend.
+            if (klass.origin == JvmLoweredDeclarationOrigin.LAMBDA_IMPL || klass.origin == JvmLoweredDeclarationOrigin.SUSPEND_LAMBDA) {
+                klass.attributeOwnerId.safeAs<IrFunctionReference>()?.symbol?.descriptor ?: descriptor
+            } else {
+                descriptor
+            }
+        )
+    }
 
 private fun IrClass.getSuperClassInfo(typeMapper: IrTypeMapper): IrSuperClassInfo {
     if (isInterface) {

@@ -24,7 +24,8 @@ data class NpmDependency(
     internal val project: Project,
     private val name: String,
     private val version: String,
-    val scope: Scope = Scope.NORMAL
+    val scope: Scope = Scope.NORMAL,
+    val generateKotlinExternals: Boolean = false
 ) : SelfResolvingDependency,
     SelfResolvingDependencyInternal,
     ResolvableDependency,
@@ -43,22 +44,6 @@ data class NpmDependency(
     internal val dependencies = mutableSetOf<NpmDependency>()
     internal var resolvedVersion: String? = null
     internal var integrity: String? = null
-
-    fun getDependenciesRecursively(): Set<NpmDependency> {
-        val visited = mutableSetOf<NpmDependency>()
-
-        fun visit(it: NpmDependency) {
-            if (!visited.add(it)) return
-
-            it.dependencies.forEach { child ->
-                visit(child)
-            }
-        }
-
-        visit(this)
-
-        return visited
-    }
 
     override fun resolve(transitive: Boolean): Set<File> =
         resolveProject()
@@ -125,6 +110,32 @@ data class NpmDependency(
     }
 
     override fun getReason(): String? = reason
+}
+
+internal fun directoryNpmDependency(
+    project: Project,
+    name: String,
+    directory: File,
+    scope: NpmDependency.Scope,
+    generateKotlinExternals: Boolean
+): NpmDependency {
+    check(directory.isDirectory) {
+        "Dependency on local path should point on directory but $directory found"
+    }
+
+    return NpmDependency(
+        project = project,
+        name = name,
+        version = fileVersion(directory),
+        scope = scope,
+        generateKotlinExternals = generateKotlinExternals
+    )
+}
+
+internal fun onlyNameNpmDependency(
+    name: String
+): Nothing {
+    throw IllegalArgumentException("NPM dependency '$name' doesn't have version. Please, set version explicitly.")
 }
 
 internal fun String.isFileVersion() =

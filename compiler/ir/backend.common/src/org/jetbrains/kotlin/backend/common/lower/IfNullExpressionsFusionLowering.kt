@@ -172,9 +172,17 @@ class IfNullExpressionsFusionLowering(val context: CommonBackendContext) : FileL
         val arg1 = condition0.getValueArgument(1) as? IrConst<*> ?: return null
         if (arg1.value != null) return null
 
-        val branch1 = whenExpr.branches[1] as? IrElseBranch ?: return null
+        val elseResult = whenExpr.branches[1].getElseBranchResultOrNull() ?: return null
 
-        return IfNullExpr(whenExpr.type, subjectVar, branch0.result, branch1.result)
+        return IfNullExpr(whenExpr.type, subjectVar, branch0.result, elseResult)
+    }
+
+    private fun IrBranch.getElseBranchResultOrNull(): IrExpression? {
+        val branchCondition = condition
+        return if (branchCondition is IrConst<*> && branchCondition.value == true)
+            result
+        else
+            null
     }
 
     private fun IrExpression.isTrivial() =

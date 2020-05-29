@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.psi.psiUtil.pureStartOffset
 import org.jetbrains.kotlin.psi2ir.endOffsetOrUndefined
 import org.jetbrains.kotlin.psi2ir.startOffsetOrUndefined
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
+import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyExternal
 import org.jetbrains.kotlin.types.KotlinType
 
 class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
@@ -75,7 +76,7 @@ class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
 
     fun generateClass(startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: ClassDescriptor, symbol: IrClassSymbol): IrClass {
 
-        val irClass = IrClassImpl(startOffset, endOffset, origin, symbol)
+        val irClass = IrClassImpl(startOffset, endOffset, origin, symbol, descriptor)
 
         symbolTable.withScope(descriptor) {
             irClass.metadata = MetadataSource.Class(descriptor)
@@ -98,13 +99,21 @@ class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
 
     fun generateEnumEntry(startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: ClassDescriptor, symbol: IrEnumEntrySymbol): IrEnumEntry {
         // TODO: corresponging class?
-        val irEntry = IrEnumEntryImpl(startOffset, endOffset, origin, symbol)
+        val irEntry = IrEnumEntryImpl(startOffset, endOffset, origin, symbol, descriptor.name)
 
         return irEntry
     }
 
-    fun generateTypeAlias(startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: TypeAliasDescriptor, symbol: IrTypeAliasSymbol): IrTypeAlias {
-        val irAlias = IrTypeAliasImpl.fromSymbolDescriptor(startOffset, endOffset, symbol, descriptor.expandedType.toIrType(), origin)
+    fun generateTypeAlias(
+        startOffset: Int,
+        endOffset: Int,
+        origin: IrDeclarationOrigin,
+        descriptor: TypeAliasDescriptor,
+        symbol: IrTypeAliasSymbol
+    ): IrTypeAlias {
+        val irAlias = IrTypeAliasImpl.fromSymbolDescriptor(
+            startOffset, endOffset, symbol, descriptor.expandedType.toIrType(), origin, descriptor
+        )
 
         generateGlobalTypeParametersDeclarations(irAlias, descriptor.declaredTypeParameters)
 
@@ -150,7 +159,7 @@ class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
         startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: ClassConstructorDescriptor, symbol: IrConstructorSymbol,
         defaultArgumentFactory: IrFunction.(ValueParameterDescriptor) -> IrExpressionBody? = { null }
     ): IrConstructor {
-        val irConstructor = IrConstructorImpl(startOffset, endOffset, origin, symbol, IrUninitializedType)
+        val irConstructor = IrConstructorImpl(startOffset, endOffset, origin, symbol, IrUninitializedType, descriptor)
         irConstructor.metadata = MetadataSource.Function(descriptor)
 
         symbolTable.withScope(descriptor) {
@@ -171,7 +180,7 @@ class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
         startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: FunctionDescriptor, symbol: IrSimpleFunctionSymbol,
         defaultArgumentFactory: IrFunction.(ValueParameterDescriptor) -> IrExpressionBody? = { null }
     ): IrSimpleFunction {
-        val irFunction = IrFunctionImpl(startOffset, endOffset, origin, symbol, IrUninitializedType)
+        val irFunction = IrFunctionImpl(startOffset, endOffset, origin, symbol, IrUninitializedType, descriptor)
         irFunction.metadata = MetadataSource.Function(descriptor)
 
         symbolTable.withScope(descriptor) {
@@ -185,7 +194,18 @@ class StandaloneDeclarationGenerator(private val context: GeneratorContext) {
     }
 
     fun generateProperty(startOffset: Int, endOffset: Int, origin: IrDeclarationOrigin, descriptor: PropertyDescriptor, symbol: IrPropertySymbol): IrProperty {
-        val irProperty = IrPropertyImpl(startOffset, endOffset, origin, symbol, isDelegated = false)
+        val irProperty = IrPropertyImpl(
+            startOffset, endOffset, origin, symbol,
+            name = descriptor.name,
+            visibility = descriptor.visibility,
+            modality = descriptor.modality,
+            isVar = descriptor.isVar,
+            isConst = descriptor.isConst,
+            isLateinit = descriptor.isLateInit,
+            isDelegated = false,
+            isExternal = descriptor.isEffectivelyExternal(),
+            isExpect = descriptor.isExpect
+        )
 
         irProperty.metadata = MetadataSource.Property(descriptor)
 

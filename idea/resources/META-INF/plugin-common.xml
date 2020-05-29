@@ -2739,7 +2739,7 @@
                      groupPath="Kotlin"
                      groupName="Style issues"
                      enabledByDefault="true"
-                     level="WEAK WARNING"
+                     level="INFO"
                      language="kotlin"
                      key="inspection.trailing.comma.display.name" bundle="messages.KotlinBundle"/>
 
@@ -3315,6 +3315,14 @@
                      level="WARNING"
                      language="kotlin"
                      key="inspection.redundant.elvis.return.null.display.name" bundle="messages.KotlinBundle"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.logging.KotlinLoggerInitializedWithForeignClassInspection"
+                     groupPath="Kotlin"
+                     groupName="Logging"
+                     enabledByDefault="false"
+                     level="WARNING"
+                     language="kotlin"
+                     key="inspection.logger.initialized.with.foreign.class.display.name" bundle="messages.KotlinBundle"/>
 
     <projectService serviceImplementation="org.jetbrains.kotlin.idea.codeInsight.KotlinCodeInsightWorkspaceSettings"/>
 

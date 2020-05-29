@@ -11,8 +11,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.idea.core.util.isMultiLine
-import org.jetbrains.kotlin.idea.formatter.TrailingCommaHelper
-import org.jetbrains.kotlin.idea.formatter.isComma
+import org.jetbrains.kotlin.idea.formatter.trailingComma.TrailingCommaHelper
+import org.jetbrains.kotlin.idea.util.isComma
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfTypesAndPredicate
@@ -130,11 +130,11 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             val withTrailingComma = lastElementOnFirstLine.parent
                 ?.safeAs<KtElement>()
                 ?.let {
-                    TrailingCommaHelper.needComma(it, CodeStyle.getSettings(it.project), true)
+                    TrailingCommaHelper.trailingCommaExistsOrCanExist(it, CodeStyle.getSettings(it.project))
                 } == true
 
             fixCommaIfNeeded(lastElementOnFirstLine, down && isLastOfItsKind(lastElementOnSecondLine, true), withTrailingComma)
-            fixCommaIfNeeded(lastElementOnSecondLine, !down && isLastOfItsKind(lastElementOnFirstLine, true),withTrailingComma)
+            fixCommaIfNeeded(lastElementOnSecondLine, !down && isLastOfItsKind(lastElementOnFirstLine, true), withTrailingComma)
             editor.project?.let { PsiDocumentManager.getInstance(it).doPostponedOperationsAndUnblockDocument(editor.document) }
         }
     }

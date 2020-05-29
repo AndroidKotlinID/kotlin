@@ -2253,6 +2253,31 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/changeSignature/addFunctionParameterAndChangeTypes.kt");
         }
 
+        @TestMetadata("addFunctionParameterForReferencedArgument.kt")
+        public void testAddFunctionParameterForReferencedArgument() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForReferencedArgument.kt");
+        }
+
+        @TestMetadata("addFunctionParameterForReferencedArgument2.kt")
+        public void testAddFunctionParameterForReferencedArgument2() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForReferencedArgument2.kt");
+        }
+
+        @TestMetadata("addFunctionParameterForReferencedArgument3.kt")
+        public void testAddFunctionParameterForReferencedArgument3() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForReferencedArgument3.kt");
+        }
+
+        @TestMetadata("addFunctionParameterForReferencedArgument4.kt")
+        public void testAddFunctionParameterForReferencedArgument4() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForReferencedArgument4.kt");
+        }
+
+        @TestMetadata("addFunctionParameterForReferencedArgument5.kt")
+        public void testAddFunctionParameterForReferencedArgument5() throws Exception {
+            runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForReferencedArgument5.kt");
+        }
+
         @TestMetadata("addFunctionParameterForTypeMismatch1.kt")
         public void testAddFunctionParameterForTypeMismatch1() throws Exception {
             runTest("idea/testData/quickfix/changeSignature/addFunctionParameterForTypeMismatch1.kt");
@@ -3277,9 +3302,34 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                     KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
                 }
 
-                @TestMetadata("classDelegatorToSuperclass.kt")
-                public void testClassDelegatorToSuperclass() throws Exception {
-                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/classDelegatorToSuperclass.kt");
+                @TestMetadata("createSuperClassFromSuperTypeEntry.kt")
+                public void testCreateSuperClassFromSuperTypeEntry() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntry.kt");
+                }
+
+                @TestMetadata("createSuperClassFromSuperTypeEntry2.kt")
+                public void testCreateSuperClassFromSuperTypeEntry2() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntry2.kt");
+                }
+
+                @TestMetadata("createSuperClassFromSuperTypeEntry3.kt")
+                public void testCreateSuperClassFromSuperTypeEntry3() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntry3.kt");
+                }
+
+                @TestMetadata("createSuperClassFromSuperTypeEntryForAnnotation.kt")
+                public void testCreateSuperClassFromSuperTypeEntryForAnnotation() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntryForAnnotation.kt");
+                }
+
+                @TestMetadata("createSuperClassFromSuperTypeEntryForEnum.kt")
+                public void testCreateSuperClassFromSuperTypeEntryForEnum() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntryForEnum.kt");
+                }
+
+                @TestMetadata("createSuperClassFromSuperTypeEntryForInline.kt")
+                public void testCreateSuperClassFromSuperTypeEntryForInline() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/delegationSpecifier/createSuperClassFromSuperTypeEntryForInline.kt");
                 }
 
                 @TestMetadata("createSuperclassInsideSubclass.kt")
@@ -3529,6 +3579,16 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("enumEntryHasComma.kt")
                 public void testEnumEntryHasComma() throws Exception {
                     runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasComma.kt");
+                }
+
+                @TestMetadata("enumEntryHasCommaAndSemicolon.kt")
+                public void testEnumEntryHasCommaAndSemicolon() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasCommaAndSemicolon.kt");
+                }
+
+                @TestMetadata("enumEntryHasCommaAndSemicolon2.kt")
+                public void testEnumEntryHasCommaAndSemicolon2() throws Exception {
+                    runTest("idea/testData/quickfix/createFromUsage/createClass/referenceExpression/enumEntryHasCommaAndSemicolon2.kt");
                 }
 
                 @TestMetadata("enumEntryHasNoLineBreak.kt")
@@ -6150,6 +6210,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/deprecatedSymbolUsage/importedObjectFunction.kt");
         }
 
+        @TestMetadata("importedObjectFunctionAddReceiver.kt")
+        public void testImportedObjectFunctionAddReceiver() throws Exception {
+            runTest("idea/testData/quickfix/deprecatedSymbolUsage/importedObjectFunctionAddReceiver.kt");
+        }
+
         @TestMetadata("importedObjectProperty.kt")
         public void testImportedObjectProperty() throws Exception {
             runTest("idea/testData/quickfix/deprecatedSymbolUsage/importedObjectProperty.kt");
@@ -6178,6 +6243,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("keepInfixCall.kt")
         public void testKeepInfixCall() throws Exception {
             runTest("idea/testData/quickfix/deprecatedSymbolUsage/keepInfixCall.kt");
+        }
+
+        @TestMetadata("kt35015.kt")
+        public void testKt35015() throws Exception {
+            runTest("idea/testData/quickfix/deprecatedSymbolUsage/kt35015.kt");
         }
 
         @TestMetadata("localFun.kt")
@@ -7903,6 +7973,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("local.kt")
         public void testLocal() throws Exception {
             runTest("idea/testData/quickfix/implement/local.kt");
+        }
+
+        @TestMetadata("menyImplMemberNotImplemented.kt")
+        public void testMenyImplMemberNotImplemented() throws Exception {
+            runTest("idea/testData/quickfix/implement/menyImplMemberNotImplemented.kt");
         }
 
         @TestMetadata("nested.kt")
@@ -11990,6 +12065,69 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
         @TestMetadata("property.kt")
         public void testProperty() throws Exception {
             runTest("idea/testData/quickfix/specifyOverrideExplicitly/property.kt");
+        }
+    }
+
+    @TestMetadata("idea/testData/quickfix/specifySuperType")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class SpecifySuperType extends AbstractQuickFixTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSpecifySuperType() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/specifySuperType"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("fullyQualifiedSuperType.kt")
+        public void testFullyQualifiedSuperType() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/fullyQualifiedSuperType.kt");
+        }
+
+        @TestMetadata("fullyQualifiedSuperTypeHasAnnotations.kt")
+        public void testFullyQualifiedSuperTypeHasAnnotations() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/fullyQualifiedSuperTypeHasAnnotations.kt");
+        }
+
+        @TestMetadata("fullyQualifiedSuperTypeHasTypeArguments.kt")
+        public void testFullyQualifiedSuperTypeHasTypeArguments() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/fullyQualifiedSuperTypeHasTypeArguments.kt");
+        }
+
+        @TestMetadata("function.kt")
+        public void testFunction() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/function.kt");
+        }
+
+        @TestMetadata("property.kt")
+        public void testProperty() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/property.kt");
+        }
+
+        @TestMetadata("superExpressionHasLabel.kt")
+        public void testSuperExpressionHasLabel() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/superExpressionHasLabel.kt");
+        }
+
+        @TestMetadata("superTypeHasAnnotations.kt")
+        public void testSuperTypeHasAnnotations() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/superTypeHasAnnotations.kt");
+        }
+
+        @TestMetadata("superTypeHasTypeArguments.kt")
+        public void testSuperTypeHasTypeArguments() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/superTypeHasTypeArguments.kt");
+        }
+
+        @TestMetadata("superTypeIsExtendedByOtherSuperType.kt")
+        public void testSuperTypeIsExtendedByOtherSuperType() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/superTypeIsExtendedByOtherSuperType.kt");
+        }
+
+        @TestMetadata("typeMismatch.kt")
+        public void testTypeMismatch() throws Exception {
+            runTest("idea/testData/quickfix/specifySuperType/typeMismatch.kt");
         }
     }
 

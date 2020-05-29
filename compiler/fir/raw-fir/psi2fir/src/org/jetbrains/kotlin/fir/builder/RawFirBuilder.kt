@@ -349,9 +349,6 @@ class RawFirBuilder(
         private fun KtParameter.toFirProperty(firParameter: FirValueParameter): FirProperty {
             require(hasValOrVar())
             var type = typeReference.toFirOrErrorType()
-            if (firParameter.isVararg) {
-                type = type.convertToArrayType()
-            }
             val status = FirDeclarationStatusImpl(visibility, modality).apply {
                 isExpect = hasExpectModifier()
                 isActual = hasActualModifier()
@@ -390,6 +387,8 @@ class RawFirBuilder(
                     visibility
                 ) else null
                 extractAnnotationsTo(this)
+            }.apply {
+                isFromVararg = firParameter.isVararg
             }
         }
 
@@ -544,9 +543,9 @@ class RawFirBuilder(
                 }
             }
 
+            // See DescriptorUtils#getDefaultConstructorVisibility in core.descriptors
             fun defaultVisibility() = when {
-                // TODO: object / enum is HIDDEN (?)
-                owner is KtObjectDeclaration || owner.hasModifier(ENUM_KEYWORD) -> Visibilities.PRIVATE
+                owner is KtObjectDeclaration || owner.hasModifier(ENUM_KEYWORD) || owner is KtEnumEntry -> Visibilities.PRIVATE
                 owner.hasModifier(SEALED_KEYWORD) -> Visibilities.PRIVATE
                 else -> Visibilities.UNKNOWN
             }
@@ -661,7 +660,7 @@ class RawFirBuilder(
         }
 
         override fun visitClassOrObject(classOrObject: KtClassOrObject, data: Unit): FirElement {
-            return withChildClassName(classOrObject.nameAsSafeName) {
+            return withChildClassName(classOrObject.nameAsSafeName, classOrObject.isLocal) {
 
                 val classKind = when (classOrObject) {
                     is KtObjectDeclaration -> ClassKind.OBJECT

@@ -106,10 +106,7 @@ The Kotlin plugin provides language support in IntelliJ IDEA and Android Studio.
               fieldName="INSTANCE"
               language="kotlin"
               extensions="kt;kts"/>
-    <fileType name="KLib"
-              implementationClass="org.jetbrains.kotlin.idea.KLibFileType"
-              fieldName="INSTANCE"
-              extensions="klib"/>
+    <fileType name="ARCHIVE" extensions="klib"/>
     <fileType name="KNM"
               implementationClass="org.jetbrains.kotlin.idea.klib.KlibMetaFileType"
               fieldName="INSTANCE"

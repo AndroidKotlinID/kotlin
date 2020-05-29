@@ -6,8 +6,8 @@
  * KOTLIN DIAGNOSTICS SPEC TEST (NEGATIVE)
  *
  * SPEC VERSION: 0.1-296
- * PLACE: expressions, try-expression -> paragraph 8 -> sentence 1
- * RELEVANT PLACES: expressions, try-expression -> paragraph 9 -> sentence 1
+ * MAIN LINK: expressions, try-expression -> paragraph 8 -> sentence 1
+ * PRIMARY LINKS: expressions, try-expression -> paragraph 9 -> sentence 1
  * NUMBER: 1
  * DESCRIPTION: The type of the try-expression is the least upper bound of the types of the last expressions of the try body and the last expressions of all the catch blocks
  */
@@ -47,7 +47,6 @@ fun case2() {
 
 /*
  * TESTCASE NUMBER: 3
- * UNEXPECTED BEHAVIOUR
  * ISSUES: KT-35494
  */
 fun case3() {
@@ -56,9 +55,9 @@ fun case3() {
         throwExceptionA(false)
         A(2)
     } catch (e: ExcA) {
-        A(<!NULL_FOR_NONNULL_TYPE, NULL_FOR_NONNULL_TYPE!>null<!>) //diag duplication
+        A(<!NULL_FOR_NONNULL_TYPE!>null<!>) //diag duplication
     } catch (e: ExcB) {
-        B(<!NULL_FOR_NONNULL_TYPE, NULL_FOR_NONNULL_TYPE!>null<!>) //diag duplication
+        B(<!NULL_FOR_NONNULL_TYPE!>null<!>) //diag duplication
     }<!>
 }
 

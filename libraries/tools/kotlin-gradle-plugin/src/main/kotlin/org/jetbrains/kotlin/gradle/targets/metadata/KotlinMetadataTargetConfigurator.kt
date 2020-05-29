@@ -18,6 +18,7 @@ import org.gradle.api.tasks.bundling.Zip
 import org.jetbrains.kotlin.gradle.dsl.KotlinCommonOptions
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.dsl.multiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.multiplatformExtensionOrNull
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.plugin.sources.*
@@ -28,8 +29,6 @@ import org.jetbrains.kotlin.gradle.tasks.locateTask
 import org.jetbrains.kotlin.gradle.tasks.registerTask
 import org.jetbrains.kotlin.gradle.utils.addExtendsFromRelation
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
-import org.jetbrains.kotlin.gradle.utils.setArchiveAppendixCompatible
-import org.jetbrains.kotlin.gradle.utils.setArchiveClassifierCompatible
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
 import java.util.concurrent.Callable
 
@@ -137,7 +136,7 @@ class KotlinMetadataTargetConfigurator(kotlinPluginVersion: String) :
         if (target.project.isKotlinGranularMetadataEnabled) {
             target.project.locateTask<Jar>(target.artifactsTaskName)!!.configure {
                 if (!target.project.isCompatibilityMetadataVariantEnabled) {
-                    it.setArchiveClassifierCompatible { "commonMain" }
+                    it.archiveClassifier.set("commonMain")
                 }
                 it.onlyIf { target.project.isCompatibilityMetadataVariantEnabled }
             }
@@ -150,10 +149,10 @@ class KotlinMetadataTargetConfigurator(kotlinPluginVersion: String) :
                 allMetadataJar.description = "Assembles a jar archive containing the metadata for all Kotlin source sets."
                 allMetadataJar.group = BasePlugin.BUILD_GROUP
 
-                allMetadataJar.setArchiveAppendixCompatible { target.name.toLowerCase() }
+                allMetadataJar.archiveAppendix.set(target.name.toLowerCase())
 
                 if (target.project.isCompatibilityMetadataVariantEnabled) {
-                    allMetadataJar.setArchiveClassifierCompatible { "all" }
+                    allMetadataJar.archiveClassifier.set("all")
                 }
             }
         }
@@ -403,7 +402,6 @@ class KotlinMetadataTargetConfigurator(kotlinPluginVersion: String) :
         // and their dependencies metadata transformed for compilation:
         return project.files(
             project.provider {
-                val metadataTarget = compilation.target
                 val sourceSet = compilation.defaultSourceSet
 
                 val transformationTaskHolders = sourceSet.getSourceSetHierarchy().mapNotNull { hierarchySourceSet ->
@@ -424,8 +422,8 @@ class KotlinMetadataTargetConfigurator(kotlinPluginVersion: String) :
                     transformationTaskHolders.flatMap { it.get().filesByResolution.toList() }.toMap()
 
                 val dependsOnCompilationOutputs = sourceSet.getSourceSetHierarchy().mapNotNull { hierarchySourceSet ->
-                    val dependencyCompilation = metadataTarget.compilations.getByName(hierarchySourceSet.name)
-                    dependencyCompilation.output.classesDirs.takeIf { hierarchySourceSet != sourceSet }
+                    val dependencyCompilation = project.getMetadataCompilationForSourceSet(hierarchySourceSet)
+                    dependencyCompilation?.output?.classesDirs.takeIf { hierarchySourceSet != sourceSet }
                 }
 
                 val artifactView = fromFiles.incoming.artifactView { view ->
@@ -541,3 +539,7 @@ internal fun Project.filesWithUnpackedArchives(from: FileCollection, extensions:
             } else it
         }
     }).builtBy(from)
+
+internal fun Project.getMetadataCompilationForSourceSet(sourceSet: KotlinSourceSet): AbstractKotlinCompilation<*>? {
+    return multiplatformExtension.metadata().compilations.findByName(sourceSet.name)
+}

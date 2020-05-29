@@ -14,7 +14,10 @@ import org.jetbrains.kotlin.fir.FirModuleBasedSession
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionBase
 import org.jetbrains.kotlin.fir.FirSessionProvider
-import org.jetbrains.kotlin.fir.extensions.FirExtensionsService
+import org.jetbrains.kotlin.fir.analysis.CheckersComponent
+import org.jetbrains.kotlin.fir.extensions.FirExtensionService
+import org.jetbrains.kotlin.fir.extensions.FirRegisteredPluginAnnotations
+import org.jetbrains.kotlin.fir.extensions.FirPredicateBasedProvider
 import org.jetbrains.kotlin.fir.java.deserialization.KotlinDeserializedJvmSymbolsProvider
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
@@ -68,6 +71,11 @@ class FirJavaModuleBasedSession(
             JvmCallConflictResolverFactory
         )
 
+        registerComponent(
+            CheckersComponent::class,
+            CheckersComponent.componentWithDefaultCheckers()
+        )
+
         Extensions.getArea(sessionProvider.project)
             .getExtensionPoint(PsiElementFinder.EP_NAME)
             .registerExtension(FirJavaElementFinder(this, sessionProvider.project))
@@ -116,8 +124,18 @@ class FirLibrarySession private constructor(
         )
 
         registerComponent(
-            FirExtensionsService::class,
-            FirExtensionsService(this)
+            FirExtensionService::class,
+            FirExtensionService(this)
+        )
+
+        registerComponent(
+            FirRegisteredPluginAnnotations::class,
+            FirRegisteredPluginAnnotations.create(this)
+        )
+
+        registerComponent(
+            FirPredicateBasedProvider::class,
+            FirPredicateBasedProvider.create(this)
         )
 
         sessionProvider.sessionCache[moduleInfo] = this

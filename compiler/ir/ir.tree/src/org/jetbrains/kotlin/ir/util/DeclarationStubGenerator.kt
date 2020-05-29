@@ -210,11 +210,7 @@ class DeclarationStubGenerator(
             if (descriptor.kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE)
                 IrDeclarationOrigin.FAKE_OVERRIDE
             else computeOrigin(descriptor)
-        return symbolTable.declareSimpleFunction(
-            UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-            origin,
-            descriptor.original
-        ) {
+        return symbolTable.declareSimpleFunction(descriptor.original) {
             IrLazyFunction(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin,
                 it, descriptor,
@@ -234,7 +230,7 @@ class DeclarationStubGenerator(
 
         val origin = computeOrigin(descriptor)
         return symbolTable.declareConstructor(
-            UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin, descriptor.original
+            descriptor.original
         ) {
             IrLazyConstructor(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin,
@@ -271,7 +267,7 @@ class DeclarationStubGenerator(
             return referenceClass.owner
         }
         val origin = computeOrigin(descriptor)
-        return symbolTable.declareClass(UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin, descriptor) {
+        return symbolTable.declareClass(descriptor) {
             IrLazyClass(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET, origin,
                 it, descriptor,

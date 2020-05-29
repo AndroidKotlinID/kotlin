@@ -17,8 +17,7 @@ import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.firProvider
-import org.jetbrains.kotlin.fir.resolve.transformers.AdapterForResolvePhase
-import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculator
+import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.resolve.transformers.TransformImplicitType
 import org.jetbrains.kotlin.fir.resolve.transformers.contracts.runContractResolveForLocalClass
 import org.jetbrains.kotlin.fir.symbols.impl.FirAccessorSymbol
@@ -30,25 +29,31 @@ import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
 
-@AdapterForResolvePhase
-class FirImplicitTypeBodyResolveTransformerAdapter(private val scopeSession: ScopeSession) : FirTransformer<Nothing?>() {
+@OptIn(AdapterForResolveProcessor::class)
+class FirImplicitTypeBodyResolveProcessor(session: FirSession, scopeSession: ScopeSession) : FirTransformerBasedResolveProcessor(session, scopeSession) {
+    override val transformer = FirImplicitTypeBodyResolveTransformerAdapter(session, scopeSession)
+}
+
+@AdapterForResolveProcessor
+class FirImplicitTypeBodyResolveTransformerAdapter(session: FirSession, scopeSession: ScopeSession) : FirTransformer<Nothing?>() {
     private val implicitBodyResolveComputationSession = ImplicitBodyResolveComputationSession()
+    private val returnTypeCalculator = ReturnTypeCalculatorWithJump(session, scopeSession, implicitBodyResolveComputationSession).also {
+        scopeSession.returnTypeCalculator = it
+    }
+
+    private val transformer = FirImplicitAwareBodyResolveTransformer(
+        session,
+        scopeSession,
+        implicitBodyResolveComputationSession,
+        FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE, implicitTypeOnly = true,
+        returnTypeCalculator
+    )
 
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         return element.compose()
     }
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
-        val session = file.session
-        val returnTypeCalculator = ReturnTypeCalculatorWithJump(session, scopeSession, implicitBodyResolveComputationSession)
-        scopeSession.returnTypeCalculator = returnTypeCalculator
-        val transformer = FirImplicitAwareBodyResolveTransformer(
-            session,
-            scopeSession,
-            implicitBodyResolveComputationSession,
-            FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE, implicitTypeOnly = true,
-            returnTypeCalculator
-        )
         return file.transform(transformer, ResolutionMode.ContextIndependent)
     }
 }

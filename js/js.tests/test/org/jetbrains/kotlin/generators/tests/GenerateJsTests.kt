@@ -8,12 +8,13 @@ package org.jetbrains.kotlin.generators.tests
 import org.jetbrains.kotlin.generators.tests.generator.testGroup
 import org.jetbrains.kotlin.js.test.AbstractDceTest
 import org.jetbrains.kotlin.js.test.AbstractJsLineNumberTest
+import org.jetbrains.kotlin.js.test.es6.semantics.*
 import org.jetbrains.kotlin.js.test.ir.semantics.*
 import org.jetbrains.kotlin.js.test.semantics.*
 import org.jetbrains.kotlin.js.test.wasm.semantics.AbstractIrWasmBoxWasmTest
 import org.jetbrains.kotlin.test.TargetBackend
 
-fun main(args: Array<String>) {
+fun main() {
     System.setProperty("java.awt.headless", "true")
 
     // TODO: repair these tests
@@ -28,9 +29,22 @@ fun main(args: Array<String>) {
             model("box/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS_IR)
         }
 
+        testClass<AbstractIrBoxJsES6Test> {
+            model("box/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS_IR_ES6)
+        }
+
         testClass<AbstractIrJsTypeScriptExportTest> {
             model("typescript-export/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS_IR)
         }
+
+        testClass<AbstractIrJsTypeScriptExportES6Test> {
+            model("typescript-export/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS_IR_ES6)
+        }
+
+        testClass<AbstractLegacyJsTypeScriptExportTest> {
+            model("typescript-export/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS)
+        }
+
 
         testClass<AbstractSourceMapGenerationSmokeTest> {
             model("sourcemap/", pattern = "^([^_](.+))\\.kt$", targetBackend = TargetBackend.JS)
@@ -66,12 +80,20 @@ fun main(args: Array<String>) {
             model("codegen/box", targetBackend = TargetBackend.JS_IR)
         }
 
+        testClass<AbstractIrJsCodegenBoxES6Test> {
+            model("codegen/box", targetBackend = TargetBackend.JS_IR_ES6)
+        }
+
         testClass<AbstractJsCodegenInlineTest> {
             model("codegen/boxInline/", targetBackend = TargetBackend.JS)
         }
 
         testClass<AbstractIrJsCodegenInlineTest> {
             model("codegen/boxInline/", targetBackend = TargetBackend.JS_IR)
+        }
+
+        testClass<AbstractIrJsCodegenInlineES6Test> {
+            model("codegen/boxInline/", targetBackend = TargetBackend.JS_IR_ES6)
         }
 
         testClass<AbstractJsLegacyPrimitiveArraysBoxTest> {

@@ -8,7 +8,7 @@ plugins {
 dependencies {
     testCompile(project(":kotlin-main-kts"))
     testCompileOnly(project(":compiler:cli"))
-    testCompileOnly(project(":kotlin-scripting-jvm-host"))
+    testCompileOnly(project(":kotlin-scripting-jvm-host-unshaded"))
     testCompile(commonDep("junit"))
     testCompile(projectTests(":kotlin-scripting-compiler")) { isTransitive = false }
 }

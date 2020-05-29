@@ -101,7 +101,7 @@ abstract class BaseDiagnosticsTest : KotlinMultiFileTestWithJava<TestModule, Tes
         analyzeAndCheck(wholeFile, files)
     }
 
-    protected open fun shouldSkipTest(wholeFile: File, files: List<TestFile>) : Boolean = false
+    protected open fun shouldSkipTest(wholeFile: File, files: List<TestFile>): Boolean = false
 
     protected abstract fun analyzeAndCheck(testDataFile: File, files: List<TestFile>)
 
@@ -412,7 +412,12 @@ abstract class BaseDiagnosticsTest : KotlinMultiFileTestWithJava<TestModule, Tes
         val RENDER_DIAGNOSTICS_FULL_TEXT = "RENDER_DIAGNOSTICS_FULL_TEXT"
 
         val DIAGNOSTIC_IN_TESTDATA_PATTERN = Regex("<!>|<!(.*?(\\(\".*?\"\\)|\\(\\))??)+(?<!<)!>")
-        val SPEC_LINKS_IN_TESTDATA_PATTERN = Regex("""/\*\s+\*\s+RELEVANT SPEC SENTENCES[\w\W]*?\*/\n""")
+        val SPEC_LINKED_TESTDATA_PATTERN =
+            Regex("""\/\*\s+? \* KOTLIN (PSI|DIAGNOSTICS|CODEGEN BOX) SPEC TEST \((POSITIVE|NEGATIVE)\)\n([\s\S]*?\n)\s+\*\/\n""")
+
+        val SPEC_NOT_LINED_TESTDATA_PATTERN =
+            Regex("""\/\*\s+? \* KOTLIN (PSI|DIAGNOSTICS|CODEGEN BOX) NOT LINKED SPEC TEST \((POSITIVE|NEGATIVE)\)\n([\s\S]*?\n)\s+\*\/\n""")
+
 
         fun parseDiagnosticFilterDirective(
             directiveMap: Directives,

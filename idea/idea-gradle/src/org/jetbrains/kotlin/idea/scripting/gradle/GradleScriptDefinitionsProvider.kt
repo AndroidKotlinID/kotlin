@@ -11,9 +11,11 @@ import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.project.Project
 import com.intellij.util.EnvironmentUtil
 import org.jetbrains.kotlin.idea.KotlinIdeaGradleBundle
+import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionContributor
 import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionSourceAsContributor
 import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionsManager
 import org.jetbrains.kotlin.idea.core.script.loadDefinitionsFromTemplates
+import org.jetbrains.kotlin.idea.scripting.gradle.importing.KotlinDslSyncListener
 import org.jetbrains.kotlin.scripting.definitions.KotlinScriptDefinitionAdapterFromNewAPIBase
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.getEnvironment
@@ -40,6 +42,21 @@ import kotlin.script.experimental.location.ScriptExpectedLocation
 import kotlin.script.templates.standard.ScriptTemplateWithArgs
 
 class GradleScriptDefinitionsContributor(private val project: Project) : ScriptDefinitionSourceAsContributor {
+    companion object {
+        fun getDefinitions(project: Project) =
+            ScriptDefinitionContributor.EP_NAME.getExtensions(project)
+                .filterIsInstance<GradleScriptDefinitionsContributor>()
+                .single().definitions.toList()
+
+        fun getDefinitionsTemplateClasspath(project: Project): MutableSet<String> =
+            mutableSetOf<String>().also { result ->
+                getDefinitions(project).forEach { definition ->
+                    definition.asLegacyOrNull<KotlinScriptDefinitionFromAnnotatedTemplate>()
+                        ?.templateClasspath
+                        ?.mapNotNullTo(result) { it.path }
+                }
+            }
+    }
 
     override val id: String = "Gradle Kotlin DSL"
     private val failedToLoad = AtomicBoolean(false)
@@ -111,7 +128,7 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
                 return default.distinct().asSequence()
             }
 
-            return sequenceOf(ErrorGradleScriptDefinition())
+            return sequenceOf(ErrorGradleScriptDefinition(project))
         }
 
     private fun tryToLoadOldBuildScriptDefinition(): List<ScriptDefinition> {
@@ -128,8 +145,8 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
     private fun kotlinStdlibAndCompiler(gradleLibDir: File): List<File> {
         // additionally need compiler jar to load gradle resolver
         return gradleLibDir.listFiles { file ->
-                file.name.startsWith("kotlin-compiler-embeddable") || file.name.startsWith("kotlin-stdlib")
-            }
+            file.name.startsWith("kotlin-compiler-embeddable") || file.name.startsWith("kotlin-stdlib")
+        }
             .firstOrNull()?.let(::listOf).orEmpty()
     }
 
@@ -139,17 +156,14 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
     ): List<ScriptDefinition> = try {
         doLoadGradleTemplates(templateClass, dependencySelector, additionalResolverClasspath)
     } catch (t: Throwable) {
+        scriptingDebugLog { "error loading gradle script templates ${t.message}" }
         // TODO: review exception handling
         failedToLoad.set(true)
         if (t is IllegalStateException) {
             Logger.getInstance(GradleScriptDefinitionsContributor::class.java)
                 .info("[kts] error loading gradle script templates: ${t.message}")
         }
-        listOf(
-            ErrorGradleScriptDefinition(
-                t.message
-            )
-        )
+        listOf(ErrorGradleScriptDefinition(project, t.message))
     }
 
 
@@ -209,6 +223,8 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
             dependencySelector.matches(it.name)
         }.takeIf { it.isNotEmpty() }?.asList() ?: error(KotlinIdeaGradleBundle.message("error.text.missing.jars.in.gradle.directory"))
 
+        scriptingDebugLog { "loading gradle script templates from $templateClasspath" }
+
         return loadDefinitionsFromTemplates(
             listOf(templateClass),
             templateClasspath,
@@ -242,15 +258,13 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
     }
 
     // TODO: refactor - minimize
-    private class ErrorGradleScriptDefinition(message: String? = null) :
+    private class ErrorGradleScriptDefinition(project: Project, message: String? = null) :
         ScriptDefinition.FromLegacy(
             ScriptingHostConfiguration(defaultJvmScriptingHostConfiguration),
-            LegacyDefinition(
-                message
-            )
+            LegacyDefinition(project, message)
         ) {
 
-        private class LegacyDefinition(message: String?) : KotlinScriptDefinitionAdapterFromNewAPIBase() {
+        private class LegacyDefinition(project: Project, message: String?) : KotlinScriptDefinitionAdapterFromNewAPIBase() {
             companion object {
                 private const val KOTLIN_DSL_SCRIPT_EXTENSION = "gradle.kts"
             }
@@ -263,9 +277,7 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
             override val baseClass: KClass<*> = ScriptTemplateWithArgs::class
 
             override val dependencyResolver: DependenciesResolver =
-                ErrorScriptDependenciesResolver(
-                    message
-                )
+                ErrorScriptDependenciesResolver(project, message)
 
             override fun toString(): String = "ErrorGradleScriptDefinition"
         }
@@ -274,9 +286,14 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
         override fun hashCode(): Int = name.hashCode()
     }
 
-    private class ErrorScriptDependenciesResolver(private val message: String? = null) : DependenciesResolver {
+    private class ErrorScriptDependenciesResolver(
+        private val project: Project,
+        private val message: String? = null
+    ) : DependenciesResolver {
         override fun resolve(scriptContents: ScriptContents, environment: Environment): ResolveResult {
-            val failureMessage = if (GradleScriptDefinitionsUpdater.gradleState.isSyncInProgress) {
+            val importTasks = KotlinDslSyncListener.instance.tasks
+            val importInProgress = synchronized(importTasks) { importTasks.values.any { it.project == project } }
+            val failureMessage = if (importInProgress) {
                 KotlinIdeaGradleBundle.message("error.text.highlighting.is.impossible.during.gradle.import")
             } else {
                 message ?: KotlinIdeaGradleBundle.message(

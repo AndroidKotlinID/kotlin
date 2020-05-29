@@ -9,22 +9,27 @@ import org.jetbrains.kotlin.android.parcel.ANDROID_PARCELABLE_CLASS_FQNAME
 import org.jetbrains.kotlin.android.parcel.PARCELER_FQNAME
 import org.jetbrains.kotlin.android.parcel.ParcelableSyntheticComponent
 import org.jetbrains.kotlin.android.parcel.serializers.ParcelableExtensionBase
-import org.jetbrains.kotlin.backend.common.CommonBackendContext
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.createImplicitParameterDeclarationWithWrappedDescriptor
-import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
+import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.erasedUpperBound
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
@@ -34,12 +39,15 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-class ParcelableIrTransformer(private val context: CommonBackendContext, private val androidSymbols: AndroidSymbols) :
+class ParcelableIrTransformer(private val context: IrPluginContext, private val androidSymbols: AndroidSymbols) :
     ParcelableExtensionBase, IrElementVisitorVoid {
     private val serializerFactory = IrParcelSerializerFactory(androidSymbols)
 
     private val deferredOperations = mutableListOf<() -> Unit>()
     private fun defer(block: () -> Unit) = deferredOperations.add(block)
+
+    private fun IrPluginContext.createIrBuilder(symbol: IrSymbol) =
+        DeclarationIrBuilder(this, symbol, symbol.owner.startOffset, symbol.owner.endOffset)
 
     private val symbolMap = mutableMapOf<IrFunctionSymbol, IrFunctionSymbol>()
 
@@ -59,6 +67,29 @@ class ParcelableIrTransformer(private val context: CommonBackendContext, private
                 ).apply {
                     copyTypeAndValueArgumentsFrom(expression)
                 }
+            }
+
+            override fun visitFunctionReference(expression: IrFunctionReference): IrExpression {
+                val remappedSymbol = symbolMap[expression.symbol]
+                val remappedReflectionTarget = expression.reflectionTarget?.let { symbolMap[it] }
+                if (remappedSymbol == null && remappedReflectionTarget == null)
+                    return super.visitFunctionReference(expression)
+
+                return IrFunctionReferenceImpl(
+                    expression.startOffset, expression.endOffset, expression.type, remappedSymbol ?: expression.symbol,
+                    expression.typeArgumentsCount, expression.valueArgumentsCount, remappedReflectionTarget,
+                    expression.origin
+                ).apply {
+                    copyTypeAndValueArgumentsFrom(expression)
+                }
+            }
+
+            override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+                // Remap overridden symbols, otherwise the code might break in BridgeLowering
+                declaration.overriddenSymbols = declaration.overriddenSymbols.map { symbol ->
+                    (symbolMap[symbol] ?: symbol) as IrSimpleFunctionSymbol
+                }
+                return super.visitSimpleFunction(declaration)
             }
         })
     }
@@ -252,7 +283,9 @@ class ParcelableIrTransformer(private val context: CommonBackendContext, private
         }
     }
 
-    private data class ParcelableProperty(val field: IrField, val parceler: IrParcelSerializer)
+    private class ParcelableProperty(val field: IrField, parcelerThunk: () -> IrParcelSerializer) {
+        val parceler by lazy(parcelerThunk)
+    }
 
     private val IrClass.classParceler: IrParcelSerializer
         get() = if (kind == ClassKind.CLASS) {
@@ -271,8 +304,9 @@ class ParcelableIrTransformer(private val context: CommonBackendContext, private
             return constructor.valueParameters.map { parameter ->
                 val property = properties.first { it.name == parameter.name }
                 val localScope = property.getParcelerScope(toplevelScope)
-                val parceler = serializerFactory.get(parameter.type, parcelizeType = defaultType, strict = true, scope = localScope)
-                ParcelableProperty(property.backingField!!, parceler)
+                ParcelableProperty(property.backingField!!) {
+                    serializerFactory.get(parameter.type, parcelizeType = defaultType, scope = localScope)
+                }
             }
         }
 

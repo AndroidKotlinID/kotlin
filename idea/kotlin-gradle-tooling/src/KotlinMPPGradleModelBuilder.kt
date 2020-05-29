@@ -148,9 +148,11 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val androidDeps = buildAndroidDeps(kotlinExt.javaClass.classLoader, project)
 
         // Some performance optimisation: do not build metadata dependencies if source set is not common
-        val doBuildMetadataDependencies =
+        val doBuildMetadataDependencies = try {
             project.properties["build_metadata_dependencies_for_actualised_source_sets"]?.toString()?.toBoolean()
-                ?: DEFAULT_BUILD_METADATA_DEPENDENCIES_FOR_ACTUALISED_SOURCE_SETS
+        } catch (_: Exception) {
+            null
+        } ?: DEFAULT_BUILD_METADATA_DEPENDENCIES_FOR_ACTUALISED_SOURCE_SETS
         val allSourceSetsProtos = sourceSets.mapNotNull { buildSourceSet(it, dependencyResolver, project, dependencyMapper, androidDeps) }
         val allSourceSets = if (doBuildMetadataDependencies) {
             allSourceSetsProtos.map { proto -> proto.buildKotlinSourceSetImpl(true) }
@@ -176,7 +178,11 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
     }
 
     private fun buildAndroidDeps(classLoader: ClassLoader, project: Project): Map<String, List<Any>>? {
-        val includeAndroidDeps = project.properties["kotlin.include.android.dependencies"]?.toString()?.toBoolean() == true
+        val includeAndroidDeps = try {
+            project.properties["kotlin.include.android.dependencies"]?.toString()?.toBoolean() == true
+        } catch (_: Exception) {
+            false
+        }
         if (includeAndroidDeps) {
             try {
                 val resolverClass = classLoader.loadClass("org.jetbrains.kotlin.gradle.targets.android.internal.AndroidDependencyResolver")
@@ -268,6 +274,11 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
             .resolveDependencies(configuration)
             .apply {
                 forEach<ExternalDependency?> { (it as? AbstractExternalDependency)?.scope = scope }
+                forEach<ExternalDependency?> {
+                    if (it is DefaultExternalProjectDependency && it.projectDependencyArtifacts !is ArrayList) {
+                        it.projectDependencyArtifacts = ArrayList(it.projectDependencyArtifacts)
+                    }
+                }
             }
             .flatMap { dependencyAdjuster.adjustDependency(it) }
         val singleDependencyFiles = resolvedDependencies.mapNotNullTo(LinkedHashSet<File>()) {
@@ -605,8 +616,6 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
                 gradleCompilation.name,
                 classifier
             )]?.dependencies?.map { dependencyMapper.getDependency(it) }?.filterNotNull() ?: emptySet()
-
-            makeConfigurationNamesDefault(dependencyMapper)
         }
     }
 
@@ -814,6 +823,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
     ) {
         private val adjustmentMap = HashMap<ExternalDependency, List<ExternalDependency>>()
 
+        private val EXTRA_DEFAULT_CONFIGURATION_NAMES = listOf("metadataApiElements")
+
         private val projectDependencyTransformation =
             transformations.filter { it.projectPath != null }.associateBy { it.projectPath }
 
@@ -888,7 +899,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
             return adjustmentMap.getOrPut(dependency) {
                 if (dependency !is ExternalProjectDependency)
                     return@getOrPut adjustLibraryDependency(dependency, parentScope)
-                if (dependency.configurationName != Dependency.DEFAULT_CONFIGURATION)
+                if (dependency.configurationName != Dependency.DEFAULT_CONFIGURATION &&
+                    !EXTRA_DEFAULT_CONFIGURATION_NAMES.contains(dependency.configurationName))
                     return@getOrPut listOf(dependency)
                 val artifacts = dependenciesByProjectPath[dependency.projectPath] ?: return@getOrPut listOf(dependency)
                 val artifactConfiguration = artifacts.mapTo(LinkedHashSet()) {

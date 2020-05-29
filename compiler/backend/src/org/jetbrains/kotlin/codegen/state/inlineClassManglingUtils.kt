@@ -5,30 +5,42 @@
 
 package org.jetbrains.kotlin.codegen.state
 
+import org.jetbrains.kotlin.codegen.coroutines.unwrapInitialDescriptorForSuspendFunction
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.resolve.InlineClassDescriptorResolver
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
-import org.jetbrains.kotlin.resolve.jvm.*
+import org.jetbrains.kotlin.resolve.jvm.requiresFunctionNameManglingForParameterTypes
+import org.jetbrains.kotlin.resolve.jvm.requiresFunctionNameManglingForReturnType
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.typeUtil.representativeUpperBound
 import java.security.MessageDigest
 import java.util.*
 
-fun getInlineClassSignatureManglingSuffix(descriptor: CallableMemberDescriptor): String? {
+fun getManglingSuffixBasedOnKotlinSignature(
+    descriptor: CallableMemberDescriptor,
+    shouldMangleByReturnType: Boolean
+): String? {
     if (descriptor !is FunctionDescriptor) return null
     if (descriptor is ConstructorDescriptor) return null
     if (InlineClassDescriptorResolver.isSynthesizedBoxOrUnboxMethod(descriptor)) return null
 
+    // If a function accepts inline class parameters, mangle its name.
     val actualValueParameterTypes = listOfNotNull(descriptor.extensionReceiverParameter?.type) + descriptor.valueParameters.map { it.type }
+    if (requiresFunctionNameManglingForParameterTypes(actualValueParameterTypes)) {
+        return "-" + md5base64(collectSignatureForMangling(actualValueParameterTypes))
+    }
 
-    return getInlineClassSignatureManglingSuffix(actualValueParameterTypes)
+    // If a class member function returns inline class value, mangle its name.
+    // NB here function can be a suspend function JVM view with return type replaced with 'Any',
+    // should unwrap it and take original return type instead.
+    if (shouldMangleByReturnType) {
+        val unwrappedDescriptor = descriptor.unwrapInitialDescriptorForSuspendFunction()
+        if (requiresFunctionNameManglingForReturnType(unwrappedDescriptor)) {
+            return "-" + md5base64(":" + getSignatureElementForMangling(unwrappedDescriptor.returnType!!))
+        }
+    }
+    return null
 }
-
-private fun getInlineClassSignatureManglingSuffix(valueParameterTypes: List<KotlinType>) =
-    if (requiresFunctionNameMangling(valueParameterTypes))
-        "-" + md5base64(collectSignatureForMangling(valueParameterTypes))
-    else
-        null
 
 private fun collectSignatureForMangling(types: List<KotlinType>) =
     types.joinToString { getSignatureElementForMangling(it) }

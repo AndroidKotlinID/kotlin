@@ -21,10 +21,11 @@ import com.intellij.openapi.vcs.changes.ChangeListManagerImpl
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.testFramework.PsiTestUtil
-import com.intellij.testFramework.UsefulTestCase
+import com.intellij.testFramework.UsefulTestCase.assertTrue
 import com.intellij.util.io.exists
 import org.jetbrains.kotlin.idea.configuration.getModulesWithKotlinFiles
 import org.jetbrains.kotlin.idea.perf.Stats.Companion.runAndMeasure
+import org.jetbrains.kotlin.idea.perf.util.logMessage
 import org.jetbrains.kotlin.idea.project.getAndCacheLanguageLevelByDependencies
 import org.jetbrains.kotlin.idea.test.ConfigLibraryUtil
 import java.io.File
@@ -85,11 +86,6 @@ enum class ProjectOpenAction {
 
             refreshGradleProject(projectPath, project)
 
-            assertTrue(
-                ModuleManager.getInstance(project).modules.isNotEmpty(),
-                "Gradle project $projectName at $projectPath has to have at least one module"
-            )
-
             return project
         }
 
@@ -131,7 +127,7 @@ enum class ProjectOpenAction {
         }.get()
 
         val modules = ModuleManager.getInstance(project).modules
-        UsefulTestCase.assertTrue("project ${openProject.projectName} has to have at least one module", modules.isNotEmpty())
+        assertTrue("project ${openProject.projectName} has to have at least one module", modules.isNotEmpty())
 
         logMessage { "modules of ${openProject.projectName}: ${modules.map { m -> m.name }}" }
 

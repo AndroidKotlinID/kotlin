@@ -12,33 +12,33 @@ import org.jetbrains.kotlin.fir.declarations.FirImport
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.builder.buildResolvedImport
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 
-open class FirImportResolveTransformer protected constructor(phase: FirResolvePhase) : FirAbstractTreeTransformer<Nothing?>(phase) {
-    constructor() : this(FirResolvePhase.IMPORTS)
+class FirImportResolveProcessor(session: FirSession, scopeSession: ScopeSession) : FirTransformerBasedResolveProcessor(session, scopeSession) {
+    override val transformer = FirImportResolveTransformer(session)
+}
 
+open class FirImportResolveTransformer protected constructor(
+    final override val session: FirSession,
+    phase: FirResolvePhase
+) : FirAbstractTreeTransformer<Nothing?>(phase) {
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         return element.compose()
     }
 
-    private lateinit var symbolProvider: FirSymbolProvider
+    constructor(session: FirSession) : this(session, FirResolvePhase.IMPORTS)
 
-    final override lateinit var session: FirSession
-
-    constructor(session: FirSession) : this() {
-        this.session = session
-        // TODO: clarify this
-        symbolProvider = FirSymbolProvider.getInstance(session)
-    }
+    private val symbolProvider: FirSymbolProvider = session.firSymbolProvider
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
+        checkSessionConsistency(file)
         file.replaceResolvePhase(transformerPhase)
-        session = file.session
-        symbolProvider = FirSymbolProvider.getInstance(file.session)
         return file.also { it.transformChildren(this, null) }.compose()
     }
 

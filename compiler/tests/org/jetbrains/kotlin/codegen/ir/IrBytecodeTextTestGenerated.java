@@ -209,6 +209,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         runTest("compiler/testData/codegen/bytecodeText/jvmField.kt");
     }
 
+    @TestMetadata("jvmStaticInternalMangling.kt")
+    public void testJvmStaticInternalMangling() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeText/jvmStaticInternalMangling.kt");
+    }
+
     @TestMetadata("kt10259.kt")
     public void testKt10259() throws Exception {
         runTest("compiler/testData/codegen/bytecodeText/kt10259.kt");
@@ -3031,6 +3036,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/noBoxingUnboxingInAccessorsForDelegatedPropertyWithInlineClassDelegate.kt");
         }
 
+        @TestMetadata("noReturnTypeMangling.kt")
+        public void testNoReturnTypeMangling() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/inlineClasses/noReturnTypeMangling.kt");
+        }
+
         @TestMetadata("nonOverridingMethodsAreCalledByInlineClass.kt")
         public void testNonOverridingMethodsAreCalledByInlineClass() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/nonOverridingMethodsAreCalledByInlineClass.kt");
@@ -3537,19 +3547,14 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/lineNumbers/inlineCondition2.kt");
         }
 
+        @TestMetadata("inlineLambdaObjectInit.kt")
+        public void testInlineLambdaObjectInit() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/lineNumbers/inlineLambdaObjectInit.kt");
+        }
+
         @TestMetadata("singleThen.kt")
         public void testSingleThen() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/lineNumbers/singleThen.kt");
-        }
-
-        @TestMetadata("stdlibInlineOnly.kt")
-        public void testStdlibInlineOnly() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/lineNumbers/stdlibInlineOnly.kt");
-        }
-
-        @TestMetadata("stdlibInlineOnlyOneLine.kt")
-        public void testStdlibInlineOnlyOneLine() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/lineNumbers/stdlibInlineOnlyOneLine.kt");
         }
 
         @TestMetadata("tryCatch.kt")

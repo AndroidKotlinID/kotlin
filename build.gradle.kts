@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.crypto.checksum.Checksum
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import proguard.gradle.ProGuardTask
@@ -42,6 +43,8 @@ plugins {
     idea
     id("jps-compatible")
     id("org.jetbrains.gradle.plugin.idea-ext")
+    id("org.gradle.crypto.checksum") version "1.2.0"
+    signing
 }
 
 pill {
@@ -163,7 +166,7 @@ extra["versions.junit"] = "4.12"
 extra["versions.javaslang"] = "2.0.6"
 extra["versions.ant"] = "1.8.2"
 extra["versions.android"] = "2.3.1"
-val coroutinesVersion = if (Platform[192].orHigher()) "1.2.1" else "1.1.1"
+val coroutinesVersion = if (Platform[192].orHigher()) "1.3.7" else "1.1.1"
 extra["versions.kotlinx-coroutines-core"] = coroutinesVersion
 extra["versions.kotlinx-coroutines-jdk8"] = coroutinesVersion
 extra["versions.json"] = "20160807"
@@ -184,7 +187,7 @@ extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.4-M3-dev-15453"
+    extra["versions.kotlin-native"] = "1.4-M3-dev-15627"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
@@ -274,6 +277,28 @@ extra["compilerModules"] = arrayOf(
     ":compiler:fir:jvm",
     ":compiler:fir:checkers",
     ":compiler:fir:analysis-tests"
+)
+
+extra["compilerModulesForJps"] = listOf(
+    ":core:type-system",
+    ":kotlin-build-common",
+    ":kotlin-util-io",
+    ":kotlin-util-klib",
+    ":kotlin-util-klib-metadata",
+    ":compiler:cli-common",
+    ":kotlin-compiler-runner",
+    ":daemon-common",
+    ":daemon-common-new",
+    ":core:descriptors",
+    ":core:descriptors.jvm",
+    ":idea:idea-jps-common",
+    ":kotlin-preloader",
+    ":compiler:util",
+    ":compiler:config",
+    ":compiler:config.jvm",
+    ":js:js.config",
+    ":core:util.runtime",
+    ":compiler:compiler.version"
 )
 
 val coreLibProjects = listOfNotNull(
@@ -595,7 +620,7 @@ tasks {
     register("scriptingTest") {
         dependsOn("dist")
         dependsOn(":kotlin-script-util:test")
-        dependsOn(":kotlin-scripting-compiler:test")
+        dependsOn(":kotlin-scripting-compiler-embeddable:test")
         dependsOn(":kotlin-scripting-common:test")
         dependsOn(":kotlin-scripting-jvm:test")
         dependsOn(":kotlin-scripting-jvm-host-test:test")
@@ -613,6 +638,10 @@ tasks {
     register("compilerTest") {
         dependsOn("jvmCompilerTest")
         dependsOn("jsCompilerTest")
+        dependsOn("miscCompilerTest")
+    }
+
+    register("miscCompilerTest") {
         dependsOn("wasmCompilerTest")
         dependsOn("nativeCompilerTest")
         dependsOn("firCompilerTest")
@@ -745,6 +774,35 @@ tasks {
         )
     }
 
+    register("publishIdeArtifacts") {
+        idePluginDependency {
+            dependsOn(
+                ":prepare:ide-plugin-dependencies:android-extensions-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:allopen-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:allopen-compiler-plugin-tests-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:incremental-compilation-impl-tests-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:kotlin-build-common-tests-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:kotlin-compiler-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:kotlin-dist-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:kotlin-gradle-statistics-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:kotlinx-serialization-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:noarg-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:sam-with-receiver-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:compiler-components-for-jps:publish",
+                ":kotlin-script-runtime:publish",
+                ":kotlin-script-util:publish",
+                ":kotlin-scripting-common:publish",
+                ":kotlin-scripting-jvm:publish",
+                ":kotlin-scripting-compiler-embeddable:publish",
+                ":kotlin-scripting-compiler-impl-embeddable:publish",
+                ":kotlin-android-extensions-runtime:publish",
+                ":kotlin-stdlib:publish",
+                ":kotlin-stdlib-jdk7:publish",
+                ":kotlin-stdlib-jdk8:publish",
+                ":kotlin-reflect:publish"
+            )
+        }
+    }
 
     register("test") {
         doLast {
@@ -772,15 +830,15 @@ fun CopySpec.setExecutablePermissions() {
 
 val zipCompiler by task<Zip> {
     dependsOn(dist)
-    destinationDir = file(distDir)
-    archiveName = "kotlin-compiler-$kotlinVersion.zip"
+    destinationDirectory.set(file(distDir))
+    archiveFileName.set("kotlin-compiler-$kotlinVersion.zip")
 
     from(distKotlinHomeDir)
     into("kotlinc")
     setExecutablePermissions()
 
     doLast {
-        logger.lifecycle("Compiler artifacts packed to $archivePath")
+        logger.lifecycle("Compiler artifacts packed to ${archiveFile.get().asFile.absolutePath}")
     }
 }
 
@@ -829,6 +887,33 @@ val zipPlugin by task<Zip> {
         logger.lifecycle("Plugin artifacts packed to $archiveFile")
     }
 }
+
+fun Project.secureZipTask(zipTask: TaskProvider<Zip>): RegisteringDomainObjectDelegateProviderWithAction<out TaskContainer, Task> {
+    val checkSumTask = tasks.register("${zipTask.name}Checksum", Checksum::class) {
+        dependsOn(zipTask)
+        val compilerFile = zipTask.get().outputs.files.singleFile
+        files = files(compilerFile)
+        outputDir = compilerFile.parentFile
+        algorithm = Checksum.Algorithm.SHA256
+    }
+
+    val signTask = tasks.register("${zipTask.name}Sign", Sign::class) {
+        description = "Signs the archive produced by the '" + zipTask.name + "' task."
+        sign(zipTask.get())
+    }
+
+    return tasks.registering {
+        dependsOn(checkSumTask)
+        dependsOn(signTask)
+    }
+}
+
+signing {
+    useGpgCmd()
+}
+
+val zipCompilerWithSignature by secureZipTask(zipCompiler)
+val zipPluginWithSignature by secureZipTask(zipPlugin)
 
 configure<IdeaModel> {
     module {

@@ -73,6 +73,10 @@
 
         <extensionPoint qualifiedName="org.jetbrains.kotlin.experimentalFeature"
                         interface="org.jetbrains.kotlin.idea.configuration.ExperimentalFeature"/>
+
+        <extensionPoint qualifiedName="org.jetbrains.kotlin.foreignUsagesRenameProcessor"
+                        interface="org.jetbrains.kotlin.idea.refactoring.rename.ForeignUsagesRenameProcessor" dynamic="true"/>
+
     </extensionPoints>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
@@ -140,10 +144,6 @@
 
         <registryKey key="kotlin.experimental.new.j2k"
                      description="Enable new Java to Kotlin converter"
-                     defaultValue="true"
-                     restartRequired="false"/>
-        <registryKey key="kotlin.experimental.project.wizard"
-                     description="Enable new Kotlin project wizard"
                      defaultValue="true"
                      restartRequired="false"/>
 

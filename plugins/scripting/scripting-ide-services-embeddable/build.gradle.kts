@@ -3,7 +3,7 @@ description = "Kotlin Scripting Compiler extension providing code completion and
 plugins { java }
 
 dependencies {
-    embedded(project(":kotlin-scripting-ide-services")) { isTransitive = false }
+    embedded(project(":kotlin-scripting-ide-services-unshaded")) { isTransitive = false }
     embedded(project(":idea:ide-common")) { isTransitive = false }
     runtime(project(":kotlin-script-runtime"))
     runtime(kotlinStdlib())

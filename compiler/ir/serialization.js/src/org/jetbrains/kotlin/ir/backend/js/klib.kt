@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.analyzer.AnalysisResult
 import org.jetbrains.kotlin.backend.common.LoggingContext
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
 import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
 import org.jetbrains.kotlin.backend.common.serialization.KlibIrVersion
 import org.jetbrains.kotlin.backend.common.serialization.knownBuiltins
@@ -44,7 +45,7 @@ import org.jetbrains.kotlin.konan.properties.propertyList
 import org.jetbrains.kotlin.konan.util.KlibMetadataFactories
 import org.jetbrains.kotlin.library.*
 import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
-import org.jetbrains.kotlin.library.impl.buildKoltinLibrary
+import org.jetbrains.kotlin.library.impl.buildKotlinLibrary
 import org.jetbrains.kotlin.library.resolver.KotlinLibraryResolveResult
 import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
 import org.jetbrains.kotlin.metadata.ProtoBuf
@@ -178,7 +179,8 @@ fun generateKLib(
         moduleFragment,
         expectDescriptorToSymbol,
         icData,
-        nopack
+        nopack,
+        false
     )
 }
 
@@ -301,7 +303,7 @@ fun GeneratorContext.generateModuleFragmentWithPlugins(
         psi2Ir.addPostprocessingStep { module ->
             extension.generate(
                 module,
-                IrPluginContext(
+                IrPluginContextImpl(
                     moduleDescriptor,
                     bindingContext,
                     languageVersionSettings,
@@ -446,7 +448,8 @@ fun serializeModuleIntoKlib(
     moduleFragment: IrModuleFragment,
     expectDescriptorToSymbol: MutableMap<DeclarationDescriptor, IrSymbol>,
     cleanFiles: List<KotlinFileSerializedData>,
-    nopack: Boolean
+    nopack: Boolean,
+    perFile: Boolean
 ) {
     assert(files.size == moduleFragment.files.size)
 
@@ -516,7 +519,7 @@ fun serializeModuleIntoKlib(
         irVersion = KlibIrVersion.INSTANCE.toString()
     )
 
-    buildKoltinLibrary(
+    buildKotlinLibrary(
         linkDependencies = dependencies,
         ir = fullSerializedIr,
         metadata = serializedMetadata,
@@ -524,6 +527,7 @@ fun serializeModuleIntoKlib(
         manifestProperties = null,
         moduleName = moduleName,
         nopack = nopack,
+        perFile = perFile,
         output = klibPath,
         versions = versions,
         builtInsPlatform = BuiltInsPlatform.JS

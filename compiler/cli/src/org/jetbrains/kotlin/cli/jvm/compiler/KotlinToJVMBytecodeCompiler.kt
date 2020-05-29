@@ -45,24 +45,28 @@ import org.jetbrains.kotlin.cli.common.messages.OutputMessageUtil
 import org.jetbrains.kotlin.cli.common.output.writeAll
 import org.jetbrains.kotlin.cli.common.toLogger
 import org.jetbrains.kotlin.cli.jvm.config.*
-import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.ClassBuilderFactories
+import org.jetbrains.kotlin.codegen.CodegenFactory
+import org.jetbrains.kotlin.codegen.DefaultCodegenFactory
+import org.jetbrains.kotlin.codegen.KotlinCodegenFacade
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.codegen.state.GenerationStateEventCallback
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.backend.Fir2IrConverter
+import org.jetbrains.kotlin.fir.backend.jvm.FirJvmBackendClassResolver
 import org.jetbrains.kotlin.fir.backend.jvm.FirJvmClassCodegen
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
-import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
-import org.jetbrains.kotlin.fir.extensions.extensionsService
+import org.jetbrains.kotlin.fir.extensions.BunchOfRegisteredExtensions
+import org.jetbrains.kotlin.fir.extensions.extensionService
 import org.jetbrains.kotlin.fir.extensions.registerExtensions
 import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
 import org.jetbrains.kotlin.fir.java.FirLibrarySession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveProcessor
 import org.jetbrains.kotlin.idea.MainFunctionDetector
 import org.jetbrains.kotlin.ir.backend.jvm.jvmResolveLibraries
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmManglerDesc
@@ -327,18 +331,18 @@ object KotlinToJVMBytecodeCompiler {
                     dependenciesInfo, provider, librariesScope,
                     project, environment.createPackagePartProvider(librariesScope)
                 )
-                it.extensionsService.registerExtensions(FirExtensionRegistrar.RegisteredExtensions.EMPTY)
+                it.extensionService.registerExtensions(BunchOfRegisteredExtensions.empty())
             }
             val firProvider = (session.firProvider as FirProviderImpl)
             val builder = RawFirBuilder(session, firProvider.kotlinScopeProvider, stubMode = false)
-            val resolveTransformer = FirTotalResolveTransformer()
+            val resolveTransformer = FirTotalResolveProcessor(session)
             val firFiles = ktFiles.map {
                 val firFile = builder.buildFirFile(it)
                 firProvider.recordFile(firFile)
                 firFile
             }.also {
                 try {
-                    resolveTransformer.processFiles(it)
+                    resolveTransformer.process(it)
                 } catch (e: Exception) {
                     throw e
                 }
@@ -346,11 +350,11 @@ object KotlinToJVMBytecodeCompiler {
 
             val signaturer = IdSignatureDescriptor(JvmManglerDesc())
 
-            val (moduleFragment, symbolTable, sourceManager) =
+            val (moduleFragment, symbolTable, sourceManager, components) =
                 Fir2IrConverter.createModuleFragment(
                     session, resolveTransformer.scopeSession, firFiles,
                     moduleConfiguration.languageVersionSettings, signaturer = signaturer,
-                    generatorExtensions = JvmGeneratorExtensions(generateFacades = false)
+                    generatorExtensions = JvmGeneratorExtensions()
                 )
             val dummyBindingContext = NoScopeRecordCliBindingTrace().bindingContext
 
@@ -367,6 +371,8 @@ object KotlinToJVMBytecodeCompiler {
                 createOutputFilesFlushingCallbackIfPossible(moduleConfiguration)
             ).isIrBackend(
                 true
+            ).jvmBackendClassResolver(
+                FirJvmBackendClassResolver(components)
             ).build()
 
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()

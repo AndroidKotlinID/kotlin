@@ -1,3 +1,8 @@
+/*
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
+ */
+
 package org.jetbrains.kotlin.gradle.plugin.mpp
 
 import org.gradle.api.Project
@@ -7,8 +12,9 @@ import org.gradle.api.artifacts.ProjectDependency
 import org.jetbrains.kotlin.gradle.plugin.HasKotlinDependencies
 import org.jetbrains.kotlin.gradle.plugin.KotlinDependencyHandler
 import org.jetbrains.kotlin.gradle.targets.js.npm.NpmDependency
-import org.jetbrains.kotlin.gradle.targets.js.npm.fileVersion
+import org.jetbrains.kotlin.gradle.targets.js.npm.directoryNpmDependency
 import org.jetbrains.kotlin.gradle.targets.js.npm.moduleName
+import org.jetbrains.kotlin.gradle.targets.js.npm.onlyNameNpmDependency
 import java.io.File
 
 class DefaultKotlinDependencyHandler(
@@ -82,26 +88,47 @@ class DefaultKotlinDependencyHandler(
             project.dependencies.add(configurationName, it)
         }
 
-    override fun npm(name: String, version: String): NpmDependency =
+    override fun npm(name: String): Dependency =
+        onlyNameNpmDependency(name)
+
+    override fun npm(
+        name: String,
+        version: String,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
         NpmDependency(
             project = project,
             name = name,
-            version = version
+            version = version,
+            generateKotlinExternals = generateKotlinExternals
         )
 
-    override fun npm(name: String, directory: File): NpmDependency =
-        directoryNpmDependency(name, directory, NpmDependency.Scope.NORMAL)
+    override fun npm(
+        name: String,
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
+        directoryNpmDependency(
+            name = name,
+            directory = directory,
+            scope = NpmDependency.Scope.NORMAL,
+            generateKotlinExternals = generateKotlinExternals
+        )
 
-    override fun npm(directory: File): NpmDependency =
+    override fun npm(
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
         npm(
             name = moduleName(directory),
-            directory = directory
+            directory = directory,
+            generateKotlinExternals = generateKotlinExternals
         )
 
-    override fun npm(org: String?, packageName: String, version: String) =
-        npm("${if (org != null) "@$org/" else ""}$packageName", version)
-
-    override fun devNpm(name: String, version: String): NpmDependency =
+    override fun devNpm(
+        name: String,
+        version: String
+    ): NpmDependency =
         NpmDependency(
             project = project,
             name = name,
@@ -110,7 +137,12 @@ class DefaultKotlinDependencyHandler(
         )
 
     override fun devNpm(name: String, directory: File): NpmDependency =
-        directoryNpmDependency(name, directory, NpmDependency.Scope.DEV)
+        directoryNpmDependency(
+            name = name,
+            directory = directory,
+            scope = NpmDependency.Scope.DEV,
+            generateKotlinExternals = false
+        )
 
     override fun devNpm(directory: File): NpmDependency =
         devNpm(
@@ -118,24 +150,45 @@ class DefaultKotlinDependencyHandler(
             directory = directory
         )
 
-    override fun optionalNpm(name: String, version: String): NpmDependency =
+    override fun optionalNpm(
+        name: String,
+        version: String,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
         NpmDependency(
             project = project,
             name = name,
             version = version,
-            scope = NpmDependency.Scope.OPTIONAL
+            scope = NpmDependency.Scope.OPTIONAL,
+            generateKotlinExternals = generateKotlinExternals
         )
 
-    override fun optionalNpm(name: String, directory: File): NpmDependency =
-        directoryNpmDependency(name, directory, NpmDependency.Scope.OPTIONAL)
+    override fun optionalNpm(
+        name: String,
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
+        directoryNpmDependency(
+            name,
+            directory,
+            NpmDependency.Scope.OPTIONAL,
+            generateKotlinExternals = generateKotlinExternals
+        )
 
-    override fun optionalNpm(directory: File): NpmDependency =
+    override fun optionalNpm(
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
         optionalNpm(
             name = moduleName(directory),
-            directory = directory
+            directory = directory,
+            generateKotlinExternals = generateKotlinExternals
         )
 
-    override fun peerNpm(name: String, version: String): NpmDependency =
+    override fun peerNpm(
+        name: String,
+        version: String
+    ): NpmDependency =
         NpmDependency(
             project = project,
             name = name,
@@ -146,17 +199,14 @@ class DefaultKotlinDependencyHandler(
     private fun directoryNpmDependency(
         name: String,
         directory: File,
-        scope: NpmDependency.Scope
-    ): NpmDependency {
-        check(directory.isDirectory) {
-            "Dependency on local path should point on directory but $directory found"
-        }
-
-        return NpmDependency(
+        scope: NpmDependency.Scope,
+        generateKotlinExternals: Boolean
+    ): NpmDependency =
+        directoryNpmDependency(
             project = project,
             name = name,
-            version = fileVersion(directory),
-            scope = scope
+            directory = directory,
+            scope = scope,
+            generateKotlinExternals = generateKotlinExternals
         )
-    }
 }

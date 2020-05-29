@@ -48,10 +48,9 @@ import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.createSession
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveProcessor
 import org.jetbrains.kotlin.ir.backend.jvm.jvmResolveLibraries
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmManglerDesc
-import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.load.kotlin.PackagePartProvider
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.AnalyzingUtils
@@ -128,14 +127,14 @@ object GenerationUtils {
 
         val firProvider = (session.firProvider as FirProviderImpl)
         val builder = RawFirBuilder(session, firProvider.kotlinScopeProvider, stubMode = false)
-        val resolveTransformer = FirTotalResolveTransformer()
+        val resolveTransformer = FirTotalResolveProcessor(session)
         val firFiles = files.map {
             val firFile = builder.buildFirFile(it)
             firProvider.recordFile(firFile)
             firFile
         }.also {
             try {
-                resolveTransformer.processFiles(it)
+                resolveTransformer.process(it)
             } catch (e: Exception) {
                 throw e
             }
@@ -146,7 +145,7 @@ object GenerationUtils {
                 configuration.languageVersionSettings,
                 signaturer = IdSignatureDescriptor(JvmManglerDesc()),
                 // TODO: differentiate JVM resolve from other targets, such as JS resolve.
-                generatorExtensions = JvmGeneratorExtensions(generateFacades = false)
+                generatorExtensions = JvmGeneratorExtensions()
             )
         val dummyBindingContext = NoScopeRecordCliBindingTrace().bindingContext
 

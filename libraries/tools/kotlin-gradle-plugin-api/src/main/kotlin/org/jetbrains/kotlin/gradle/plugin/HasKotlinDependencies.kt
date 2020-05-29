@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -54,30 +54,111 @@ interface KotlinDependencyHandler {
 
     fun project(notation: Map<String, Any?>): ProjectDependency
 
-    fun npm(name: String, version: String = "*"): Dependency
+    @Deprecated("Declaring NPM dependency without version is forbidden")
+    fun npm(name: String): Dependency
 
-    fun npm(name: String, directory: File): Dependency
+    fun npm(
+        name: String,
+        version: String,
+        generateKotlinExternals: Boolean
+    ): Dependency
 
-    fun npm(directory: File): Dependency
-
-    @Deprecated(
-        message = "Use npm(name, version) instead. Name like in package.json"
+    fun npm(
+        name: String,
+        version: String
+    ): Dependency = npm(
+        name = name,
+        version = version,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
     )
-    fun npm(org: String? = null, packageName: String, version: String = "*"): Dependency
 
-    fun devNpm(name: String, version: String = "*"): Dependency
+    fun npm(
+        name: String,
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): Dependency
 
-    fun devNpm(name: String, directory: File): Dependency
+    fun npm(
+        name: String,
+        directory: File
+    ): Dependency = npm(
+        name = name,
+        directory = directory,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
+    )
 
-    fun devNpm(directory: File): Dependency
+    fun npm(
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): Dependency
 
-    fun optionalNpm(name: String, version: String = "*"): Dependency
+    fun npm(
+        directory: File
+    ): Dependency = npm(
+        directory = directory,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
+    )
 
-    fun optionalNpm(name: String, directory: File): Dependency
+    fun devNpm(
+        name: String,
+        version: String
+    ): Dependency
 
-    fun optionalNpm(directory: File): Dependency
+    fun devNpm(
+        name: String,
+        directory: File
+    ): Dependency
 
-    fun peerNpm(name: String, version: String = "*"): Dependency
+    fun devNpm(
+        directory: File
+    ): Dependency
+
+    fun optionalNpm(
+        name: String,
+        version: String,
+        generateKotlinExternals: Boolean
+    ): Dependency
+
+    fun optionalNpm(
+        name: String,
+        version: String
+    ): Dependency = optionalNpm(
+        name = name,
+        version = version,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
+    )
+
+    fun optionalNpm(
+        name: String,
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): Dependency
+
+    fun optionalNpm(
+        name: String,
+        directory: File
+    ): Dependency = optionalNpm(
+        name = name,
+        directory = directory,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
+    )
+
+    fun optionalNpm(
+        directory: File,
+        generateKotlinExternals: Boolean
+    ): Dependency
+
+    fun optionalNpm(
+        directory: File
+    ): Dependency = optionalNpm(
+        directory = directory,
+        generateKotlinExternals = DEFAULT_GENERATE_KOTLIN_EXTERNALS
+    )
+
+    fun peerNpm(
+        name: String,
+        version: String
+    ): Dependency
 }
 
 interface HasKotlinDependencies {

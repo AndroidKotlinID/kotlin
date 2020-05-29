@@ -7,7 +7,8 @@ package org.jetbrains.kotlin.idea.perf
 
 import org.jetbrains.kotlin.idea.perf.WholeProjectPerformanceTest.Companion.nsToMs
 import org.jetbrains.kotlin.idea.perf.profilers.*
-import org.jetbrains.kotlin.idea.testFramework.logMessage
+import org.jetbrains.kotlin.idea.perf.util.TeamCity
+import org.jetbrains.kotlin.idea.perf.util.logMessage
 import org.jetbrains.kotlin.idea.testFramework.suggestOsNeutralFileName
 import org.jetbrains.kotlin.util.PerformanceCounter
 import java.io.*
@@ -21,6 +22,7 @@ typealias StatInfos = Map<String, Any>?
 
 class Stats(
     val name: String = "",
+    private val profilerConfig: ProfilerConfig = ProfilerConfig(),
     private val header: Array<String> = arrayOf("Name", "ValueMS", "StdDev"),
     private val acceptanceStabilityLevel: Int = 25
 ) : Closeable {
@@ -57,9 +59,9 @@ class Stats(
         )) {
             val n = "$id : ${v.first}"
 
-            printTestStarted(n)
-            printStatValue("$id${v.second}", v.third)
-            printTestFinished(n, v.third, includeStatValue = false)
+            TeamCity.test(n, durationMs = v.third) {
+                TeamCity.statValue("$id${v.second}", v.third)
+            }
         }
 
         statInfosArray.filterNotNull()
@@ -75,9 +77,11 @@ class Stats(
 
                 val shortName = if (perfCounterName.endsWith(": time")) n.removeSuffix(": time") else null
 
-                shortName?.let { printTestStarted(it) }
-                printStatValue(n, mean)
-                shortName?.let { printTestFinished(it, mean, includeStatValue = false) }
+                shortName?.let {
+                    TeamCity.test(it, durationMs = mean) {
+                        TeamCity.statValue(it, mean)
+                    }
+                }
             }
 
         perfTestRawDataMs.addAll(timingsMs.toList())
@@ -161,15 +165,15 @@ class Stats(
                     val stabilityName = "$name: $testName stability"
 
                     val stable = stabilityPercentage <= acceptanceStabilityLevel
-                    printTestStarted(stabilityName)
-                    printStatValue(stabilityName, stabilityPercentage)
-                    if (stable or !checkStability) {
-                        printTestFinished(stabilityName)
+
+                    val error = if (stable or !checkStability) {
+                        null
                     } else {
-                        printTestFailed(
-                            stabilityName,
-                            "$testName stability is $stabilityPercentage %, above accepted level of $acceptanceStabilityLevel %"
-                        )
+                        "$testName stability is $stabilityPercentage %, above accepted level of $acceptanceStabilityLevel %"
+                    }
+
+                    TeamCity.test(stabilityName, errorDetails = error) {
+                        TeamCity.statValue(stabilityName, stabilityPercentage)
                     }
                 }
             } else {
@@ -178,7 +182,7 @@ class Stats(
         }
 
         if (testName != WARM_UP) {
-            tcSuite(testName, block)
+            TeamCity.suite(testName, block)
         } else {
             block()
         }
@@ -197,16 +201,17 @@ class Stats(
 
             val t = statInfo[ERROR_KEY] as? Throwable
             if (t != null) {
-                printTestStarted(n)
-                printTestFinished(n, t)
+                TeamCity.test(n, errors = listOf(t)) {}
             } else if (!printOnlyErrors) {
-                printTestStarted(n)
-                for ((k, v) in statInfo) {
-                    if (k == TEST_KEY) continue
-                    printStatValue("$n $k", v)
+                TeamCity.test(n, durationMs = (statInfo[TEST_KEY] as Long).nsToMs) {
+                    for ((k, v) in statInfo) {
+                        if (k == TEST_KEY) continue
+                        TeamCity.statValue("$n $k", v)
+                        (v as? Number)?.let {
+                            TeamCity.metadata(n, k, it)
+                        }
+                    }
                 }
-
-                printTestFinished(n, (statInfo[TEST_KEY] as Long).nsToMs)
             }
         }
     }
@@ -242,7 +247,14 @@ class Stats(
 
     private fun <SV, TV> mainPhase(phaseData: PhaseData<SV, TV>): Array<StatInfos> {
         val statInfosArray = phase(phaseData, "")
-        statInfosArray.filterNotNull().map { it[ERROR_KEY] as? Throwable }.firstOrNull()?.let { throw it }
+        statInfosArray.filterNotNull().map { it[ERROR_KEY] as? Throwable }.firstOrNull()?.let {
+            printTimings(
+                phaseData.testName,
+                printOnlyErrors = true,
+                statInfoArray = statInfosArray
+            )
+            throw it
+        }
         return statInfosArray
     }
 
@@ -255,7 +267,7 @@ class Stats(
                 testData.reset()
                 triggerGC(attempt)
 
-                val phaseProfiler = createPhaseProfiler(phaseData, phaseName, attempt)
+                val phaseProfiler = createPhaseProfiler(phaseData, phaseName, attempt, profilerConfig)
 
                 val setUpMillis = measureTimeMillis { phaseData.setUp(testData) }
                 val attemptName = "${phaseData.testName} #$attempt"
@@ -297,7 +309,7 @@ class Stats(
             }
         } catch (t: Throwable) {
             logMessage(t) { "error at ${phaseData.testName}" }
-            tcPrintErrors(phaseData.testName, listOf(t))
+            TeamCity.testFailed(name, error = t)
         }
         return statInfosArray
     }
@@ -305,7 +317,8 @@ class Stats(
     private fun <K, T> createPhaseProfiler(
         phaseData: PhaseData<K, T>,
         phaseName: String,
-        attempt: Int
+        attempt: Int,
+        profilerConfig: ProfilerConfig
     ): PhaseProfiler {
         val profilerHandler = if (phaseData.profilerEnabled) ProfilerHandler.getInstance() else DummyProfilerHandler
 
@@ -314,7 +327,7 @@ class Stats(
             check(with(File(profilerPath)) { exists() || mkdirs() }) { "unable to mkdirs $profilerPath for ${phaseData.testName}" }
             val activityName = "${phaseData.testName}-${if (phaseName.isEmpty()) "" else "$phaseName-"}$attempt"
 
-            ActualPhaseProfiler(activityName, profilerPath, profilerHandler)
+            ActualPhaseProfiler(activityName, profilerPath, profilerHandler, profilerConfig)
         } else {
             DummyPhaseProfiler
         }
@@ -335,7 +348,7 @@ class Stats(
     override fun close() {
         if (perfTestRawDataMs.isNotEmpty()) {
             val geomMeanMs = geomMean(perfTestRawDataMs.toList()).toLong()
-            printStatValue("$name geomMean", geomMeanMs)
+            TeamCity.statValue("$name geomMean", geomMeanMs)
             append(arrayOf("$name geomMean", geomMeanMs, 0))
         }
         statsOutput.flush()
@@ -353,71 +366,6 @@ class Stats(
                 block()
             }
             logMessage { "$note took $openProjectMillis ms" }
-        }
-
-        fun printTestStarted(testName: String) {
-            println("##teamcity[testStarted name='$testName' captureStandardOutput='true']")
-        }
-
-        fun printStatValue(name: String, value: Any) {
-            println("##teamcity[buildStatisticValue key='$name' value='$value']")
-        }
-
-        private fun printTestFinished(testName: String) {
-            println("##teamcity[testFinished name='$testName']")
-        }
-
-        fun printTestFinished(testName: String, spentMs: Long, includeStatValue: Boolean = true) {
-            if (includeStatValue) {
-                printStatValue(testName, spentMs)
-            }
-            println("##teamcity[testFinished name='$testName' duration='$spentMs']")
-        }
-
-        fun printTestFinished(testName: String, error: Throwable) {
-            println("error at $testName:")
-            printStatValue(testName, -1)
-            tcPrintErrors(testName, listOf(error))
-        }
-
-        private fun printTestFailed(testName: String, details: String) {
-            println("##teamcity[testFailed name='$testName' message='Exceptions reported' details='${tcEscape(details)}']")
-        }
-
-        inline fun tcSuite(name: String, block: () -> Unit) {
-            println("##teamcity[testSuiteStarted name='$name']")
-            try {
-                block()
-            } finally {
-                println("##teamcity[testSuiteFinished name='$name']")
-            }
-        }
-
-        inline fun tcTest(name: String, block: () -> Pair<Long, List<Throwable>>) {
-            printTestStarted(name)
-            val (time, errors) = block()
-            tcPrintErrors(name, errors)
-        }
-
-        private fun tcEscape(s: String) = s.replace("|", "||")
-            .replace("[", "|[")
-            .replace("]", "|]")
-            .replace("\r", "|r")
-            .replace("\n", "|n")
-            .replace("'", "|'")
-
-        fun tcPrintErrors(name: String, errors: List<Throwable>) {
-            if (errors.isNotEmpty()) {
-                val detailsWriter = StringWriter()
-                val errorDetailsPrintWriter = PrintWriter(detailsWriter)
-                errors.forEach {
-                    it.printStackTrace(errorDetailsPrintWriter)
-                    errorDetailsPrintWriter.println()
-                }
-                errorDetailsPrintWriter.close()
-                val details = detailsWriter.toString()
-                printTestFailed(name, details)
-            }
         }
     }
 

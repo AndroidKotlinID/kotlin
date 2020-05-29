@@ -41,9 +41,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
-import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.makeNotNull
-import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.lexer.KtTokens
@@ -235,12 +233,12 @@ class Fir2IrVisitor(
         val irTarget = conversionScope.returnTarget(returnExpression)
         return returnExpression.convertWithOffsets { startOffset, endOffset ->
             val result = returnExpression.result
-            val descriptor = irTarget.descriptor
             IrReturnImpl(
                 startOffset, endOffset, irBuiltIns.nothingType,
-                when (descriptor) {
-                    is ClassConstructorDescriptor -> symbolTable.referenceConstructor(descriptor)
-                    else -> symbolTable.referenceSimpleFunction(descriptor)
+                when (irTarget) {
+                    is IrConstructor -> irTarget.symbol
+                    is IrSimpleFunction -> irTarget.symbol
+                    else -> throw AssertionError("Should not be here: $irTarget")
                 },
                 convertToIrExpression(result)
             )
@@ -253,18 +251,25 @@ class Fir2IrVisitor(
     }
 
     override fun visitVarargArgumentsExpression(varargArgumentsExpression: FirVarargArgumentsExpression, data: Any?): IrElement {
-        val irReturnType = varargArgumentsExpression.typeRef.toIrType()
-        return IrVarargImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irReturnType,
-                            varargArgumentsExpression.varargElementType.toIrType(),
-                            varargArgumentsExpression.arguments.map { arg ->
-                                convertToIrExpression(arg).run {
-                                    if (arg is FirSpreadArgumentExpression || arg is FirNamedArgumentExpression && arg.isSpread) {
-                                        IrSpreadElementImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, this)
-                                    }
-                                    else this
-                                }
-                            })
+        return varargArgumentsExpression.convertWithOffsets { startOffset, endOffset ->
+            IrVarargImpl(
+                startOffset,
+                endOffset,
+                varargArgumentsExpression.typeRef.toIrType(),
+                varargArgumentsExpression.varargElementType.toIrType(),
+                varargArgumentsExpression.arguments.map { it.convertToIrVarargElement() }
+            )
+        }
     }
+
+    private fun FirExpression.convertToIrVarargElement(): IrVarargElement =
+        if (this is FirSpreadArgumentExpression || this is FirNamedArgumentExpression && this.isSpread) {
+            IrSpreadElementImpl(
+                source?.startOffset ?: UNDEFINED_OFFSET,
+                source?.endOffset ?: UNDEFINED_OFFSET,
+                convertToIrExpression(this)
+            )
+        } else convertToIrExpression(this)
 
     override fun visitFunctionCall(functionCall: FirFunctionCall, data: Any?): IrExpression {
         val convertibleCall = if (functionCall.toResolvedCallableSymbol()?.fir is FirIntegerOperator) {
@@ -760,13 +765,24 @@ class Fir2IrVisitor(
 
     override fun visitArrayOfCall(arrayOfCall: FirArrayOfCall, data: Any?): IrElement {
         return arrayOfCall.convertWithOffsets { startOffset, endOffset ->
+            lateinit var elementType: IrType
+            lateinit var arrayType: IrType
+            // Resolved arrayOf call will have resolved type. FirArrayOfCall from collection literal won't.
+            if (arrayOfCall.typeRef is FirResolvedTypeRef) {
+                arrayType = arrayOfCall.typeRef.toIrType()
+                elementType = arrayType.getArrayElementType(irBuiltIns)
+            } else {
+                // TODO: The element type should be the least upper bound of all arguments' types, e.g., ["4", 2u, 0.42f] => Array<Any>
+                //   Currently, the type of elements in array literals still has integer literal type, which shouldn't be at this stage.
+                //   elementType = arrayOfCall.arguments.map { it.typeRef.toIrType() }.commonSupertype(irBuiltIns)
+                elementType = arrayOfCall.arguments.firstOrNull()?.typeRef?.toIrType() ?: createErrorType()
+                arrayType = elementType.toArrayOrPrimitiveArrayType(irBuiltIns)
+            }
             IrVarargImpl(
                 startOffset, endOffset,
-                type = arrayOfCall.arguments.firstOrNull()?.typeRef?.toIrType() ?: createErrorType(),
-                varargElementType = arrayOfCall.typeRef.toIrType(),
-                elements = arrayOfCall.arguments.map {
-                    convertToIrExpression(it)
-                }
+                type = arrayType,
+                varargElementType = elementType,
+                elements = arrayOfCall.arguments.map { it.convertToIrVarargElement() }
             )
         }
     }

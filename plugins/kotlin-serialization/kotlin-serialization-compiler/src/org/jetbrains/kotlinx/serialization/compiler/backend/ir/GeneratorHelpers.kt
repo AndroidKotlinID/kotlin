@@ -205,7 +205,7 @@ interface IrBuilderExtension {
         assert(irPropertySymbol.isBound || declare)
 
         if (declare) {
-            IrPropertyImpl(propertyParent.startOffset, propertyParent.endOffset, SERIALIZABLE_PLUGIN_ORIGIN, irPropertySymbol).also {
+            IrPropertyImpl(propertyParent.startOffset, propertyParent.endOffset, SERIALIZABLE_PLUGIN_ORIGIN, propertyDescriptor, irPropertySymbol).also {
                 it.parent = propertyParent
                 propertyParent.addMember(it)
             }
@@ -234,7 +234,7 @@ interface IrBuilderExtension {
 
         return originProperty.run {
             // TODO: type parameters
-            IrFieldImpl(startOffset, endOffset, SERIALIZABLE_PLUGIN_ORIGIN, fieldSymbol, propertyDescriptor.type.toIrType())
+            IrFieldImpl(startOffset, endOffset, SERIALIZABLE_PLUGIN_ORIGIN, propertyDescriptor, propertyDescriptor.type.toIrType(), symbol = fieldSymbol)
         }
     }
 
@@ -252,7 +252,8 @@ interface IrBuilderExtension {
                 fieldSymbol.owner.endOffset,
                 SERIALIZABLE_PLUGIN_ORIGIN,
                 symbol,
-                descriptor.returnType!!.toIrType()
+                descriptor.returnType!!.toIrType(),
+                descriptor
             ).also { f ->
                 generateOverriddenFunctionSymbols(f, compilerContext.symbolTable)
                 f.createParameterDeclarations(receiver = null)

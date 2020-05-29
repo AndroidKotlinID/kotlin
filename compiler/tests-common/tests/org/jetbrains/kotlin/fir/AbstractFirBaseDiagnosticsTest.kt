@@ -26,9 +26,9 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnostic
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.extensions.FirExtensionsService
-import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
-import org.jetbrains.kotlin.fir.extensions.extensionsService
+import org.jetbrains.kotlin.fir.extensions.BunchOfRegisteredExtensions
+import org.jetbrains.kotlin.fir.extensions.FirExtensionService
+import org.jetbrains.kotlin.fir.extensions.extensionService
 import org.jetbrains.kotlin.fir.extensions.registerExtensions
 import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
 import org.jetbrains.kotlin.fir.java.FirLibrarySession
@@ -80,7 +80,7 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
             builtInsModuleInfo, sessionProvider, allProjectScope, project,
             environment.createPackagePartProvider(allProjectScope)
         ).also {
-            registerFirExtensions(it.extensionsService)
+            registerFirExtensions(it.extensionService)
         }
 
         val configToSession = modules.mapValues { (config, info) ->
@@ -89,7 +89,7 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
                 project,
                 moduleFiles.mapNotNull { it.ktFile })
             FirJavaModuleBasedSession(info, sessionProvider, scope).also {
-                registerFirExtensions(it.extensionsService)
+                registerFirExtensions(it.extensionService)
             }
         }
 
@@ -109,8 +109,8 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
         runAnalysis(testDataFile, files, firFilesPerSession)
     }
 
-    open fun registerFirExtensions(service: FirExtensionsService) {
-        service.registerExtensions(FirExtensionRegistrar.RegisteredExtensions.EMPTY)
+    open fun registerFirExtensions(service: FirExtensionService) {
+        service.registerExtensions(BunchOfRegisteredExtensions.empty())
     }
 
     private fun mapKtFilesToFirFiles(session: FirSession, ktFiles: List<KtFile>, firFiles: MutableList<FirFile>, useLightTree: Boolean) {

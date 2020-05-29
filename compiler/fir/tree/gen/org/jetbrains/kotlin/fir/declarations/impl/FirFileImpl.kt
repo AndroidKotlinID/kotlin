@@ -24,10 +24,10 @@ import org.jetbrains.kotlin.fir.visitors.*
 
 internal class FirFileImpl(
     override val source: FirSourceElement?,
-    override val annotations: MutableList<FirAnnotationCall>,
     override val session: FirSession,
     override var resolvePhase: FirResolvePhase,
     override val origin: FirDeclarationOrigin,
+    override val annotations: MutableList<FirAnnotationCall>,
     override val imports: MutableList<FirImport>,
     override val declarations: MutableList<FirDeclaration>,
     override val name: String,
@@ -43,13 +43,18 @@ internal class FirFileImpl(
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirFileImpl {
         transformAnnotations(transformer, data)
-        imports.transformInplace(transformer, data)
+        transformImports(transformer, data)
         transformDeclarations(transformer, data)
         return this
     }
 
     override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirFileImpl {
         annotations.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformImports(transformer: FirTransformer<D>, data: D): FirFileImpl {
+        imports.transformInplace(transformer, data)
         return this
     }
 

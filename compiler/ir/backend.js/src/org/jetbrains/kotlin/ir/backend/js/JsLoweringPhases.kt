@@ -228,7 +228,14 @@ private val removeInlineFunctionsWithReifiedTypeParametersLoweringPhase = makeDe
 )
 
 private val throwableSuccessorsLoweringPhase = makeBodyLoweringPhase(
-    ::ThrowableLowering,
+    { context ->
+        context.run {
+            val extendThrowableSymbol =
+                if (es6mode) setPropertiesToThrowableInstanceSymbol else extendThrowableSymbol
+
+            ThrowableLowering(this, extendThrowableSymbol)
+        }
+    },
     name = "ThrowableLowering",
     description = "Link kotlin.Throwable and JavaScript Error together to provide proper interop between language and platform exceptions"
 )
@@ -517,6 +524,19 @@ private val typeOperatorLoweringPhase = makeBodyLoweringPhase(
     )
 )
 
+private val es6AddInternalParametersToConstructorPhase = makeBodyLoweringPhase(
+    ::ES6AddInternalParametersToConstructorPhase,
+    name = "ES6CreateInitFunctionPhase",
+    description = "Add `box` and `resultType` params, create init functions for constructors"
+)
+
+private val es6ConstructorLowering = makeBodyLoweringPhase(
+    ::ES6ConstructorLowering,
+    name = "ES6ConstructorLoweringPhase",
+    description = "Lower constructors",
+    prerequisite = setOf(es6AddInternalParametersToConstructorPhase)
+)
+
 private val secondaryConstructorLoweringPhase = makeDeclarationTransformerPhase(
     ::SecondaryConstructorLowering,
     name = "SecondaryConstructorLoweringPhase",
@@ -689,6 +709,86 @@ val loweringList = listOf<Lowering>(
     validateIrAfterLowering
 )
 
+val es6LoweringList = listOf<Lowering>(
+    scriptRemoveReceiverLowering,
+    validateIrBeforeLowering,
+    testGenerationPhase,
+    expectDeclarationsRemovingPhase,
+    stripTypeAliasDeclarationsPhase,
+    arrayConstructorPhase,
+    lateinitNullableFieldsPhase,
+    lateinitDeclarationLoweringPhase,
+    lateinitUsageLoweringPhase,
+    sharedVariablesLoweringPhase,
+    localClassesInInlineLambdasPhase,
+    localClassesInInlineFunctionsPhase,
+    localClassesExtractionFromInlineFunctionsPhase,
+    functionInliningPhase,
+    copyInlineFunctionBodyLoweringPhase,
+    createScriptFunctionsPhase,
+    callableReferenceLowering,
+    singleAbstractMethodPhase,
+    tailrecLoweringPhase,
+    enumClassConstructorLoweringPhase,
+    enumClassConstructorBodyLoweringPhase,
+    localDelegatedPropertiesLoweringPhase,
+    localDeclarationsLoweringPhase,
+    localClassExtractionPhase,
+    innerClassesLoweringPhase,
+    innerClassesMemberBodyLoweringPhase,
+    innerClassConstructorCallsLoweringPhase,
+    propertiesLoweringPhase,
+    primaryConstructorLoweringPhase,
+    delegateToPrimaryConstructorLoweringPhase,
+    annotationConstructorLowering,
+    initializersLoweringPhase,
+    initializersCleanupLoweringPhase,
+    kotlinNothingValueExceptionPhase,
+    // Common prefix ends
+    enumEntryInstancesLoweringPhase,
+    enumEntryInstancesBodyLoweringPhase,
+    enumClassCreateInitializerLoweringPhase,
+    enumEntryCreateGetInstancesFunsLoweringPhase,
+    enumSyntheticFunsLoweringPhase,
+    enumUsageLoweringPhase,
+    enumEntryRemovalLoweringPhase,
+    suspendFunctionsLoweringPhase,
+    propertyReferenceLoweringPhase,
+    interopCallableReferenceLoweringPhase,
+    returnableBlockLoweringPhase,
+    forLoopsLoweringPhase,
+    primitiveCompanionLoweringPhase,
+    propertyAccessorInlinerLoweringPhase,
+    foldConstantLoweringPhase,
+    privateMembersLoweringPhase,
+    privateMemberUsagesLoweringPhase,
+    defaultArgumentStubGeneratorPhase,
+    defaultArgumentPatchOverridesPhase,
+    defaultParameterInjectorPhase,
+    defaultParameterCleanerPhase,
+    jsDefaultCallbackGeneratorPhase,
+    removeInlineFunctionsWithReifiedTypeParametersLoweringPhase,
+    throwableSuccessorsLoweringPhase,
+    es6AddInternalParametersToConstructorPhase,
+    es6ConstructorLowering,
+    varargLoweringPhase,
+    multipleCatchesLoweringPhase,
+    bridgesConstructionPhase,
+    typeOperatorLoweringPhase,
+    secondaryFactoryInjectorLoweringPhase,
+    classReferenceLoweringPhase,
+    inlineClassDeclarationLoweringPhase,
+    inlineClassUsageLoweringPhase,
+    autoboxingTransformerPhase,
+    blockDecomposerLoweringPhase,
+    constLoweringPhase,
+    objectDeclarationLoweringPhase,
+    objectUsageLoweringPhase,
+    callsLoweringPhase,
+    cleanupLoweringPhase,
+    validateIrAfterLowering
+)
+
 // TODO comment? Eliminate MouduleLowering's? Don't filter them here?
 val pirLowerings = loweringList.filter { it is DeclarationLowering || it is BodyLowering } + staticMembersLoweringPhase
 
@@ -697,6 +797,14 @@ val jsPhases = namedIrModulePhase(
     name = "IrModuleLowering",
     description = "IR module lowering",
     lower = loweringList.drop(1).fold(loweringList[0].modulePhase) { acc: CompilerPhase<JsIrBackendContext, IrModuleFragment, IrModuleFragment>, lowering ->
+        acc.then(lowering.modulePhase)
+    }
+)
+
+val jsEs6Phases = namedIrModulePhase(
+    name = "ES6IrModuleLowering",
+    description = "ES6 IR module lowering",
+    lower = es6LoweringList.drop(1).fold(es6LoweringList[0].modulePhase) { acc: CompilerPhase<JsIrBackendContext, IrModuleFragment, IrModuleFragment>, lowering ->
         acc.then(lowering.modulePhase)
     }
 )

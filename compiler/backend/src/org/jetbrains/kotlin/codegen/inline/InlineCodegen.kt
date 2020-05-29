@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.codegen.intrinsics.IntrinsicArrayConstructors
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
@@ -24,7 +25,9 @@ import org.jetbrains.kotlin.resolve.ImportedFromObjectCallableDescriptor
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
 import org.jetbrains.kotlin.resolve.inline.isInlineOnly
+import org.jetbrains.kotlin.resolve.isInlineClassType
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
+import org.jetbrains.kotlin.resolve.jvm.requiresFunctionNameManglingForReturnType
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DescriptorWithContainerSource
 import org.jetbrains.kotlin.types.KotlinType
@@ -72,7 +75,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
     var activeLambda: LambdaInfo? = null
         protected set
 
-    private val defaultSourceMapper = sourceCompiler.lazySourceMapper
+    private val sourceMapper = sourceCompiler.lazySourceMapper
 
     protected var delayedHiddenWriting: Function0<Unit>? = null
 
@@ -208,7 +211,6 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
 
     protected fun inlineCall(nodeAndSmap: SMAPAndMethodNode, inlineDefaultLambda: Boolean, isCallOfFunctionInCorrespondingDefaultDispatch: Boolean): InlineResult {
         assert(delayedHiddenWriting == null) { "'putHiddenParamsIntoLocals' should be called after 'processAndPutHiddenParameters(true)'" }
-        if (!isCallOfFunctionInCorrespondingDefaultDispatch) defaultSourceMapper.callSiteMarker = CallSiteMarker(codegen.lastLineNumber)
         val node = nodeAndSmap.node
         if (inlineDefaultLambda) {
             for (lambda in extractDefaultLambdas(node)) {
@@ -230,11 +232,13 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
             sourceCompiler, sourceCompiler.inlineCallSiteInfo, reifiedTypeInliner, typeParameterMappings
         )
 
+        val sourceInfo = sourceMapper.sourceInfo!!
+        val callSite = SourcePosition(codegen.lastLineNumber, sourceInfo.source, sourceInfo.pathOrCleanFQN)
         val inliner = MethodInliner(
             node, parameters, info, FieldRemapper(null, null, parameters), isSameModule,
             "Method inlining " + sourceCompiler.callElementText,
-            NestedSourceMapper(defaultSourceMapper, nodeAndSmap.classSMAP), info.callSiteInfo,
-            if (functionDescriptor.isInlineOnly()) InlineOnlySmapSkipper(codegen) else null,
+            SourceMapCopier(sourceMapper, nodeAndSmap.classSMAP, callSite.takeIf { !isCallOfFunctionInCorrespondingDefaultDispatch }),
+            info.callSiteInfo, if (functionDescriptor.isInlineOnly()) InlineOnlySmapSkipper(codegen) else null,
             !isInlinedToInlineFunInKotlinRuntime()
         ) //with captured
 
@@ -269,9 +273,6 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
         if (shouldSpillStack) {
             addInlineMarker(codegen.v, false)
         }
-
-        if (!isCallOfFunctionInCorrespondingDefaultDispatch) defaultSourceMapper.callSiteMarker = null
-
         return result
     }
 
@@ -616,7 +617,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
                     callableDescriptor.name.asString() == "arrayOf" -> IntrinsicArrayConstructors.generateArrayOfBody(asmMethod)
                     else -> throw UnsupportedOperationException("Not an array intrinsic: $callableDescriptor")
                 }
-                return SMAPAndMethodNode(body, SMAP(listOf(FileMapping.SKIP)))
+                return SMAPAndMethodNode(body, SMAP(listOf()))
             }
 
             assert(callableDescriptor is DescriptorWithContainerSource) { "Not a deserialized function or proper: $callableDescriptor" }
@@ -631,8 +632,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
                     ?: throw IllegalStateException("Couldn't find declaration file for $containerId")
             }
 
-            val methodNode =
-                getMethodNode(bytes, asmMethod.name, asmMethod.descriptor, AsmUtil.asmTypeByClassId(containerId)) ?: return null
+            val methodNode = getMethodNodeInner(containerId, bytes, asmMethod, callableDescriptor) ?: return null
 
             // KLUDGE: Inline suspend function built with compiler version less than 1.1.4/1.2-M1 did not contain proper
             // before/after suspension point marks, so we detect those functions here and insert the corresponding marks
@@ -641,6 +641,28 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
             }
 
             return methodNode
+        }
+
+        private fun getMethodNodeInner(
+            containerId: ClassId,
+            bytes: ByteArray,
+            asmMethod: Method,
+            callableDescriptor: CallableMemberDescriptor
+        ): SMAPAndMethodNode? {
+            val classType = AsmUtil.asmTypeByClassId(containerId)
+            var methodNode = getMethodNode(bytes, asmMethod.name, asmMethod.descriptor, classType)
+            if (methodNode == null && requiresFunctionNameManglingForReturnType(callableDescriptor)) {
+                val nameWithoutManglingSuffix = asmMethod.name.stripManglingSuffixOrNull()
+                if (nameWithoutManglingSuffix != null) {
+                    methodNode = getMethodNode(bytes, nameWithoutManglingSuffix, asmMethod.descriptor, classType)
+                }
+            }
+            return methodNode
+        }
+
+        private fun String.stripManglingSuffixOrNull(): String? {
+            val dashIndex = indexOf('-')
+            return if (dashIndex < 0) null else substring(0, dashIndex)
         }
 
         private fun isBuiltInArrayIntrinsic(callableDescriptor: CallableMemberDescriptor): Boolean {

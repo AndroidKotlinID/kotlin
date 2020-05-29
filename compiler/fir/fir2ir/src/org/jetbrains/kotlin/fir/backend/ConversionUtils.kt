@@ -36,6 +36,7 @@ import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.symbols.*
+import org.jetbrains.kotlin.ir.symbols.impl.IrClassPublicSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
@@ -296,7 +297,7 @@ internal fun IrClass.findMatchingOverriddenSymbolsFromSupertypes(
 ): List<IrSymbol> {
     for (superType in superTypes) {
         val superTypeClass = superType.classOrNull
-        if (superTypeClass is IrClassSymbolImpl) {
+        if (superTypeClass is IrClassSymbolImpl || superTypeClass is IrClassPublicSymbolImpl) {
             superTypeClass.owner.findMatchingOverriddenSymbolsFromThisAndSupertypes(irBuiltIns, target, result, visited)
         }
     }
@@ -319,8 +320,8 @@ private fun IrClass.findMatchingOverriddenSymbolsFromThisAndSupertypes(
             continue
         }
         when {
-            declaration is IrFunction && target is IrFunction ->
-                if (declaration.descriptor.modality != Modality.FINAL &&
+            declaration is IrSimpleFunction && target is IrSimpleFunction ->
+                if (declaration.modality != Modality.FINAL &&
                     !Visibilities.isPrivate(declaration.visibility) &&
                     isOverriding(irBuiltIns, target, declaration)
                 ) {
@@ -339,7 +340,7 @@ private fun IrClass.findMatchingOverriddenSymbolsFromThisAndSupertypes(
                 if (targetIsPropertyAccessor) {
                     val getter = declaration.getter
                     if (getter != null) {
-                        if (getter.descriptor.modality != Modality.FINAL &&
+                        if (getter.modality != Modality.FINAL &&
                             !Visibilities.isPrivate(getter.visibility) &&
                             isOverriding(irBuiltIns, target, getter)
                         ) {
@@ -348,7 +349,7 @@ private fun IrClass.findMatchingOverriddenSymbolsFromThisAndSupertypes(
                     }
                     val setter = declaration.setter
                     if (setter != null) {
-                        if (setter.descriptor.modality != Modality.FINAL &&
+                        if (setter.modality != Modality.FINAL &&
                             !Visibilities.isPrivate(setter.visibility) &&
                             isOverriding(irBuiltIns, target, setter)
                         ) {
@@ -415,19 +416,19 @@ private val nameToOperationConventionOrigin = mutableMapOf(
 internal fun FirReference.statementOrigin(): IrStatementOrigin? {
     return when (this) {
         is FirPropertyFromParameterResolvedNamedReference -> IrStatementOrigin.INITIALIZE_PROPERTY_FROM_PARAMETER
-        is FirResolvedNamedReference -> when (resolvedSymbol) {
+        is FirResolvedNamedReference -> when (val symbol = resolvedSymbol) {
             is AccessorSymbol, is SyntheticPropertySymbol -> IrStatementOrigin.GET_PROPERTY
             is FirNamedFunctionSymbol -> when {
-                resolvedSymbol.callableId.isInvoke() ->
+                symbol.callableId.isInvoke() ->
                     IrStatementOrigin.INVOKE
-                source?.elementType == KtNodeTypes.FOR && resolvedSymbol.callableId.isIteratorNext() ->
+                source?.elementType == KtNodeTypes.FOR && symbol.callableId.isIteratorNext() ->
                     IrStatementOrigin.FOR_LOOP_NEXT
-                source?.elementType == KtNodeTypes.FOR && resolvedSymbol.callableId.isIteratorHasNext() ->
+                source?.elementType == KtNodeTypes.FOR && symbol.callableId.isIteratorHasNext() ->
                     IrStatementOrigin.FOR_LOOP_HAS_NEXT
-                source?.elementType == KtNodeTypes.FOR && resolvedSymbol.callableId.isIterator() ->
+                source?.elementType == KtNodeTypes.FOR && symbol.callableId.isIterator() ->
                     IrStatementOrigin.FOR_LOOP_ITERATOR
                 source?.elementType == KtNodeTypes.OPERATION_REFERENCE ->
-                    nameToOperationConventionOrigin[resolvedSymbol.callableId.callableName]
+                    nameToOperationConventionOrigin[symbol.callableId.callableName]
                 else ->
                     null
             }

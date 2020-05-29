@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -105,6 +105,8 @@ abstract class BasicBoxTest(
         doTest(filePath, "OK", MainCallParameters.noCall(), coroutinesPackage)
     }
 
+    open fun dontRunOnSpecificPlatform(targetBackend: TargetBackend): Boolean = false
+
     open fun doTest(filePath: String, expectedResult: String, mainCallParameters: MainCallParameters, coroutinesPackage: String = "") {
         val file = File(filePath)
         val outputDir = getOutputDir(file)
@@ -178,7 +180,7 @@ abstract class BasicBoxTest(
                     module.name.endsWith(OLD_MODULE_SUFFIX) -> null
                     // JS_IR generates single js file for all modules (apart from runtime).
                     // TODO: Split and refactor test runner for JS_IR
-                    targetBackend == TargetBackend.JS_IR && !isMainModule -> null
+                    targetBackend in listOf(TargetBackend.JS_IR, TargetBackend.JS_IR_ES6) && !isMainModule -> null
                     else -> Pair(outputFileName, module)
                 }
             }
@@ -231,7 +233,7 @@ abstract class BasicBoxTest(
                     globalCommonFiles + localCommonFiles + additionalCommonFiles + additionalMainFiles
 
 
-            val dontRunGeneratedCode = InTextDirectivesUtils.dontRunGeneratedCode(targetBackend, file)
+            val dontRunGeneratedCode = InTextDirectivesUtils.dontRunGeneratedCode(targetBackend, file) || dontRunOnSpecificPlatform(targetBackend)
 
             if (!dontRunGeneratedCode && generateNodeJsRunner && !SKIP_NODE_JS.matcher(fileContent).find()) {
                 val nodeRunnerName = mainModule.outputFileName(outputDir) + ".node.js"
@@ -251,6 +253,15 @@ abstract class BasicBoxTest(
 
                 if (runIrPir && !skipDceDriven) {
                     runGeneratedCode(pirAllJsFiles, testModuleName, testPackage, testFunction, expectedResult, withModuleSystem)
+                }
+            } else {
+                val ignored = InTextDirectivesUtils.isIgnoredTarget(
+                    targetBackend, file,
+                    InTextDirectivesUtils.IGNORE_BACKEND_DIRECTIVE_PREFIX
+                )
+
+                if (ignored) {
+                    throw AssertionError("Ignored test hasn't been ran. Emulate its failing")
                 }
             }
 
@@ -680,6 +691,7 @@ abstract class BasicBoxTest(
         }
 
         val libraries = when (targetBackend) {
+            TargetBackend.JS_IR_ES6 -> dependencies
             TargetBackend.JS_IR -> dependencies
             TargetBackend.JS -> JsConfig.JS_STDLIB + JsConfig.JS_KOTLIN_TEST + dependencies
             else -> error("Unsupported target backend: $targetBackend")

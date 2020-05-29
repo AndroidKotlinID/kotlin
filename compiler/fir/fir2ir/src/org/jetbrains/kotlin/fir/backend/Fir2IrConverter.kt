@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.backend
 
+import org.jetbrains.kotlin.backend.common.ir.BuiltinSymbolsBase
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
@@ -15,6 +16,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrModuleFragmentImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
+import org.jetbrains.kotlin.ir.descriptors.WrappedDeclarationDescriptor
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
@@ -172,6 +174,7 @@ class Fir2IrConverter(
             constantValueGenerator.typeTranslator = typeTranslator
             typeTranslator.constantValueGenerator = constantValueGenerator
             val builtIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, symbolTable)
+            BuiltinSymbolsBase(builtIns, moduleDescriptor.builtIns, symbolTable)
             val sourceManager = PsiSourceManager()
             val components = Fir2IrComponentsStorage(session, scopeSession, symbolTable, builtIns)
             val declarationStorage = Fir2IrDeclarationStorage(components, moduleDescriptor)
@@ -187,9 +190,11 @@ class Fir2IrConverter(
                 irFiles += converter.registerFileAndClasses(firFile)
             }
             val irModuleFragment = IrModuleFragmentImpl(moduleDescriptor, builtIns, irFiles)
+            val irProviders =
+                generateTypicalIrProviderList(irModuleFragment.descriptor, builtIns, symbolTable, extensions = generatorExtensions)
             val externalDependenciesGenerator = ExternalDependenciesGenerator(
                 symbolTable,
-                generateTypicalIrProviderList(irModuleFragment.descriptor, builtIns, symbolTable, extensions = generatorExtensions),
+                irProviders,
                 languageVersionSettings
             )
             // Necessary call to generate built-in IR classes
@@ -210,6 +215,12 @@ class Fir2IrConverter(
             }
 
             externalDependenciesGenerator.generateUnboundSymbolsAsDependencies()
+            val stubGenerator = irProviders.filterIsInstance<DeclarationStubGenerator>().first()
+            for (descriptor in symbolTable.wrappedTopLevelCallableDescriptors()) {
+                val parentClass = stubGenerator.generateOrGetFacadeClass(descriptor as WrappedDeclarationDescriptor<*>)
+                descriptor.owner.parent = parentClass ?: continue
+            }
+
             return Fir2IrResult(irModuleFragment, symbolTable, sourceManager, components)
         }
     }

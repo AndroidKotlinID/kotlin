@@ -17,6 +17,8 @@ internal data class KotlinWebpackRunner(
     val configFile: File,
     val execHandleFactory: ExecHandleFactory,
     val tool: String,
+    val args: List<String>,
+    val nodeArgs: List<String>,
     val config: KotlinWebpackConfig
 ) {
     fun execute() = npmProject.project.execWithErrorLogger("webpack") {
@@ -43,6 +45,13 @@ internal data class KotlinWebpackRunner(
             args.add("--progress")
         }
 
-        npmProject.useTool(execFactory, tool, *args.toTypedArray())
+        args.addAll(this.args)
+
+        npmProject.useTool(
+            execFactory,
+            tool,
+            nodeArgs,
+            args
+        )
     }
 }

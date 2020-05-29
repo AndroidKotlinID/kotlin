@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -20,6 +20,14 @@ import java.io.File
 
 class KotlinJsDcePlugin : Plugin<Project> {
     override fun apply(project: Project) {
+        project.logger.warn(
+            """
+                The `kotlin-dce-js` Gradle plugin has been deprecated.
+                DCE is now integrated in the `org.jetbrains.kotlin.js` plugin.
+                For plugin usage details, see https://kotlinlang.org/docs/reference/js-project-setup.html.
+                For more details about JavaScript DCE, see https://kotlinlang.org/docs/reference/javascript-dce.html
+        """.trimIndent()
+        )
         val kotlinExtension =
             project.multiplatformExtensionOrNull
                 ?: project.extensions.getByName("kotlin") as? KotlinSingleTargetExtension

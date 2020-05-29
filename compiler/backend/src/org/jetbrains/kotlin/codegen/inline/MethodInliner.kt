@@ -54,7 +54,7 @@ class MethodInliner(
     private val nodeRemapper: FieldRemapper,
     private val isSameModule: Boolean,
     private val errorPrefix: String,
-    private val sourceMapper: SourceMapper,
+    private val sourceMapper: SourceMapCopier,
     private val inlineCallSiteInfo: InlineCallSiteInfo,
     private val inlineOnlySmapSkipper: InlineOnlySmapSkipper?, //non null only for root
     private val shouldPreprocessApiVersionCalls: Boolean = false
@@ -278,7 +278,7 @@ class MethodInliner(
                         visitInsn(Opcodes.NOP)
                     }
 
-                    inlineOnlySmapSkipper?.onInlineLambdaStart(remappingMethodAdapter, info)
+                    inlineOnlySmapSkipper?.onInlineLambdaStart(remappingMethodAdapter, info, sourceMapper.parent)
                     addInlineMarker(this, true)
                     val lambdaParameters = info.addAllParameters(nodeRemapper)
 
@@ -288,20 +288,14 @@ class MethodInliner(
                     )
 
                     setLambdaInlining(true)
-                    val lambdaSMAP = info.node.classSMAP
 
-                    val childSourceMapper =
-                        if (inliningContext.classRegeneration && !inliningContext.isInliningLambda)
-                            NestedSourceMapper(sourceMapper, lambdaSMAP)
-                        else
-                            NestedSourceMapper(sourceMapper.parent!!, lambdaSMAP, sameFile = info !is DefaultLambda)
-
+                    val callSite = sourceMapper.callSite.takeIf { info is DefaultLambda }
                     val inliner = MethodInliner(
                         info.node.node, lambdaParameters, inliningContext.subInlineLambda(info),
                         newCapturedRemapper,
                         if (info is DefaultLambda) isSameModule else true /*cause all nested objects in same module as lambda*/,
                         "Lambda inlining " + info.lambdaClassType.internalName,
-                        childSourceMapper, inlineCallSiteInfo, null
+                        SourceMapCopier(sourceMapper.parent, info.node.classSMAP, callSite), inlineCallSiteInfo, null
                     )
 
                     val varRemapper = LocalVarRemapper(lambdaParameters, valueParamShift)
