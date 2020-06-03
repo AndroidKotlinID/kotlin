@@ -12425,6 +12425,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/funInterface/castFromAny.kt");
         }
 
+        @TestMetadata("funConversionInVararg.kt")
+        public void testFunConversionInVararg() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/funConversionInVararg.kt");
+        }
+
         @TestMetadata("funInterfaceWithReceiver.kt")
         public void testFunInterfaceWithReceiver() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/funInterfaceWithReceiver.kt");
@@ -26796,6 +26801,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/regressions/kt3903.kt");
         }
 
+        @TestMetadata("kt39088.kt")
+        public void testKt39088() throws Exception {
+            runTest("compiler/testData/codegen/box/regressions/kt39088.kt");
+        }
+
         @TestMetadata("kt4142.kt")
         public void testKt4142() throws Exception {
             runTest("compiler/testData/codegen/box/regressions/kt4142.kt");
@@ -27361,6 +27371,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt24825.kt")
         public void testKt24825() throws Exception {
             runTest("compiler/testData/codegen/box/sam/kt24825.kt");
+        }
+
+        @TestMetadata("kt31908.kt")
+        public void testKt31908() throws Exception {
+            runTest("compiler/testData/codegen/box/sam/kt31908.kt");
         }
 
         @TestMetadata("nonInlinedSamWrapper.kt")

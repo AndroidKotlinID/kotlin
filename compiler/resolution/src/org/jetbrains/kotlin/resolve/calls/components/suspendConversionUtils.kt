@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.resolve.calls.components
 import org.jetbrains.kotlin.builtins.*
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.ParameterDescriptor
+import org.jetbrains.kotlin.resolve.calls.inference.model.LowerPriorityToPreserveCompatibility
 import org.jetbrains.kotlin.resolve.calls.model.*
 import org.jetbrains.kotlin.types.UnwrappedType
 
@@ -17,8 +18,6 @@ object SuspendTypeConversions : ParameterTypeConversion {
         argument: KotlinCallArgument,
         expectedParameterType: UnwrappedType
     ): Boolean {
-        if (!candidate.callComponents.languageVersionSettings.supportsFeature(LanguageFeature.SuspendConversion)) return true
-
         if (argument !is SimpleKotlinCallArgument) return true
 
         val argumentType = argument.receiver.stableType
@@ -52,6 +51,8 @@ object SuspendTypeConversions : ParameterTypeConversion {
         )
 
         candidate.resolvedCall.registerArgumentWithSuspendConversion(argument, nonSuspendParameterType)
+
+        candidate.addDiagnostic(LowerPriorityToPreserveCompatibility)
 
         return nonSuspendParameterType
     }

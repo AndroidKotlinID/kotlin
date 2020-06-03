@@ -9605,6 +9605,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/funInterface/castFromAny.kt");
         }
 
+        @TestMetadata("funConversionInVararg.kt")
+        public void testFunConversionInVararg() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/funConversionInVararg.kt");
+        }
+
         @TestMetadata("funInterfaceInheritance.kt")
         public void testFunInterfaceInheritance() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/funInterfaceInheritance.kt");
@@ -22635,6 +22640,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("kt3903.kt")
         public void testKt3903() throws Exception {
             runTest("compiler/testData/codegen/box/regressions/kt3903.kt");
+        }
+
+        @TestMetadata("kt39088.kt")
+        public void testKt39088() throws Exception {
+            runTest("compiler/testData/codegen/box/regressions/kt39088.kt");
         }
 
         @TestMetadata("kt4142.kt")

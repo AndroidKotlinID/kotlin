@@ -153,6 +153,9 @@ class StringBuilderTest {
         StringBuilder().let { sb ->
             repeat(times) { sb.append("foo") }
             assertEquals(expected, sb.toString())
+
+            sb.append(null as String?)
+            assertEquals(expected + "null", sb.toString())
         }
     }
 
@@ -351,14 +354,14 @@ class StringBuilderTest {
             assertEquals("MMMmy insertT CharSequence test", sb.toString())
             sb.insertRange(31, "_*#", 0, 1)
             assertEquals("MMMmy insertT CharSequence test_", sb.toString())
-            sb.insertRange(0, null as CharSequence?, 0, 2)
+            sb.insertRange(0, "null" as CharSequence, 0, 2)
             assertEquals("nuMMMmy insertT CharSequence test_", sb.toString())
 
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(-1, "_" as CharSequence) }
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(sb.length + 1, StringBuilder("_")) }
-            assertFails { sb.insertRange(0, null as CharSequence?, -1, 0) }
-            assertFails { sb.insertRange(0, null as CharSequence?, 0, 5) }
-            assertFails { sb.insertRange(0, null as CharSequence?, 2, 1) }
+            assertFails { sb.insertRange(0, "null" as CharSequence, -1, 0) }
+            assertFails { sb.insertRange(0, "null" as CharSequence, 0, 5) }
+            assertFails { sb.insertRange(0, "null" as CharSequence, 2, 1) }
         }
     }
 
@@ -384,6 +387,8 @@ class StringBuilderTest {
             assertEquals("_my insertTtT string test", sb.toString())
             sb.insert(25, "_!_")
             assertEquals("_my insertTtT string test_!_", sb.toString())
+            sb.insert(13, null as String?)
+            assertEquals("_my insertTtTnull string test_!_", sb.toString())
         }
     }
 

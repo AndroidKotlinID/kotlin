@@ -879,6 +879,21 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             runTest("idea/testData/quickfix/addJvmNameAnnotation/basic.kt");
         }
 
+        @TestMetadata("extension.kt")
+        public void testExtension() throws Exception {
+            runTest("idea/testData/quickfix/addJvmNameAnnotation/extension.kt");
+        }
+
+        @TestMetadata("extension2.kt")
+        public void testExtension2() throws Exception {
+            runTest("idea/testData/quickfix/addJvmNameAnnotation/extension2.kt");
+        }
+
+        @TestMetadata("extension3.kt")
+        public void testExtension3() throws Exception {
+            runTest("idea/testData/quickfix/addJvmNameAnnotation/extension3.kt");
+        }
+
         @TestMetadata("hasAnnotation.kt")
         public void testHasAnnotation() throws Exception {
             runTest("idea/testData/quickfix/addJvmNameAnnotation/hasAnnotation.kt");
@@ -2894,6 +2909,21 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
 
         public void testAllFilesPresentInConvertToAnonymousObject() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/convertToAnonymousObject"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("hasConcreateMember.kt")
+        public void testHasConcreateMember() throws Exception {
+            runTest("idea/testData/quickfix/convertToAnonymousObject/hasConcreateMember.kt");
+        }
+
+        @TestMetadata("hasConcreateMember2.kt")
+        public void testHasConcreateMember2() throws Exception {
+            runTest("idea/testData/quickfix/convertToAnonymousObject/hasConcreateMember2.kt");
+        }
+
+        @TestMetadata("hasTypeParameter.kt")
+        public void testHasTypeParameter() throws Exception {
+            runTest("idea/testData/quickfix/convertToAnonymousObject/hasTypeParameter.kt");
         }
 
         @TestMetadata("labeledReturn.kt")
@@ -9468,6 +9498,11 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
 
             public void testAllFilesPresentInSuspend() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/quickfix/modifiers/suspend"), Pattern.compile("^([\\w\\-_]+)\\.kt$"), null, true);
+            }
+
+            @TestMetadata("anonymousFunction.kt")
+            public void testAnonymousFunction() throws Exception {
+                runTest("idea/testData/quickfix/modifiers/suspend/anonymousFunction.kt");
             }
 
             @TestMetadata("base.kt")

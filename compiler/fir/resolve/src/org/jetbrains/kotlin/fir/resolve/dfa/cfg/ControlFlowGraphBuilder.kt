@@ -305,13 +305,20 @@ class ControlFlowGraphBuilder {
     // ----------------------------------- Block -----------------------------------
 
     fun enterBlock(block: FirBlock): BlockEnterNode? {
-        val lastNode = lastNode
-        return if (lastNode is FunctionEnterNode) {
-            blocksOfFunctions[block] = lastNode.fir
-            null
-        } else {
-            createBlockEnterNode(block).also { addNewSimpleNode(it) }.also { levelCounter++ }
+        when (val lastNode = lastNode) {
+            is FunctionEnterNode -> {
+                blocksOfFunctions[block] = lastNode.fir
+                return null
+            }
+            is DelegatedConstructorCallNode -> {
+                val ownerEnterNode = lastNode.owner.enterNode
+                if (ownerEnterNode is FunctionEnterNode) {
+                    blocksOfFunctions[block] = ownerEnterNode.fir
+                    return null
+                }
+            }
         }
+        return createBlockEnterNode(block).also { addNewSimpleNode(it) }.also { levelCounter++ }
     }
 
     fun exitBlock(block: FirBlock): CFGNode<*> {
@@ -853,18 +860,18 @@ class ControlFlowGraphBuilder {
 
     // ----------------------------------- Safe calls -----------------------------------
 
-    fun enterSafeCall(qualifiedAccess: FirQualifiedAccess): EnterSafeCallNode {
+    fun enterSafeCall(safeCall: FirSafeCallExpression): EnterSafeCallNode {
         val lastNode = lastNodes.pop()
-        val enterNode = createEnterSafeCallNode(qualifiedAccess)
+        val enterNode = createEnterSafeCallNode(safeCall)
         lastNodes.push(enterNode)
-        val exitNode = createExitSafeCallNode(qualifiedAccess)
+        val exitNode = createExitSafeCallNode(safeCall)
         exitSafeCallNodes.push(exitNode)
         addEdge(lastNode, enterNode)
         addEdge(lastNode, exitNode)
         return enterNode
     }
 
-    fun exitSafeCall(qualifiedAccess: FirQualifiedAccess): ExitSafeCallNode {
+    fun exitSafeCall(safeCall: FirSafeCallExpression): ExitSafeCallNode {
         return exitSafeCallNodes.pop().also {
             addNewSimpleNode(it)
             it.updateDeadStatus()

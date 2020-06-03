@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.backend.common.LoggingContext
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
+import org.jetbrains.kotlin.backend.common.overrides.FakeOverrideChecker
 import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
 import org.jetbrains.kotlin.backend.common.serialization.KlibIrVersion
 import org.jetbrains.kotlin.backend.common.serialization.knownBuiltins
@@ -162,6 +163,8 @@ fun generateKLib(
     val moduleFragment = psi2IrContext.generateModuleFragmentWithPlugins(project, files, irLinker, expectDescriptorToSymbol)
 
     moduleFragment.acceptVoid(ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc)))
+    val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
+    irLinker.modules.forEach{ fakeOverrideChecker.check(it) }
 
     val moduleName = configuration[CommonConfigurationKeys.MODULE_NAME]!!
 
@@ -226,10 +229,15 @@ fun loadIr(
             }
 
             val moduleFragment = psi2IrContext.generateModuleFragmentWithPlugins(project, mainModule.files, irLinker)
+            symbolTable.noUnboundLeft("Unbound symbols left after linker")
 
             // TODO: not sure whether this check should be enabled by default. Add configuration key for it.
             val mangleChecker = ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc))
             moduleFragment.acceptVoid(mangleChecker)
+
+            val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
+            irLinker.modules.forEach{ fakeOverrideChecker.check(it) }
+
             irBuiltIns.knownBuiltins.forEach { it.acceptVoid(mangleChecker) }
 
             return IrModuleInfo(moduleFragment, deserializedModuleFragments, irBuiltIns, symbolTable, irLinker)

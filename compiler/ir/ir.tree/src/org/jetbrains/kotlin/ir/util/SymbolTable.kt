@@ -18,13 +18,13 @@
 
 package org.jetbrains.kotlin.ir.util
 
-import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.*
-import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyDeclarationBase
 import org.jetbrains.kotlin.ir.declarations.lazy.IrLazySymbolTable
-import org.jetbrains.kotlin.ir.descriptors.*
+import org.jetbrains.kotlin.ir.descriptors.WrappedDeclarationDescriptor
+import org.jetbrains.kotlin.ir.descriptors.WrappedFunctionDescriptorWithContainerSource
+import org.jetbrains.kotlin.ir.descriptors.WrappedPropertyDescriptorWithContainerSource
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
 import org.jetbrains.kotlin.ir.symbols.*
@@ -35,16 +35,6 @@ import org.jetbrains.kotlin.serialization.deserialization.descriptors.Descriptor
 
 interface IrProvider {
     fun getDeclaration(symbol: IrSymbol): IrDeclaration?
-}
-
-/**
- * Extension of [IrProvider] which always produces inheritors of [IrLazyDeclarationBase].
- * Thus, it needs [declarationStubGenerator] to be able to produce IR declarations.
- */
-interface LazyIrProvider : IrProvider {
-    var declarationStubGenerator: DeclarationStubGenerator
-
-    override fun getDeclaration(symbol: IrSymbol): IrLazyDeclarationBase?
 }
 
 interface IrDeserializer : IrProvider {
@@ -643,6 +633,9 @@ open class SymbolTable(
     override fun referenceProperty(descriptor: PropertyDescriptor): IrPropertySymbol =
         propertySymbolTable.referenced(descriptor) { createPropertySymbol(descriptor) }
 
+    fun referencePropertyIfAny(sig: IdSignature): IrPropertySymbol? =
+        propertySymbolTable.get(sig)
+
     override fun referencePropertyFromLinker(descriptor: PropertyDescriptor, sig: IdSignature): IrPropertySymbol =
         propertySymbolTable.run {
             if (sig.isPublic) referenced(sig) { IrPropertyPublicSymbolImpl(descriptor, sig) }
@@ -727,6 +720,9 @@ open class SymbolTable(
 
     override fun referenceSimpleFunction(descriptor: FunctionDescriptor) =
         simpleFunctionSymbolTable.referenced(descriptor) { createSimpleFunctionSymbol(descriptor) }
+
+    fun referenceSimpleFunctionIfAny(sig: IdSignature): IrSimpleFunctionSymbol? =
+        simpleFunctionSymbolTable.get(sig)
 
     override fun referenceSimpleFunctionFromLinker(descriptor: FunctionDescriptor, sig: IdSignature): IrSimpleFunctionSymbol {
         return simpleFunctionSymbolTable.run {
@@ -956,9 +952,9 @@ inline fun <T, D : DeclarationDescriptor> ReferenceSymbolTable.withReferenceScop
     return result
 }
 
-val SymbolTable.allUnbound: List<IrSymbol>
+val SymbolTable.allUnbound: Set<IrSymbol>
     get() {
-        val r = mutableListOf<IrSymbol>()
+        val r = mutableSetOf<IrSymbol>()
         r.addAll(unboundClasses)
         r.addAll(unboundConstructors)
         r.addAll(unboundEnumEntries)
@@ -967,5 +963,15 @@ val SymbolTable.allUnbound: List<IrSymbol>
         r.addAll(unboundProperties)
         r.addAll(unboundTypeAliases)
         r.addAll(unboundTypeParameters)
-        return r.filter { !it.isBound }
+        return r.filter { !it.isBound }.toSet()
     }
+
+fun SymbolTable.noUnboundLeft(message: String) {
+    val unbound = this.allUnbound
+    assert(unbound.isEmpty()) {
+        "$message\n" +
+                unbound.map {
+                    "$it ${if (it.isPublicApi) it.signature.toString() else "NON-PUBLIC API $it"}"
+                }.joinToString("\n")
+    }
+}

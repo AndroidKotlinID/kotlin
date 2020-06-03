@@ -1941,6 +1941,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTestWithFirVali
                 runTest("compiler/testData/diagnostics/tests/callableReference/propertyOfNestedGenericClass.kt");
             }
 
+            @TestMetadata("referenceAdaptationCompatibility.kt")
+            public void testReferenceAdaptationCompatibility() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/referenceAdaptationCompatibility.kt");
+            }
+
             @TestMetadata("rewriteAtSliceOnGetOperator.kt")
             public void testRewriteAtSliceOnGetOperator() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/rewriteAtSliceOnGetOperator.kt");
@@ -7966,6 +7971,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTestWithFirVali
                 runTest("compiler/testData/diagnostics/tests/funInterface/genericSubstitutionForFunInterface.kt");
             }
 
+            @TestMetadata("noCompatibilityResolveForFunInterfaces.kt")
+            public void testNoCompatibilityResolveForFunInterfaces() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/funInterface/noCompatibilityResolveForFunInterfaces.kt");
+            }
+
             @TestMetadata("resolveFunInterfaceWithoutMainMethod.kt")
             public void testResolveFunInterfaceWithoutMainMethod() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/funInterface/resolveFunInterfaceWithoutMainMethod.kt");
@@ -10166,6 +10176,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTestWithFirVali
             @TestMetadata("kt37853.kt")
             public void testKt37853() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt37853.kt");
+            }
+
+            @TestMetadata("kt39220.kt")
+            public void testKt39220() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt39220.kt");
             }
 
             @TestMetadata("kt6175.kt")
@@ -13616,6 +13631,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTestWithFirVali
 
                 public void testAllFilesPresentInSam() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/j+k/sam"), Pattern.compile("^(.*)\\.kts?$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("compatibilityResolveToOuterScopeForKotlinFunctions.kt")
+                public void testCompatibilityResolveToOuterScopeForKotlinFunctions() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/j+k/sam/compatibilityResolveToOuterScopeForKotlinFunctions.kt");
                 }
 
                 @TestMetadata("enhancedSamConstructor.kt")
@@ -23272,6 +23292,21 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTestWithFirVali
             @TestMetadata("severalConversionsInOneCall.kt")
             public void testSeveralConversionsInOneCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/suspendConversion/severalConversionsInOneCall.kt");
+            }
+
+            @TestMetadata("suspendAndFunConversionInDisabledMode.kt")
+            public void testSuspendAndFunConversionInDisabledMode() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/suspendConversion/suspendAndFunConversionInDisabledMode.kt");
+            }
+
+            @TestMetadata("suspendConversionCompatibility.kt")
+            public void testSuspendConversionCompatibility() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/suspendConversion/suspendConversionCompatibility.kt");
+            }
+
+            @TestMetadata("suspendConversionCompatibilityInDisabledMode.kt")
+            public void testSuspendConversionCompatibilityInDisabledMode() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/suspendConversion/suspendConversionCompatibilityInDisabledMode.kt");
             }
 
             @TestMetadata("suspendConversionDisabled.kt")

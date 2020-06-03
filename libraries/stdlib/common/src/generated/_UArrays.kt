@@ -5871,6 +5871,710 @@ public inline fun <R : Comparable<R>> UShortArray.maxBy(selector: (UShort) -> R)
 }
 
 /**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.maxOf(selector: (UInt) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.maxOf(selector: (ULong) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.maxOf(selector: (UByte) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.maxOf(selector: (UShort) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.maxOf(selector: (UInt) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.maxOf(selector: (ULong) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.maxOf(selector: (UByte) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.maxOf(selector: (UShort) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UIntArray.maxOf(selector: (UInt) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> ULongArray.maxOf(selector: (ULong) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UByteArray.maxOf(selector: (UByte) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UShortArray.maxOf(selector: (UShort) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.maxOfOrNull(selector: (UInt) -> Double): Double? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.maxOfOrNull(selector: (ULong) -> Double): Double? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.maxOfOrNull(selector: (UByte) -> Double): Double? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.maxOfOrNull(selector: (UShort) -> Double): Double? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.maxOfOrNull(selector: (UInt) -> Float): Float? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.maxOfOrNull(selector: (ULong) -> Float): Float? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.maxOfOrNull(selector: (UByte) -> Float): Float? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.maxOfOrNull(selector: (UShort) -> Float): Float? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        maxValue = maxOf(maxValue, v)
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UIntArray.maxOfOrNull(selector: (UInt) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> ULongArray.maxOfOrNull(selector: (ULong) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UByteArray.maxOfOrNull(selector: (UByte) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UShortArray.maxOfOrNull(selector: (UShort) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (maxValue < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UIntArray.maxOfWith(comparator: Comparator<in R>, selector: (UInt) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> ULongArray.maxOfWith(comparator: Comparator<in R>, selector: (ULong) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UByteArray.maxOfWith(comparator: Comparator<in R>, selector: (UByte) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UShortArray.maxOfWith(comparator: Comparator<in R>, selector: (UShort) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UIntArray.maxOfWithOrNull(comparator: Comparator<in R>, selector: (UInt) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> ULongArray.maxOfWithOrNull(comparator: Comparator<in R>, selector: (ULong) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UByteArray.maxOfWithOrNull(comparator: Comparator<in R>, selector: (UByte) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
+ * Returns the largest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UShortArray.maxOfWithOrNull(comparator: Comparator<in R>, selector: (UShort) -> R): R? {
+    if (isEmpty()) return null
+    var maxValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(maxValue, v) < 0) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}
+
+/**
  * Returns the first element having the largest value according to the provided [comparator] or `null` if there are no elements.
  */
 @SinceKotlin("1.3")
@@ -6088,6 +6792,710 @@ public inline fun <R : Comparable<R>> UShortArray.minBy(selector: (UShort) -> R)
         }
     }
     return minElem
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.minOf(selector: (UInt) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.minOf(selector: (ULong) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.minOf(selector: (UByte) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.minOf(selector: (UShort) -> Double): Double {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.minOf(selector: (UInt) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.minOf(selector: (ULong) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.minOf(selector: (UByte) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.minOf(selector: (UShort) -> Float): Float {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UIntArray.minOf(selector: (UInt) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> ULongArray.minOf(selector: (ULong) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UByteArray.minOf(selector: (UByte) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UShortArray.minOf(selector: (UShort) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.minOfOrNull(selector: (UInt) -> Double): Double? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.minOfOrNull(selector: (ULong) -> Double): Double? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.minOfOrNull(selector: (UByte) -> Double): Double? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.minOfOrNull(selector: (UShort) -> Double): Double? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.minOfOrNull(selector: (UInt) -> Float): Float? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.minOfOrNull(selector: (ULong) -> Float): Float? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.minOfOrNull(selector: (UByte) -> Float): Float? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ * 
+ * If any of values produced by [selector] function is `NaN`, the returned result is `NaN`.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.minOfOrNull(selector: (UShort) -> Float): Float? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        minValue = minOf(minValue, v)
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UIntArray.minOfOrNull(selector: (UInt) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> ULongArray.minOfOrNull(selector: (ULong) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UByteArray.minOfOrNull(selector: (UByte) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R : Comparable<R>> UShortArray.minOfOrNull(selector: (UShort) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UIntArray.minOfWith(comparator: Comparator<in R>, selector: (UInt) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> ULongArray.minOfWith(comparator: Comparator<in R>, selector: (ULong) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UByteArray.minOfWith(comparator: Comparator<in R>, selector: (UByte) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array.
+ * 
+ * @throws NoSuchElementException if the array is empty.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UShortArray.minOfWith(comparator: Comparator<in R>, selector: (UShort) -> R): R {
+    if (isEmpty()) throw NoSuchElementException()
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UIntArray.minOfWithOrNull(comparator: Comparator<in R>, selector: (UInt) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> ULongArray.minOfWithOrNull(comparator: Comparator<in R>, selector: (ULong) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UByteArray.minOfWithOrNull(comparator: Comparator<in R>, selector: (UByte) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the smallest value according to the provided [comparator]
+ * among all values produced by [selector] function applied to each element in the array or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun <R> UShortArray.minOfWithOrNull(comparator: Comparator<in R>, selector: (UShort) -> R): R? {
+    if (isEmpty()) return null
+    var minValue = selector(this[0])
+    for (i in 1..lastIndex) {
+        val v = selector(this[i])
+        if (comparator.compare(minValue, v) > 0) {
+            minValue = v
+        }
+    }
+    return minValue
 }
 
 /**
@@ -7884,6 +9292,346 @@ public inline fun UByteArray.sumByDouble(selector: (UByte) -> Double): Double {
 @kotlin.internal.InlineOnly
 public inline fun UShortArray.sumByDouble(selector: (UShort) -> Double): Double {
     var sum: Double = 0.0
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfDouble")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.sumOf(selector: (UInt) -> Double): Double {
+    var sum: Double = 0.toDouble()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfDouble")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.sumOf(selector: (ULong) -> Double): Double {
+    var sum: Double = 0.toDouble()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfDouble")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.sumOf(selector: (UByte) -> Double): Double {
+    var sum: Double = 0.toDouble()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfDouble")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.sumOf(selector: (UShort) -> Double): Double {
+    var sum: Double = 0.toDouble()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.sumOf(selector: (UInt) -> Int): Int {
+    var sum: Int = 0.toInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.sumOf(selector: (ULong) -> Int): Int {
+    var sum: Int = 0.toInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.sumOf(selector: (UByte) -> Int): Int {
+    var sum: Int = 0.toInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.sumOf(selector: (UShort) -> Int): Int {
+    var sum: Int = 0.toInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfLong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.sumOf(selector: (UInt) -> Long): Long {
+    var sum: Long = 0.toLong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfLong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.sumOf(selector: (ULong) -> Long): Long {
+    var sum: Long = 0.toLong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfLong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.sumOf(selector: (UByte) -> Long): Long {
+    var sum: Long = 0.toLong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfLong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.sumOf(selector: (UShort) -> Long): Long {
+    var sum: Long = 0.toLong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfUInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.sumOf(selector: (UInt) -> UInt): UInt {
+    var sum: UInt = 0.toUInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfUInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.sumOf(selector: (ULong) -> UInt): UInt {
+    var sum: UInt = 0.toUInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfUInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.sumOf(selector: (UByte) -> UInt): UInt {
+    var sum: UInt = 0.toUInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfUInt")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.sumOf(selector: (UShort) -> UInt): UInt {
+    var sum: UInt = 0.toUInt()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfULong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UIntArray.sumOf(selector: (UInt) -> ULong): ULong {
+    var sum: ULong = 0.toULong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfULong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun ULongArray.sumOf(selector: (ULong) -> ULong): ULong {
+    var sum: ULong = 0.toULong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfULong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UByteArray.sumOf(selector: (UByte) -> ULong): ULong {
+    var sum: ULong = 0.toULong()
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the sum of all values produced by [selector] function applied to each element in the array.
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("sumOfULong")
+@ExperimentalUnsignedTypes
+@kotlin.internal.InlineOnly
+public inline fun UShortArray.sumOf(selector: (UShort) -> ULong): ULong {
+    var sum: ULong = 0.toULong()
     for (element in this) {
         sum += selector(element)
     }

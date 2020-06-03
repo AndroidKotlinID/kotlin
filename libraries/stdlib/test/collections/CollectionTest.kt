@@ -1,14 +1,17 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package test.collections
 
+import test.assertIsNegativeZero
+import test.assertIsPositiveZero
 import test.assertStaticAndRuntimeTypeIs
 import kotlin.test.*
 import test.collections.behaviors.*
 import test.comparisons.STRING_CASE_INSENSITIVE_ORDER
+import kotlin.math.pow
 import kotlin.random.Random
 
 class CollectionTest {
@@ -44,6 +47,17 @@ class CollectionTest {
         assertEquals(listOf("foo", "bar"), foo)
 
         assertStaticAndRuntimeTypeIs<List<String>>(foo)
+    }
+
+
+    @Test fun flatMap() {
+        val source = listOf(null, "foo", "bar")
+        val result1 = source.flatMap { it.orEmpty().asSequence() }
+        val result2 = source.flatMap { it.orEmpty().asIterable() }
+
+        val expected = "foobar".toList()
+        assertEquals(expected, result1)
+        assertEquals(expected, result2)
     }
 
     /*
@@ -818,6 +832,9 @@ class CollectionTest {
         expect("a", { listOf("a", "b").min() })
         expect(null, { listOf<Int>().asSequence().min() })
         expect(2, { listOf(2, 3).asSequence().min() })
+
+        assertIsNegativeZero(listOf(0.0, -0.0).shuffled().min()!!)
+        assertIsNegativeZero(listOf(0.0F, -0.0F).shuffled().min()!!.toDouble())
     }
 
     @Test fun max() {
@@ -829,6 +846,9 @@ class CollectionTest {
         expect("b", { listOf("a", "b").max() })
         expect(null, { listOf<Int>().asSequence().max() })
         expect(3, { listOf(2, 3).asSequence().max() })
+
+        assertIsPositiveZero(listOf(0.0, -0.0).shuffled().max()!!)
+        assertIsPositiveZero(listOf(0.0F, -0.0F).shuffled().max()!!.toDouble())
     }
 
     @Test fun minWith() {
@@ -883,6 +903,66 @@ class CollectionTest {
         assertEquals(5, c)
     }
 
+    @Test fun minOf() {
+        assertEquals(null, emptyList<Int>().minOfOrNull { it } )
+        assertFailsWith<NoSuchElementException> { emptyList<Int>().minOf { it } }
+
+        assertEquals(1, listOf(1).minOf { it })
+        assertEquals(-3, listOf(2, 3).minOf { -it })
+        assertEquals("xa", listOf('a', 'b').minOf { "x$it" })
+        assertEquals(1, listOf("b", "abc").minOf { it.length })
+
+        assertEquals(-32.0, listOf(1, 2, 3, 4, 5).minOf { (-2.0).pow(it) })
+        assertEquals(-32.0F, listOf(1, 2, 3, 4, 5).minOf { (-2.0F).pow(it) })
+
+        assertEquals(Double.NaN, listOf(1, -1, 0).minOf { it.toDouble().pow(0.5) })
+        assertEquals(Float.NaN, listOf(1, -1, 0).minOf { it.toFloat().pow(0.5F) })
+
+        assertIsNegativeZero(listOf(1.0, -1.0).shuffled().minOf { it * 0.0 })
+        assertIsNegativeZero(listOf(1.0F, -1.0F).shuffled().minOf { it * 0.0F }.toDouble())
+    }
+
+    @Test fun minOfWith() {
+        val data = listOf("abca", "bcaa", "cabb")
+        val result = data.minOfWith(compareBy { it.reversed() }) { it.take(3) }
+        val resultOrNull = data.minOfWithOrNull(compareBy { it.reversed() }) { it.take(3) }
+        assertEquals("bca", result)
+        assertEquals(result, resultOrNull)
+
+        assertEquals(null, emptyList<Int>().minOfWithOrNull(naturalOrder()) { it })
+        // TODO: investigate why no unit-coercion happens here and an explicit 'Unit' is required
+        assertFailsWith<NoSuchElementException> { emptyList<Int>().minOfWith(naturalOrder()) { it }; Unit }
+    }
+
+    @Test fun maxOf() {
+        assertEquals(null, emptyList<Int>().maxOfOrNull { it } )
+        assertFailsWith<NoSuchElementException> { emptyList<Int>().maxOf { it } }
+
+        assertEquals(1, listOf(1).maxOf { it })
+        assertEquals(-2, listOf(2, 3).maxOf { -it })
+        assertEquals("xb", listOf('a', 'b').maxOf { "x$it" })
+        assertEquals(3, listOf("b", "abc").maxOf { it.length })
+
+        assertEquals(16.0, listOf(1, 2, 3, 4, 5).maxOf { (-2.0).pow(it) })
+        assertEquals(16.0F, listOf(1, 2, 3, 4, 5).maxOf { (-2.0F).pow(it) })
+
+        assertIsPositiveZero(listOf(1.0, -1.0).shuffled().maxOf { it * 0.0 })
+        assertIsPositiveZero(listOf(1.0F, -1.0F).shuffled().maxOf { it * 0.0F }.toDouble())
+    }
+
+    @Test fun maxOfWith() {
+        val data = listOf("abca", "bcaa", "cabb")
+        val result = data.maxOfWith(compareBy { it.reversed() }) { it.take(3) }
+        val resultOrNull = data.maxOfWithOrNull(compareBy { it.reversed() }) { it.take(3) }
+        assertEquals("abc", result)
+        assertEquals(result, resultOrNull)
+
+        assertEquals(null, emptyList<Int>().maxOfWithOrNull(naturalOrder()) { it })
+        // TODO: investigate why no unit-coercion happens here and an explicit 'Unit' is required
+        assertFailsWith<NoSuchElementException> { emptyList<Int>().maxOfWith(naturalOrder()) { it }; Unit }
+    }
+
+
     @Test fun sum() {
         expect(0) { arrayListOf<Int>().sum() }
         expect(14) { listOf(2, 3, 9).sum() }
@@ -890,6 +970,22 @@ class CollectionTest {
         expect(3000000000000) { arrayListOf<Long>(1000000000000, 2000000000000).sum() }
         expect(3.0.toFloat()) { arrayListOf<Float>(1.0.toFloat(), 2.0.toFloat()).sum() }
         expect(3.0.toFloat()) { sequenceOf<Float>(1.0.toFloat(), 2.0.toFloat()).sum() }
+    }
+
+    @Test fun sumOf() {
+        assertEquals(0, emptyList<Nothing>().sumOf { 1.toInt() })
+        assertEquals(0L, emptyList<Nothing>().sumOf { 1L })
+        assertEquals(0U, emptyList<Nothing>().sumOf { 1U.toUInt() })
+        assertEquals(0UL, emptyList<Nothing>().sumOf { 1UL })
+        assertEquals(0.0, emptyList<Nothing>().sumOf { 1.0 })
+
+        val items = listOf("", "a", "bc", "de", "fgh", "klmnop")
+        assertEquals(items.size + 14, items.sumOf { it.length + 1 })
+        assertEquals(14L, items.sumOf { it.length.toLong() })
+        assertEquals(items.size.toUInt(), items.sumOf { 1U.toUInt() })
+        assertEquals(14UL, items.sumOf { it.length.toULong() })
+        assertEquals(14.0, items.sumOf { it.length.toDouble() })
+        assertEquals(Double.NaN, items.sumOf { 0.0 / it.length })
     }
 
     @Test fun average() {

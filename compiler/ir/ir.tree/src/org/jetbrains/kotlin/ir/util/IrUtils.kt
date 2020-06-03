@@ -234,18 +234,6 @@ val IrBody.statements: List<IrStatement>
 val IrClass.defaultType: IrSimpleType
     get() = this.thisReceiver!!.type as IrSimpleType
 
-val IrSimpleFunction.isSynthesized: Boolean get() = descriptor.kind == CallableMemberDescriptor.Kind.SYNTHESIZED
-
-val IrDeclaration.isReal: Boolean get() = !isFakeOverride
-
-val IrDeclaration.isFakeOverride: Boolean
-    get() = when (this) {
-        is IrSimpleFunction -> isFakeOverride
-        is IrProperty -> isFakeOverride
-        is IrField -> isFakeOverride
-        else -> false
-    }
-
 fun IrClass.isSubclassOf(ancestor: IrClass): Boolean {
 
     val alreadyVisited = mutableSetOf<IrClass>()
@@ -262,74 +250,10 @@ fun IrClass.isSubclassOf(ancestor: IrClass): Boolean {
     return this.hasAncestorInSuperTypes()
 }
 
-fun IrSimpleFunction.collectRealOverrides(toSkip: (IrSimpleFunction) -> Boolean = { false }): Set<IrSimpleFunction> {
-    if (isReal && !toSkip(this)) return setOf(this)
-
-    val visited = mutableSetOf<IrSimpleFunction>()
-    val realOverrides = mutableSetOf<IrSimpleFunction>()
-
-    fun collectRealOverrides(func: IrSimpleFunction) {
-        if (!visited.add(func)) return
-
-        if (func.isReal && !toSkip(func)) {
-            realOverrides += func
-        } else {
-            func.overriddenSymbols.forEach { collectRealOverrides(it.owner) }
-        }
-    }
-
-    overriddenSymbols.forEach { collectRealOverrides(it.owner) }
-
-    fun excludeRepeated(func: IrSimpleFunction) {
-        if (!visited.add(func)) return
-
-        func.overriddenSymbols.forEach {
-            realOverrides.remove(it.owner)
-            excludeRepeated(it.owner)
-        }
-    }
-
-    visited.clear()
-    realOverrides.toList().forEach { excludeRepeated(it) }
-
-    return realOverrides
-}
-
-// This implementation is from kotlin-native
-// TODO: use this implementation instead of any other
-fun IrSimpleFunction.resolveFakeOverride(toSkip: (IrSimpleFunction) -> Boolean = { false }): IrSimpleFunction? {
-    return collectRealOverrides(toSkip)
-        .filter { it.modality != Modality.ABSTRACT }
-        .let { realOverrides ->
-            // Kotlin forbids conflicts between overrides, but they may trickle down from Java.
-            realOverrides.singleOrNull { it.parent.safeAs<IrClass>()?.isInterface != true } ?: realOverrides.singleOrNull()
-        }
-}
-
-fun IrSimpleFunction.isOrOverridesSynthesized(): Boolean {
-    if (isSynthesized) return true
-
-    if (isFakeOverride) return overriddenSymbols.all { it.owner.isOrOverridesSynthesized() }
-
-    return false
-}
-
 fun IrSimpleFunction.findInterfaceImplementation(): IrSimpleFunction? {
     if (isReal) return null
 
-    if (isOrOverridesSynthesized()) return null
-
     return resolveFakeOverride()?.run { if (parentAsClass.isInterface) this else null }
-}
-
-fun IrField.resolveFakeOverride(): IrField? {
-    var toVisit = setOf(this)
-    val nonOverridden = mutableSetOf<IrField>()
-    while (toVisit.isNotEmpty()) {
-        nonOverridden += toVisit.filter { it.overriddenSymbols.isEmpty() }
-        toVisit = toVisit.flatMap { it.overriddenSymbols }.map { it.owner }.toSet()
-    }
-    return nonOverridden.singleOrNull()
 }
 
 val IrClass.isAnnotationClass get() = kind == ClassKind.ANNOTATION_CLASS
