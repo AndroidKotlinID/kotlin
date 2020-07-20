@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -10,8 +10,10 @@ import groovy.lang.Closure
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
@@ -24,14 +26,18 @@ import org.jetbrains.kotlin.gradle.dsl.NativeCacheKind
 import org.jetbrains.kotlin.gradle.internal.ensureParentDirsCreated
 import org.jetbrains.kotlin.gradle.plugin.LanguageSettingsBuilder
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
+import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.plugin.sources.DefaultLanguageSettingsBuilder
+import org.jetbrains.kotlin.gradle.targets.native.internal.isAllowCommonizer
 import org.jetbrains.kotlin.gradle.utils.getValue
 import org.jetbrains.kotlin.gradle.utils.klibModuleName
+import org.jetbrains.kotlin.gradle.utils.listFilesOrEmpty
 import org.jetbrains.kotlin.konan.library.KLIB_INTEROP_IR_PROVIDER_IDENTIFIER
 import org.jetbrains.kotlin.konan.properties.saveToFile
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind.*
+import org.jetbrains.kotlin.konan.target.Distribution
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.library.*
 import java.io.File
@@ -272,7 +278,7 @@ abstract class AbstractKotlinNativeCompile<T : KotlinCommonToolOptions> : Abstra
             add("-Xexpect-actual-linker")
             add("-Xmetadata-klib")
             addArg("-manifest", manifestFile.get().absolutePath)
-            add("-no-default-libs")
+            if (project.isAllowCommonizer()) add("-no-default-libs")
         }
 
         addArg("-o", outputFile.get().absolutePath)
@@ -325,7 +331,7 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 
     @get:Internal
     override val baseName: String
-        get() = if (compilation.isMainCompilation) project.name else "${project.name}_${compilation.name}"
+        get() = if (compilation.isMain()) project.name else "${project.name}_${compilation.name}"
 
     @get:Input
     val moduleName: String by project.provider {
@@ -337,13 +343,12 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 
     // Inputs and outputs.
     // region Sources.
-    @InputFiles
-    @SkipWhenEmpty
-    override fun getSource(): FileTree = project.files(compilation.allSources).asFileTree
 
-    private val commonSources: FileCollection
-        // Already taken into account in getSources method.
-        get() = project.files(compilation.commonSources).asFileTree
+    @get:Internal // these sources are normally a subset of `source` ones which are already tracked
+    val commonSources: ConfigurableFileCollection = project.files()
+
+    private val commonSourcesTree: FileTree
+        get() = commonSources.asFileTree
 
     private val friendModule: FileCollection?
         get() = project.files(
@@ -366,27 +371,12 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
     // endregion.
 
     // region Kotlin options.
-    private inner class NativeCompileOptions : KotlinCommonOptions {
-        override var apiVersion: String?
-            get() = languageSettings.apiVersion
-            set(value) { languageSettings.apiVersion = value }
-
-        override var languageVersion: String?
-            get() = this@KotlinNativeCompile.languageVersion
-            set(value) { languageSettings.languageVersion = value }
-
-        override var allWarningsAsErrors: Boolean = false
-        override var suppressWarnings: Boolean = false
-        override var verbose: Boolean = false
-
-        override var freeCompilerArgs: List<String> = listOf()
-    }
+    override val kotlinOptions: KotlinCommonOptions
+        get() = compilation.kotlinOptions
 
     @get:Input
     override val additionalCompilerOptions: Collection<String>
         get() = kotlinOptions.freeCompilerArgs
-
-    override val kotlinOptions: KotlinCommonOptions = NativeCompileOptions()
 
     override fun kotlinOptions(fn: KotlinCommonOptions.() -> Unit) {
         kotlinOptions.fn()
@@ -427,8 +417,8 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 
     override fun buildSourceArgs(): List<String> = mutableListOf<String>().apply {
         addAll(getSource().map { it.absolutePath })
-        if (!commonSources.isEmpty) {
-            add("-Xcommon-sources=${commonSources.map { it.absolutePath }.joinToString(separator = ",")}")
+        if (!commonSourcesTree.isEmpty) {
+            add("-Xcommon-sources=${commonSourcesTree.map { it.absolutePath }.joinToString(separator = ",")}")
         }
     }
     // endregion.
@@ -440,9 +430,7 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
 open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOptions>() {
 
     init {
-        if (!linkFromSources) {
-            dependsOn(project.provider { compilation.compileKotlinTask })
-        }
+        dependsOn(project.provider { compilation.compileKotlinTask })
     }
 
     @Internal
@@ -460,14 +448,7 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     @InputFiles
     @SkipWhenEmpty
     override fun getSource(): FileTree =
-        if (linkFromSources) {
-            // Allow a user to force the old behaviour of a link task.
-            // It's better to keep this flag in 1.3.70 to be able to workaroud probable klib serialization bugs.
-            // TODO: Remove in 1.4.
-            project.files(compilation.allSources).asFileTree
-        } else {
-            project.files(intermediateLibrary.get()).asFileTree
-        }
+        project.files(intermediateLibrary.get()).asFileTree
 
     @OutputDirectory
     override fun getDestinationDir(): File {
@@ -521,29 +502,6 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
         fn.call()
     }
 
-    //region language settings inputs for the [linkFromSources] mode.
-    // TODO: Remove in 1.3.70.
-    @get:Optional
-    @get:Input
-    val languageVersion: String?
-        get() = languageSettings.languageVersion.takeIf { linkFromSources }
-
-    @get:Optional
-    @get:Input
-    val apiVersion: String?
-        get() = languageSettings.apiVersion.takeIf { linkFromSources }
-
-    @get:Optional
-    @get:Input
-    val enabledLanguageFeatures: Set<String>?
-        get() = languageSettings.enabledLanguageFeatures.takeIf { linkFromSources }
-
-    @get:Optional
-    @get:Input
-    val experimentalAnnotationsInUse: Set<String>?
-        get() = languageSettings.experimentalAnnotationsInUse.takeIf { linkFromSources }
-    // endregion.
-
     // Binary-specific options.
     @get:Optional
     @get:Input
@@ -576,13 +534,6 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     val embedBitcode: Framework.BitcodeEmbeddingMode
         get() = (binary as? Framework)?.embedBitcode ?: Framework.BitcodeEmbeddingMode.DISABLE
 
-    // This property allows a user to force the old behaviour of a link task
-    // to workaround issues that may occur after switching to the two-stage linking.
-    // If it is specified, the final binary is built directly from sources instead of a klib.
-    // TODO: Remove it in 1.3.70.
-    private val linkFromSources: Boolean
-        get() = project.hasProperty(LINK_FROM_SOURCES_PROPERTY)
-
     override fun buildCompilerArgs(): List<String> = mutableListOf<String>().apply {
         addAll(super.buildCompilerArgs())
 
@@ -603,47 +554,20 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
         }
         addKey("-Xstatic-framework", isStaticFramework)
 
-        // Allow a user to force the old behaviour of a link task.
-        // TODO: Remove in 1.3.70.
-        if (!linkFromSources) {
-            languageSettings.let {
-                addArgIfNotNull("-language-version", it.languageVersion)
-                addArgIfNotNull("-api-version", it.apiVersion)
-                it.enabledLanguageFeatures.forEach { featureName ->
-                    add("-XXLanguage:+$featureName")
-                }
-                it.experimentalAnnotationsInUse.forEach { annotationName ->
-                    add("-Xopt-in=$annotationName")
-                }
+        languageSettings.let {
+            addArgIfNotNull("-language-version", it.languageVersion)
+            addArgIfNotNull("-api-version", it.apiVersion)
+            it.enabledLanguageFeatures.forEach { featureName ->
+                add("-XXLanguage:+$featureName")
+            }
+            it.experimentalAnnotationsInUse.forEach { annotationName ->
+                add("-Xopt-in=$annotationName")
             }
         }
     }
 
-    override fun buildSourceArgs(): List<String> {
-        return if (!linkFromSources) {
-            listOf("-Xinclude=${intermediateLibrary.get().absolutePath}")
-        } else {
-            // Allow a user to force the old behaviour of a link task.
-            // TODO: Remove in 1.3.70.
-            mutableListOf<String>().apply {
-                val friendCompilations = compilation.associateWithTransitiveClosure.toList()
-                val friendFiles = if (friendCompilations.isNotEmpty())
-                    project.files(
-                        project.provider { friendCompilations.map { it.output.allOutputs } + compilation.friendArtifacts }
-                    )
-                else null
-
-                if (friendFiles != null && !friendFiles.isEmpty) {
-                    addArg("-friend-modules", friendFiles.joinToString(File.pathSeparator) { it.absolutePath })
-                }
-
-                addAll(project.files(compilation.allSources).map { it.absolutePath })
-                if (!compilation.commonSources.isEmpty) {
-                    add("-Xcommon-sources=${compilation.commonSources.joinToString(separator = ",") { it.absolutePath }}")
-                }
-            }
-        }
-    }
+    override fun buildSourceArgs(): List<String> =
+        listOf("-Xinclude=${intermediateLibrary.get().absolutePath}")
 
     private fun validatedExportedLibraries() {
         val exportConfiguration = exportLibraries as? Configuration ?: return
@@ -683,7 +607,6 @@ open class KotlinNativeLink : AbstractKotlinNativeCompile<KotlinCommonToolOption
     }
 
     companion object {
-        private const val LINK_FROM_SOURCES_PROPERTY = "kotlin.native.linkFromSources"
     }
 }
 
@@ -805,7 +728,7 @@ internal class CacheBuilder(val project: Project, val binary: NativeBinary) {
                 dfs(library)
 
         for (library in sortedLibraries) {
-            if (File(cacheDirectory, library.uniqueName.cachedName).exists())
+            if (File(cacheDirectory, library.uniqueName.cachedName).listFilesOrEmpty().isNotEmpty())
                 continue
             project.logger.info("Compiling ${library.uniqueName} to cache")
             val args = mutableListOf(
@@ -840,14 +763,14 @@ internal class CacheBuilder(val project: Project, val binary: NativeBinary) {
     }
 
     private val String.cachedName
-        get() = getCacheFileName(this, konanCacheKind, compilation.konanTarget)
+        get() = getCacheFileName(this, konanCacheKind)
 
     private fun ensureCompilerProvidedLibPrecached(platformLibName: String, platformLibs: Map<String, File>, visitedLibs: MutableSet<String>) {
         if (platformLibName in visitedLibs)
             return
         visitedLibs += platformLibName
         val platformLib = platformLibs[platformLibName] ?: error("$platformLibName is not found in platform libs")
-        if (File(rootCacheDirectory, platformLibName.cachedName).exists())
+        if (File(rootCacheDirectory, platformLibName.cachedName).listFilesOrEmpty().isNotEmpty())
             return
         val unresolvedDependencies = resolveSingleFileKlib(
             KFile(platformLib.absolutePath),
@@ -869,7 +792,9 @@ internal class CacheBuilder(val project: Project, val binary: NativeBinary) {
     }
 
     private fun ensureCompilerProvidedLibsPrecached() {
-        val platformLibs = libraries.filter { it.providedByCompiler(project) }.associateBy { it.name }
+        val distribution = Distribution(project.konanHome)
+        val platformLibs = (listOf(File(distribution.stdlib)) + File(distribution.platformLibs(compilation.konanTarget))
+            .listFiles()).associateBy { it.name }
         val visitedLibs = mutableSetOf<String>()
         for (platformLibName in platformLibs.keys)
             ensureCompilerProvidedLibPrecached(platformLibName, platformLibs, visitedLibs)
@@ -911,9 +836,9 @@ internal class CacheBuilder(val project: Project, val binary: NativeBinary) {
             return konanHome.resolve("klib/cache/$optionsAwareCacheName")
         }
 
-        internal fun getCacheFileName(baseName: String, cacheKind: NativeCacheKind, konanTarget: KonanTarget): String =
+        internal fun getCacheFileName(baseName: String, cacheKind: NativeCacheKind): String =
             cacheKind.outputKind?.let {
-                "${it.prefix(konanTarget)}${baseName}-cache${it.suffix(konanTarget)}"
+                "${baseName}-cache"
             } ?: error("No output for kind $cacheKind")
 
         internal fun cacheWorksFor(target: KonanTarget) =
@@ -940,7 +865,7 @@ open class CInteropProcess : DefaultTask() {
     val baseKlibName: String
         @Internal get() {
             val compilationPrefix = settings.compilation.let {
-                if (it.isMainCompilation) project.name else it.name
+                if (it.isMain()) project.name else it.name
             }
             return "$compilationPrefix-cinterop-$interopName"
         }
@@ -964,7 +889,7 @@ open class CInteropProcess : DefaultTask() {
         project.provider { destinationDir.get().resolve(outputFileName) }
 
     val defFile: File
-        @InputFile get() = settings.defFile
+        @InputFile get() = settings.defFileProperty.get()
 
     val packageName: String?
         @Optional @Input get() = settings.packageName

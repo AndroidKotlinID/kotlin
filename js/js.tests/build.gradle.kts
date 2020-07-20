@@ -2,6 +2,8 @@ import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.npm.NpmTask
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.internal.os.OperatingSystem
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 
 plugins {
     kotlin("jvm")
@@ -18,7 +20,8 @@ node {
 val antLauncherJar by configurations.creating
 val testJsRuntime by configurations.creating {
     attributes {
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(KotlinUsages.KOTLIN_RUNTIME))
+        attribute(KotlinPlatformType.attribute, KotlinPlatformType.js)
     }
 }
 
@@ -127,6 +130,8 @@ fun Test.setUpBoxTests() {
         systemProperty("kotlin.ant.classpath", antLauncherJar.asPath)
         systemProperty("kotlin.ant.launcher.class", "org.apache.tools.ant.Main")
     }
+
+    systemProperty("overwrite.output", findProperty("overwrite.output") ?: "false")
 
     val prefixForPpropertiesToForward = "fd."
     for ((key, value) in properties) {

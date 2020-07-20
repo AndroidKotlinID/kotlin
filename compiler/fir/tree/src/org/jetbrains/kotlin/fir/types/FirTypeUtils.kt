@@ -21,6 +21,7 @@ inline fun <reified T : ConeKotlinType> FirTypeRef.coneTypeSafe(): T? {
     }
     return (this as? FirResolvedTypeRef)?.type as? T
 }
+inline val FirTypeRef.coneType: ConeKotlinType get() = coneTypeUnsafe()
 
 val FirTypeRef.isAny: Boolean get() = isBuiltinType(StandardClassIds.Any, false)
 val FirTypeRef.isNullableAny: Boolean get() = isBuiltinType(StandardClassIds.Any, true)
@@ -76,4 +77,18 @@ fun ConeClassLikeType.toConstKind(): FirConstKind<*>? = when (lookupTag.classId)
     StandardClassIds.UShort -> FirConstKind.UnsignedShort
     StandardClassIds.UByte -> FirConstKind.UnsignedByte
     else -> null
+}
+
+fun List<FirAnnotationCall>.computeTypeAttributes(): ConeAttributes {
+    if (this.isEmpty()) return ConeAttributes.Empty
+    val attributes = mutableListOf<ConeAttribute<*>>()
+    for (annotation in this) {
+        val type = annotation.annotationTypeRef.coneTypeSafe<ConeClassLikeType>() ?: continue
+        when (type.lookupTag.classId) {
+            CompilerConeAttributes.Exact.ANNOTATION_CLASS_ID -> attributes += CompilerConeAttributes.Exact
+            CompilerConeAttributes.NoInfer.ANNOTATION_CLASS_ID -> attributes += CompilerConeAttributes.NoInfer
+            CompilerConeAttributes.ExtensionFunctionType.ANNOTATION_CLASS_ID -> attributes += CompilerConeAttributes.ExtensionFunctionType
+        }
+    }
+    return ConeAttributes.create(attributes)
 }

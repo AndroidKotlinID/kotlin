@@ -12,7 +12,7 @@ sealed class TowerGroupKind(private val index: Int) : Comparable<TowerGroupKind>
 
     object ClassifierPrioritized : TowerGroupKind(-10)
 
-    class Qualifier(depth: Int) : WithDepth(0, depth)
+    object Qualifier : TowerGroupKind(0)
 
     object Classifier : TowerGroupKind(10)
 
@@ -37,6 +37,7 @@ sealed class TowerGroupKind(private val index: Int) : Comparable<TowerGroupKind>
         return 0
     }
 
+    @Suppress("FunctionName")
     companion object {
         // These two groups intentionally have the same priority
         fun Implicit(depth: Int): TowerGroupKind = ImplicitOrNonLocal(depth, "Implicit")
@@ -59,7 +60,7 @@ private constructor(
 
         val ClassifierPrioritized = kindOf(TowerGroupKind.ClassifierPrioritized)
 
-        fun Qualifier(depth: Int) = kindOf(TowerGroupKind.Qualifier(depth))
+        val Qualifier = kindOf(TowerGroupKind.Qualifier)
 
         val Classifier = kindOf(TowerGroupKind.Classifier)
 

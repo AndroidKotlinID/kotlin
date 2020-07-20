@@ -12,9 +12,13 @@ import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
-import org.jetbrains.kotlin.backend.jvm.codegen.*
+import org.jetbrains.kotlin.backend.jvm.codegen.continuationParameter
+import org.jetbrains.kotlin.backend.jvm.codegen.hasContinuation
+import org.jetbrains.kotlin.backend.jvm.codegen.isInvokeSuspendOfContinuation
+import org.jetbrains.kotlin.backend.jvm.codegen.isReadOfCrossinline
 import org.jetbrains.kotlin.backend.jvm.ir.IrInlineReferenceLocator
 import org.jetbrains.kotlin.backend.jvm.ir.defaultValue
+import org.jetbrains.kotlin.backend.jvm.ir.isStaticInlineClassReplacement
 import org.jetbrains.kotlin.backend.jvm.localDeclarationsPhase
 import org.jetbrains.kotlin.codegen.coroutines.*
 import org.jetbrains.kotlin.codegen.inline.coroutines.FOR_INLINE_SUFFIX
@@ -28,6 +32,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
+import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
@@ -86,10 +91,10 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
     }
 
     private fun transformSuspendLambdasIntoContinuations(irFile: IrFile) {
-        val inlineReferences = mutableSetOf<IrCallableReference>()
+        val inlineReferences = mutableSetOf<IrCallableReference<*>>()
         val suspendLambdas = mutableMapOf<IrFunctionReference, SuspendLambdaInfo>()
         irFile.acceptChildrenVoid(object : IrInlineReferenceLocator(context) {
-            override fun visitInlineReference(argument: IrCallableReference) {
+            override fun visitInlineReference(argument: IrCallableReference<*>) {
                 inlineReferences.add(argument)
             }
 
@@ -275,7 +280,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
     // TODO: fix the generic signature -- type parameters of FunctionN should be substituted
     private fun IrClass.addInvokeCallingCreate(
         create: IrFunction,
-        invokeSuspend: IrFunction,
+        invokeSuspend: IrSimpleFunction,
         invokeToOverride: IrSimpleFunctionSymbol
     ) = addFunctionOverride(invokeToOverride.owner) { function ->
         val newlyCreatedObject = irCall(create).also { createCall ->
@@ -291,7 +296,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
     // versions; for other lambdas, there's no point in generating a non-overriding `create` separately.
     private fun IrClass.addInvokeCallingConstructor(
         constructor: IrFunction,
-        invokeSuspend: IrFunction,
+        invokeSuspend: IrSimpleFunction,
         invokeToOverride: IrSimpleFunctionSymbol,
         fieldsForBound: List<IrField>,
         fieldsForUnbound: List<IrField>
@@ -333,7 +338,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
         return irGet(result)
     }
 
-    private fun IrBlockBodyBuilder.callInvokeSuspend(invokeSuspend: IrFunction, lambda: IrExpression): IrExpression {
+    private fun IrBlockBodyBuilder.callInvokeSuspend(invokeSuspend: IrSimpleFunction, lambda: IrExpression): IrExpression {
         // SingletonReferencesLowering has finished a while ago, so `irUnit()` won't work anymore.
         val unitClass = context.irBuiltIns.unitClass
         val unitField = this@AddContinuationLowering.context.declarationFactory.getFieldForObjectInstance(unitClass.owner)
@@ -578,7 +583,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                 if (function.body == null || !function.hasContinuation()) return result
 
                 if (flag.capturesCrossinline || function.isInline) {
-                    result += buildFunWithDescriptorForInlining(view.descriptor) {
+                    result += buildFun(view.descriptor) {
                         name = Name.identifier(view.name.asString() + FOR_INLINE_SUFFIX)
                         returnType = view.returnType
                         modality = view.modality
@@ -640,13 +645,13 @@ private fun IrFunction.suspendFunctionViewOrStub(context: JvmBackendContext): Ir
 }
 
 internal fun IrFunction.suspendFunctionOriginal(): IrFunction =
-    if (this is IrSimpleFunction && isSuspend && origin != JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_REPLACEMENT)
+    if (this is IrSimpleFunction && isSuspend && !isStaticInlineClassReplacement)
         attributeOwnerId as IrFunction
     else this
 
 private fun IrFunction.createSuspendFunctionStub(context: JvmBackendContext): IrFunction {
     require(this.isSuspend && this is IrSimpleFunction)
-    return buildFunWithDescriptorForInlining(descriptor) {
+    return buildFun(descriptor) {
         updateFrom(this@createSuspendFunctionStub)
         name = this@createSuspendFunctionStub.name
         origin = this@createSuspendFunctionStub.origin
@@ -691,7 +696,7 @@ private fun IrFunction.continuationType(context: JvmBackendContext): IrType {
         context.ir.symbols.continuationClass.typeWith(returnType)
 }
 
-private fun <T : IrFunctionAccessExpression> T.retargetToSuspendView(
+private fun <T : IrMemberAccessExpression<IrFunctionSymbol>> T.retargetToSuspendView(
     context: JvmBackendContext,
     caller: IrFunction?,
     copyWithTargetSymbol: T.(IrSimpleFunctionSymbol) -> T

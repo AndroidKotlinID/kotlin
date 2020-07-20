@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.fir.declarations.impl
 
-import org.jetbrains.kotlin.contracts.description.InvocationKind
+import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.fir.FirLabel
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSourceElement
@@ -40,7 +40,7 @@ internal class FirAnonymousFunctionImpl(
     override var typeRef: FirTypeRef,
     override val symbol: FirAnonymousFunctionSymbol,
     override var label: FirLabel?,
-    override var invocationKind: InvocationKind?,
+    override var invocationKind: EventOccurrencesRange?,
     override val isLambda: Boolean,
     override val typeParameters: MutableList<FirTypeParameter>,
 ) : FirAnonymousFunction() {
@@ -69,10 +69,10 @@ internal class FirAnonymousFunctionImpl(
         transformReceiverTypeRef(transformer, data)
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
-        body = body?.transformSingle(transformer, data)
+        transformBody(transformer, data)
         typeRef = typeRef.transformSingle(transformer, data)
         label = label?.transformSingle(transformer, data)
-        typeParameters.transformInplace(transformer, data)
+        transformTypeParameters(transformer, data)
         return this
     }
 
@@ -101,6 +101,16 @@ internal class FirAnonymousFunctionImpl(
         return this
     }
 
+    override fun <D> transformBody(transformer: FirTransformer<D>, data: D): FirAnonymousFunctionImpl {
+        body = body?.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformTypeParameters(transformer: FirTransformer<D>, data: D): FirAnonymousFunctionImpl {
+        typeParameters.transformInplace(transformer, data)
+        return this
+    }
+
     override fun replaceResolvePhase(newResolvePhase: FirResolvePhase) {
         resolvePhase = newResolvePhase
     }
@@ -122,7 +132,7 @@ internal class FirAnonymousFunctionImpl(
         typeRef = newTypeRef
     }
 
-    override fun replaceInvocationKind(newInvocationKind: InvocationKind?) {
+    override fun replaceInvocationKind(newInvocationKind: EventOccurrencesRange?) {
         invocationKind = newInvocationKind
     }
 }

@@ -162,8 +162,23 @@ object KotlinToJVMBytecodeCompiler {
         }
     }
 
-    internal fun compileModules(environment: KotlinCoreEnvironment, buildFile: File?, chunk: List<Module>): Boolean {
+    internal fun compileModules(
+        environment: KotlinCoreEnvironment,
+        buildFile: File?,
+        chunk: List<Module>,
+        repeat: Boolean = false
+    ): Boolean {
         ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
+
+        val repeats = environment.configuration[CLIConfigurationKeys.REPEAT_COMPILE_MODULES]
+        if (repeats != null && !repeat) {
+            val performanceManager = environment.configuration[CLIConfigurationKeys.PERF_MANAGER]
+            return (0 until repeats).map {
+                val result = compileModules(environment, buildFile, chunk, repeat = true)
+                performanceManager?.notifyRepeat(repeats, it)
+                result
+            }.last()
+        }
 
         val moduleVisibilityManager = ModuleVisibilityManager.SERVICE.getInstance(environment.project)
         for (module in chunk) {
@@ -289,6 +304,8 @@ object KotlinToJVMBytecodeCompiler {
 
     private fun compileModulesUsingFrontendIR(environment: KotlinCoreEnvironment, buildFile: File?, chunk: List<Module>): Boolean {
         val project = environment.project
+        val performanceManager = environment.configuration.get(CLIConfigurationKeys.PERF_MANAGER)
+
         Extensions.getArea(project)
             .getExtensionPoint(PsiElementFinder.EP_NAME)
             .unregisterExtension(JavaElementFinder::class.java)
@@ -297,6 +314,7 @@ object KotlinToJVMBytecodeCompiler {
         val localFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL)
         val outputs = newLinkedHashMapWithExpectedSize<Module, GenerationState>(chunk.size)
         for (module in chunk) {
+            performanceManager?.notifyAnalysisStarted()
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
 
             val ktFiles = module.getSourceFiles(environment, localFileSystem, chunk.size > 1, buildFile)
@@ -349,8 +367,14 @@ object KotlinToJVMBytecodeCompiler {
                 }
             }
 
+            val debugTargetDescription = "target " + module.getModuleName() + "-" + module.getModuleType() + " "
+            val codeLines = environment.countLinesOfCode(ktFiles)
+            performanceManager?.notifyAnalysisFinished(ktFiles.size, codeLines, debugTargetDescription)
+
+            performanceManager?.notifyGenerationStarted()
             val signaturer = IdSignatureDescriptor(JvmManglerDesc())
 
+            performanceManager?.notifyIRTranslationStarted()
             val (moduleFragment, symbolTable, sourceManager, components) =
                 Fir2IrConverter.createModuleFragment(
                     session, resolveTransformer.scopeSession, firFiles,
@@ -358,6 +382,9 @@ object KotlinToJVMBytecodeCompiler {
                     generatorExtensions = JvmGeneratorExtensions(),
                     mangler = FirJvmKotlinMangler(session)
                 )
+
+            performanceManager?.notifyIRTranslationFinished(ktFiles.size, codeLines, debugTargetDescription)
+
             val dummyBindingContext = NoScopeRecordCliBindingTrace().bindingContext
 
             val codegenFactory = JvmIrCodegenFactory(moduleConfiguration.get(CLIConfigurationKeys.PHASE_CONFIG) ?: PhaseConfig(jvmPhases))
@@ -379,8 +406,7 @@ object KotlinToJVMBytecodeCompiler {
 
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
 
-            val performanceManager = environment.configuration.get(CLIConfigurationKeys.PERF_MANAGER)
-            performanceManager?.notifyGenerationStarted()
+            performanceManager?.notifyIRGenerationStarted()
             generationState.beforeCompile()
             codegenFactory.generateModuleInFrontendIRMode(
                 generationState, moduleFragment, symbolTable, sourceManager
@@ -391,8 +417,8 @@ object KotlinToJVMBytecodeCompiler {
             generationState.factory.done()
             performanceManager?.notifyGenerationFinished(
                 ktFiles.size,
-                environment.countLinesOfCode(ktFiles),
-                additionalDescription = "target " + module.getModuleName() + "-" + module.getModuleType() + " "
+                codeLines,
+                additionalDescription = debugTargetDescription
             )
 
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
@@ -409,6 +435,7 @@ object KotlinToJVMBytecodeCompiler {
                 generationState.extraJvmDiagnosticsTrace.bindingContext, environment.messageCollector
             )
 
+            performanceManager?.notifyIRGenerationFinished(ktFiles.size, codeLines, additionalDescription = debugTargetDescription)
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
             outputs[module] = generationState
         }

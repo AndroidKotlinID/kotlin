@@ -28,22 +28,17 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.load.java.JavaVisibilities
 import org.jetbrains.kotlin.name.NameUtils
 
-private fun makePatchParentsPhase(number: Int) = namedIrFilePhase(
-    lower = object : SameTypeCompilerPhase<CommonBackendContext, IrFile> {
-        override fun invoke(
-            phaseConfig: PhaseConfig,
-            phaserState: PhaserState<IrFile>,
-            context: CommonBackendContext,
-            input: IrFile
-        ): IrFile {
-            input.acceptVoid(PatchDeclarationParentsVisitor())
-            return input
-        }
-    },
+private fun makePatchParentsPhase(number: Int): NamedCompilerPhase<CommonBackendContext, IrFile> = makeIrFilePhase(
+    { PatchDeclarationParents() },
     name = "PatchParents$number",
     description = "Patch parent references in IrFile, pass $number",
-    nlevels = 0
 )
+
+private class PatchDeclarationParents : FileLoweringPass {
+    override fun lower(irFile: IrFile) {
+        irFile.acceptVoid(PatchDeclarationParentsVisitor())
+    }
+}
 
 private val validateIrBeforeLowering = makeCustomPhase<JvmBackendContext, IrModuleFragment>(
     { context, module -> validationCallback(context, module, checkProperties = true) },
@@ -108,7 +103,7 @@ internal val propertiesPhase = makeIrFilePhase(
     stickyPostconditions = setOf((PropertiesLowering)::checkNoProperties)
 )
 
-internal val localDeclarationsPhase = makeIrFilePhase<CommonBackendContext>(
+internal val localDeclarationsPhase = makeIrFilePhase(
     { context ->
         LocalDeclarationsLowering(
             context,
@@ -214,7 +209,7 @@ private val staticInitializersPhase = makeIrFilePhase(
     description = "Move code from object init blocks and static field initializers to a new <clinit> function"
 )
 
-private val initializersPhase = makeIrFilePhase<JvmBackendContext>(
+private val initializersPhase = makeIrFilePhase(
     ::InitializersLowering,
     name = "Initializers",
     description = "Merge init blocks and field initializers into constructors",
@@ -222,7 +217,7 @@ private val initializersPhase = makeIrFilePhase<JvmBackendContext>(
     prerequisite = setOf(jvmLocalClassExtractionPhase)
 )
 
-private val initializersCleanupPhase = makeIrFilePhase<JvmBackendContext>(
+private val initializersCleanupPhase = makeIrFilePhase(
     { context ->
         InitializersCleanupLowering(context) {
             it.constantValue(context) == null && (!it.isStatic || it.correspondingPropertySymbol?.owner?.isConst != true)
@@ -270,109 +265,111 @@ private val kotlinNothingValueExceptionPhase = makeIrFilePhase<CommonBackendCont
     description = "Throw proper exception for calls returning value of type 'kotlin.Nothing'"
 )
 
-@Suppress("Reformat")
-private val jvmFilePhases =
-        typeAliasAnnotationMethodsPhase then
-        stripTypeAliasDeclarationsPhase then
-        provisionalFunctionExpressionPhase then
+private val jvmFilePhases = listOf(
+    typeAliasAnnotationMethodsPhase,
+    stripTypeAliasDeclarationsPhase,
+    provisionalFunctionExpressionPhase,
 
-        jvmOverloadsAnnotationPhase then
-        mainMethodGenerationPhase then
+    jvmOverloadsAnnotationPhase,
+    mainMethodGenerationPhase,
 
-        inventNamesForLocalClassesPhase then
-        kCallableNamePropertyPhase then
-        annotationPhase then
-        polymorphicSignaturePhase then
-        varargPhase then
-        arrayConstructorPhase then
-        checkNotNullPhase then
+    inventNamesForLocalClassesPhase,
+    kCallableNamePropertyPhase,
+    annotationPhase,
+    polymorphicSignaturePhase,
+    varargPhase,
+    arrayConstructorPhase,
+    checkNotNullPhase,
 
-        lateinitNullableFieldsPhase then
-        lateinitDeclarationLoweringPhase then
-        lateinitUsageLoweringPhase then
+    lateinitNullableFieldsPhase,
+    lateinitDeclarationLoweringPhase,
+    lateinitUsageLoweringPhase,
 
-        moveOrCopyCompanionObjectFieldsPhase then
-        inlineCallableReferenceToLambdaPhase then
-        propertyReferencePhase then
-        constPhase then
-        propertiesPhase then
-        remapObjectFieldAccesses then
-        anonymousObjectSuperConstructorPhase then
-        tailrecPhase then
+    moveOrCopyCompanionObjectFieldsPhase,
+    inlineCallableReferenceToLambdaPhase,
+    propertyReferencePhase,
+    constPhase,
+    propertiesPhase,
+    remapObjectFieldAccesses,
+    anonymousObjectSuperConstructorPhase,
+    tailrecPhase,
 
-        forLoopsPhase then
-        jvmInlineClassPhase then
+    jvmStandardLibraryBuiltInsPhase,
 
-        sharedVariablesPhase then
+    forLoopsPhase,
+    jvmInlineClassPhase,
 
-        makePatchParentsPhase(1) then
+    sharedVariablesPhase,
 
-        enumWhenPhase then
-        singletonReferencesPhase then
+    makePatchParentsPhase(1),
 
-        functionReferencePhase then
-        singleAbstractMethodPhase then
-        assertionPhase then
-        returnableBlocksPhase then
-        localDeclarationsPhase then
-        jvmLocalClassExtractionPhase then
-        staticLambdaPhase then
+    enumWhenPhase,
+    singletonReferencesPhase,
 
-        jvmDefaultConstructorPhase then
+    functionReferencePhase,
+    singleAbstractMethodPhase,
+    assertionPhase,
+    returnableBlocksPhase,
+    localDeclarationsPhase,
+    jvmLocalClassExtractionPhase,
+    staticLambdaPhase,
 
-        flattenStringConcatenationPhase then
-        foldConstantLoweringPhase then
-        computeStringTrimPhase then
-        jvmStringConcatenationLowering then
+    jvmDefaultConstructorPhase,
 
-        defaultArgumentStubPhase then
-        defaultArgumentInjectorPhase then
-        defaultArgumentCleanerPhase then
+    flattenStringConcatenationPhase,
+    foldConstantLoweringPhase,
+    computeStringTrimPhase,
+    jvmStringConcatenationLowering,
 
-        interfacePhase then
-        inheritedDefaultMethodsOnClassesPhase then
-        interfaceSuperCallsPhase then
-        interfaceDefaultCallsPhase then
-        interfaceObjectCallsPhase then
+    defaultArgumentStubPhase,
+    defaultArgumentInjectorPhase,
+    defaultArgumentCleanerPhase,
 
-        tailCallOptimizationPhase then
-        addContinuationPhase then
+    interfacePhase,
+    inheritedDefaultMethodsOnClassesPhase,
+    interfaceSuperCallsPhase,
+    interfaceDefaultCallsPhase,
+    interfaceObjectCallsPhase,
 
-        innerClassesPhase then
-        innerClassesMemberBodyPhase then
-        innerClassConstructorCallsPhase then
+    tailCallOptimizationPhase,
+    addContinuationPhase,
 
-        makePatchParentsPhase(2) then
+    innerClassesPhase,
+    innerClassesMemberBodyPhase,
+    innerClassConstructorCallsPhase,
 
-        enumClassPhase then
-        objectClassPhase then
-        staticInitializersPhase then
-        initializersPhase then
-        initializersCleanupPhase then
-        collectionStubMethodLowering then
-        functionNVarargBridgePhase then
-        jvmStaticAnnotationPhase then
-        staticDefaultFunctionPhase then
-        bridgePhase then
-        syntheticAccessorPhase then
+    makePatchParentsPhase(2),
 
-        jvmArgumentNullabilityAssertions then
-        toArrayPhase then
-        jvmOptimizationLoweringPhase then
-        ifNullExpressionsFusionPhase then
-        additionalClassAnnotationPhase then
-        typeOperatorLowering then
-        replaceKFunctionInvokeWithFunctionInvokePhase then
-        kotlinNothingValueExceptionPhase then
+    enumClassPhase,
+    objectClassPhase,
+    staticInitializersPhase,
+    initializersPhase,
+    initializersCleanupPhase,
+    collectionStubMethodLowering,
+    functionNVarargBridgePhase,
+    jvmStaticAnnotationPhase,
+    staticDefaultFunctionPhase,
+    bridgePhase,
+    syntheticAccessorPhase,
 
-        checkLocalNamesWithOldBackendPhase then
+    jvmArgumentNullabilityAssertions,
+    toArrayPhase,
+    jvmOptimizationLoweringPhase,
+    ifNullExpressionsFusionPhase,
+    additionalClassAnnotationPhase,
+    typeOperatorLowering,
+    replaceKFunctionInvokeWithFunctionInvokePhase,
+    kotlinNothingValueExceptionPhase,
 
-        renameFieldsPhase then
-        fakeInliningLocalVariablesLowering then
+    checkLocalNamesWithOldBackendPhase,
 
-        makePatchParentsPhase(3)
+    renameFieldsPhase,
+    fakeInliningLocalVariablesLowering,
 
-val jvmPhases = namedIrModulePhase(
+    makePatchParentsPhase(3)
+)
+
+val jvmPhases = NamedCompilerPhase(
     name = "IrLowering",
     description = "IR lowering",
     lower = validateIrBeforeLowering then

@@ -185,6 +185,12 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
         generateBridges();
         generateClosureBody();
 
+        if (samType != null) {
+            SamWrapperCodegen.generateDelegatesToDefaultImpl(
+                    asmType, classDescriptor, samType.getClassDescriptor(), functionCodegen, state
+            );
+        }
+
         this.constructor = generateConstructor();
 
         if (isConst(closure)) {

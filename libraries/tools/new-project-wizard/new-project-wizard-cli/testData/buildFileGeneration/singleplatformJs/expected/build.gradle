@@ -12,11 +12,23 @@ repositories {
 }
 dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test-js'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-js'
 }
 kotlin {
     js {
-        browser {}
-        binaries.executable()
+        browser {
+            binaries.executable()
+            webpackTask {
+                cssSupport.enabled = true
+            }
+            runTask {
+                cssSupport.enabled = true
+            }
+            testTask {
+                useKarma {
+                    useChromeHeadless()
+                    webpackConfig.cssSupport.enabled = true
+                }
+            }
+        }
     }
 }

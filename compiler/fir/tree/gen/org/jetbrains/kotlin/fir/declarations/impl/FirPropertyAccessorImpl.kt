@@ -69,11 +69,11 @@ open class FirPropertyAccessorImpl @FirImplementationDetail constructor(
         transformReturnTypeRef(transformer, data)
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
-        body = body?.transformSingle(transformer, data)
+        transformBody(transformer, data)
         transformContractDescription(transformer, data)
         transformStatus(transformer, data)
         transformAnnotations(transformer, data)
-        typeParameters.transformInplace(transformer, data)
+        transformTypeParameters(transformer, data)
         return this
     }
 
@@ -96,6 +96,11 @@ open class FirPropertyAccessorImpl @FirImplementationDetail constructor(
         return this
     }
 
+    override fun <D> transformBody(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
+        body = body?.transformSingle(transformer, data)
+        return this
+    }
+
     override fun <D> transformContractDescription(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
         contractDescription = contractDescription.transformSingle(transformer, data)
         return this
@@ -108,6 +113,11 @@ open class FirPropertyAccessorImpl @FirImplementationDetail constructor(
 
     override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
         annotations.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformTypeParameters(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
+        typeParameters.transformInplace(transformer, data)
         return this
     }
 

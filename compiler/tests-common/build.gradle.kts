@@ -10,6 +10,7 @@ dependencies {
     testCompile(project(":core:descriptors.jvm"))
     testCompile(project(":core:deserialization"))
     testCompile(project(":compiler:util"))
+    testCompile(project(":compiler:tests-mutes"))
     testCompile(project(":compiler:backend"))
     testCompile(project(":compiler:fir:tree"))
     testCompile(project(":compiler:fir:raw-fir:psi2fir"))
@@ -60,6 +61,12 @@ dependencies {
                 rootProject = rootProject
             )
         }
+    }
+    Platform[202] {
+        testCompile(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-1") }
+    }
+    Platform[203].orHigher {
+        testCompile(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-2") }
     }
     testCompile(intellijDep()) {
         includeJars(

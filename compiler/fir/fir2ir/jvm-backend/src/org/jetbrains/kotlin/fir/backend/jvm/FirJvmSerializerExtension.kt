@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.fir.serialization.FirElementSerializer
 import org.jetbrains.kotlin.fir.serialization.FirSerializerExtension
 import org.jetbrains.kotlin.fir.serialization.nonSourceAnnotations
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.load.kotlin.NON_EXISTENT_CLASS_NAME
@@ -75,6 +76,7 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
         return classBuilderMode != ClassBuilderMode.ABI || nestedClass.effectiveVisibility != FirEffectiveVisibilityImpl.Private
     }
 
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun serializeClass(
         klass: FirClass<*>,
         proto: ProtoBuf.Class.Builder,
@@ -93,7 +95,13 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
         writeVersionRequirementForJvmDefaultIfNeeded(klass, proto, versionRequirementTable)
 
         if (jvmDefaultMode.forAllMethodsWithBody && klass is FirRegularClass && klass.classKind == ClassKind.INTERFACE) {
-            proto.setExtension(JvmProtoBuf.jvmClassFlags, JvmFlags.getClassFlags(true))
+            proto.setExtension(
+                JvmProtoBuf.jvmClassFlags,
+                JvmFlags.getClassFlags(
+                    jvmDefaultMode.forAllMethodsWithBody,
+                    JvmDefaultMode.ALL_COMPATIBILITY == jvmDefaultMode
+                )
+            )
         }
     }
 
@@ -231,8 +239,8 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
     private fun FirFunction<*>.needsInlineParameterNullCheckRequirement(): Boolean =
         this is FirSimpleFunction && isInline && !isSuspend && !isParamAssertionsDisabled &&
                 !Visibilities.isPrivate(visibility) &&
-                (valueParameters.any { it.returnTypeRef.coneTypeSafe<ConeKotlinType>()?.isBuiltinFunctionalType(session) == true } ||
-                        receiverTypeRef?.coneTypeSafe<ConeKotlinType>()?.isBuiltinFunctionalType(session) == true)
+                (valueParameters.any { it.returnTypeRef.coneType.isBuiltinFunctionalType(session) } ||
+                        receiverTypeRef?.coneType?.isBuiltinFunctionalType(session) == true)
 
     override fun serializeProperty(
         property: FirProperty,

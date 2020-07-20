@@ -51,7 +51,7 @@ class BuiltInsSerializer(dependOnOldBuiltIns: Boolean) : MetadataSerializer(Buil
                 put(CommonConfigurationKeys.MODULE_NAME, "module for built-ins serialization")
             }
 
-            val environment = KotlinCoreEnvironment.createForTests(rootDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
+            val environment = KotlinCoreEnvironment.createForProduction(rootDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
 
             serialize(environment)
 
@@ -67,7 +67,7 @@ class BuiltInsSerializer(dependOnOldBuiltIns: Boolean) : MetadataSerializer(Buil
             PrintingMessageCollector(System.err, MessageRenderer.PLAIN_RELATIVE_PATHS, false),
             false
     ) {
-        override fun report(severity: CompilerMessageSeverity, message: String, location: CompilerMessageLocation?) {
+        override fun report(severity: CompilerMessageSeverity, message: String, location: CompilerMessageSourceLocation?) {
             // Only report diagnostics without a particular location because there's plenty of errors in built-in sources
             // (functions without bodies, incorrect combination of modifiers, etc.)
             if (location == null) {

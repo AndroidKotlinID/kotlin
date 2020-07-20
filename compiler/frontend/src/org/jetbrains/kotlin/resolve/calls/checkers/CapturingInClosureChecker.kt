@@ -8,15 +8,15 @@ package org.jetbrains.kotlin.resolve.calls.checkers
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.contracts.description.CallsEffectDeclaration
 import org.jetbrains.kotlin.contracts.description.ContractProviderKey
-import org.jetbrains.kotlin.contracts.description.InvocationKind
+import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
 import org.jetbrains.kotlin.descriptors.impl.LocalVariableDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ValueParameterDescriptorImpl
+import org.jetbrains.kotlin.diagnostics.Errors.CAPTURED_VAL_INITIALIZATION
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.BindingContext.CAPTURED_IN_CLOSURE
-import org.jetbrains.kotlin.resolve.BindingContext.FIELD_CAPTURED_IN_EXACLY_ONCE_CLOSURE
 import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
@@ -35,6 +35,7 @@ class CapturingInClosureChecker : CallChecker {
         val variableDescriptor = variableResolvedCall.resultingDescriptor as? VariableDescriptor
         if (variableDescriptor != null) {
             checkCapturingInClosure(variableDescriptor, context.trace, context.scope)
+            checkFieldInExactlyOnceLambdaInitialization(variableDescriptor, context.trace, context.scope.ownerDescriptor, reportOn)
         }
     }
 
@@ -47,12 +48,23 @@ class CapturingInClosureChecker : CallChecker {
                 return
             }
         }
-        // Check whether a field is captured in EXACTLY_ONCE contract
-        if (variable !is PropertyDescriptor || scopeContainer !is AnonymousFunctionDescriptor) return
+    }
+
+    private fun checkFieldInExactlyOnceLambdaInitialization(
+        variable: VariableDescriptor,
+        trace: BindingTrace,
+        scopeContainer: DeclarationDescriptor,
+        reportOn: PsiElement
+    ) {
+        if (variable !is PropertyDescriptor || scopeContainer !is AnonymousFunctionDescriptor || variable.isVar) return
         val scopeDeclaration = DescriptorToSourceUtils.descriptorToDeclaration(scopeContainer) as? KtFunction ?: return
         if (scopeContainer.containingDeclaration !is ConstructorDescriptor) return
-        if (isExactlyOnceContract(trace.bindingContext, scopeDeclaration)) {
-            trace.record(FIELD_CAPTURED_IN_EXACLY_ONCE_CLOSURE, variable)
+        if (!isExactlyOnceContract(trace.bindingContext, scopeDeclaration)) return
+        if (trace.bindingContext[CAPTURED_IN_CLOSURE, variable] == CaptureKind.NOT_INLINE) return
+        val (callee, param) = getCalleeDescriptorAndParameter(trace.bindingContext, scopeDeclaration) ?: return
+        if (callee !is FunctionDescriptor) return
+        if (!callee.isInline || (param.isCrossinline || !InlineUtil.isInlineParameter(param))) {
+            trace.report(CAPTURED_VAL_INITIALIZATION.on(reportOn as KtExpression, variable))
         }
     }
 
@@ -91,7 +103,7 @@ class CapturingInClosureChecker : CallChecker {
         // We cannot box function/lambda arguments, destructured lambda arguments, for-loop index variables,
         // exceptions inside catch blocks ans vals in when
         return if (isArgument(variable, variableParent) ||
-            isDestructuredVariable(variable, variableParent) ||
+            findDestructuredVariable(variable, variableParent) != null ||
             isForLoopParameter(variable) ||
             isCatchBlockParameter(variable) ||
             isValInWhen(variable)
@@ -105,12 +117,6 @@ class CapturingInClosureChecker : CallChecker {
     private fun isArgument(variable: VariableDescriptor, variableParent: DeclarationDescriptor): Boolean =
         variable is ValueParameterDescriptor && variableParent is CallableDescriptor
                 && variableParent.valueParameters.contains(variable)
-
-    private fun isDestructuredVariable(variable: VariableDescriptor, variableParent: DeclarationDescriptor): Boolean =
-        variable is LocalVariableDescriptor && variableParent is AnonymousFunctionDescriptor &&
-                variableParent.valueParameters.any {
-                    it is ValueParameterDescriptorImpl.WithDestructuringDeclaration && it.destructuringVariables.contains(variable)
-                }
 
     private fun isValInWhen(variable: VariableDescriptor): Boolean {
         val psi = ((variable as? LocalVariableDescriptor)?.source as? KotlinSourceElement)?.psi ?: return false
@@ -141,7 +147,7 @@ class CapturingInClosureChecker : CallChecker {
         val contractDescription = function.getUserData(ContractProviderKey)?.getContractDescription() ?: return false
         val effect = contractDescription.effects.filterIsInstance<CallsEffectDeclaration>()
             .find { it.variableReference.descriptor == parameter.original } ?: return false
-        return effect.kind == InvocationKind.EXACTLY_ONCE
+        return effect.kind == EventOccurrencesRange.EXACTLY_ONCE
     }
 
     private fun isExactlyOnceContract(bindingContext: BindingContext, argument: KtFunction): Boolean {
@@ -166,3 +172,10 @@ class CapturingInClosureChecker : CallChecker {
         return getCalleeDescriptorAndParameter(bindingContext, argument)?.second?.isCrossinline == true
     }
 }
+
+fun findDestructuredVariable(variable: VariableDescriptor, variableParent: DeclarationDescriptor): ValueParameterDescriptor? =
+    if (variable is LocalVariableDescriptor && variableParent is AnonymousFunctionDescriptor) {
+        variableParent.valueParameters.find {
+            it is ValueParameterDescriptorImpl.WithDestructuringDeclaration && it.destructuringVariables.contains(variable)
+        }
+    } else null

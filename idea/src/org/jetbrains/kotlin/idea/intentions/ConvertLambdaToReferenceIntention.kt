@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getParameterForArgument
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.components.hasDefaultValue
 import org.jetbrains.kotlin.resolve.calls.components.isVararg
+import org.jetbrains.kotlin.resolve.calls.model.DefaultValueArgument
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.VarargValueArgument
 import org.jetbrains.kotlin.resolve.descriptorUtil.isCompanionObject
@@ -63,6 +64,7 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
         explicitReceiver: KtExpression? = null,
         lambdaExpression: KtLambdaExpression
     ): Boolean {
+        val languageVersionSettings = callableExpression.languageVersionSettings
         val context = callableExpression.analyze()
         val calleeReferenceExpression = when (callableExpression) {
             is KtCallExpression -> callableExpression.calleeExpression as? KtNameReferenceExpression ?: return false
@@ -80,10 +82,13 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
 
         val lambdaParameterIsSuspend = lambdaParameterType?.isSuspendFunctionType == true
         val calleeFunctionIsSuspend = (calleeDescriptor as? FunctionDescriptor)?.isSuspend == true
-        if (lambdaParameterIsSuspend && !calleeFunctionIsSuspend || !lambdaParameterIsSuspend && calleeFunctionIsSuspend) return false
+        if (!lambdaParameterIsSuspend && calleeFunctionIsSuspend) return false
+        if (lambdaParameterIsSuspend && !calleeFunctionIsSuspend &&
+            !languageVersionSettings.supportsFeature(LanguageFeature.SuspendConversion)
+        ) return false
 
         // No references with type parameters
-        if (calleeDescriptor.typeParameters.isNotEmpty()) return false
+        if (calleeDescriptor.typeParameters.isNotEmpty() && lambdaExpression.parentValueArgument() == null) return false
         // No references to Java synthetic properties
         if (calleeDescriptor is SyntheticJavaPropertyDescriptor) return false
 
@@ -94,17 +99,25 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
         }
 
         if (!descriptorHasReceiver && explicitReceiver != null && calleeDescriptor !is ClassConstructorDescriptor) return false
-        val noBoundReferences = !callableExpression.languageVersionSettings.supportsFeature(LanguageFeature.BoundCallableReferences)
+        val noBoundReferences = !languageVersionSettings.supportsFeature(LanguageFeature.BoundCallableReferences)
         if (noBoundReferences && descriptorHasReceiver && explicitReceiver == null) return false
 
         val callableArgumentsCount = (callableExpression as? KtCallExpression)?.valueArguments?.size ?: 0
-        if (calleeDescriptor.valueParameters.size != callableArgumentsCount) return false
-        val lambdaMustReturnUnit =
-            if (lambdaParameterType?.isFunctionType == true) lambdaParameterType.getReturnTypeFromFunctionType().isUnit() else false
-        if (lambdaMustReturnUnit) {
-            calleeDescriptor.returnType.let {
-                // If Unit required, no references to non-Unit callables
-                if (it == null || !it.isUnit()) return false
+        val enableFunctionReferenceWithDefaultValueAsOtherType =
+            languageVersionSettings.supportsFeature(LanguageFeature.FunctionReferenceWithDefaultValueAsOtherType)
+        if (enableFunctionReferenceWithDefaultValueAsOtherType) {
+            if (calleeDescriptor.valueParameters.size != callableArgumentsCount &&
+                (lambdaExpression.parentValueArgument() == null || calleeDescriptor.valueParameters.none { it.declaresDefaultValue() })
+            ) return false
+        } else {
+            if (calleeDescriptor.valueParameters.size != callableArgumentsCount) return false
+            val lambdaMustReturnUnit =
+                if (lambdaParameterType?.isFunctionType == true) lambdaParameterType.getReturnTypeFromFunctionType().isUnit() else false
+            if (lambdaMustReturnUnit) {
+                calleeDescriptor.returnType.let {
+                    // If Unit required, no references to non-Unit callables
+                    if (it == null || !it.isUnit()) return false
+                }
             }
         }
 
@@ -137,6 +150,7 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
             if (lambdaValueParameterDescriptors.size < explicitReceiverShift + callableExpression.valueArguments.size) return false
             val resolvedCall = callableExpression.getResolvedCall(context) ?: return false
             resolvedCall.valueArguments.entries.forEach { (valueParameter, resolvedArgument) ->
+                if (resolvedArgument is DefaultValueArgument && enableFunctionReferenceWithDefaultValueAsOtherType) return@forEach
                 val argument = resolvedArgument.arguments.singleOrNull() ?: return false
                 if (resolvedArgument is VarargValueArgument && argument.getSpreadElement() == null) return false
                 val argumentExpression = argument.getArgumentExpression() as? KtNameReferenceExpression ?: return false
@@ -223,6 +237,12 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
                 }
                 lambdaArgument.delete()
             }
+
+            outerCallExpression.typeArgumentList?.let {
+                if (RemoveExplicitTypeArgumentsIntention.isApplicableTo(it, approximateFlexible = false)) {
+                    it.delete()
+                }
+            }
         }
     }
 
@@ -243,7 +263,9 @@ open class ConvertLambdaToReferenceIntention(textGetter: () -> String) : SelfTar
         val calledFunctionInLambda = lambda.singleStatementOrNull()
             ?.getResolvedCall(context)?.resultingDescriptor as? FunctionDescriptor ?: return
         val overloadedFunctions = calledFunctionInLambda.overloadedFunctions()
-        if (overloadedFunctions.count { it.valueParameters.size == calledFunctionInLambda.valueParameters.size } < 2) return
+        if (overloadedFunctions.count { it.valueParameters.size == calledFunctionInLambda.valueParameters.size } < 2
+            && calledFunctionInLambda.typeParameters.isEmpty()
+        ) return
 
         if (InsertExplicitTypeArgumentsIntention.isApplicableTo(this, context)) {
             InsertExplicitTypeArgumentsIntention.applyTo(this)

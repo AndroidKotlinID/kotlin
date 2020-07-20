@@ -6,20 +6,21 @@
 package org.jetbrains.kotlin.scripting.ide_services
 
 import junit.framework.TestCase
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlin.scripting.ide_services.compiler.KJvmReplCompilerWithIdeServices
 import org.jetbrains.kotlin.scripting.ide_services.compiler.completion
 import org.jetbrains.kotlin.scripting.ide_services.compiler.filterOutShadowedDescriptors
 import org.jetbrains.kotlin.scripting.ide_services.compiler.nameFilter
-import org.jetbrains.kotlin.scripting.ide_services.test_util.SourceCodeTestImpl
-import org.jetbrains.kotlin.scripting.ide_services.test_util.simpleScriptCompilationConfiguration
-import org.jetbrains.kotlin.scripting.ide_services.test_util.toList
-import org.junit.Assert
+import org.jetbrains.kotlin.scripting.ide_services.test_util.*
+import org.jetbrains.kotlin.scripting.resolve.skipExtensionsResolutionForImplicits
+import org.jetbrains.kotlin.scripting.resolve.skipExtensionsResolutionForImplicitsExceptInnermost
+import org.junit.Ignore
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.reflect.KProperty
-import kotlin.reflect.KProperty0
+import java.io.Writer
 import kotlin.script.experimental.api.*
+import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvm.updateClasspath
+import kotlin.script.experimental.jvm.util.classpathFromClass
+
+typealias TestRunConfigurator = (TestConf.Run).() -> Unit
 
 class ReplCompletionAndErrorsAnalysisTest : TestCase() {
     @Test
@@ -189,10 +190,10 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                 val c = foob
             """.trimIndent()
             expect {
-                addError(1, 16, "Type mismatch: inferred type is String but Int was expected", "ERROR")
-                addError(1, 22, "The floating-point literal does not conform to the expected type String", "ERROR")
-                addError(2, 14, "Type mismatch: inferred type is String but Int was expected", "ERROR")
-                addError(3, 9, "Unresolved reference: foob", "ERROR")
+                addError(1, 16, 1, 20, "Type mismatch: inferred type is String but Int was expected", "ERROR")
+                addError(1, 22, 1, 26, "The floating-point literal does not conform to the expected type String", "ERROR")
+                addError(2, 14, 2, 19, "Type mismatch: inferred type is String but Int was expected", "ERROR")
+                addError(3, 9, 3, 13, "Unresolved reference: foob", "ERROR")
             }
         }
     }
@@ -290,238 +291,203 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             }
     }
 
-    class TestConf {
-        private val runs = mutableListOf<Run>()
-
-        fun run(setup: (Run).() -> Unit) {
-            val r = Run()
-            r.setup()
-            runs.add(r)
+    @Test
+    fun testImplicitExtensions() = test {
+        run {
+            code = """
+                class A {
+                    fun String.foooo() = 42
+                }
+            """.trimIndent()
+            doCompile
         }
-
-        fun collect() = runs.map { it.collect() }
-
-        class Run {
-            private var _doCompile = false
-            val doCompile: Unit
-                get() {
-                    _doCompile = true
-                }
-
-            private var _doComplete = false
-            val doComplete: Unit
-                get() {
-                    _doComplete = true
-                }
-
-            private var _doErrorCheck = false
-            val doErrorCheck: Unit
-                get() {
-                    _doErrorCheck = true
-                }
-
-            var cursor: Int? = null
-            var compilationConfiguration: ScriptCompilationConfiguration? = null
-            var code: String = ""
-            private var _expected: Expected = Expected(this)
-
-            fun expect(setup: (Expected).() -> Unit) {
-                _expected = Expected(this)
-                _expected.setup()
-            }
-
-            fun collect(): Pair<RunRequest, ExpectedResult> {
-                return RunRequest(cursor, code, _doCompile, _doComplete, _doErrorCheck, compilationConfiguration) to _expected.collect()
-            }
-
-            class Expected(private val run: Run) {
-                val completions = ExpectedList<SourceCodeCompletionVariant>(run::doComplete)
-                fun addCompletion(text: String, displayText: String, tail: String, icon: String) {
-                    completions.add(SourceCodeCompletionVariant(text, displayText, tail, icon))
-                }
-
-                val errors = ExpectedList<ScriptDiagnostic>(run::doErrorCheck)
-                fun addError(startLine: Int, startCol: Int, message: String, severity: String) {
-                    errors.add(
-                        ScriptDiagnostic(
-                            ScriptDiagnostic.unspecifiedError,
-                            message,
-                            ScriptDiagnostic.Severity.valueOf(severity),
-                            location = SourceCode.Location(
-                                SourceCode.Position(startLine, startCol)
-                            )
-                        )
-                    )
-                }
-
-                var resultType: String? by ExpectedNullableVar(run::doErrorCheck)
-
-                fun collect(): ExpectedResult {
-                    return ExpectedResult(completions, errors, resultType)
-                }
-            }
-
-        }
-    }
-
-    private fun test(setup: (TestConf).() -> Unit) {
-        val test = TestConf()
-        test.setup()
-        runBlocking { checkEvaluateInRepl(simpleScriptCompilationConfiguration, test.collect()) }
-    }
-
-    enum class ComparisonType {
-        COMPARE_SIZE, INCLUDES, EQUALS, DONT_CHECK
-    }
-
-    data class RunRequest(
-        val cursor: Int?,
-        val code: String,
-        val doCompile: Boolean,
-        val doComplete: Boolean,
-        val doErrorCheck: Boolean,
-        val compilationConfiguration: ScriptCompilationConfiguration?
-    )
-
-    interface ExpectedOptions {
-        val mode: ComparisonType
-        val size: Int
-    }
-
-    class ExpectedList<T>(private val runProperty: KProperty0<Unit>) : ExpectedOptions {
-        val list = mutableListOf<T>()
-
-        override var mode = ComparisonType.DONT_CHECK
-        override var size = 0
-            set(value) {
-                if (mode == ComparisonType.DONT_CHECK)
-                    mode = ComparisonType.COMPARE_SIZE
-                runProperty.get()
-                field = value
-            }
-
-        fun add(elem: T) {
-            if (mode == ComparisonType.DONT_CHECK)
-                mode = ComparisonType.EQUALS
-            runProperty.get()
-            list.add(elem)
-        }
-    }
-
-    class ExpectedNullableVar<T>(private val runProperty: KProperty0<Unit>) {
-        private var variable: T? = null
-
-        operator fun getValue(thisRef: Any?, property: KProperty<*>): T? = variable
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T?) {
-            runProperty.get()
-            variable = value
-        }
-    }
-
-    data class ExpectedResult(
-        val completions: ExpectedList<SourceCodeCompletionVariant>,
-        val errors: ExpectedList<ScriptDiagnostic>,
-        val resultType: String?,
-    )
-
-    data class ActualResult(
-        val completions: List<SourceCodeCompletionVariant>,
-        val errors: List<ScriptDiagnostic>,
-        val resultType: String?,
-    )
-
-    private val currentLineCounter = AtomicInteger()
-
-    private fun nextCodeLine(code: String): SourceCode =
-        SourceCodeTestImpl(
-            currentLineCounter.getAndIncrement(),
-            code
-        )
-
-    private suspend fun evaluateInRepl(
-        compilationConfiguration: ScriptCompilationConfiguration,
-        snippets: List<RunRequest>
-    ): List<ResultWithDiagnostics<ActualResult>> {
-        val compiler = KJvmReplCompilerWithIdeServices()
-        return snippets.map { runRequest ->
-            with(runRequest) {
-                val newCompilationConfiguration = this.compilationConfiguration?.let {
-                    ScriptCompilationConfiguration(compilationConfiguration, it)
-                } ?: compilationConfiguration
-
-                val pos = SourceCode.Position(0, 0, cursor)
-                val codeLine = nextCodeLine(code)
-                val completionRes = if (doComplete && cursor != null) {
-                    val res = compiler.complete(codeLine, pos, newCompilationConfiguration)
-                    res.toList().filter { it.tail != "keyword" }
-                } else {
-                    emptyList()
-                }
-
-                val analysisResult = if (doErrorCheck) {
-                    val codeLineForErrorCheck = nextCodeLine(code)
-                    compiler.analyze(codeLineForErrorCheck, SourceCode.Position(0, 0), newCompilationConfiguration).valueOrNull()
-                } else {
-                    null
-                } ?: ReplAnalyzerResult()
-
-                val errorsSequence = analysisResult[ReplAnalyzerResult.analysisDiagnostics]!!
-                val resultType = analysisResult[ReplAnalyzerResult.renderedResultType]
-
-                if (doCompile) {
-                    val codeLineForCompilation = nextCodeLine(code)
-                    compiler.compile(codeLineForCompilation, newCompilationConfiguration)
-                }
-
-                ActualResult(completionRes, errorsSequence.toList(), resultType).asSuccess()
-            }
-        }
-    }
-
-    private fun <T> checkLists(index: Int, checkName: String, expected: List<T>, actual: List<T>, options: ExpectedOptions) {
-        when (options.mode) {
-            ComparisonType.EQUALS -> Assert.assertEquals(
-                "#$index ($checkName): Expected $expected, got $actual",
-                expected,
-                actual
-            )
-            ComparisonType.INCLUDES -> Assert.assertTrue(
-                "#$index ($checkName): Expected $actual to include $expected",
-                actual.containsAll(expected)
-            )
-            ComparisonType.COMPARE_SIZE -> Assert.assertEquals(
-                "#$index ($checkName): Expected list size to be equal to ${options.size}, but was ${actual.size}",
-                options.size,
-                actual.size
-            )
-            ComparisonType.DONT_CHECK -> {
-            }
-        }
-    }
-
-    private suspend fun checkEvaluateInRepl(
-        compilationConfiguration: ScriptCompilationConfiguration,
-        testData: List<Pair<RunRequest, ExpectedResult>>
-    ) {
-        val (snippets, expected) = testData.unzip()
-        val expectedIter = expected.iterator()
-        evaluateInRepl(compilationConfiguration, snippets).forEachIndexed { index, res ->
-            when (res) {
-                is ResultWithDiagnostics.Failure -> Assert.fail("#$index: Expected result, got $res")
-                is ResultWithDiagnostics.Success -> {
-                    val (expectedCompletions, expectedErrors, expectedResultType) = expectedIter.next()
-                    val (completionsRes, errorsRes, resultType) = res.value
-
-                    checkLists(index, "completions", expectedCompletions.list, completionsRes, expectedCompletions)
-                    val expectedErrorsWithPath = expectedErrors.list.map {
-                        it.copy(sourcePath = errorsRes.firstOrNull()?.sourcePath)
+        run {
+            code = """
+                with(A()) {
+                    with("bar") {
+                        foo
                     }
-                    checkLists(index, "errors", expectedErrorsWithPath, errorsRes, expectedErrors)
-                    assertEquals("Analysis result types are different", expectedResultType, resultType)
                 }
+            """.trimIndent()
+            cursor = code.indexOf("foo") + 3
+            expect {
+                completions.mode = ComparisonType.EQUALS
+                addCompletion("foooo()", "foooo()", "Int", "method")
             }
         }
     }
 
+    @Test
+    fun testDefaultImports() = test {
+        run(setupDefaultImportsCompletionRun)
+    }
+
+    @Test
+    fun testImportCompletion() = test {
+        run {
+            code = """
+                import kotl
+            """.trimIndent()
+            cursor = 11
+            expect {
+                completions.mode = ComparisonType.INCLUDES
+                addCompletion("kotlin", "kotlin", "package kotlin", "package")
+            }
+        }
+    }
+
+    @Ignore("Should be fixed by KT-39314")
+    @Test
+    fun ignore_testDefaultImportsNotFirst() = test {
+        run {
+            code = "1"
+            doCompile
+        }
+        run(setupDefaultImportsCompletionRun)
+    }
+
+    @Test
+    fun testLongCompilationsWithImport() = test {
+        // This test normally completes in about 5-10s
+        // Log should show slow _linear_ compilation time growth
+
+        val compileWriter = System.out.writer()
+
+        for (i in 1..120) {
+            run {
+                code = """
+                    import kotlin.math.*
+                    val dataFrame = mapOf("x" to sin(3.0))
+                    val e = "str"
+                """.trimIndent()
+                doCompile
+
+                loggingInfo = CSVLoggingInfo(compile = CSVLoggingInfoItem(compileWriter, i, "compile;"))
+            }
+        }
+    }
+
+    @Test
+    fun testLongRunningCompilationWithReceiver() = test {
+        // This test normally completes in about 8-13s
+        // Removing skip* configuration parameters should slow down the test (2-3 times)
+
+        val conf = ScriptCompilationConfiguration {
+            jvm {
+                updateClasspath(classpathFromClass<TestReceiver1>())
+            }
+            implicitReceivers(TestReceiver1::class, TestReceiver2::class)
+            skipExtensionsResolutionForImplicits(KotlinType(TestReceiver1::class))
+            skipExtensionsResolutionForImplicitsExceptInnermost(KotlinType(TestReceiver2::class))
+        }
+
+        val writer = System.out.writer()
+        for (i in 1..200) {
+            run(longCompilationRun(writer, i, conf))
+            run {
+                compilationConfiguration = conf
+
+                code = """
+                    val x = xyz
+                """.trimIndent()
+                cursor = 11
+
+                expect {
+                    completions.mode = ComparisonType.EQUALS
+                    addCompletion("xyz1", "xyz1", "Int", "property")
+                    addCompletion("xyz2", "xyz2", "Int", "property")
+                }
+
+                loggingInfo = CSVLoggingInfo(complete = CSVLoggingInfoItem(writer, i, "complete;"))
+            }
+        }
+    }
+
+    private val setupDefaultImportsCompletionRun: TestRunConfigurator = {
+        compilationConfiguration = ScriptCompilationConfiguration {
+            defaultImports(listOf("kotlin.math.atan"))
+        }
+
+        code = "ata"
+        cursor = 3
+
+        expect {
+            completions.mode = ComparisonType.INCLUDES
+            addCompletion("atan(", "atan(Double)", "Double", "method")
+        }
+    }
+}
+
+// Artificial split into several testsuites, to speed up parallel testing
+class IdeServicesLongRunningTest1 : TestCase() {
+    @Test
+    fun testLongRunningCompletion() = test {
+        // This test normally completes in about 15-25s
+        // Log should show slow _linear_ compilation/completion time growth
+
+        val compileWriter = System.out.writer() // FileWriter("$csvDir/compilations.csv")
+        val completeWriter = System.out.writer() // FileWriter("$csvDir/completions.csv")
+
+        for (i in 1..230) {
+            run(longCompilationRun(compileWriter, i))
+            run(longCompletionRun(completeWriter, i))
+        }
+    }
+}
+
+// Artificial split into several testsuites, to speed up parallel testing
+class IdeServicesLongRunningTest2 : TestCase() {
+    @Test
+    fun testLongRunningCompilation() = test {
+        // This test normally completes in about 10-20s
+
+        val writer = System.out.writer()
+        for (i in 1..500) {
+            run(longCompilationRun(writer, i))
+        }
+    }
+}
+
+@Suppress("unused")
+class TestReceiver1(val xyz1: Int = 42)
+
+@Suppress("unused")
+class TestReceiver2(val xyz2: Int = 42)
+
+private fun longCompilationRun(writer: Writer, i: Int, conf: ScriptCompilationConfiguration? = null): TestRunConfigurator {
+    return {
+        conf?.let {
+            compilationConfiguration = it
+        }
+
+        code = """
+            val dataFrame = mapOf("x" to 45)
+            val e = "str"
+        """.trimIndent()
+        doCompile
+
+        loggingInfo = CSVLoggingInfo(compile = CSVLoggingInfoItem(writer, i, "compile;"))
+    }
+}
+
+private fun longCompletionRun(writer: Writer, i: Int, conf: ScriptCompilationConfiguration? = null): TestRunConfigurator {
+    return {
+        conf?.let {
+            compilationConfiguration = it
+        }
+
+        code = """
+            val x = mapOf("a" to dataFrame., "b" to 12, e to 42)
+        """.trimIndent()
+        cursor = 31
+
+        doComplete
+        expect {
+            completions.mode = ComparisonType.INCLUDES
+            addCompletion("entries", "entries", "Set<Map.Entry<String, Int>>", "property")
+        }
+
+        loggingInfo = CSVLoggingInfo(complete = CSVLoggingInfoItem(writer, i, "complete;"))
+    }
 }
 

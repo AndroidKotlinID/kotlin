@@ -88,7 +88,7 @@ class FirJavaConstructor @FirImplementationDetail constructor(
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirJavaConstructor {
         transformReturnTypeRef(transformer, data)
         transformControlFlowGraphReference(transformer, data)
-        typeParameters.transformInplace(transformer, data)
+        transformTypeParameters(transformer, data)
         transformValueParameters(transformer, data)
         status = status.transformSingle(transformer, data)
         transformAnnotations(transformer, data)
@@ -110,6 +110,15 @@ class FirJavaConstructor @FirImplementationDetail constructor(
     }
 
     override fun <D> transformDelegatedConstructor(transformer: FirTransformer<D>, data: D): FirJavaConstructor {
+        return this
+    }
+
+    override fun <D> transformBody(transformer: FirTransformer<D>, data: D): FirConstructor {
+        return this
+    }
+
+    override fun <D> transformTypeParameters(transformer: FirTransformer<D>, data: D): FirJavaConstructor {
+        typeParameters.transformInplace(transformer, data)
         return this
     }
 

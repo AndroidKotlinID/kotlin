@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.ModuleConfi
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.PluginSettingReference
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.SettingType
 import org.jetbrains.kotlin.tools.projectWizard.core.entity.settings.reference
-import org.jetbrains.kotlin.tools.projectWizard.core.service.kotlinVersionKind
+import org.jetbrains.kotlin.tools.projectWizard.core.service.WizardKotlinVersion
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.*
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.AndroidConfigIR
 import org.jetbrains.kotlin.tools.projectWizard.library.MavenArtifact
@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.DefaultRepo
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.Module
 import org.jetbrains.kotlin.tools.projectWizard.settings.buildsystem.Repository
 import org.jetbrains.kotlin.tools.projectWizard.settings.javaPackage
-import org.jetbrains.kotlin.tools.projectWizard.settings.version.Version
 import org.jetbrains.kotlin.tools.projectWizard.templates.FileTemplate
 import org.jetbrains.kotlin.tools.projectWizard.templates.FileTemplateDescriptor
 import java.nio.file.Path
@@ -99,9 +98,19 @@ interface AndroidModuleConfigurator : ModuleConfigurator,
             "src" / "main" / "AndroidManifest.xml"
         )
 
-        val androidanifestForLibraryXml = FileTemplateDescriptor(
+        val androidManifestForLibraryXml = FileTemplateDescriptor(
             "android/AndroidManifestLibrary.xml.vm",
             "src" / "main" / "AndroidManifest.xml"
+        )
+
+        val colorsXml = FileTemplateDescriptor(
+            "android/colors.xml",
+            "src" / "main" / "res" / "values" / "colors.xml"
+        )
+
+        val stylesXml = FileTemplateDescriptor(
+            "android/styles.xml",
+            "src" / "main" / "res" / "values" / "styles.xml"
         )
 
         fun mainActivityKt(javaPackage: JavaPackage) = FileTemplateDescriptor(
@@ -111,11 +120,11 @@ interface AndroidModuleConfigurator : ModuleConfigurator,
     }
 
     companion object {
-        fun createRepositories(kotlinVersion: Version) = buildList<Repository> {
+        fun createRepositories(kotlinVersion: WizardKotlinVersion) = buildList<Repository> {
             +DefaultRepository.GRADLE_PLUGIN_PORTAL
             +DefaultRepository.GOOGLE
             +DefaultRepository.JCENTER
-            addIfNotNull(kotlinVersion.kotlinVersionKind.repository)
+            +kotlinVersion.repository
         }
     }
 }
@@ -147,7 +156,7 @@ object AndroidTargetConfigurator : TargetConfigurator,
         val settings = mapOf("package" to javaPackage.asCodePackage())
         TemplatesPlugin::addFileTemplates.execute(
             listOf(
-                FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.androidanifestForLibraryXml, modulePath, settings)
+                FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.androidManifestForLibraryXml, modulePath, settings)
             )
         )
     }

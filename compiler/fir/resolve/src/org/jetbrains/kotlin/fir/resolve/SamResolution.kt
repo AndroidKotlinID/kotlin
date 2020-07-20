@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
-import org.jetbrains.kotlin.fir.inferenceContext
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.resolve.calls.FirSyntheticFunctionSymbol
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
@@ -92,7 +92,7 @@ class FirSamResolverImpl(
         val result =
             substitutor
                 .substituteOrSelf(unsubstitutedFunctionType)
-                .withNullability(ConeNullability.create(type.isMarkedNullable), firSession.inferenceContext)
+                .withNullability(ConeNullability.create(type.isMarkedNullable), firSession.typeContext)
 
         require(result is ConeLookupTagBasedType) {
             "Function type should always be ConeLookupTagBasedType, but ${result::class} was found"
@@ -148,7 +148,7 @@ class FirSamResolverImpl(
             newTypeParameter.bounds += declared.bounds.mapNotNull { typeRef ->
                 buildResolvedTypeRef {
                     source = typeRef.source
-                    type = substitutor.substituteOrSelf(typeRef.coneTypeSafe() ?: return@mapNotNull null)
+                    type = substitutor.substituteOrSelf(typeRef.coneType)
                 }
             }
         }
@@ -196,13 +196,13 @@ class FirSamResolverImpl(
                 isVararg = false
             }
 
-
             resolvePhase = FirResolvePhase.BODY_RESOLVE
         }
     }
 
     private fun resolveFunctionTypeIfSamInterface(firRegularClass: FirRegularClass): ConeKotlinType? {
         return resolvedFunctionType.getOrPut(firRegularClass) {
+            if (!firRegularClass.status.isFun) return@getOrPut NULL_STUB
             val abstractMethod = firRegularClass.getSingleAbstractMethodOrNull(firSession, scopeSession) ?: return@getOrPut NULL_STUB
             // TODO: val shouldConvertFirstParameterToDescriptor = samWithReceiverResolvers.any { it.shouldConvertFirstSamParameterToReceiver(abstractMethod) }
 
@@ -224,7 +224,6 @@ private fun FirRegularClass.getSingleAbstractMethodOrNull(
     if (classKind != ClassKind.INTERFACE || hasMoreThenOneAbstractFunctionOrHasAbstractProperty()) return null
 
     val samCandidateNames = computeSamCandidateNames(session)
-
     return findSingleAbstractMethodByNames(session, scopeSession, samCandidateNames)
 }
 
@@ -332,13 +331,10 @@ fun FirSimpleFunction.isPublicInObject(checkOnlyName: Boolean): Boolean {
         }
         else -> error("Unexpected method name: $name")
     }
-
 }
 
 private fun FirValueParameter.hasTypeOf(classId: ClassId, allowNullable: Boolean): Boolean {
-    val type = returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: return false
-
-    val classLike = when (type) {
+    val classLike = when (val type = returnTypeRef.coneType) {
         is ConeClassLikeType -> type
         is ConeFlexibleType -> type.upperBound as? ConeClassLikeType ?: return false
         else -> return false
@@ -357,7 +353,7 @@ private fun FirSimpleFunction.getFunctionTypeForAbstractMethod(): ConeLookupTagB
 
     return createFunctionalType(
         parameterTypes, receiverType = null,
-        rawReturnType = returnTypeRef.coneTypeSafe() ?: ConeKotlinErrorType("No type for return type of $this"),
+        rawReturnType = returnTypeRef.coneType,
         isSuspend = this.isSuspend
     )
 }

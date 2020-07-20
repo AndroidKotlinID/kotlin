@@ -9,6 +9,8 @@ import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.common.lower.allOverridden
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
+import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
+import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns.FQ_NAMES
 import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
@@ -87,7 +89,10 @@ fun JvmBackendContext.getSourceMapper(declaration: IrClass): SourceMapper {
     // NOTE: apparently inliner requires the source range to cover the
     //       whole file the class is declared in rather than the class only.
     // TODO: revise
-    val endLineNumber = fileEntry?.getSourceRangeInfo(0, fileEntry.maxOffset)?.endLineNumber ?: 0
+    val endLineNumber = when {
+        fileEntry is MultifileFacadeFileEntry -> 0
+        else -> fileEntry?.getSourceRangeInfo(0, fileEntry.maxOffset)?.endLineNumber ?: 0
+    }
     return SourceMapper(
         SourceInfo.createInfoForIr(
             endLineNumber + 1,
@@ -283,13 +288,19 @@ fun IrDeclarationWithVisibility.isInlineOnlyOrReifiable(): Boolean =
     this is IrFunction && (isReifiable() || isInlineOnly())
 
 fun IrDeclarationWithVisibility.isEffectivelyInlineOnly(): Boolean =
-    isInlineOnlyOrReifiable() || isInlineOnlyPrivateInBytecode()
+    isInlineOnlyOrReifiable() || isInlineOnlyPrivateInBytecode() || isInlineOnlyPropertyAccessor()
 
 fun IrDeclarationWithVisibility.isInlineOnlyPrivateInBytecode(): Boolean =
     (this is IrFunction && isInlineOnly()) || isPrivateInlineSuspend()
 
 private fun IrDeclarationWithVisibility.isPrivateInlineSuspend(): Boolean =
     this is IrFunction && isSuspend && isInline && visibility == Visibilities.PRIVATE
+
+private fun IrDeclarationWithVisibility.isInlineOnlyPropertyAccessor(): Boolean {
+    if (this !is IrSimpleFunction) return false
+    val propertySymbol = correspondingPropertySymbol ?: return false
+    return propertySymbol.owner.hasAnnotation(INLINE_ONLY_ANNOTATION_FQ_NAME)
+}
 
 fun IrFunction.isInlineOnly() =
     isInline && hasAnnotation(INLINE_ONLY_ANNOTATION_FQ_NAME)
@@ -392,23 +403,13 @@ fun IrClass.isOptionalAnnotationClass(): Boolean =
     isAnnotationClass &&
             hasAnnotation(ExpectedActualDeclarationChecker.OPTIONAL_EXPECTATION_FQ_NAME)
 
-//@JvmOverloads
-//fun OtherOriginForIr(element: PsiElement?, descriptor: DeclarationDescriptor? = null) =
-//    if (element == null && descriptor == null)
-//        JvmDeclarationOrigin.NO_ORIGIN
-//    else
-//        object : JvmDeclarationOrigin(JvmDeclarationOriginKind.OTHER, element, descriptor) {
-//            override val element get() =
-//                error("Access to PsiElement")
-//            override val descriptor get() =
-//                error("Access to descriptor")
-//        }
-
-//        JvmDeclarationOrigin(OTHER, element, descriptor)
-
 val IrAnnotationContainer.deprecationFlags: Int
     get() {
-        val annotation = annotations.findAnnotation(FQ_NAMES.deprecated) ?: return 0
+        val annotation = annotations.findAnnotation(FQ_NAMES.deprecated)
+            ?: return if ((this as? IrDeclaration)?.origin?.let {
+                    it == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY
+                } == true
+            ) Opcodes.ACC_DEPRECATED else 0
         val isHidden = (annotation.getValueArgument(2) as? IrGetEnumValue)?.symbol?.owner
             ?.name?.asString() == DeprecationLevel.HIDDEN.name
         return Opcodes.ACC_DEPRECATED or if (isHidden) Opcodes.ACC_SYNTHETIC else 0
@@ -430,5 +431,5 @@ val IrFunction.deprecationFlags: Int
 val IrDeclaration.psiElement: PsiElement?
     get() = (descriptor as? DeclarationDescriptorWithSource)?.psiElement
 
-val IrMemberAccessExpression.psiElement: PsiElement?
+val IrMemberAccessExpression<*>.psiElement: PsiElement?
     get() = (symbol.descriptor.original as? DeclarationDescriptorWithSource)?.psiElement

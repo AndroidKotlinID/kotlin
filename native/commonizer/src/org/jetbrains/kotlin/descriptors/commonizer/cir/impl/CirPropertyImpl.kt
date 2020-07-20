@@ -25,12 +25,14 @@ data class CirPropertyImpl(
     override val kind: CallableMemberDescriptor.Kind,
     override val isVar: Boolean,
     override val isLateInit: Boolean,
-    override val isConst: Boolean,
+    override var isConst: Boolean,
     override val isDelegate: Boolean,
     override val getter: CirPropertyGetter?,
     override val setter: CirPropertySetter?,
     override val backingFieldAnnotations: List<CirAnnotation>?,
     override val delegateFieldAnnotations: List<CirAnnotation>?,
-    override val compileTimeInitializer: ConstantValue<*>?,
-    override val isLiftedUp: Boolean
-) : CirProperty
+    override val compileTimeInitializer: ConstantValue<*>?
+) : CirProperty {
+    // const property in "common" fragment is already lifted up
+    override val isLiftedUp get() = isConst
+}

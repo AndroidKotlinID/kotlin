@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.idea.formatter
 
 import com.intellij.formatting.*
+import com.intellij.formatting.blocks.prev
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiComment
@@ -178,7 +179,7 @@ abstract class KotlinCommonBlock(
         if (node.wrapForFirstCallInChainIsAllowed && node.receiverIsCall())
             Wrap.createWrap(
                 settings.kotlinCommonSettings.METHOD_CALL_CHAIN_WRAP,
-                true /* wrapFirstElement */,
+                true, /* wrapFirstElement */
             )
         else
             null
@@ -327,9 +328,14 @@ abstract class KotlinCommonBlock(
         }
 
         if (newChildIndex > 0) {
-            val prevBlock = mySubBlocks?.get(newChildIndex - 1)
-            if (prevBlock?.node?.elementType == MODIFIER_LIST) {
+            val prevNode = mySubBlocks?.get(newChildIndex - 1)?.node
+            if (prevNode?.elementType == MODIFIER_LIST) {
                 return ChildAttributes(Indent.getNoneIndent(), null)
+            }
+            val property = prevNode?.psi as? KtProperty
+            if (property?.receiverTypeReference != null && property.accessors.isNotEmpty()) {
+                val indent = if (type in CODE_BLOCKS) Indent.getContinuationIndent() else Indent.getNormalIndent()
+                return ChildAttributes(indent, null)
             }
         }
 
@@ -339,7 +345,7 @@ abstract class KotlinCommonBlock(
                 null,
             )
 
-            TRY -> ChildAttributes(Indent.getNoneIndent(), null)
+            TRY, CATCH, FINALLY -> ChildAttributes(Indent.getNoneIndent(), null)
 
             in QUALIFIED_EXPRESSIONS -> ChildAttributes(Indent.getContinuationWithoutFirstIndent(), null)
 
@@ -924,11 +930,6 @@ private val INDENT_RULES = arrayOf(
         .within(BODY).notForType(BLOCK)
         .set(Indent.getNormalIndent()),
 
-    strategy("For WHEN content")
-        .within(WHEN)
-        .notForType(RBRACE, LBRACE, WHEN_KEYWORD)
-        .set(Indent.getNormalIndent()),
-
     strategy("For single statement in THEN and ELSE")
         .within(THEN, ELSE).notForType(BLOCK)
         .set(Indent.getNormalIndent()),
@@ -1038,20 +1039,25 @@ private val INDENT_RULES = arrayOf(
 
     strategy("Opening parenthesis for conditions")
         .forType(LPAR)
-        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE)
+        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE, FOR, WHEN)
         .set(Indent.getContinuationWithoutFirstIndent(true)),
 
     strategy("Closing parenthesis for conditions")
         .forType(RPAR)
-        .forElement { node -> !hasErrorElementBefore(node) }
-        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE)
+        .forElement { node -> !hasErrorElementBefore(node) || node.prev()?.textLength == 0 }
+        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE, FOR, WHEN)
         .set(Indent.getNoneIndent()),
 
     strategy("Closing parenthesis for incomplete conditions")
         .forType(RPAR)
         .forElement { node -> hasErrorElementBefore(node) }
-        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE)
+        .within(IF, WHEN_ENTRY, WHILE, DO_WHILE, FOR, WHEN)
         .set(Indent.getContinuationWithoutFirstIndent()),
+
+    strategy("For WHEN content")
+        .within(WHEN)
+        .notForType(RBRACE, LBRACE, WHEN_KEYWORD)
+        .set(Indent.getNormalIndent()),
 
     strategy("KDoc comment indent")
         .within(KDOC_CONTENT)

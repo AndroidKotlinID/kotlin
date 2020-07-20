@@ -6,13 +6,15 @@
 package org.jetbrains.kotlin.ir.symbols.impl
 
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.WrappedDeclarationDescriptor
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.render
 
-abstract class IrPublicSymbolBase<out D : DeclarationDescriptor>(
+abstract class IrPublicSymbolBase<out D : DeclarationDescriptor> @OptIn(ObsoleteDescriptorBasedAPI::class) constructor(
+    @ObsoleteDescriptorBasedAPI
     override val descriptor: D,
     override val signature: IdSignature
 ) : IrSymbol {

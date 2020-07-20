@@ -9,25 +9,19 @@ import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.ir.copyParameterDeclarationsFrom
 import org.jetbrains.kotlin.backend.common.ir.passTypeArgumentsFrom
-import org.jetbrains.kotlin.backend.common.lower.allOverridden
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlockBody
 import org.jetbrains.kotlin.backend.common.lower.loops.forLoopsPhase
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
-import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
-import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.*
-import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.inlineClassFieldName
 import org.jetbrains.kotlin.config.ApiVersion
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
-import org.jetbrains.kotlin.ir.builders.declarations.addFunction
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
@@ -53,7 +47,8 @@ val jvmInlineClassPhase = makeIrFilePhase(
     name = "Inline Classes",
     description = "Lower inline classes",
     // forLoopsPhase may produce UInt and ULong which are inline classes.
-    prerequisite = setOf(forLoopsPhase)
+    // standard library replacements are done on the unmangled names for UInt and ULong classes.
+    prerequisite = setOf(forLoopsPhase, jvmStandardLibraryBuiltInsPhase)
 )
 
 /**
@@ -255,15 +250,15 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         return listOf(replacement)
     }
 
-    private fun typedArgumentList(function: IrFunction, expression: IrMemberAccessExpression) =
+    private fun typedArgumentList(function: IrFunction, expression: IrMemberAccessExpression<*>) =
         listOfNotNull(
             function.dispatchReceiverParameter?.let { it to expression.dispatchReceiver },
             function.extensionReceiverParameter?.let { it to expression.extensionReceiver }
         ) + function.valueParameters.map { it to expression.getValueArgument(it.index) }
 
-    private fun IrMemberAccessExpression.buildReplacement(
+    private fun IrMemberAccessExpression<*>.buildReplacement(
         originalFunction: IrFunction,
-        original: IrMemberAccessExpression,
+        original: IrMemberAccessExpression<*>,
         replacement: IrSimpleFunction
     ) {
         copyTypeArgumentsFrom(original)
@@ -479,6 +474,7 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
             // Don't create a default argument stub for the primary constructor
             irConstructor.valueParameters.forEach { it.defaultValue = null }
             copyParameterDeclarationsFrom(irConstructor)
+            annotations += irConstructor.annotations
             body = context.createIrBuilder(this.symbol).irBlockBody(this) {
                 +irDelegatingConstructorCall(context.irBuiltIns.anyClass.owner.constructors.single())
                 +irSetField(

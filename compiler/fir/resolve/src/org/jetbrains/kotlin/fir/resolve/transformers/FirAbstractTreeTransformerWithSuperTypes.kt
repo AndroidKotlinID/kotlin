@@ -5,30 +5,39 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers
 
+import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.expressions.FirStatement
-import org.jetbrains.kotlin.fir.resolve.providers.getNestedClassifierScope
 import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
-import org.jetbrains.kotlin.fir.scopes.impl.FirCompositeScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirMemberTypeParameterScope
-import org.jetbrains.kotlin.fir.scopes.impl.nestedClassifierScope
+import org.jetbrains.kotlin.fir.resolve.providers.getNestedClassifierScope
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutorByMap
+import org.jetbrains.kotlin.fir.resolve.toSymbol
+import org.jetbrains.kotlin.fir.scopes.FirCompositeScope
+import org.jetbrains.kotlin.fir.scopes.FirScope
+import org.jetbrains.kotlin.fir.scopes.impl.*
+import org.jetbrains.kotlin.fir.types.ConeClassErrorType
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.ConeLookupTagBasedType
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 
 abstract class FirAbstractTreeTransformerWithSuperTypes(
-    phase: FirResolvePhase,
-    reversedScopePriority: Boolean
+    phase: FirResolvePhase
 ) : FirAbstractTreeTransformer<Nothing?>(phase) {
-    protected val towerScope = FirCompositeScope(mutableListOf(), reversedPriority = reversedScopePriority)
+    protected val scopes = mutableListOf<FirScope>()
+    protected val towerScope = FirCompositeScope(scopes.asReversed())
 
     protected inline fun <T> withScopeCleanup(crossinline l: () -> T): T {
-        val sizeBefore = towerScope.scopes.size
+        val sizeBefore = scopes.size
         val result = l()
-        val size = towerScope.scopes.size
+        val size = scopes.size
         assert(size >= sizeBefore)
-        towerScope.dropLastScopes(size - sizeBefore)
+        repeat(size - sizeBefore) {
+            scopes.removeAt(scopes.lastIndex)
+        }
         return result
     }
 
@@ -38,21 +47,28 @@ abstract class FirAbstractTreeTransformerWithSuperTypes(
     ): CompositeTransformResult<FirStatement> {
         return withScopeCleanup {
             // ? Is it Ok to use original file session here ?
-            val superTypes = lookupSuperTypes(firClass, lookupInterfaces = false, deep = true, useSiteSession = session).asReversed()
+            val superTypes = lookupSuperTypes(
+                firClass,
+                lookupInterfaces = false,
+                deep = true,
+                substituteTypes = true,
+                useSiteSession = session
+            ).asReversed()
             for (superType in superTypes) {
-                session.getNestedClassifierScope(superType.lookupTag)?.let {
-                    towerScope.addScope(it)
+                session.getNestedClassifierScope(superType.lookupTag)?.let { nestedClassifierScope ->
+                    val scope = nestedClassifierScope.wrapNestedClassifierScopeWithSubstitutionForSuperType(superType, session)
+                    scopes.add(scope)
                 }
             }
             if (firClass is FirRegularClass) {
                 firClass.addTypeParametersScope()
                 val companionObject = firClass.companionObject
                 if (companionObject != null) {
-                    nestedClassifierScope(companionObject)?.let(towerScope::addScope)
+                    nestedClassifierScope(companionObject)?.let(scopes::add)
                 }
             }
 
-            nestedClassifierScope(firClass)?.let(towerScope::addScope)
+            nestedClassifierScope(firClass)?.let(scopes::add)
 
             transformElement(firClass, data)
         }
@@ -60,7 +76,16 @@ abstract class FirAbstractTreeTransformerWithSuperTypes(
 
     protected fun FirMemberDeclaration.addTypeParametersScope() {
         if (typeParameters.isNotEmpty()) {
-            towerScope.addScope(FirMemberTypeParameterScope(this))
+            scopes.add(FirMemberTypeParameterScope(this))
         }
     }
+}
+
+fun createSubstitutionForSupertype(superType: ConeLookupTagBasedType, session: FirSession): ConeSubstitutor {
+    val klass = superType.lookupTag.toSymbol(session)?.fir as? FirRegularClass ?: return ConeSubstitutor.Empty
+    val arguments = superType.typeArguments.map {
+        it as? ConeKotlinType ?: ConeClassErrorType("illegal projection usage")
+    }
+    val mapping = klass.typeParameters.map { it.symbol }.zip(arguments).toMap()
+    return ConeSubstitutorByMap(mapping)
 }

@@ -5,12 +5,7 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.cir
 
-interface CirTypeAlias :
-    CirAnnotatedDeclaration,
-    CirNamedDeclaration,
-    CirDeclarationWithTypeParameters,
-    CirDeclarationWithVisibility {
-
+interface CirTypeAlias : CirClassifier, CirLiftedUpDeclaration {
     val underlyingType: CirSimpleType
     val expandedType: CirSimpleType
 }

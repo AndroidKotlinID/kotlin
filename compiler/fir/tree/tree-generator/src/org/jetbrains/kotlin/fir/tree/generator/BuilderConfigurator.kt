@@ -95,6 +95,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             default("argumentList") {
                 value = "FirEmptyArgumentList"
             }
+            default("resolveStatus", "FirAnnotationResolveStatus.Unresolved")
             useTypes(emptyArgumentListType)
         }
 
@@ -221,6 +222,31 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         builder(resolvedTypeRef) {
             defaultFalse("isSuspend")
             defaultNull("delegatedTypeRef")
+            withCopy()
+        }
+
+        builder(errorTypeRef) {
+            withCopy()
+        }
+
+        builder(delegatedTypeRef) {
+            withCopy()
+        }
+
+        builder(functionTypeRef) {
+            withCopy()
+        }
+
+        builder(resolvedFunctionTypeRef) {
+            withCopy()
+        }
+
+        builder(implicitTypeRef) {
+            withCopy()
+        }
+
+        builder(composedSuperTypeRef) {
+            withCopy()
         }
 
         builder(breakExpression) {
@@ -257,6 +283,11 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         }
 
         builder(checkNotNullCall) {
+            default("calleeReference", "FirStubReference")
+            useTypes(stubReferenceType)
+        }
+
+        builder(elvisExpression) {
             default("calleeReference", "FirStubReference")
             useTypes(stubReferenceType)
         }

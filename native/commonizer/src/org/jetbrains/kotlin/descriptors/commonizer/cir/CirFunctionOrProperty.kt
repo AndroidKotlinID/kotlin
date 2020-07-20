@@ -11,23 +11,23 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 
 interface CirFunctionOrProperty :
-    CirAnnotatedDeclaration,
-    CirNamedDeclaration,
-    CirDeclarationWithTypeParameters,
-    CirDeclarationWithVisibility,
-    CirDeclarationWithModality,
+    CirDeclaration,
+    CirHasAnnotations,
+    CirHasName,
+    CirHasTypeParameters,
+    CirHasVisibility,
+    CirHasModality,
     CirMaybeCallableMemberOfClass {
 
-    val isExternal: Boolean
     val extensionReceiver: CirExtensionReceiver?
     val returnType: CirType
     val kind: CallableMemberDescriptor.Kind
+
+    fun isNonAbstractMemberInInterface(): Boolean =
+        modality != Modality.ABSTRACT && containingClassDetails?.kind == ClassKind.INTERFACE
+
+    fun isVirtual(): Boolean =
+        visibility != Visibilities.PRIVATE
+                && modality != Modality.FINAL
+                && !(containingClassDetails?.modality == Modality.FINAL && containingClassDetails?.kind != ClassKind.ENUM_CLASS)
 }
-
-fun CirFunctionOrProperty.isNonAbstractMemberInInterface(): Boolean =
-    modality != Modality.ABSTRACT && containingClassDetails?.kind == ClassKind.INTERFACE
-
-fun CirFunctionOrProperty.isVirtual(): Boolean =
-    visibility != Visibilities.PRIVATE
-            && modality != Modality.FINAL
-            && !(containingClassDetails?.modality == Modality.FINAL && containingClassDetails?.kind != ClassKind.ENUM_CLASS)

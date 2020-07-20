@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.common.ir.Symbols
 import org.jetbrains.kotlin.backend.common.ir.createTemporaryVariableWithWrappedDescriptor
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.config.languageVersionSettings
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -36,6 +37,7 @@ interface InlineFunctionResolver {
     fun getFunctionDeclaration(symbol: IrFunctionSymbol): IrFunction
 }
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 open class DefaultInlineFunctionResolver(open val context: CommonBackendContext) : InlineFunctionResolver {
     override fun getFunctionDeclaration(symbol: IrFunctionSymbol): IrFunction {
         val descriptor = symbol.descriptor.original
@@ -56,6 +58,7 @@ open class DefaultInlineFunctionResolver(open val context: CommonBackendContext)
     }
 }
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 class FunctionInlining(
     val context: CommonBackendContext,
     val inlineFunctionResolver: InlineFunctionResolver
@@ -143,9 +146,12 @@ class FunctionInlining(
             callee: IrFunction,
             performRecursiveInline: Boolean
         ): IrReturnableBlock {
-            val copiedCallee = if (performRecursiveInline)
-                visitElement(copyIrElement.copy(callee)) as IrFunction
-            else copyIrElement.copy(callee) as IrFunction
+            val copiedCallee = copyIrElement.copy(callee).let {
+                (it as IrFunction).parent = callee.parent
+                if (performRecursiveInline)
+                    visitElement(it) as IrFunction
+                else it
+            }
 
             val evaluationStatements = evaluateArguments(callSite, copiedCallee)
             val statements = (copiedCallee.body as IrBlockBody).statements
@@ -160,10 +166,6 @@ class FunctionInlining(
             val transformer = ParameterSubstitutor()
             statements.transform { it.transform(transformer, data = null) }
             statements.addAll(0, evaluationStatements)
-
-            val isCoroutineIntrinsicCall = callSite.symbol.descriptor.isBuiltInSuspendCoroutineUninterceptedOrReturn(
-                context.configuration.languageVersionSettings
-            )
 
             return IrReturnableBlockImpl(
                 startOffset = callSite.startOffset,
@@ -411,7 +413,7 @@ class FunctionInlining(
                     }
 
                     else -> {
-                        val message = "Incomplete expression: call to ${callee.descriptor} " +
+                        val message = "Incomplete expression: call to ${callee.render()} " +
                                 "has no argument at index ${parameter.index}"
                         throw Error(message)
                     }

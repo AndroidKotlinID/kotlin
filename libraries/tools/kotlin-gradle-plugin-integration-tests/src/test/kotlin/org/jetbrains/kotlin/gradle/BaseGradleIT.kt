@@ -28,7 +28,7 @@ abstract class BaseGradleIT {
 
     protected var workingDir = File(".")
 
-    protected open fun defaultBuildOptions(): BuildOptions = BuildOptions(withDaemon = true)
+    internal open fun defaultBuildOptions(): BuildOptions = BuildOptions(withDaemon = true)
 
     open val defaultGradleVersion: GradleVersionRequired
         get() = GradleVersionRequired.None
@@ -426,6 +426,18 @@ abstract class BaseGradleIT {
         return this
     }
 
+    fun CompiledProject.assertSingleFileExists(
+        directory: String = "",
+        filePath: String = ""
+    ): CompiledProject {
+        val directoryFile = fileInWorkingDir(directory)
+        assertTrue(
+            directoryFile.listFiles()?.size == 1,
+            "[$directory] should contain only single file"
+        )
+        return assertFileExists("$directory/$filePath")
+    }
+
     fun CompiledProject.assertFileExists(path: String = ""): CompiledProject {
         assertTrue(fileInWorkingDir(path).exists(), "The file [$path] does not exist.")
         return this
@@ -479,6 +491,12 @@ abstract class BaseGradleIT {
         }
     }
 
+    fun CompiledProject.assertTasksExecutedByPrefix(taskPrefixes: Iterable<String>) {
+        for (prefix in taskPrefixes) {
+            assertContainsRegex("(Executing actions for task|Executing task) '$prefix\\w*'".toRegex())
+        }
+    }
+
     fun CompiledProject.assertTasksExecuted(vararg tasks: String) {
         assertTasksExecuted(tasks.toList())
     }
@@ -521,6 +539,18 @@ abstract class BaseGradleIT {
         }
     }
 
+    fun CompiledProject.assertTasksRegisteredByPrefix(taskPrefixes: Iterable<String>) {
+        for (prefix in taskPrefixes) {
+            assertContainsRegex("'Register task $prefix\\w*'".toRegex())
+        }
+    }
+
+    fun CompiledProject.assertTasksNotRegisteredByPrefix(taskPrefixes: Iterable<String>) {
+        for (prefix in taskPrefixes) {
+            assertNotContains("'Register task $prefix\\w*'".toRegex())
+        }
+    }
+
     fun CompiledProject.assertTasksNotRealized(vararg tasks: String) {
         for (task in tasks) {
             assertNotContains("'Realize task $task'")
@@ -535,6 +565,12 @@ abstract class BaseGradleIT {
     fun CompiledProject.assertTasksSkipped(vararg tasks: String) {
         for (task in tasks) {
             assertContains("Skipping task '$task'")
+        }
+    }
+
+    fun CompiledProject.assertTasksSkippedByPrefix(taskPrefixes: Iterable<String>) {
+        for (prefix in taskPrefixes) {
+            assertContainsRegex("Skipping task '$prefix\\w*'".toRegex())
         }
     }
 

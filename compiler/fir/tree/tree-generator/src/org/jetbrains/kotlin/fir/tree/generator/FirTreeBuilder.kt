@@ -23,32 +23,34 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val declarationStatus = element("DeclarationStatus", Declaration)
     val resolvedDeclarationStatus = element("ResolvedDeclarationStatus", Declaration, declarationStatus)
 
+    val controlFlowGraphOwner = element("ControlFlowGraphOwner", Declaration)
+
     val statement = element("Statement", Expression, annotationContainer)
     val expression = element("Expression", Expression, statement)
     val declaration = element("Declaration", Declaration)
     val annotatedDeclaration = element("AnnotatedDeclaration", Declaration, declaration, annotationContainer)
-    val anonymousInitializer = element("AnonymousInitializer", Declaration, declaration, symbolOwner)
+    val anonymousInitializer = element("AnonymousInitializer", Declaration, declaration, symbolOwner, controlFlowGraphOwner)
     val typedDeclaration = element("TypedDeclaration", Declaration, annotatedDeclaration)
     val callableDeclaration = element("CallableDeclaration", Declaration, typedDeclaration, symbolOwner)
     val typeParameterRef = element("TypeParameterRef", Declaration)
     val typeParameter = element("TypeParameter", Declaration, typeParameterRef, annotatedDeclaration, symbolOwner)
     val typeParameterRefsOwner = element("TypeParameterRefsOwner", Declaration)
     val typeParametersOwner = element("TypeParametersOwner", Declaration, typeParameterRefsOwner)
-    val memberDeclaration = element("MemberDeclaration", Declaration, annotatedDeclaration)
+    val memberDeclaration = element("MemberDeclaration", Declaration, annotatedDeclaration, typeParameterRefsOwner)
     val callableMemberDeclaration = element("CallableMemberDeclaration", Declaration, callableDeclaration, memberDeclaration)
 
     val variable = element("Variable", Declaration, callableDeclaration, annotatedDeclaration, statement)
-    val valueParameter = element("ValueParameter", Declaration, variable)
-    val property = element("Property", Declaration, variable, typeParametersOwner, callableMemberDeclaration)
+    val valueParameter = element("ValueParameter", Declaration, variable, controlFlowGraphOwner)
+    val property = element("Property", Declaration, variable, typeParametersOwner, controlFlowGraphOwner, callableMemberDeclaration)
     val field = element("Field", Declaration, variable, typeParametersOwner, callableMemberDeclaration)
     val enumEntry = element("EnumEntry", Declaration, variable, callableMemberDeclaration)
 
     val classLikeDeclaration = element("ClassLikeDeclaration", Declaration, annotatedDeclaration, statement, symbolOwner)
     val klass = element("Class", Declaration, classLikeDeclaration, statement, typeParameterRefsOwner)
-    val regularClass = element("RegularClass", Declaration, memberDeclaration, typeParameterRefsOwner, klass)
+    val regularClass = element("RegularClass", Declaration, memberDeclaration, typeParameterRefsOwner, controlFlowGraphOwner, klass)
     val typeAlias = element("TypeAlias", Declaration, classLikeDeclaration, memberDeclaration, typeParametersOwner)
 
-    val function = element("Function", Declaration, callableDeclaration, targetElement, typeParameterRefsOwner, statement)
+    val function = element("Function", Declaration, callableDeclaration, targetElement, typeParameterRefsOwner, controlFlowGraphOwner, statement)
 
     val contractDescriptionOwner = element("ContractDescriptionOwner", Declaration)
     val simpleFunction = element("SimpleFunction", Declaration, function, callableMemberDeclaration, contractDescriptionOwner, typeParametersOwner)
@@ -57,7 +59,7 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val file = element("File", Declaration, annotatedDeclaration)
 
     val anonymousFunction = element("AnonymousFunction", Declaration, function, expression, typeParametersOwner)
-    val anonymousObject = element("AnonymousObject", Declaration, klass, expression)
+    val anonymousObject = element("AnonymousObject", Declaration, klass, controlFlowGraphOwner, expression)
 
     val diagnosticHolder = element("DiagnosticHolder", Diagnostics)
 
@@ -89,12 +91,14 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val qualifiedAccessWithoutCallee = element("QualifiedAccessWithoutCallee", Expression, statement)
     val qualifiedAccess = element("QualifiedAccess", Expression, qualifiedAccessWithoutCallee, resolvable)
     val checkNotNullCall = element("CheckNotNullCall", Expression, expression, call, resolvable)
+    val elvisExpression = element("ElvisExpression", Expression, expression, resolvable)
 
     val arrayOfCall = element("ArrayOfCall", Expression, expression, call)
     val arraySetCall = element("AugmentedArraySetCall", Expression, statement)
     val classReferenceExpression = element("ClassReferenceExpression", Expression, expression)
     val errorExpression = element("ErrorExpression", Expression, expression, diagnosticHolder)
     val errorFunction = element("ErrorFunction", Declaration, function, diagnosticHolder, typeParametersOwner)
+    val errorProperty = element("ErrorProperty", Declaration, variable, diagnosticHolder, typeParametersOwner)
     val qualifiedAccessExpression = element("QualifiedAccessExpression", Expression, expression, qualifiedAccess)
     val functionCall = element("FunctionCall", Expression, qualifiedAccessExpression, call)
     val delegatedConstructorCall = element("DelegatedConstructorCall", Expression, resolvable, call)

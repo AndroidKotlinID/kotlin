@@ -22,14 +22,12 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.declarations.builder.*
-import org.jetbrains.kotlin.fir.inferenceContext
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.serialization.FirElementSerializer
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousFunctionSymbol
-import org.jetbrains.kotlin.fir.types.ConeKotlinErrorType
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
-import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.coneTypeUnsafe
+import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrFunction
@@ -61,7 +59,7 @@ class FirJvmClassCodegen(
             else -> null
         }
 
-    private val approximator = object : AbstractTypeApproximator(session.inferenceContext) {
+    private val approximator = object : AbstractTypeApproximator(session.typeContext) {
         override fun createErrorType(message: String): SimpleTypeMarker {
             return ConeKotlinErrorType(message)
         }
@@ -72,9 +70,9 @@ class FirJvmClassCodegen(
         conf: TypeApproximatorConfiguration = TypeApproximatorConfiguration.PublicDeclaration
     ): FirTypeRef {
         val approximatedType = if (toSuper)
-            approximator.approximateToSuperType(this.coneTypeUnsafe(), conf)
+            approximator.approximateToSuperType(coneType, conf)
         else
-            approximator.approximateToSubType(this.coneTypeUnsafe(), conf)
+            approximator.approximateToSubType(coneType, conf)
         return withReplacedConeType(approximatedType as? ConeKotlinType)
     }
 
@@ -96,6 +94,7 @@ class FirJvmClassCodegen(
         }
     }
 
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun generateKotlinMetadataAnnotation() {
 
         val localDelegatedProperties = (irClass.attributeOwnerId as? IrClass)?.let(context.localDelegatedProperties::get)

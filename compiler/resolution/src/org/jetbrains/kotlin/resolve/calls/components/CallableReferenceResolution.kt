@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.resolve.calls.components
 
 import org.jetbrains.kotlin.builtins.*
+import org.jetbrains.kotlin.config.ApiVersion
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
@@ -20,13 +21,11 @@ import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind.DISPATCH_RE
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind.EXTENSION_RECEIVER
 import org.jetbrains.kotlin.resolve.calls.tower.*
 import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
+import org.jetbrains.kotlin.resolve.descriptorUtil.isCompanionObject
 import org.jetbrains.kotlin.resolve.scopes.receivers.DetailedReceiver
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValueWithSmartCastInfo
-import org.jetbrains.kotlin.types.ErrorUtils
-import org.jetbrains.kotlin.types.KotlinType
-import org.jetbrains.kotlin.types.UnwrappedType
-import org.jetbrains.kotlin.types.Variance
+import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.checker.captureFromExpression
 import org.jetbrains.kotlin.types.expressions.CoercionStrategy
 import org.jetbrains.kotlin.types.typeUtil.immediateSupertypes
@@ -146,13 +145,13 @@ fun ConstraintSystemOperation.checkCallableReference(
 
     val toFreshSubstitutor = createToFreshVariableSubstitutorAndAddInitialConstraints(candidateDescriptor, this)
 
-    if (expectedType != null) {
-        addSubtypeConstraint(toFreshSubstitutor.safeSubstitute(reflectionCandidateType), expectedType, position)
-    }
-
     if (!ErrorUtils.isError(candidateDescriptor)) {
         addReceiverConstraint(toFreshSubstitutor, dispatchReceiver, candidateDescriptor.dispatchReceiverParameter, position)
         addReceiverConstraint(toFreshSubstitutor, extensionReceiver, candidateDescriptor.extensionReceiverParameter, position)
+    }
+
+    if (expectedType != null && !hasContradiction) {
+        addSubtypeConstraint(toFreshSubstitutor.safeSubstitute(reflectionCandidateType), expectedType, position)
     }
 
     val invisibleMember = Visibilities.findInvisibleMember(
@@ -187,7 +186,8 @@ class CallableReferencesCandidateFactory(
     val scopeTower: ImplicitScopeTower,
     val compatibilityChecker: ((ConstraintSystemOperation) -> Unit) -> Unit,
     val expectedType: UnwrappedType?,
-    private val csBuilder: ConstraintSystemOperation
+    private val csBuilder: ConstraintSystemOperation,
+    private val resolutionCallbacks: KotlinResolutionCallbacks
 ) : CandidateFactory<CallableReferenceCandidate> {
 
     fun createCallableProcessor(explicitReceiver: DetailedReceiver?) =
@@ -213,8 +213,25 @@ class CallableReferencesCandidateFactory(
             callComponents.builtIns
         )
 
-        if (needCompatibilityWarning(callableReferenceAdaptation)) {
-            diagnostics.add(LowerPriorityToPreserveCompatibility)
+        fun createReferenceCandidate(): CallableReferenceCandidate =
+            CallableReferenceCandidate(
+                candidateDescriptor, dispatchCallableReceiver, extensionCallableReceiver,
+                explicitReceiverKind, reflectionCandidateType, callableReferenceAdaptation, diagnostics
+            )
+
+        if (callComponents.statelessCallbacks.isHiddenInResolution(candidateDescriptor, argument, resolutionCallbacks)) {
+            diagnostics.add(HiddenDescriptor)
+            return createReferenceCandidate()
+        }
+
+        if (needCompatibilityResolveForCallableReference(callableReferenceAdaptation, candidateDescriptor)) {
+            markCandidateForCompatibilityResolve(diagnostics)
+        }
+
+        if (callableReferenceAdaptation != null && expectedType != null && hasNonTrivialAdaptation(callableReferenceAdaptation)) {
+            if (!expectedType.isFunctionType && !expectedType.isSuspendFunctionType) { // expectedType has some reflection type
+                diagnostics.add(AdaptedCallableReferenceIsUsedWithReflection(argument))
+            }
         }
 
         if (callableReferenceAdaptation != null &&
@@ -255,20 +272,26 @@ class CallableReferencesCandidateFactory(
             )
         }
 
-        return CallableReferenceCandidate(
-            candidateDescriptor, dispatchCallableReceiver, extensionCallableReceiver,
-            explicitReceiverKind, reflectionCandidateType, callableReferenceAdaptation, diagnostics
-        )
+        return createReferenceCandidate()
     }
 
-    private fun needCompatibilityWarning(callableReferenceAdaptation: CallableReferenceAdaptation?): Boolean {
+    private fun needCompatibilityResolveForCallableReference(
+        callableReferenceAdaptation: CallableReferenceAdaptation?,
+        candidate: CallableDescriptor
+    ): Boolean {
+        // KT-13934: reference to companion object member via class name
+        if (candidate.containingDeclaration.isCompanionObject() && argument.lhsResult is LHSResult.Type) return true
+
         if (callableReferenceAdaptation == null) return false
 
-        return callableReferenceAdaptation.defaults != 0 ||
+        return hasNonTrivialAdaptation(callableReferenceAdaptation)
+    }
+
+    private fun hasNonTrivialAdaptation(callableReferenceAdaptation: CallableReferenceAdaptation) =
+        callableReferenceAdaptation.defaults != 0 ||
                 callableReferenceAdaptation.suspendConversionStrategy != SuspendConversionStrategy.NO_CONVERSION ||
                 callableReferenceAdaptation.coercionStrategy != CoercionStrategy.NO_COERCION ||
                 callableReferenceAdaptation.mappedArguments.values.any { it is ResolvedCallArgument.VarargArgument }
-    }
 
     private enum class VarargMappingState {
         UNMAPPED, MAPPED_WITH_PLAIN_ARGS, MAPPED_WITH_ARRAY
@@ -280,12 +303,19 @@ class CallableReferencesCandidateFactory(
         unboundReceiverCount: Int,
         builtins: KotlinBuiltIns
     ): CallableReferenceAdaptation? {
+        if (callComponents.languageVersionSettings.apiVersion < ApiVersion.KOTLIN_1_4) return null
+
+        if (expectedType == null) return null
+
+        // Do not adapt references against KCallable type as it's impossible to map defaults/vararg to absent parameters of KCallable
+        if (ReflectionTypes.hasKCallableTypeFqName(expectedType)) return null
+
         val inputOutputTypes = extractInputOutputTypesFromCallableReferenceExpectedType(expectedType) ?: return null
 
         val expectedArgumentCount = inputOutputTypes.inputTypes.size - unboundReceiverCount
         if (expectedArgumentCount < 0) return null
 
-        val fakeArguments = (0 until expectedArgumentCount).map { FakeKotlinCallArgumentForCallableReference(it) }
+        val fakeArguments = createFakeArgumentsForReference(descriptor, expectedArgumentCount, inputOutputTypes, unboundReceiverCount)
         val argumentMapping =
             callComponents.argumentsToParametersMapper.mapArguments(fakeArguments, externalArgument = null, descriptor = descriptor)
         if (argumentMapping.diagnostics.any { !it.candidateApplicability.isSuccess }) return null
@@ -378,6 +408,36 @@ class CallableReferencesCandidateFactory(
             adaptedArguments,
             suspendConversionStrategy
         )
+    }
+
+    private fun createFakeArgumentsForReference(
+        descriptor: FunctionDescriptor,
+        expectedArgumentCount: Int,
+        inputOutputTypes: InputOutputTypes,
+        unboundReceiverCount: Int
+    ): List<FakeKotlinCallArgumentForCallableReference> {
+        var afterVararg = false
+        var varargComponentType: UnwrappedType? = null
+        var vararg = false
+        return (0 until expectedArgumentCount).map { index ->
+            val inputType = inputOutputTypes.inputTypes.getOrNull(index + unboundReceiverCount)
+            if (vararg && varargComponentType != inputType) {
+                afterVararg = true
+            }
+
+            val valueParameter = descriptor.valueParameters.getOrNull(index)
+            val name =
+                if (afterVararg && valueParameter?.declaresDefaultValue() == true)
+                    valueParameter.name
+                else
+                    null
+
+            if (valueParameter?.isVararg == true) {
+                varargComponentType = inputType
+                vararg = true
+            }
+            FakeKotlinCallArgumentForCallableReference(index, name)
+        }
     }
 
     private fun varargParameterTypeByExpectedParameter(

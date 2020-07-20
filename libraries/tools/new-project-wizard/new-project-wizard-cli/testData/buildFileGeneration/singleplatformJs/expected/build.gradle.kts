@@ -12,11 +12,23 @@ repositories {
 }
 dependencies {
     testImplementation(kotlin("test-js"))
-    implementation(kotlin("stdlib-js"))
 }
 kotlin {
     js {
-        browser {}
-        binaries.executable()
+        browser {
+            binaries.executable()
+            webpackTask {
+                cssSupport.enabled = true
+            }
+            runTask {
+                cssSupport.enabled = true
+            }
+            testTask {
+                useKarma {
+                    useChromeHeadless()
+                    webpackConfig.cssSupport.enabled = true
+                }
+            }
+        }
     }
 }

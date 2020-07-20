@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.FirTargetElement
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirResolvedDeclarationStatus
+import org.jetbrains.kotlin.fir.declarations.FirControlFlowGraphOwner
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
@@ -75,11 +76,13 @@ import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessWithoutCallee
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirCheckNotNullCall
+import org.jetbrains.kotlin.fir.expressions.FirElvisExpression
 import org.jetbrains.kotlin.fir.expressions.FirArrayOfCall
 import org.jetbrains.kotlin.fir.expressions.FirAugmentedArraySetCall
 import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
 import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
 import org.jetbrains.kotlin.fir.declarations.FirErrorFunction
+import org.jetbrains.kotlin.fir.declarations.FirErrorProperty
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
@@ -156,6 +159,8 @@ abstract class FirVisitor<out R, in D> {
     open fun visitDeclarationStatus(declarationStatus: FirDeclarationStatus, data: D): R  = visitElement(declarationStatus, data)
 
     open fun visitResolvedDeclarationStatus(resolvedDeclarationStatus: FirResolvedDeclarationStatus, data: D): R  = visitElement(resolvedDeclarationStatus, data)
+
+    open fun visitControlFlowGraphOwner(controlFlowGraphOwner: FirControlFlowGraphOwner, data: D): R  = visitElement(controlFlowGraphOwner, data)
 
     open fun visitStatement(statement: FirStatement, data: D): R  = visitElement(statement, data)
 
@@ -273,6 +278,8 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitCheckNotNullCall(checkNotNullCall: FirCheckNotNullCall, data: D): R  = visitElement(checkNotNullCall, data)
 
+    open fun visitElvisExpression(elvisExpression: FirElvisExpression, data: D): R  = visitElement(elvisExpression, data)
+
     open fun visitArrayOfCall(arrayOfCall: FirArrayOfCall, data: D): R  = visitElement(arrayOfCall, data)
 
     open fun visitAugmentedArraySetCall(augmentedArraySetCall: FirAugmentedArraySetCall, data: D): R  = visitElement(augmentedArraySetCall, data)
@@ -282,6 +289,8 @@ abstract class FirVisitor<out R, in D> {
     open fun visitErrorExpression(errorExpression: FirErrorExpression, data: D): R  = visitElement(errorExpression, data)
 
     open fun visitErrorFunction(errorFunction: FirErrorFunction, data: D): R  = visitElement(errorFunction, data)
+
+    open fun visitErrorProperty(errorProperty: FirErrorProperty, data: D): R  = visitElement(errorProperty, data)
 
     open fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: D): R  = visitElement(qualifiedAccessExpression, data)
 

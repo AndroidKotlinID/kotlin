@@ -197,8 +197,8 @@ public fun CharSequence.random(random: Random): Char {
 /**
  * Returns a random character from this char sequence, or `null` if this char sequence is empty.
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
 public inline fun CharSequence.randomOrNull(): Char? {
     return randomOrNull(Random)
@@ -207,8 +207,8 @@ public inline fun CharSequence.randomOrNull(): Char? {
 /**
  * Returns a random character from this char sequence using the specified source of randomness, or `null` if this char sequence is empty.
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun CharSequence.randomOrNull(random: Random): Char? {
     if (isEmpty())
         return null
@@ -786,6 +786,39 @@ public inline fun <R> CharSequence.flatMap(transform: (Char) -> Iterable<R>): Li
 }
 
 /**
+ * Returns a single list of all elements yielded from results of [transform] function being invoked on each character
+ * and its index in the original char sequence.
+ * 
+ * @sample samples.collections.Collections.Transformations.flatMapIndexed
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedIterable")
+@kotlin.internal.InlineOnly
+public inline fun <R> CharSequence.flatMapIndexed(transform: (index: Int, Char) -> Iterable<R>): List<R> {
+    return flatMapIndexedTo(ArrayList<R>(), transform)
+}
+
+/**
+ * Appends all elements yielded from results of [transform] function being invoked on each character
+ * and its index in the original char sequence, to the given [destination].
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedIterableTo")
+@kotlin.internal.InlineOnly
+public inline fun <R, C : MutableCollection<in R>> CharSequence.flatMapIndexedTo(destination: C, transform: (index: Int, Char) -> Iterable<R>): C {
+    var index = 0
+    for (element in this) {
+        val list = transform(index++, element)
+        destination.addAll(list)
+    }
+    return destination
+}
+
+/**
  * Appends all elements yielded from results of [transform] function being invoked on each character of original char sequence, to the given [destination].
  */
 public inline fun <R, C : MutableCollection<in R>> CharSequence.flatMapTo(destination: C, transform: (Char) -> Iterable<R>): C {
@@ -1088,25 +1121,25 @@ public inline fun CharSequence.forEachIndexed(action: (index: Int, Char) -> Unit
     for (item in this) action(index++, item)
 }
 
-/**
- * Returns the largest character or `null` if there are no characters.
- */
+@Deprecated("Use maxOrNull instead.", ReplaceWith("maxOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 public fun CharSequence.max(): Char? {
-    if (isEmpty()) return null
-    var max = this[0]
-    for (i in 1..lastIndex) {
-        val e = this[i]
-        if (max < e) max = e
-    }
-    return max
+    return maxOrNull()
+}
+
+@Deprecated("Use maxByOrNull instead.", ReplaceWith("maxByOrNull(selector)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public inline fun <R : Comparable<R>> CharSequence.maxBy(selector: (Char) -> R): Char? {
+    return maxByOrNull(selector)
 }
 
 /**
  * Returns the first character yielding the largest value of the given function or `null` if there are no characters.
  * 
- * @sample samples.collections.Collections.Aggregates.maxBy
+ * @sample samples.collections.Collections.Aggregates.maxByOrNull
  */
-public inline fun <R : Comparable<R>> CharSequence.maxBy(selector: (Char) -> R): Char? {
+@SinceKotlin("1.4")
+public inline fun <R : Comparable<R>> CharSequence.maxByOrNull(selector: (Char) -> R): Char? {
     if (isEmpty()) return null
     var maxElem = this[0]
     val lastIndex = this.lastIndex
@@ -1292,9 +1325,30 @@ public inline fun <R> CharSequence.maxOfWithOrNull(comparator: Comparator<in R>,
 }
 
 /**
+ * Returns the largest character or `null` if there are no characters.
+ */
+@SinceKotlin("1.4")
+public fun CharSequence.maxOrNull(): Char? {
+    if (isEmpty()) return null
+    var max = this[0]
+    for (i in 1..lastIndex) {
+        val e = this[i]
+        if (max < e) max = e
+    }
+    return max
+}
+
+@Deprecated("Use maxWithOrNull instead.", ReplaceWith("maxWithOrNull(comparator)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public fun CharSequence.maxWith(comparator: Comparator<in Char>): Char? {
+    return maxWithOrNull(comparator)
+}
+
+/**
  * Returns the first character having the largest value according to the provided [comparator] or `null` if there are no characters.
  */
-public fun CharSequence.maxWith(comparator: Comparator<in Char>): Char? {
+@SinceKotlin("1.4")
+public fun CharSequence.maxWithOrNull(comparator: Comparator<in Char>): Char? {
     if (isEmpty()) return null
     var max = this[0]
     for (i in 1..lastIndex) {
@@ -1304,25 +1358,25 @@ public fun CharSequence.maxWith(comparator: Comparator<in Char>): Char? {
     return max
 }
 
-/**
- * Returns the smallest character or `null` if there are no characters.
- */
+@Deprecated("Use minOrNull instead.", ReplaceWith("minOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 public fun CharSequence.min(): Char? {
-    if (isEmpty()) return null
-    var min = this[0]
-    for (i in 1..lastIndex) {
-        val e = this[i]
-        if (min > e) min = e
-    }
-    return min
+    return minOrNull()
+}
+
+@Deprecated("Use minByOrNull instead.", ReplaceWith("minByOrNull(selector)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public inline fun <R : Comparable<R>> CharSequence.minBy(selector: (Char) -> R): Char? {
+    return minByOrNull(selector)
 }
 
 /**
  * Returns the first character yielding the smallest value of the given function or `null` if there are no characters.
  * 
- * @sample samples.collections.Collections.Aggregates.minBy
+ * @sample samples.collections.Collections.Aggregates.minByOrNull
  */
-public inline fun <R : Comparable<R>> CharSequence.minBy(selector: (Char) -> R): Char? {
+@SinceKotlin("1.4")
+public inline fun <R : Comparable<R>> CharSequence.minByOrNull(selector: (Char) -> R): Char? {
     if (isEmpty()) return null
     var minElem = this[0]
     val lastIndex = this.lastIndex
@@ -1508,9 +1562,30 @@ public inline fun <R> CharSequence.minOfWithOrNull(comparator: Comparator<in R>,
 }
 
 /**
+ * Returns the smallest character or `null` if there are no characters.
+ */
+@SinceKotlin("1.4")
+public fun CharSequence.minOrNull(): Char? {
+    if (isEmpty()) return null
+    var min = this[0]
+    for (i in 1..lastIndex) {
+        val e = this[i]
+        if (min > e) min = e
+    }
+    return min
+}
+
+@Deprecated("Use minWithOrNull instead.", ReplaceWith("minWithOrNull(comparator)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public fun CharSequence.minWith(comparator: Comparator<in Char>): Char? {
+    return minWithOrNull(comparator)
+}
+
+/**
  * Returns the first character having the smallest value according to the provided [comparator] or `null` if there are no characters.
  */
-public fun CharSequence.minWith(comparator: Comparator<in Char>): Char? {
+@SinceKotlin("1.4")
+public fun CharSequence.minWithOrNull(comparator: Comparator<in Char>): Char? {
     if (isEmpty()) return null
     var min = this[0]
     for (i in 1..lastIndex) {
@@ -1635,8 +1710,8 @@ public inline fun CharSequence.reduceIndexedOrNull(operation: (index: Int, acc: 
  * 
  * @sample samples.collections.Collections.Aggregates.reduceOrNull
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun CharSequence.reduceOrNull(operation: (acc: Char, Char) -> Char): Char? {
     if (isEmpty())
         return null
@@ -1726,8 +1801,8 @@ public inline fun CharSequence.reduceRightIndexedOrNull(operation: (index: Int, 
  * 
  * @sample samples.collections.Collections.Aggregates.reduceRightOrNull
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun CharSequence.reduceRightOrNull(operation: (Char, acc: Char) -> Char): Char? {
     var index = lastIndex
     if (index < 0) return null
@@ -1843,8 +1918,8 @@ public inline fun CharSequence.runningReduceIndexed(operation: (index: Int, acc:
  * 
  * @sample samples.collections.Collections.Aggregates.scan
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <R> CharSequence.scan(initial: R, operation: (acc: R, Char) -> R): List<R> {
     return runningFold(initial, operation)
 }
@@ -1861,20 +1936,20 @@ public inline fun <R> CharSequence.scan(initial: R, operation: (acc: R, Char) ->
  * 
  * @sample samples.collections.Collections.Aggregates.scan
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <R> CharSequence.scanIndexed(initial: R, operation: (index: Int, acc: R, Char) -> R): List<R> {
     return runningFoldIndexed(initial, operation)
 }
 
-@Deprecated("Use runningReduce instead.", ReplaceWith("runningReduce(operation)"))
+@Deprecated("Use runningReduce instead.", ReplaceWith("runningReduce(operation)"), level = DeprecationLevel.ERROR)
 @SinceKotlin("1.3")
 @ExperimentalStdlibApi
 public inline fun CharSequence.scanReduce(operation: (acc: Char, Char) -> Char): List<Char> {
     return runningReduce(operation)
 }
 
-@Deprecated("Use runningReduceIndexed instead.", ReplaceWith("runningReduceIndexed(operation)"))
+@Deprecated("Use runningReduceIndexed instead.", ReplaceWith("runningReduceIndexed(operation)"), level = DeprecationLevel.ERROR)
 @SinceKotlin("1.3")
 @ExperimentalStdlibApi
 public inline fun CharSequence.scanReduceIndexed(operation: (index: Int, acc: Char, Char) -> Char): List<Char> {

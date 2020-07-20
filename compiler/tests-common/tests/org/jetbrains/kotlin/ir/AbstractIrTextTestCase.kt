@@ -179,6 +179,7 @@ abstract class AbstractIrTextTestCase : AbstractIrGeneratorTestCase() {
             element.acceptChildrenVoid(this)
         }
 
+        @OptIn(ObsoleteDescriptorBasedAPI::class)
         override fun visitDeclaration(declaration: IrDeclaration) {
             if (declaration is IrSymbolOwner) {
                 declaration.symbol.checkBinding("decl", declaration)
@@ -205,18 +206,11 @@ abstract class AbstractIrTextTestCase : AbstractIrGeneratorTestCase() {
             visitDeclaration(declaration)
 
             require((declaration.origin == IrDeclarationOrigin.FAKE_OVERRIDE) == declaration.isFakeOverride) {
-                "${declaration.descriptor}: origin: ${declaration.origin}; isFakeOverride: ${declaration.isFakeOverride}"
+                "${declaration.render()}: origin: ${declaration.origin}; isFakeOverride: ${declaration.isFakeOverride}"
             }
         }
 
-        override fun visitField(declaration: IrField) {
-            visitDeclaration(declaration)
-
-            require((declaration.origin == IrDeclarationOrigin.FAKE_OVERRIDE) == declaration.isFakeOverride) {
-                "${declaration.descriptor}: origin: ${declaration.origin}; isFakeOverride: ${declaration.isFakeOverride}"
-            }
-        }
-
+        @OptIn(ObsoleteDescriptorBasedAPI::class)
         override fun visitFunction(declaration: IrFunction) {
             visitDeclaration(declaration)
 
@@ -257,7 +251,7 @@ abstract class AbstractIrTextTestCase : AbstractIrGeneratorTestCase() {
             visitFunction(declaration)
 
             require((declaration.origin == IrDeclarationOrigin.FAKE_OVERRIDE) == declaration.isFakeOverride) {
-                "${declaration.descriptor}: origin: ${declaration.origin}; isFakeOverride: ${declaration.isFakeOverride}"
+                "${declaration.render()}: origin: ${declaration.origin}; isFakeOverride: ${declaration.isFakeOverride}"
             }
         }
 
@@ -301,12 +295,14 @@ abstract class AbstractIrTextTestCase : AbstractIrGeneratorTestCase() {
             }
         }
 
+        @OptIn(ObsoleteDescriptorBasedAPI::class)
         override fun visitClass(declaration: IrClass) {
             visitDeclaration(declaration)
 
             checkTypeParameters(declaration.descriptor, declaration, declaration.descriptor.declaredTypeParameters)
         }
 
+        @ObsoleteDescriptorBasedAPI
         private fun checkTypeParameters(
             descriptor: DeclarationDescriptor,
             declaration: IrTypeParametersContainer,

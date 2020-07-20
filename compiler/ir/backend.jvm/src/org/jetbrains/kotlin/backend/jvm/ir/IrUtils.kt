@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.backend.jvm.codegen.isInlineOnly
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmDeclarationFactory
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
-import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.codegen.inline.coroutines.FOR_INLINE_SUFFIX
 import org.jetbrains.kotlin.config.JvmDefaultMode
 import org.jetbrains.kotlin.descriptors.ClassKind
@@ -26,6 +25,7 @@ import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.Scope
 import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyClass
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
@@ -44,7 +44,7 @@ import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_FQ_NAME
-import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedClassDescriptor
+import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_NO_COMPATIBILITY_FQ_NAME
 
 /**
  * Perform as much type erasure as is significant for JVM signature generation.
@@ -156,13 +156,16 @@ fun IrSimpleFunction.isCompiledToJvmDefault(jvmDefaultMode: JvmDefaultMode): Boo
     assert(!isFakeOverride && parentAsClass.isInterface && modality != Modality.ABSTRACT) {
         "`isCompiledToJvmDefault` should be called on non-fakeoverrides and non-abstract methods from interfaces ${ir2string(this)}"
     }
+    if (origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB) return false
     if (hasJvmDefault()) return true
-    val parentDescriptor = propertyIfAccessor.parentAsClass.descriptor
-    if (parentDescriptor !is DeserializedClassDescriptor) return jvmDefaultMode.forAllMethodsWithBody
-    return JvmProtoBufUtil.isNewPlaceForBodyGeneration(parentDescriptor.classProto)
+    (parentAsClass as? IrLazyClass)?.classProto?.let {
+        return JvmProtoBufUtil.isNewPlaceForBodyGeneration(it)
+    }
+    return jvmDefaultMode.forAllMethodsWithBody
 }
 
 fun IrFunction.hasJvmDefault(): Boolean = propertyIfAccessor.hasAnnotation(JVM_DEFAULT_FQ_NAME)
+fun IrClass.hasJvmDefaultNoCompatibilityAnnotation(): Boolean = hasAnnotation(JVM_DEFAULT_NO_COMPATIBILITY_FQ_NAME)
 fun IrFunction.hasPlatformDependent(): Boolean = propertyIfAccessor.hasAnnotation(PLATFORM_DEPENDENT_ANNOTATION_FQ_NAME)
 
 fun IrFunction.getJvmVisibilityOfDefaultArgumentStub() =
@@ -278,14 +281,10 @@ fun createDelegatingCallWithPlaceholderTypeArguments(existingCall: IrCall, redir
         copyFromWithPlaceholderTypeArguments(existingCall, irBuiltIns)
     }
 
-fun IrFunctionAccessExpression.copyFromWithPlaceholderTypeArguments(existingCall: IrFunctionAccessExpression, irBuiltIns: IrBuiltIns) {
-    copyValueArgumentsFrom(
-        existingCall,
-        existingCall.symbol.owner,
-        this.symbol.owner,
-        receiversAsArguments = true,
-        argumentsAsReceivers = false,
-    )
+fun IrMemberAccessExpression<IrFunctionSymbol>.copyFromWithPlaceholderTypeArguments(
+    existingCall: IrMemberAccessExpression<IrFunctionSymbol>, irBuiltIns: IrBuiltIns
+) {
+    copyValueArgumentsFrom(existingCall, this.symbol.owner, receiversAsArguments = true, argumentsAsReceivers = false)
     var offset = 0
     existingCall.symbol.owner.parentAsClass.typeParameters.forEach { _ ->
         putTypeArgument(offset++, createPlaceholderAnyNType(irBuiltIns))
@@ -338,7 +337,11 @@ fun IrProperty.needsAccessor(accessor: IrSimpleFunction): Boolean = when {
     // Properties in annotation classes become abstract methods named after the property.
     (parent as? IrClass)?.kind == ClassKind.ANNOTATION_CLASS -> true
     // @JvmField properties have no getters/setters
-    backingField?.hasAnnotation(JvmAbi.JVM_FIELD_ANNOTATION_FQ_NAME) == true -> false
+    resolveFakeOverride()?.backingField?.hasAnnotation(JvmAbi.JVM_FIELD_ANNOTATION_FQ_NAME) == true -> false
     // We do not produce default accessors for private fields
     else -> accessor.origin != IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR || !Visibilities.isPrivate(accessor.visibility)
 }
+
+val IrDeclaration.isStaticInlineClassReplacement: Boolean
+    get() = origin == JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_REPLACEMENT
+            || origin == JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_CONSTRUCTOR

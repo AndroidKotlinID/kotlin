@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.ir.util
 import org.jetbrains.kotlin.descriptors.ScriptDescriptor
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.*
 import org.jetbrains.kotlin.ir.expressions.*
@@ -47,6 +48,7 @@ interface SymbolRenamer {
     object DEFAULT : SymbolRenamer
 }
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 open class DeepCopyIrTreeWithSymbols(
     private val symbolRemapper: SymbolRemapper,
     private val typeRemapper: TypeRemapper,
@@ -89,7 +91,7 @@ open class DeepCopyIrTreeWithSymbols(
             declaration.files.transform()
         )
 
-    override fun visitExternalPackageFragment(declaration: IrExternalPackageFragment, data: Nothing?): IrExternalPackageFragment =
+    override fun visitExternalPackageFragment(declaration: IrExternalPackageFragment): IrExternalPackageFragment =
         IrExternalPackageFragmentImpl(
             symbolRemapper.getDeclaredExternalPackageFragment(declaration.symbol),
             symbolRenamer.getExternalPackageFragmentName(declaration.symbol)
@@ -163,7 +165,8 @@ open class DeepCopyIrTreeWithSymbols(
             isSuspend = declaration.isSuspend,
             isExpect = declaration.isExpect,
             isFakeOverride = declaration.isFakeOverride,
-            isOperator = declaration.isOperator
+            isOperator = declaration.isOperator,
+            isInfix = declaration.isInfix
         ).apply {
             overriddenSymbols = declaration.overriddenSymbols.map {
                 symbolRemapper.getReferencedFunction(it) as IrSimpleFunctionSymbol
@@ -243,12 +246,8 @@ open class DeepCopyIrTreeWithSymbols(
             isFinal = declaration.isFinal,
             isExternal = declaration.isExternal,
             isStatic = declaration.isStatic,
-            isFakeOverride = declaration.isFakeOverride
         ).apply {
             transformAnnotations(declaration)
-            overriddenSymbols = declaration.overriddenSymbols.map {
-                symbolRemapper.getReferencedField(it)
-            }
             initializer = declaration.initializer?.transform()
         }
 
@@ -309,7 +308,7 @@ open class DeepCopyIrTreeWithSymbols(
             declaration.superTypes.mapTo(superTypes) { it.remapType() }
         }
 
-    private fun copyTypeParameter(declaration: IrTypeParameter) =
+    private fun copyTypeParameter(declaration: IrTypeParameter): IrTypeParameter =
         IrTypeParameterImpl(
             declaration.startOffset, declaration.endOffset,
             mapDeclarationOrigin(declaration.origin),
@@ -507,7 +506,7 @@ open class DeepCopyIrTreeWithSymbols(
         }.copyAttributes(expression)
     }
 
-    private fun IrMemberAccessExpression.copyRemappedTypeArgumentsFrom(other: IrMemberAccessExpression) {
+    private fun IrMemberAccessExpression<*>.copyRemappedTypeArgumentsFrom(other: IrMemberAccessExpression<*>) {
         assert(typeArgumentsCount == other.typeArgumentsCount) {
             "Mismatching type arguments: $typeArgumentsCount vs ${other.typeArgumentsCount} "
         }
@@ -531,13 +530,13 @@ open class DeepCopyIrTreeWithSymbols(
         }.copyAttributes(expression)
     }
 
-    private fun <T : IrMemberAccessExpression> T.transformReceiverArguments(original: T): T =
+    private fun <T : IrMemberAccessExpression<*>> T.transformReceiverArguments(original: T): T =
         apply {
             dispatchReceiver = original.dispatchReceiver?.transform()
             extensionReceiver = original.extensionReceiver?.transform()
         }
 
-    private fun <T : IrMemberAccessExpression> T.transformValueArguments(original: T) {
+    private fun <T : IrMemberAccessExpression<*>> T.transformValueArguments(original: T) {
         transformReceiverArguments(original)
         for (i in 0 until original.valueArgumentsCount) {
             putValueArgument(i, original.getValueArgument(i)?.transform())

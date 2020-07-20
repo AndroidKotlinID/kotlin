@@ -33,32 +33,24 @@ class DebuggerConnection(
     val project: Project,
     val configuration: RunConfigurationBase<*>,
     val params: JavaParameters?,
-    val runnerSettings: DebuggingRunnerData?
-) : XDebuggerManagerListener {
-    var disposable: Disposable? = null
+    val runnerSettings: DebuggingRunnerData?,
+    modifyArgs: Boolean = true
+) : XDebuggerManagerListener, Disposable {
     var connection: MessageBusConnection? = null
     private val log by logger
 
     init {
-        if (params is JavaParameters) {
+        if (params is JavaParameters && modifyArgs) {
             // gradle related logic in KotlinGradleCoroutineDebugProjectResolver
             val kotlinxCoroutinesCore = params.classPath?.pathList?.firstOrNull { it.contains("kotlinx-coroutines-core") }
-            val kotlinxCoroutinesDebug = params.classPath?.pathList?.firstOrNull { it.contains("kotlinx-coroutines-debug") }
 
-            val mode = when {
-                kotlinxCoroutinesDebug != null -> {
-                    CoroutineDebuggerMode.VERSION_UP_TO_1_3_5
-                }
-                kotlinxCoroutinesCore != null -> {
-                    determineCoreVersionMode(kotlinxCoroutinesCore)
-                }
-                else -> CoroutineDebuggerMode.DISABLED
-            }
+            if (kotlinxCoroutinesCore != null) {
+                val mode = determineCoreVersionMode(kotlinxCoroutinesCore)
 
-            when (mode) {
-                CoroutineDebuggerMode.VERSION_1_3_6_AND_UP -> initializeCoroutineAgent(params, kotlinxCoroutinesCore)
-                CoroutineDebuggerMode.VERSION_UP_TO_1_3_5 -> initializeCoroutineAgent(params, kotlinxCoroutinesDebug)
-                else -> log.debug("CoroutineDebugger disabled.")
+                when (mode) {
+                    CoroutineDebuggerMode.VERSION_1_3_8_AND_UP -> initializeCoroutineAgent(params, kotlinxCoroutinesCore)
+                    else -> log.debug("CoroutineDebugger disabled.")
+                }
             }
         }
         connect()
@@ -67,11 +59,11 @@ class DebuggerConnection(
     private fun determineCoreVersionMode(kotlinxCoroutinesCore: String): CoroutineDebuggerMode {
         val regex = Regex(""".+\Wkotlinx-coroutines-core-(.+)?\.jar""")
         val matchResult = regex.matchEntire(kotlinxCoroutinesCore) ?: return CoroutineDebuggerMode.DISABLED
+        val versionToCompareTo = DefaultArtifactVersion("1.3.7-255")
 
-        val coroutinesCoreVersion = DefaultArtifactVersion(matchResult.groupValues[1])
-        val versionToCompareTo = DefaultArtifactVersion("1.3.5")
-        return if (versionToCompareTo < coroutinesCoreVersion)
-            CoroutineDebuggerMode.VERSION_1_3_6_AND_UP
+        val artifactVersion = DefaultArtifactVersion(matchResult.groupValues[1])
+        return if (artifactVersion >= versionToCompareTo)
+            CoroutineDebuggerMode.VERSION_1_3_8_AND_UP
         else
             CoroutineDebuggerMode.DISABLED
     }
@@ -88,21 +80,15 @@ class DebuggerConnection(
     override fun processStarted(debugProcess: XDebugProcess) {
         DebuggerInvocationUtil.swingInvokeLater(project) {
             if (debugProcess is JavaDebugProcess) {
-                disposable = registerXCoroutinesPanel(debugProcess.session)
+                registerXCoroutinesPanel(debugProcess.session)?.let {
+                    Disposer.register(this, it)
+                }
             }
         }
     }
 
     override fun processStopped(debugProcess: XDebugProcess) {
-        val rootDisposable = disposable
-        if (rootDisposable is Disposable && debugProcess is JavaDebugProcess && debugProcess.session.suspendContext is SuspendContextImpl) {
-            ManagerThreadExecutor(debugProcess).on(debugProcess.session.suspendContext).invoke {
-                Disposer.dispose(rootDisposable)
-                disposable = null
-            }
-        }
-        connection?.disconnect()
-        connection = null
+        Disposer.dispose(this)
     }
 
     private fun registerXCoroutinesPanel(session: XDebugSession): Disposable? {
@@ -120,10 +106,16 @@ class DebuggerConnection(
         val param = createContentParamProvider.createContentParams()
         return ui.createContent(param.id, param.component, param.displayName, param.icon, param.parentComponent)
     }
+
+    override fun dispose() {
+        connection?.disconnect()
+        connection = null
+    }
 }
 
 enum class CoroutineDebuggerMode {
     DISABLED,
     VERSION_UP_TO_1_3_5,
-    VERSION_1_3_6_AND_UP
+    VERSION_1_3_6_AND_UP,
+    VERSION_1_3_8_AND_UP,
 }

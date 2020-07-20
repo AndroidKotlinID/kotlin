@@ -18,11 +18,11 @@ dependencies {
     compileOnly(project(":js:js.translator"))
     compileOnly(project(":kotlin-util-klib-metadata"))
 
-    runtime(kotlinStdlib())
+    runtimeOnly(kotlinStdlib())
 
     testCompile(projectTests(":compiler:tests-common"))
     testCompile(commonDep("junit:junit"))
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0-1.4.0-dev-5730") { isTransitive = false }
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-jvm:0.20.0-1.4.0-rc-95") { isTransitive = false }
 
     testRuntimeOnly(intellijCoreDep()) { includeJars("intellij-core") }
 
@@ -46,3 +46,4 @@ projectTest(parallel = true) {
 }
 
 apply(from = "$rootDir/gradle/kotlinPluginPublication.gradle.kts")
+

@@ -64,9 +64,13 @@ import java.io.File
 abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
     companion object {
         val DUMP_CFG_DIRECTIVE = "DUMP_CFG"
+        val COMMON_COROUTINES_DIRECTIVE ="COMMON_COROUTINES_TEST"
 
         val TestFile.withDumpCfgDirective: Boolean
             get() = DUMP_CFG_DIRECTIVE in directives
+
+        val TestFile.withCommonCoroutinesDirective: Boolean
+            get() = COMMON_COROUTINES_DIRECTIVE in directives
 
         val File.cfgDumpFile: File
             get() = File(absolutePath.replace(".kt", ".dot"))
@@ -83,10 +87,17 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
         val allFirFiles = firFilesPerSession.values.flatten()
         checkDiagnostics(testDataFile, testFiles, allFirFiles)
         checkFir(testDataFile, allFirFiles)
+        checkCfg(allFirFiles, testFiles, testDataFile)
+    }
 
+    protected fun checkCfg(
+        allFirFiles: List<FirFile>,
+        testFiles: List<TestFile>,
+        testDataFile: File
+    ) {
+        checkCfgEdgeConsistency(allFirFiles)
         if (testFiles.any { it.withDumpCfgDirective }) {
-            checkCfg(testDataFile, allFirFiles)
-            checkCfgEdgeConsistency(allFirFiles)
+            checkCfgDump(testDataFile, allFirFiles)
         } else {
             checkCfgDumpNotExists(testDataFile)
         }
@@ -103,7 +114,7 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
 
     protected open fun checkDiagnostics(file: File, testFiles: List<TestFile>, firFiles: List<FirFile>) {
         val diagnostics = collectDiagnostics(firFiles)
-        val actualText = StringBuilder()
+        val actualTextBuilder = StringBuilder()
         for (testFile in testFiles) {
             val firFile = firFiles.firstOrNull { it.psi == testFile.ktFile }
             if (firFile != null) {
@@ -111,13 +122,17 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
                     collectDebugInfoDiagnostics(firFile, testFile.diagnosedRangesToDiagnosticNames)
                 testFile.getActualText(
                     diagnostics.getValue(firFile) + debugInfoDiagnostics,
-                    actualText,
+                    actualTextBuilder,
                 )
             } else {
-                actualText.append(testFile.expectedText)
+                actualTextBuilder.append(testFile.expectedText)
             }
         }
-        KotlinTestUtils.assertEqualsToFile(file, actualText.toString())
+        var actualText = actualTextBuilder.toString()
+        if (testFiles.any { it.withCommonCoroutinesDirective }) {
+            actualText = actualText.replace(coroutinesPackage, "COROUTINES_PACKAGE")
+        }
+        KotlinTestUtils.assertEqualsToFile(file, actualText)
     }
 
     protected fun collectDebugInfoDiagnostics(
@@ -264,7 +279,7 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
         return FirDiagnosticsCollector.create(session)
     }
 
-    private fun checkCfg(testDataFile: File, firFiles: List<FirFile>) {
+    private fun checkCfgDump(testDataFile: File, firFiles: List<FirFile>) {
         val builder = StringBuilder()
 
         firFiles.first().accept(FirControlFlowGraphRenderVisitor(builder), null)
@@ -284,7 +299,9 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
 
         override fun visitControlFlowGraphReference(controlFlowGraphReference: FirControlFlowGraphReference) {
             val graph = (controlFlowGraphReference as? FirControlFlowGraphReferenceImpl)?.controlFlowGraph ?: return
+            assertEquals(ControlFlowGraph.State.Completed, graph.state)
             checkConsistency(graph)
+            checkOrder(graph)
         }
 
         private fun checkConsistency(graph: ControlFlowGraph) {
@@ -301,14 +318,32 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
             }
         }
 
+        private val cfgKinds = listOf(EdgeKind.DeadForward, EdgeKind.CfgForward, EdgeKind.DeadBackward, EdgeKind.CfgBackward)
+
         private fun checkEdge(from: CFGNode<*>, to: CFGNode<*>) {
             KtUsefulTestCase.assertContainsElements(from.followingNodes, to)
             KtUsefulTestCase.assertContainsElements(to.previousNodes, from)
             val fromKind = from.outgoingEdges.getValue(to)
             val toKind = to.incomingEdges.getValue(from)
             TestCase.assertEquals(fromKind, toKind)
-            if (from.isDead || to.isDead) {
-                KtUsefulTestCase.assertContainsElements(listOf(EdgeKind.Dead, EdgeKind.Cfg), toKind)
+            if (from.isDead && to.isDead) {
+                KtUsefulTestCase.assertContainsElements(cfgKinds, toKind)
+            }
+        }
+
+        private fun checkOrder(graph: ControlFlowGraph) {
+            val visited = mutableSetOf<CFGNode<*>>()
+            for (node in graph.nodes) {
+                for (previousNode in node.previousNodes) {
+                    if (previousNode.owner != graph) continue
+                    if (!node.incomingEdges.getValue(previousNode).isBack) {
+                        if (previousNode !in visited) {
+                            val x = 1
+                        }
+                        assertTrue(previousNode in visited)
+                    }
+                }
+                visited += node
             }
         }
     }
@@ -324,4 +359,5 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
         }
 
     }
+
 }

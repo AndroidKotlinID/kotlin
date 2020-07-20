@@ -5,17 +5,14 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.cir.factory
 
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
-import org.jetbrains.kotlin.descriptors.TypeAliasDescriptor
-import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.descriptors.ClassifierDescriptorWithTypeParameters
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirSimpleTypeKind.*
 import org.jetbrains.kotlin.descriptors.commonizer.cir.impl.CirSimpleTypeImpl
 import org.jetbrains.kotlin.descriptors.commonizer.utils.Interner
 import org.jetbrains.kotlin.descriptors.commonizer.utils.declarationDescriptor
-import org.jetbrains.kotlin.descriptors.commonizer.utils.fqNameInterned
-import org.jetbrains.kotlin.descriptors.commonizer.utils.fqNameWithTypeParameters
 import org.jetbrains.kotlin.types.*
 
 object CirTypeFactory {
@@ -30,11 +27,11 @@ object CirTypeFactory {
 
     fun create(source: SimpleType): CirSimpleType {
         val abbreviation: SimpleType = (source as? AbbreviatedType)?.abbreviation ?: source
-        val expanded: SimpleType = (source as? AbbreviatedType)?.expandedType ?: source
+        val classifierDescriptor: ClassifierDescriptor = abbreviation.declarationDescriptor
 
-        val simpleType = CirSimpleTypeImpl(
-            kind = abbreviation.declarationDescriptor.cirSimpleTypeKind,
-            fqName = abbreviation.fqNameInterned,
+        return create(
+            classifierId = CirClassifierIdFactory.create(classifierDescriptor),
+            visibility = (classifierDescriptor as? ClassifierDescriptorWithTypeParameters)?.visibility ?: Visibilities.UNKNOWN,
             arguments = abbreviation.arguments.map { projection ->
                 CirTypeProjection(
                     projectionKind = projection.projectionKind,
@@ -42,23 +39,23 @@ object CirTypeFactory {
                     type = create(projection.type)
                 )
             },
-            isMarkedNullable = abbreviation.isMarkedNullable,
-            isDefinitelyNotNullType = abbreviation.isDefinitelyNotNullType,
-            expandedTypeConstructorId = CirTypeConstructorId(
-                fqName = expanded.fqNameInterned,
-                numberOfTypeParameters = expanded.constructor.parameters.size
-            ),
-            fqNameWithTypeParameters = source.fqNameWithTypeParameters
+            isMarkedNullable = abbreviation.isMarkedNullable
         )
+    }
 
-        return interner.intern(simpleType)
+    fun create(
+        classifierId: CirClassifierId,
+        visibility: Visibility,
+        arguments: List<CirTypeProjection>,
+        isMarkedNullable: Boolean
+    ): CirSimpleType {
+        return interner.intern(
+            CirSimpleTypeImpl(
+                classifierId = classifierId,
+                visibility = visibility,
+                arguments = arguments,
+                isMarkedNullable = isMarkedNullable
+            )
+        )
     }
 }
-
-val ClassifierDescriptor.cirSimpleTypeKind: CirSimpleTypeKind
-    get() = when (this) {
-        is ClassDescriptor -> CLASS
-        is TypeAliasDescriptor -> TYPE_ALIAS
-        is TypeParameterDescriptor -> TYPE_PARAMETER
-        else -> error("Unexpected classifier descriptor type: ${this::class.java}, $this")
-    }

@@ -4,7 +4,6 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Transformer
 import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
 import kotlinx.metadata.jvm.KmModuleVisitor
 import kotlinx.metadata.jvm.KotlinModuleMetadata
-import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import shadow.org.apache.tools.zip.ZipEntry
 import shadow.org.apache.tools.zip.ZipOutputStream
 
@@ -180,9 +179,17 @@ val relocateCoreSources by task<Copy> {
     outputs.cacheIf { true }
 }
 
-tasks.getByName("jar").enabled = false
+noDefaultJar()
 
-val sourcesJar = tasks.register<Jar>("sourcesJar") {
+java {
+    withSourcesJar()
+}
+
+configurePublishedComponent {
+    addVariantsFromConfiguration(configurations[JavaPlugin.SOURCES_ELEMENTS_CONFIGURATION_NAME]) { }
+}
+
+val sourcesJar = tasks.named<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 
     dependsOn(relocateCoreSources)
@@ -210,9 +217,10 @@ val result by task<Jar> {
     callGroovy("manifestAttributes", manifest, project, "Main", true)
 }
 
-val modularJar by task<Jar> {
+javadocJar()
+
+modularJar {
     dependsOn(intermediate)
-    archiveClassifier.set("modular")
     from {
         zipTree(intermediate.get().singleOutputFile())
     }
@@ -229,13 +237,9 @@ dexMethodCount {
 }
 
 artifacts {
-    listOf(mainJar.name, "runtime", "archives").forEach { configurationName ->
+    listOf(mainJar.name, "runtime", "archives", "runtimeElements").forEach { configurationName ->
         add(configurationName, result.get().outputs.files.singleFile) {
             builtBy(result)
         }
     }
-
-    add("archives", modularJar)
 }
-
-javadocJar()

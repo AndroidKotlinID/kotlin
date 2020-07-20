@@ -13,7 +13,6 @@ import org.gradle.api.artifacts.ConfigurablePublishArtifact
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
-import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME_JARS
 import org.gradle.api.component.ComponentWithCoordinates
 import org.gradle.api.component.ComponentWithVariants
@@ -22,6 +21,7 @@ import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.internal.component.SoftwareComponentInternal
 import org.gradle.api.internal.component.UsageContext
 import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.util.ConfigureUtil
 import org.gradle.util.WrapUtil
@@ -43,10 +43,10 @@ abstract class AbstractKotlinTarget(
     override val defaultConfigurationName: String
         get() = disambiguateName("default")
 
-    override var useDisambiguitionClassifierAsSourcesetNamePreffix: Boolean = true
+    override var useDisambiguationClassifierAsSourceSetNamePrefix: Boolean = true
         internal set
 
-    override var overrideDisambiguitionClassifierOnIdeImport: String? = null
+    override var overrideDisambiguationClassifierOnIdeImport: String? = null
         internal set
 
     override val apiElementsConfigurationName: String
@@ -99,8 +99,7 @@ abstract class AbstractKotlinTarget(
                         ?: project.configurations.create(kotlinUsageContext.name).also { configuration ->
                             configuration.isCanBeConsumed = false
                             configuration.isCanBeResolved = false
-                            configuration.dependencies.addAll(kotlinUsageContext.dependencies)
-                            configuration.dependencyConstraints.addAll(kotlinUsageContext.dependencyConstraints)
+                            configuration.extendsFrom(project.configurations.getByName(kotlinUsageContext.dependencyConfigurationName))
                             configuration.artifacts.addAll(kotlinUsageContext.artifacts)
 
                             val attributes = kotlinUsageContext.attributes

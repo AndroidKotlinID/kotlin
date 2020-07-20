@@ -475,6 +475,11 @@ public class CliTestGenerated extends AbstractCliTest {
             runTest("compiler/testData/cli/jvm/jvm8Target.args");
         }
 
+        @TestMetadata("jvmDefaultAll.args")
+        public void testJvmDefaultAll() throws Exception {
+            runTest("compiler/testData/cli/jvm/jvmDefaultAll.args");
+        }
+
         @TestMetadata("kotlinHomeWithoutStdlib.args")
         public void testKotlinHomeWithoutStdlib() throws Exception {
             runTest("compiler/testData/cli/jvm/kotlinHomeWithoutStdlib.args");
@@ -533,6 +538,11 @@ public class CliTestGenerated extends AbstractCliTest {
         @TestMetadata("multipleTextRangesInDiagnosticsOrder.args")
         public void testMultipleTextRangesInDiagnosticsOrder() throws Exception {
             runTest("compiler/testData/cli/jvm/multipleTextRangesInDiagnosticsOrder.args");
+        }
+
+        @TestMetadata("newInferenceImpliesProgressiveModeForNI.args")
+        public void testNewInferenceImpliesProgressiveModeForNI() throws Exception {
+            runTest("compiler/testData/cli/jvm/newInferenceImpliesProgressiveModeForNI.args");
         }
 
         @TestMetadata("newInferenceImpliesSamConversions.args")

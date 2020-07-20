@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -29,13 +29,16 @@ private val ENUM_VALUES = Name.identifier("values")
 private val ENUM_VALUE_OF = Name.identifier("valueOf")
 private val VALUE = Name.identifier("value")
 
-fun FirRegularClassBuilder.generateValuesFunction(session: FirSession, packageFqName: FqName, classFqName: FqName) {
+fun FirRegularClassBuilder.generateValuesFunction(
+    session: FirSession, packageFqName: FqName, classFqName: FqName, makeExpect: Boolean = false
+) {
+    val sourceElement = source?.fakeElement(FirFakeSourceElementKind.EnumGeneratedDeclaration)
     declarations += buildSimpleFunction {
-        source = this@generateValuesFunction.source
+        source = sourceElement
         origin = FirDeclarationOrigin.Source
         this.session = session
         returnTypeRef = buildResolvedTypeRef {
-            source = this@generateValuesFunction.source
+            source = sourceElement
             type = ConeClassLikeTypeImpl(
                 ConeClassLikeLookupTagImpl(StandardClassIds.Array),
                 arrayOf(
@@ -47,6 +50,7 @@ fun FirRegularClassBuilder.generateValuesFunction(session: FirSession, packageFq
         name = ENUM_VALUES
         this.status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
             isStatic = true
+            isExpect = makeExpect
         }
         symbol = FirNamedFunctionSymbol(CallableId(packageFqName, classFqName, ENUM_VALUES))
         resolvePhase = FirResolvePhase.BODY_RESOLVE
@@ -54,13 +58,16 @@ fun FirRegularClassBuilder.generateValuesFunction(session: FirSession, packageFq
     }
 }
 
-fun FirRegularClassBuilder.generateValueOfFunction(session: FirSession, packageFqName: FqName, classFqName: FqName) {
+fun FirRegularClassBuilder.generateValueOfFunction(
+    session: FirSession, packageFqName: FqName, classFqName: FqName, makeExpect: Boolean = false
+) {
+    val sourceElement = source?.fakeElement(FirFakeSourceElementKind.EnumGeneratedDeclaration)
     declarations += buildSimpleFunction {
-        source = this@generateValueOfFunction.source
+        source = sourceElement
         origin = FirDeclarationOrigin.Source
         this.session = session
         returnTypeRef = buildResolvedTypeRef {
-            source = this@generateValueOfFunction.source
+            source = sourceElement
             type = ConeClassLikeTypeImpl(
                 this@generateValueOfFunction.symbol.toLookupTag(),
                 emptyArray(),
@@ -70,10 +77,11 @@ fun FirRegularClassBuilder.generateValueOfFunction(session: FirSession, packageF
         name = ENUM_VALUE_OF
         status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
             isStatic = true
+            isExpect = makeExpect
         }
         symbol = FirNamedFunctionSymbol(CallableId(packageFqName, classFqName, ENUM_VALUE_OF))
         valueParameters += buildValueParameter vp@{
-            source = this@generateValueOfFunction.source
+            source = sourceElement
             origin = FirDeclarationOrigin.Source
             this@vp.session = session
             returnTypeRef = FirImplicitStringTypeRef(source)

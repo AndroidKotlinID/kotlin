@@ -7,10 +7,7 @@ package org.jetbrains.kotlin.backend.jvm.lower
 
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
-import org.jetbrains.kotlin.backend.common.ir.copyTo
-import org.jetbrains.kotlin.backend.common.ir.createImplicitParameterDeclarationWithWrappedDescriptor
-import org.jetbrains.kotlin.backend.common.ir.isSuspend
-import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
+import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
@@ -20,9 +17,11 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
-import org.jetbrains.kotlin.ir.builders.declarations.*
+import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
+import org.jetbrains.kotlin.ir.builders.declarations.addFunction
+import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
+import org.jetbrains.kotlin.ir.builders.declarations.buildClass
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrClassImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
@@ -42,7 +41,7 @@ internal val functionReferencePhase = makeIrFilePhase(
 
 internal class FunctionReferenceLowering(private val context: JvmBackendContext) : FileLoweringPass, IrElementTransformerVoidWithContext() {
     // This pass ignores suspend function references and function references used in inline arguments to inline functions.
-    private val ignoredFunctionReferences = mutableSetOf<IrCallableReference>()
+    private val ignoredFunctionReferences = mutableSetOf<IrCallableReference<*>>()
 
     private val IrFunctionReference.isIgnored: Boolean
         get() = (!type.isFunctionOrKFunction() || ignoredFunctionReferences.contains(this)) && !isSuspendFunctionReference()
@@ -150,10 +149,11 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
         private val adaptedReferenceOriginalTarget: IrFunction? = adapteeCall?.symbol?.owner
         private val isAdaptedReference = adaptedReferenceOriginalTarget != null
 
+        private val isKotlinFunInterface =
+            samSuperType != null && samSuperType.getClass()?.origin != IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
+
         private val needToGenerateSamEqualsHashCodeMethods =
-            samSuperType != null &&
-                    samSuperType.getClass()?.origin != IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB &&
-                    (isAdaptedReference || !isLambda)
+            isKotlinFunInterface && (isAdaptedReference || !isLambda)
 
         private val superType =
             samSuperType ?: when {
@@ -189,21 +189,11 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
             createImplicitParameterDeclarationWithWrappedDescriptor()
             copyAttributes(irFunctionReference)
             if (isLambda) {
-                (this as IrClassImpl).metadata = irFunctionReference.symbol.owner.metadata
+                metadata = irFunctionReference.symbol.owner.metadata
             }
         }
 
-        private val receiverFieldFromSuper = context.ir.symbols.functionReferenceReceiverField.owner
-
-        val fakeOverrideReceiverField = functionReferenceClass.addField {
-            name = receiverFieldFromSuper.name
-            isFakeOverride = true
-            origin = IrDeclarationOrigin.FAKE_OVERRIDE
-            type = receiverFieldFromSuper.type
-            isFinal = receiverFieldFromSuper.isFinal
-            isStatic = receiverFieldFromSuper.isStatic
-            visibility = receiverFieldFromSuper.visibility
-        }
+        private val receiverField = context.ir.symbols.functionReferenceReceiverField.owner
 
         fun build(): IrExpression = context.createJvmIrBuilder(currentScope!!.scope.scopeOwnerSymbol).run {
             irBlock(irFunctionReference.startOffset, irFunctionReference.endOffset) {
@@ -228,6 +218,9 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
 
                 if (needToGenerateSamEqualsHashCodeMethods) {
                     generateSamEqualsHashCodeMethods(boundReceiverVar)
+                }
+                if (isKotlinFunInterface) {
+                    functionReferenceClass.addFakeOverridesViaIncorrectHeuristic()
                 }
 
                 +functionReferenceClass
@@ -417,7 +410,9 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
                                 // will put it into a field.
                                 if (samSuperType == null)
                                     irImplicitCast(
-                                        irGetField(irGet(dispatchReceiverParameter!!), fakeOverrideReceiverField),
+                                        irGetField(irGet(dispatchReceiverParameter!!),
+                                                   this@FunctionReferenceBuilder.receiverField
+                                        ),
                                         boundReceiver.second.type
                                     )
                                 else
@@ -469,7 +464,7 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
             }
 
         private val IrFunction.originalName: Name
-            get() = (metadata as? MetadataSource.Function)?.descriptor?.name ?: name
+            get() = metadata?.name ?: name
 
         private fun JvmIrBuilder.generateSignature(target: IrFunctionSymbol): IrExpression =
             irCall(backendContext.ir.symbols.signatureStringIntrinsic).apply {

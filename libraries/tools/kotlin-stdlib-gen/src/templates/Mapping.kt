@@ -311,7 +311,7 @@ object Mapping : TemplateGroupBase() {
             doc { "Returns a single sequence of all elements from results of [transform] function being invoked on each element of original sequence." }
             returns("Sequence<R>")
             body {
-                "return FlatteningSequence(this, transform, { it.iterator() })"
+                "return FlatteningSequence(this, transform, Iterable<R>::iterator)"
             }
         }
     }
@@ -338,7 +338,7 @@ object Mapping : TemplateGroupBase() {
             doc { "Returns a single sequence of all elements from results of [transform] function being invoked on each element of original sequence." }
             returns("Sequence<R>")
             body {
-                "return FlatteningSequence(this, transform, { it.iterator() })"
+                "return FlatteningSequence(this, transform, Sequence<R>::iterator)"
             }
         }
     }
@@ -393,6 +393,82 @@ object Mapping : TemplateGroupBase() {
             }
             return destination
             """
+        }
+    }
+
+    val f_flatMapIndexed = listOf(Iterables, Sequences).map { containerFamily ->
+        val containerClass = containerFamily.name.dropLast(1)
+        fn("flatMapIndexed(transform: (index: Int, T) -> $containerClass<R>)") {
+            when (containerFamily) {
+                Iterables -> include(Iterables, Sequences, ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned, CharSequences)
+                Sequences -> include(Sequences, Iterables, ArraysOfObjects)
+            }
+        } builder {
+            inlineOnly()
+
+            since("1.4")
+            doc {
+                """
+                Returns a single ${f.mapResult} of all elements yielded from results of [transform] function being invoked on each ${f.element}  
+                and its index in the original ${f.collection}.
+                """
+            }
+            annotation("@OptIn(kotlin.experimental.ExperimentalTypeInference::class)")
+            annotation("@OverloadResolutionByLambdaReturnType")
+            if (family != ArraysOfUnsigned)
+                annotation("""@kotlin.jvm.JvmName("flatMapIndexed$containerClass")""")
+            sample("samples.collections.Collections.Transformations.flatMapIndexed")
+            typeParam("R")
+            returns("List<R>")
+            body {
+                "return flatMapIndexedTo(ArrayList<R>(), transform)"
+            }
+            specialFor(Sequences) {
+                inline(Inline.No)
+                returns("Sequence<R>")
+                body {
+                    "return flatMapIndexed(this, transform, $containerClass<R>::iterator)"
+                }
+            }
+        }
+    }
+
+
+    val f_flatMapIndexedTo = listOf(Iterables, Sequences).map { containerFamily ->
+        val containerClass = containerFamily.name.dropLast(1)
+        fn("flatMapIndexedTo(destination: C, transform: (index: Int, T) -> $containerClass<R>)") {
+            when (containerFamily) {
+                Iterables -> include(Iterables, Sequences, ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned, CharSequences)
+                Sequences -> include(Sequences, Iterables, ArraysOfObjects)
+            }
+        } builder {
+            inlineOnly()
+
+            since("1.4")
+            doc {
+                """
+                Appends all elements yielded from results of [transform] function being invoked on each ${f.element} 
+                and its index in the original ${f.collection}, to the given [destination].
+                """
+            }
+            annotation("@OptIn(kotlin.experimental.ExperimentalTypeInference::class)")
+            annotation("@OverloadResolutionByLambdaReturnType")
+            if (family != ArraysOfUnsigned)
+                annotation("""@kotlin.jvm.JvmName("flatMapIndexed${containerClass}To")""")
+            typeParam("R")
+            typeParam("C : MutableCollection<in R>")
+            returns("C")
+            body {
+                fun checkOverflow(value: String) = if (f == Sequences || f == Iterables) "checkIndexOverflow($value)" else value
+                """
+                var index = 0
+                for (element in this) {
+                    val list = transform(${checkOverflow("index++")}, element)
+                    destination.addAll(list)
+                }
+                return destination
+                """
+            }
         }
     }
 

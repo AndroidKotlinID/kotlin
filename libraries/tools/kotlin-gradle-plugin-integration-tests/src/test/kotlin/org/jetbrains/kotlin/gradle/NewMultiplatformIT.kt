@@ -1390,30 +1390,6 @@ class NewMultiplatformIT : BaseGradleIT() {
         }
     }
 
-    // Check that we still can build binaries from sources if the corresponding property is specified.
-    // TODO: Drop in 1.4
-    @Test
-    fun testLinkNativeBinaryFromSources() = with(
-        transformProjectWithPluginsDsl("groovy-dsl", gradleVersion, "new-mpp-native-binaries")
-    ) {
-        val linkTask = ":linkDebugExecutable${nativeHostTargetName.capitalize()}"
-
-        val prefix = CompilerOutputKind.PROGRAM.prefix(HostManager.host)
-        val suffix = CompilerOutputKind.PROGRAM.suffix(HostManager.host)
-        val fileName = "${prefix}native-binary$suffix"
-        val outputFile = "build/bin/$nativeHostTargetName/debugExecutable/$fileName"
-
-        build(linkTask, "-Pkotlin.native.linkFromSources") {
-            assertSuccessful()
-            assertTasksExecuted(linkTask)
-            assertFileExists(outputFile)
-            checkNativeCommandLineFor(linkTask) {
-                assertTrue(it.contains("-Xcommon-sources="))
-                assertTrue(it.contains(projectDir.resolve("src/commonMain/kotlin/RootMain.kt").absolutePath))
-            }
-        }
-    }
-
     // We propagate compilation args to link tasks for now (see KT-33717).
     // TODO: Reenable the test when the args are separated.
     @Ignore
@@ -2131,13 +2107,13 @@ class NewMultiplatformIT : BaseGradleIT() {
         fun testDependencies() = testResolveAllConfigurations("app") {
             assertContains(">> :app:testNonTransitiveStringNotationApiDependenciesMetadata --> junit-4.12.jar")
             assertEquals(
-                1,
+                2, // the dependency above and stdlib
                 (Regex.escape(">> :app:testNonTransitiveStringNotationApiDependenciesMetadata") + " .*").toRegex().findAll(output).count()
             )
 
             assertContains(">> :app:testNonTransitiveDependencyNotationApiDependenciesMetadata --> kotlin-reflect-${defaultBuildOptions().kotlinVersion}.jar")
             assertEquals(
-                1,
+                2, // the dependency above and stdlib
                 (Regex.escape(">> :app:testNonTransitiveStringNotationApiDependenciesMetadata") + " .*").toRegex().findAll(output).count()
             )
 

@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.fir.expressions.FirResolvable
 import org.jetbrains.kotlin.fir.FirTargetElement
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
 import org.jetbrains.kotlin.fir.declarations.FirResolvedDeclarationStatus
+import org.jetbrains.kotlin.fir.declarations.FirControlFlowGraphOwner
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
@@ -75,11 +76,13 @@ import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessWithoutCallee
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirCheckNotNullCall
+import org.jetbrains.kotlin.fir.expressions.FirElvisExpression
 import org.jetbrains.kotlin.fir.expressions.FirArrayOfCall
 import org.jetbrains.kotlin.fir.expressions.FirAugmentedArraySetCall
 import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
 import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
 import org.jetbrains.kotlin.fir.declarations.FirErrorFunction
+import org.jetbrains.kotlin.fir.declarations.FirErrorProperty
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
@@ -177,6 +180,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitResolvedDeclarationStatus(resolvedDeclarationStatus: FirResolvedDeclarationStatus) {
         visitElement(resolvedDeclarationStatus)
+    }
+
+    open fun visitControlFlowGraphOwner(controlFlowGraphOwner: FirControlFlowGraphOwner) {
+        visitElement(controlFlowGraphOwner)
     }
 
     open fun visitStatement(statement: FirStatement) {
@@ -411,6 +418,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(checkNotNullCall)
     }
 
+    open fun visitElvisExpression(elvisExpression: FirElvisExpression) {
+        visitElement(elvisExpression)
+    }
+
     open fun visitArrayOfCall(arrayOfCall: FirArrayOfCall) {
         visitElement(arrayOfCall)
     }
@@ -429,6 +440,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitErrorFunction(errorFunction: FirErrorFunction) {
         visitElement(errorFunction)
+    }
+
+    open fun visitErrorProperty(errorProperty: FirErrorProperty) {
+        visitElement(errorProperty)
     }
 
     open fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression) {
@@ -663,6 +678,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitResolvedDeclarationStatus(resolvedDeclarationStatus)
     }
 
+    final override fun visitControlFlowGraphOwner(controlFlowGraphOwner: FirControlFlowGraphOwner, data: Nothing?) {
+        visitControlFlowGraphOwner(controlFlowGraphOwner)
+    }
+
     final override fun visitStatement(statement: FirStatement, data: Nothing?) {
         visitStatement(statement)
     }
@@ -895,6 +914,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitCheckNotNullCall(checkNotNullCall)
     }
 
+    final override fun visitElvisExpression(elvisExpression: FirElvisExpression, data: Nothing?) {
+        visitElvisExpression(elvisExpression)
+    }
+
     final override fun visitArrayOfCall(arrayOfCall: FirArrayOfCall, data: Nothing?) {
         visitArrayOfCall(arrayOfCall)
     }
@@ -913,6 +936,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitErrorFunction(errorFunction: FirErrorFunction, data: Nothing?) {
         visitErrorFunction(errorFunction)
+    }
+
+    final override fun visitErrorProperty(errorProperty: FirErrorProperty, data: Nothing?) {
+        visitErrorProperty(errorProperty)
     }
 
     final override fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: Nothing?) {

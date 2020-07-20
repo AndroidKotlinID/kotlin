@@ -68,13 +68,13 @@ internal class FirConstructorImpl(
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         transformReturnTypeRef(transformer, data)
         transformReceiverTypeRef(transformer, data)
-        typeParameters.transformInplace(transformer, data)
+        transformTypeParameters(transformer, data)
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
         transformStatus(transformer, data)
         transformAnnotations(transformer, data)
         transformDelegatedConstructor(transformer, data)
-        body = body?.transformSingle(transformer, data)
+        transformBody(transformer, data)
         return this
     }
 
@@ -85,6 +85,11 @@ internal class FirConstructorImpl(
 
     override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         receiverTypeRef = receiverTypeRef?.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformTypeParameters(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
+        typeParameters.transformInplace(transformer, data)
         return this
     }
 
@@ -110,6 +115,11 @@ internal class FirConstructorImpl(
 
     override fun <D> transformDelegatedConstructor(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         delegatedConstructor = delegatedConstructor?.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformBody(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
+        body = body?.transformSingle(transformer, data)
         return this
     }
 

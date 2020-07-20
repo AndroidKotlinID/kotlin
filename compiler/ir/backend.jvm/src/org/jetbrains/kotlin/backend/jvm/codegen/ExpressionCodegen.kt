@@ -6,18 +6,16 @@
 package org.jetbrains.kotlin.backend.jvm.codegen
 
 import org.jetbrains.kotlin.backend.common.lower.BOUND_RECEIVER_PARAMETER
+import org.jetbrains.kotlin.backend.common.lower.SYNTHESIZED_INIT_BLOCK
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
 import org.jetbrains.kotlin.backend.jvm.intrinsics.JavaClassProperty
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
+import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.AsmUtil.*
-import org.jetbrains.kotlin.codegen.BaseExpressionCodegen
-import org.jetbrains.kotlin.codegen.CallGenerator
-import org.jetbrains.kotlin.codegen.StackValue
 import org.jetbrains.kotlin.codegen.coroutines.SuspensionPointKind
-import org.jetbrains.kotlin.codegen.extractReificationArgument
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.Companion.putNeedClassReificationMarker
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.AS
@@ -146,6 +144,8 @@ class ExpressionCodegen(
         get() = MaterialValue(this@ExpressionCodegen, asmType, type)
 
     private fun markNewLabel() = Label().apply { mv.visitLabel(this) }
+
+    private fun markNewLinkedLabel() = linkedLabel().apply { mv.visitLabel(this) }
 
     private fun getLineNumberForOffset(offset: Int): Int = fileEntry?.getLineNumber(offset)?.plus(1) ?: -1
 
@@ -324,15 +324,25 @@ class ExpressionCodegen(
 
     override fun visitBlock(expression: IrBlock, data: BlockInfo): PromisedValue {
         assert(expression !is IrReturnableBlock) { "unlowered returnable block: ${expression.dump()}" }
+        val isSynthesizedInitBlock = expression.origin == SYNTHESIZED_INIT_BLOCK
+        if (isSynthesizedInitBlock) {
+            expression.markLineNumber(startOffset = true)
+            mv.nop()
+        }
         if (expression.isTransparentScope)
             return super.visitBlock(expression, data)
         val info = BlockInfo(data)
         // Force materialization to avoid reading from out-of-scope variables.
-        return super.visitBlock(expression, info).materialized().also {
+        val value = super.visitBlock(expression, info).materialized().also {
             if (info.variables.isNotEmpty()) {
                 writeLocalVariablesInTable(info, markNewLabel())
             }
         }
+        if (isSynthesizedInitBlock) {
+            expression.markLineNumber(startOffset = false)
+            mv.nop()
+        }
+        return value
     }
 
     private val IrVariable.isVisibleInLVT: Boolean
@@ -391,10 +401,13 @@ class ExpressionCodegen(
 
                 // IR constructors have no receiver and return the new instance, but on JVM they are void-returning
                 // instance methods named <init>.
+                markLineNumber(expression)
                 mv.anew(asmType)
                 mv.dup()
             }
             expression is IrDelegatingConstructorCall -> {
+                expression.markLineNumber(startOffset = true)
+
                 // In this case the receiver is `this` (not specified in IR) and the return value is discarded anyway.
                 mv.load(0, OBJECT_TYPE)
 
@@ -491,13 +504,12 @@ class ExpressionCodegen(
         val varType = typeMapper.mapType(declaration)
         val index = frameMap.enter(declaration.symbol, varType)
 
-        declaration.markLineNumber(startOffset = true)
-
         val initializer = declaration.initializer
         if (initializer != null) {
             var value = initializer.accept(this, data)
             initializer.markLineNumber(startOffset = true)
             value.materializeAt(varType, declaration.type)
+            declaration.markLineNumber(startOffset = true)
             mv.store(index, varType)
         } else if (declaration.isVisibleInLVT) {
             pushDefaultValueOnStack(varType, mv)
@@ -525,16 +537,27 @@ class ExpressionCodegen(
             assert(callee.constantValue() == null) { "access of const val: ${expression.dump()}" }
         }
 
-        val realField = callee.resolveFakeOverride()!!
-        val fieldType = typeMapper.mapType(realField.type)
-        val fieldName = realField.name.asString()
+        val fieldType = typeMapper.mapType(callee.type)
+        val fieldName = callee.name.asString()
         val isStatic = expression.receiver == null
         expression.markLineNumber(startOffset = true)
-        val ownerName = expression.receiver?.let { receiver ->
-            val ownerType = typeMapper.mapTypeAsDeclaration(receiver.type)
+
+        val ownerType = when {
+            expression.superQualifierSymbol != null -> {
+                typeMapper.mapClass(expression.superQualifierSymbol!!.owner)
+            }
+            expression.receiver != null -> {
+                typeMapper.mapTypeAsDeclaration(expression.receiver!!.type)
+            }
+            else -> typeMapper.mapClass(callee.parentAsClass)
+        }
+
+        val ownerName = ownerType.internalName
+
+        expression.receiver?.let { receiver ->
             receiver.accept(this, data).materializeAt(ownerType, receiver.type)
-            ownerType.internalName
-        } ?: typeMapper.mapClass(callee.parentAsClass).internalName
+        }
+        
         return if (expression is IrSetField) {
             val value = expression.value.accept(this, data)
 
@@ -547,6 +570,7 @@ class ExpressionCodegen(
                 value.materializeAt(fieldType, callee.type)
             }
 
+            expression.markLineNumber(startOffset = true)
             when {
                 isStatic -> mv.putstatic(ownerName, fieldName, fieldType.descriptor)
                 else -> mv.putfield(ownerName, fieldName, fieldType.descriptor)
@@ -1016,7 +1040,7 @@ class ExpressionCodegen(
         data: BlockInfo,
         nestedTryWithoutFinally: MutableList<TryInfo> = arrayListOf()
     ) {
-        val gapStart = markNewLabel()
+        val gapStart = markNewLinkedLabel()
         finallyDepth++
         if (isFinallyMarkerRequired()) {
             generateFinallyMarker(mv, finallyDepth, true)

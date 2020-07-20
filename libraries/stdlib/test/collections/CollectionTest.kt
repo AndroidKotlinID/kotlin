@@ -60,6 +60,16 @@ class CollectionTest {
         assertEquals(expected, result2)
     }
 
+    @Test fun flatMapIndexed() {
+        val source = listOf(null, "foo", "bar")
+        val result1 = source.flatMapIndexed { index, it -> it.orEmpty().take(index + 1).asSequence() }
+        val result2 = source.flatMapIndexed { index, it -> it.orEmpty().take(index + 1).asIterable() }
+
+        val expected = "fobar".toList()
+        assertEquals(expected, result1)
+        assertEquals(expected, result2)
+    }
+
     /*
     @Test fun mapNotNull() {
         val data = listOf(null, "foo", null, "bar")
@@ -823,83 +833,83 @@ class CollectionTest {
         assertTrue(hashSetOf(45, 14, 13).toIterable().contains(14))
     }
 
-    @Test fun min() {
-        expect(null, { listOf<Int>().min() })
-        expect(1, { listOf(1).min() })
-        expect(2, { listOf(2, 3).min() })
-        expect(2000000000000, { listOf(3000000000000, 2000000000000).min() })
-        expect('a', { listOf('a', 'b').min() })
-        expect("a", { listOf("a", "b").min() })
-        expect(null, { listOf<Int>().asSequence().min() })
-        expect(2, { listOf(2, 3).asSequence().min() })
+    @Test fun minOrNull() {
+        expect(null, { listOf<Int>().minOrNull() })
+        expect(1, { listOf(1).minOrNull() })
+        expect(2, { listOf(2, 3).minOrNull() })
+        expect(2000000000000, { listOf(3000000000000, 2000000000000).minOrNull() })
+        expect('a', { listOf('a', 'b').minOrNull() })
+        expect("a", { listOf("a", "b").minOrNull() })
+        expect(null, { listOf<Int>().asSequence().minOrNull() })
+        expect(2, { listOf(2, 3).asSequence().minOrNull() })
 
-        assertIsNegativeZero(listOf(0.0, -0.0).shuffled().min()!!)
-        assertIsNegativeZero(listOf(0.0F, -0.0F).shuffled().min()!!.toDouble())
+        assertIsNegativeZero(listOf(0.0, -0.0).shuffled().minOrNull()!!)
+        assertIsNegativeZero(listOf(0.0F, -0.0F).shuffled().minOrNull()!!.toDouble())
     }
 
     @Test fun max() {
-        expect(null, { listOf<Int>().max() })
-        expect(1, { listOf(1).max() })
-        expect(3, { listOf(2, 3).max() })
-        expect(3000000000000, { listOf(3000000000000, 2000000000000).max() })
-        expect('b', { listOf('a', 'b').max() })
-        expect("b", { listOf("a", "b").max() })
-        expect(null, { listOf<Int>().asSequence().max() })
-        expect(3, { listOf(2, 3).asSequence().max() })
+        expect(null, { listOf<Int>().maxOrNull() })
+        expect(1, { listOf(1).maxOrNull() })
+        expect(3, { listOf(2, 3).maxOrNull() })
+        expect(3000000000000, { listOf(3000000000000, 2000000000000).maxOrNull() })
+        expect('b', { listOf('a', 'b').maxOrNull() })
+        expect("b", { listOf("a", "b").maxOrNull() })
+        expect(null, { listOf<Int>().asSequence().maxOrNull() })
+        expect(3, { listOf(2, 3).asSequence().maxOrNull() })
 
-        assertIsPositiveZero(listOf(0.0, -0.0).shuffled().max()!!)
-        assertIsPositiveZero(listOf(0.0F, -0.0F).shuffled().max()!!.toDouble())
+        assertIsPositiveZero(listOf(0.0, -0.0).shuffled().maxOrNull()!!)
+        assertIsPositiveZero(listOf(0.0F, -0.0F).shuffled().maxOrNull()!!.toDouble())
     }
 
-    @Test fun minWith() {
-        expect(null, { listOf<Int>().minWith(naturalOrder()) })
-        expect(1, { listOf(1).minWith(naturalOrder()) })
-        expect("a", { listOf("a", "B").minWith(STRING_CASE_INSENSITIVE_ORDER) })
-        expect("a", { listOf("a", "B").asSequence().minWith(STRING_CASE_INSENSITIVE_ORDER) })
+    @Test fun minWithOrNull() {
+        expect(null, { listOf<Int>().minWithOrNull(naturalOrder()) })
+        expect(1, { listOf(1).minWithOrNull(naturalOrder()) })
+        expect("a", { listOf("a", "B").minWithOrNull(STRING_CASE_INSENSITIVE_ORDER) })
+        expect("a", { listOf("a", "B").asSequence().minWithOrNull(STRING_CASE_INSENSITIVE_ORDER) })
     }
 
-    @Test fun maxWith() {
-        expect(null, { listOf<Int>().maxWith(naturalOrder()) })
-        expect(1, { listOf(1).maxWith(naturalOrder()) })
-        expect("B", { listOf("a", "B").maxWith(STRING_CASE_INSENSITIVE_ORDER) })
-        expect("B", { listOf("a", "B").asSequence().maxWith(STRING_CASE_INSENSITIVE_ORDER) })
+    @Test fun maxWithOrNull() {
+        expect(null, { listOf<Int>().maxWithOrNull(naturalOrder()) })
+        expect(1, { listOf(1).maxWithOrNull(naturalOrder()) })
+        expect("B", { listOf("a", "B").maxWithOrNull(STRING_CASE_INSENSITIVE_ORDER) })
+        expect("B", { listOf("a", "B").asSequence().maxWithOrNull(STRING_CASE_INSENSITIVE_ORDER) })
     }
 
-    @Test fun minBy() {
-        expect(null, { listOf<Int>().minBy { it } })
-        expect(1, { listOf(1).minBy { it } })
-        expect(3, { listOf(2, 3).minBy { -it } })
-        expect('a', { listOf('a', 'b').minBy { "x$it" } })
-        expect("b", { listOf("b", "abc").minBy { it.length } })
-        expect(null, { listOf<Int>().asSequence().minBy { it } })
-        expect(3, { listOf(2, 3).asSequence().minBy { -it } })
+    @Test fun minByOrNull() {
+        expect(null, { listOf<Int>().minByOrNull { it } })
+        expect(1, { listOf(1).minByOrNull { it } })
+        expect(3, { listOf(2, 3).minByOrNull { -it } })
+        expect('a', { listOf('a', 'b').minByOrNull { "x$it" } })
+        expect("b", { listOf("b", "abc").minByOrNull { it.length } })
+        expect(null, { listOf<Int>().asSequence().minByOrNull { it } })
+        expect(3, { listOf(2, 3).asSequence().minByOrNull { -it } })
     }
 
-    @Test fun maxBy() {
-        expect(null, { listOf<Int>().maxBy { it } })
-        expect(1, { listOf(1).maxBy { it } })
-        expect(2, { listOf(2, 3).maxBy { -it } })
-        expect('b', { listOf('a', 'b').maxBy { "x$it" } })
-        expect("abc", { listOf("b", "abc").maxBy { it.length } })
-        expect(null, { listOf<Int>().asSequence().maxBy { it } })
-        expect(2, { listOf(2, 3).asSequence().maxBy { -it } })
+    @Test fun maxByOrNull() {
+        expect(null, { listOf<Int>().maxByOrNull { it } })
+        expect(1, { listOf(1).maxByOrNull { it } })
+        expect(2, { listOf(2, 3).maxByOrNull { -it } })
+        expect('b', { listOf('a', 'b').maxByOrNull { "x$it" } })
+        expect("abc", { listOf("b", "abc").maxByOrNull { it.length } })
+        expect(null, { listOf<Int>().asSequence().maxByOrNull { it } })
+        expect(2, { listOf(2, 3).asSequence().maxByOrNull { -it } })
     }
 
-    @Test fun minByEvaluateOnce() {
+    @Test fun minByOrNullEvaluateOnce() {
         var c = 0
-        expect(1, { listOf(5, 4, 3, 2, 1).minBy { c++; it * it } })
+        expect(1, { listOf(5, 4, 3, 2, 1).minByOrNull { c++; it * it } })
         assertEquals(5, c)
         c = 0
-        expect(1, { listOf(5, 4, 3, 2, 1).asSequence().minBy { c++; it * it } })
+        expect(1, { listOf(5, 4, 3, 2, 1).asSequence().minByOrNull { c++; it * it } })
         assertEquals(5, c)
     }
 
-    @Test fun maxByEvaluateOnce() {
+    @Test fun maxByOrNullEvaluateOnce() {
         var c = 0
-        expect(5, { listOf(5, 4, 3, 2, 1).maxBy { c++; it * it } })
+        expect(5, { listOf(5, 4, 3, 2, 1).maxByOrNull { c++; it * it } })
         assertEquals(5, c)
         c = 0
-        expect(5, { listOf(5, 4, 3, 2, 1).asSequence().maxBy { c++; it * it } })
+        expect(5, { listOf(5, 4, 3, 2, 1).asSequence().maxByOrNull { c++; it * it } })
         assertEquals(5, c)
     }
 

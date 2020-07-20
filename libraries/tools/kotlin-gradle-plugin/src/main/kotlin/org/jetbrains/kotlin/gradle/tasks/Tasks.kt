@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.gradle.plugin.COMPILER_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformPluginBase
 import org.jetbrains.kotlin.gradle.plugin.PLUGIN_CLASSPATH_CONFIGURATION_NAME
+import org.jetbrains.kotlin.gradle.plugin.mpp.AbstractKotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.associateWithTransitiveClosure
 import org.jetbrains.kotlin.gradle.plugin.mpp.ownModuleName
 import org.jetbrains.kotlin.gradle.report.BuildReportMode
@@ -251,10 +252,11 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     @get:Internal // takes part in the compiler arguments
     val friendPaths: Array<String> by project.provider {
         taskData.compilation.run {
+            if (this !is AbstractKotlinCompilation<*>) return@run emptyArray<String>()
             associateWithTransitiveClosure
                 .flatMap { it.output.classesDirs }
                 .plus(friendArtifacts)
-                .map { it.canonicalPath }.toTypedArray()
+                .map { it.absolutePath }.toTypedArray()
         }
     }
 
@@ -356,10 +358,8 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
     @get:Internal
     internal var parentKotlinOptionsImpl: KotlinJvmOptionsImpl? = null
 
-    private val kotlinOptionsImpl = KotlinJvmOptionsImpl()
-
     override val kotlinOptions: KotlinJvmOptions
-        get() = kotlinOptionsImpl
+        get() = taskData.compilation.kotlinOptions as KotlinJvmOptions
 
     @get:Internal
     internal open val sourceRootsContainer = FilteringSourceRootsContainer()
@@ -507,10 +507,8 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         incremental = true
     }
 
-    private val kotlinOptionsImpl = KotlinJsOptionsImpl()
-
     override val kotlinOptions: KotlinJsOptions
-        get() = kotlinOptionsImpl
+        get() = taskData.compilation.kotlinOptions as KotlinJsOptions
 
     @get:Internal
     protected val defaultOutputFile: File
@@ -546,7 +544,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
 
         if (defaultsOnly) return
 
-        kotlinOptionsImpl.updateArguments(args)
+        (kotlinOptions as KotlinJsOptionsImpl).updateArguments(args)
     }
 
     override fun getSourceRoots() = SourceRoots.KotlinOnly.create(getSource(), sourceFilesExtensions)
@@ -568,7 +566,7 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
     @get:Optional
     @get:PathSensitive(PathSensitivity.RELATIVE)
     internal val sourceMapBaseDirs: FileCollection?
-        get() = kotlinOptionsImpl.sourceMapBaseDirs
+        get() = (kotlinOptions as KotlinJsOptionsImpl).sourceMapBaseDirs
 
     private fun isHybridKotlinJsLibrary(file: File): Boolean =
         JsLibraryUtils.isKotlinJavascriptLibrary(file) && isKotlinLibrary(file)

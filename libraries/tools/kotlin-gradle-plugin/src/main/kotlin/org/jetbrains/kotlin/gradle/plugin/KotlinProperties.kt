@@ -170,11 +170,7 @@ internal class PropertiesProvider private constructor(private val project: Proje
      * Forces to run a compilation in a separate JVM.
      */
     val nativeDisableCompilerDaemon: Boolean?
-        get() = booleanProperty(KOTLIN_NATIVE_DISABLE_COMPILER_DAEMON)
-
-    // TODO: Remove once KT-37550 is fixed
-    val nativeEnableParallelExecutionCheck: Boolean
-        get() = booleanProperty(KOTLIN_NATIVE_ENABLE_PARALLEL_EXECUTION_CHECK) ?: true
+        get() = booleanProperty("kotlin.native.disableCompilerDaemon")
 
     /**
      * Allows a user to specify additional arguments of a JVM executing KLIB commonizer.
@@ -191,8 +187,8 @@ internal class PropertiesProvider private constructor(private val project: Proje
     /**
      * Generate kotlin/js external declarations from all .d.ts files found in npm modules
      */
-    val jsGenerateExternals: Boolean?
-        get() = booleanProperty("kotlin.js.experimental.generateKotlinExternals")
+    val jsGenerateExternals: Boolean
+        get() = booleanProperty("kotlin.js.generate.externals") ?: DEFAULT_GENERATE_EXTERNALS
 
     /**
      * Automaticaly discover external .d.ts declarations
@@ -205,6 +201,15 @@ internal class PropertiesProvider private constructor(private val project: Proje
      */
     val jsCompiler: KotlinJsCompilerType
         get() = property(jsCompilerProperty)?.let { KotlinJsCompilerType.byArgumentOrNull(it) } ?: KotlinJsCompilerType.LEGACY
+
+    /**
+     * Use Kotlin/JS backend compiler type
+     */
+    val jsGenerateExecutableDefault: Boolean
+        get() = booleanProperty("kotlin.js.generate.executable.default") ?: true
+
+    val stdlibDefaultDependency: Boolean
+        get() = booleanProperty("kotlin.stdlib.default.dependency") ?: true
 
     private fun propertyWithDeprecatedVariant(propName: String, deprecatedPropName: String): String? {
         val deprecatedProperty = property(deprecatedPropName)
@@ -229,11 +234,7 @@ internal class PropertiesProvider private constructor(private val project: Proje
 
         private const val CACHED_PROVIDER_EXT_NAME = "kotlin.properties.provider"
 
-        internal const val KOTLIN_NATIVE_DISABLE_COMPILER_DAEMON = "kotlin.native.disableCompilerDaemon"
         internal const val KOTLIN_NATIVE_IGNORE_INCORRECT_DEPENDENCIES = "kotlin.native.ignoreIncorrectDependencies"
-
-        // TODO: Remove once KT-37550 is fixed
-        internal const val KOTLIN_NATIVE_ENABLE_PARALLEL_EXECUTION_CHECK = "kotlin.native.enableParallelExecutionCheck"
 
         operator fun invoke(project: Project): PropertiesProvider =
             with(project.extensions.extraProperties) {

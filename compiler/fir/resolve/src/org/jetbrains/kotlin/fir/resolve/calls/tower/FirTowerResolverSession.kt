@@ -19,9 +19,9 @@ import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.resolve.scope
 import org.jetbrains.kotlin.fir.resolve.transformQualifiedAccessUsingSmartcastInfo
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.firUnsafe
+import org.jetbrains.kotlin.fir.scopes.FirCompositeScope
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
-import org.jetbrains.kotlin.fir.scopes.impl.FirCompositeScope
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
@@ -155,13 +155,12 @@ class FirTowerResolverSession internal constructor(
         info: CallInfo, qualifierReceiver: QualifierReceiver?
     ) {
         if (qualifierReceiver == null) return
-        for ((depth, qualifierScope) in qualifierReceiver.callableScopes().withIndex()) {
-            processLevel(
-                qualifierScope.toScopeTowerLevel(includeInnerConstructors = false),
-                info.noStubReceiver(), TowerGroup.Qualifier(depth),
-                useParentGroupForInvokes = true,
-            )
-        }
+        val callableScope = qualifierReceiver.callableScope() ?: return
+        processLevel(
+            callableScope.toScopeTowerLevel(includeInnerConstructors = false),
+            info.noStubReceiver(), TowerGroup.Qualifier,
+            useParentGroupForInvokes = true,
+        )
     }
 
     private suspend fun processClassifierScope(
@@ -457,7 +456,7 @@ class FirTowerResolverSession internal constructor(
         val scope = when (superTypeRef) {
             is FirResolvedTypeRef -> superTypeRef.type.scope(session, components.scopeSession)
             is FirComposedSuperTypeRef -> FirCompositeScope(
-                superTypeRef.superTypeRefs.mapNotNullTo(mutableListOf()) { it.type.scope(session, components.scopeSession) }
+                superTypeRef.superTypeRefs.mapNotNull { it.type.scope(session, components.scopeSession) }
             )
             else -> null
         } ?: return

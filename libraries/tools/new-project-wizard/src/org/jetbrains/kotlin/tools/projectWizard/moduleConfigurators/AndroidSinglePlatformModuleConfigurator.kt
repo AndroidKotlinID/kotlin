@@ -1,3 +1,8 @@
+/*
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
+ */
+
 package org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators
 
 
@@ -5,7 +10,6 @@ import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
 import org.jetbrains.kotlin.tools.projectWizard.Versions
 import org.jetbrains.kotlin.tools.projectWizard.core.*
-import org.jetbrains.kotlin.tools.projectWizard.core.service.kotlinVersionKind
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.*
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.BuildScriptDependencyIR
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.BuildScriptRepositoryIR
@@ -45,13 +49,13 @@ object AndroidSinglePlatformModuleConfigurator :
             DefaultRepository.GRADLE_PLUGIN_PORTAL,
             DefaultRepository.JCENTER,
             DefaultRepository.GOOGLE,
-            configurationData.kotlinVersion.kotlinVersionKind.repository
+            configurationData.kotlinVersion.repository
         ).forEach { repository ->
             +BuildScriptRepositoryIR(RepositoryIR((repository)))
         }
 
         irsList {
-            "classpath"(const("org.jetbrains.kotlin:kotlin-gradle-plugin:${configurationData.kotlinVersion}"))
+            "classpath"(const("org.jetbrains.kotlin:kotlin-gradle-plugin:${configurationData.kotlinVersion.version}"))
             "classpath"(const("com.android.tools.build:gradle:${Versions.GRADLE_PLUGINS.ANDROID}"))
         }.forEach {
             +BuildScriptDependencyIR(it)
@@ -96,6 +100,8 @@ object AndroidSinglePlatformModuleConfigurator :
             listOf(
                 FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.activityMainXml, modulePath, settings),
                 FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.androidManifestXml, modulePath, settings),
+                FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.colorsXml, modulePath, settings),
+                FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.stylesXml, modulePath, settings),
                 FileTemplate(AndroidModuleConfigurator.FileTemplateDescriptors.mainActivityKt(javaPackage), modulePath, settings)
             )
         )

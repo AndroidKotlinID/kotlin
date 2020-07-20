@@ -21,7 +21,6 @@ import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirTypeResolveScopeForBodyResolve
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousFunctionSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -94,7 +93,6 @@ abstract class FirAbstractBodyResolveTransformer(phase: FirResolvePhase) : FirAb
     protected inline val file: FirFile get() = components.file
     protected inline val integerLiteralTypeApproximator: IntegerLiteralTypeApproximationTransformer get() = components.integerLiteralTypeApproximator
     protected inline val integerOperatorsTypeUpdater: IntegerOperatorsTypeUpdater get() = components.integerOperatorsTypeUpdater
-
 
     val ResolutionMode.expectedType: FirTypeRef?
         get() = when (this) {
@@ -282,7 +280,7 @@ abstract class FirAbstractBodyResolveTransformer(phase: FirResolvePhase) : FirAb
             qualifiedResolver
         )
         val typeResolverTransformer = FirSpecificTypeResolverTransformer(
-            FirTypeResolveScopeForBodyResolve(this), session
+            session
         )
         override val callCompleter: FirCallCompleter = FirCallCompleter(transformer, this)
         override val dataFlowAnalyzer: FirDataFlowAnalyzer<*> =
@@ -295,4 +293,3 @@ abstract class FirAbstractBodyResolveTransformer(phase: FirResolvePhase) : FirAb
         override val integerOperatorsTypeUpdater: IntegerOperatorsTypeUpdater = IntegerOperatorsTypeUpdater(integerLiteralTypeApproximator)
     }
 }
-

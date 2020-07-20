@@ -55,11 +55,11 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         }
 
         typeParametersOwner.configure {
-            +typeParameters
+            +typeParameters.withTransform()
         }
 
         typeParameterRefsOwner.configure {
-            +typeParameterRefs
+            +typeParameterRefs.withTransform()
         }
 
         resolvable.configure {
@@ -68,6 +68,10 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         diagnosticHolder.configure {
             +field("diagnostic", coneDiagnosticType)
+        }
+
+        controlFlowGraphOwner.configure {
+            +controlFlowGraphReferenceField
         }
 
         declaration.configure {
@@ -97,10 +101,9 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         function.configure {
             withArg("F", "FirFunction<F>")
             parentArg(callableDeclaration, "F", "F")
-            +controlFlowGraphReferenceField
             +symbol("FirFunctionSymbol", "F")
             +fieldList(valueParameter, withReplace = true).withTransform()
-            +body(nullable = true)
+            +body(nullable = true).withTransform()
         }
 
         errorFunction.configure {
@@ -184,6 +187,11 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             needTransformOtherChildren()
         }
 
+        elvisExpression.configure {
+            +field("lhs", expression).withTransform()
+            +field("rhs", expression).withTransform()
+        }
+
         qualifiedAccessWithoutCallee.configure {
             +typeArguments.withTransform()
             +receivers
@@ -210,7 +218,8 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         typeOperatorCall.configure {
             +field("operation", operationType)
-            +field("conversionTypeRef", typeRef)
+            +field("conversionTypeRef", typeRef).withTransform()
+            needTransformOtherChildren()
         }
 
         whenBranch.configure {
@@ -243,13 +252,11 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +field("companionObject", regularClass, nullable = true).withTransform()
             +booleanField("hasLazyNestedClassifiers")
             +superTypeRefs(withReplace = true)
-            +controlFlowGraphReferenceField
         }
 
         anonymousObject.configure {
             parentArg(klass, "F", anonymousObject)
             +symbol("FirAnonymousObjectSymbol")
-            +controlFlowGraphReferenceField
         }
 
         typeAlias.configure {
@@ -265,7 +272,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             parentArg(function, "F", anonymousFunction)
             +symbol("FirAnonymousFunctionSymbol")
             +field(label, nullable = true)
-            +field(invocationKindType, nullable = true, withReplace = true).apply {
+            +field("invocationKind", eventOccurrencesRangeType, nullable = true, withReplace = true).apply {
                 isMutable = true
             }
             +booleanField("isLambda")
@@ -298,11 +305,9 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         property.configure {
             parentArg(variable, "F", property)
             parentArg(callableMemberDeclaration, "F", property)
-            +controlFlowGraphReferenceField
             +symbol("FirPropertySymbol")
             +field("backingFieldSymbol", backingFieldSymbolType)
             +booleanField("isLocal")
-            +typeParameters
             +status
         }
 
@@ -323,7 +328,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             generateBooleanFields(
                 "expect", "actual", "override", "operator", "infix", "inline", "tailRec",
                 "external", "const", "lateInit", "inner", "companion", "data", "suspend", "static",
-                "fromSealedClass", "fromEnumClass"
+                "fromSealedClass", "fromEnumClass", "fun"
             )
         }
 
@@ -368,6 +373,11 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             needTransformOtherChildren()
         }
 
+        errorProperty.configure {
+            parentArg(variable, "F", errorProperty)
+            +symbol("FirErrorPropertySymbol")
+        }
+
         enumEntry.configure {
             parentArg(variable, "F", enumEntry)
             parentArg(callableMemberDeclaration, "F", enumEntry)
@@ -382,7 +392,6 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             parentArg(symbolOwner, "E", anonymousInitializer)
             +body(nullable = true)
             +symbol(anonymousInitializerSymbolType.type)
-            +controlFlowGraphReferenceField
         }
 
         file.configure {
@@ -413,7 +422,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         annotationCall.configure {
             +field("useSiteTarget", annotationUseSiteTargetType, nullable = true)
             +field("annotationTypeRef", typeRef).withTransform()
-            +booleanField("resolved", withReplace = true)
+            +field("resolveStatus", annotationResolveStatusType, withReplace = true)
         }
 
         arraySetCall.configure {

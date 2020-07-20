@@ -56,8 +56,12 @@ class FakeOverrideChecker(
             .map { with(irMangler) { it.signatureString }}
             .sorted()
 
-        assert(descriptorSignatures == irSignatures) {
-            "[IR VALIDATION] Fake override mismatch for ${clazz.fqNameWhenAvailable!!}\n" +
+        // We can't have equality here because dependency libraries could have
+        // been compiled with -friend-modules.
+        // There can be internal fake overrides in IR absent in descriptors.
+        // Also there can be members inherited from internal interfaces of other modules.
+        require(irSignatures.containsAll(descriptorSignatures)) {
+            "[IR VALIDATION] Internal fake override mismatch for ${clazz.fqNameWhenAvailable!!}\n" +
             "\tDescriptor based: $descriptorSignatures\n" +
             "\tIR based        : $irSignatures"
         }

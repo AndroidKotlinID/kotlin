@@ -6,10 +6,12 @@
 package org.jetbrains.kotlin.gradle.targets.js.ir
 
 import org.gradle.api.attributes.Usage
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsOptions
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
+import org.jetbrains.kotlin.gradle.plugin.mpp.isMain
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsReportAggregatingTestRun
 import org.jetbrains.kotlin.gradle.tasks.KotlinTasksProvider
 import org.jetbrains.kotlin.gradle.testing.internal.kotlinTestRegistry
@@ -53,9 +55,9 @@ open class KotlinJsIrTargetConfigurator(kotlinPluginVersion: String) :
         return KotlinJsIrSourceSetProcessor(tasksProvider, compilation, kotlinPluginVersion)
     }
 
-    override fun createArchiveTasks(target: KotlinJsIrTarget): Zip {
+    override fun createArchiveTasks(target: KotlinJsIrTarget): TaskProvider<out Zip> {
         return super.createArchiveTasks(target).apply {
-            archiveExtension.set(KLIB_TYPE)
+            configure { it.archiveExtension.set(KLIB_TYPE) }
         }
     }
 
@@ -63,7 +65,7 @@ open class KotlinJsIrTargetConfigurator(kotlinPluginVersion: String) :
         super.configureCompilations(target)
 
         target.compilations.all { compilation ->
-            compilation.compileKotlinTask.kotlinOptions {
+            compilation.kotlinOptions {
                 configureOptions()
 
                 freeCompilerArgs += listOf(
@@ -72,7 +74,7 @@ open class KotlinJsIrTargetConfigurator(kotlinPluginVersion: String) :
                 )
 
                 // Configure FQ module name to avoid cyclic dependencies in klib manifests (see KT-36721).
-                val baseName = if (compilation.name == KotlinCompilation.MAIN_COMPILATION_NAME) {
+                val baseName = if (compilation.isMain()) {
                     target.project.name
                 } else {
                     "${target.project.name}_${compilation.name}"

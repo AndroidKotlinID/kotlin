@@ -5,32 +5,24 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.cir.impl
 
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirSimpleType
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirSimpleTypeKind
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeConstructorId
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeProjection
+import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.descriptors.commonizer.cir.*
 import org.jetbrains.kotlin.descriptors.commonizer.utils.appendHashCode
 import org.jetbrains.kotlin.descriptors.commonizer.utils.hashCode
-import org.jetbrains.kotlin.name.FqName
 
 data class CirSimpleTypeImpl(
-    override val kind: CirSimpleTypeKind,
-    override val fqName: FqName,
+    override val classifierId: CirClassifierId,
+    override val visibility: Visibility, // visibility of the classifier descriptor
     override val arguments: List<CirTypeProjection>,
-    override val isMarkedNullable: Boolean,
-    override val isDefinitelyNotNullType: Boolean,
-    override val expandedTypeConstructorId: CirTypeConstructorId,
-    override val fqNameWithTypeParameters: String
+    override val isMarkedNullable: Boolean
 ) : CirSimpleType() {
     // See also org.jetbrains.kotlin.types.KotlinType.cachedHashCode
     private var cachedHashCode = 0
 
-    private fun computeHashCode() = hashCode(kind)
-        .appendHashCode(fqName)
+    private fun computeHashCode() = hashCode(classifierId)
+        .appendHashCode(visibility)
         .appendHashCode(arguments)
         .appendHashCode(isMarkedNullable)
-        .appendHashCode(isDefinitelyNotNullType)
-        .appendHashCode(fqNameWithTypeParameters)
 
     override fun hashCode(): Int {
         var currentHashCode = cachedHashCode
@@ -45,11 +37,9 @@ data class CirSimpleTypeImpl(
         other === this -> true
         other is CirSimpleType -> {
             isMarkedNullable == other.isMarkedNullable
-                    && fqName == other.fqName
-                    && kind == other.kind
+                    && classifierId == other.classifierId
+                    && visibility == other.visibility
                     && arguments == other.arguments
-                    && fqNameWithTypeParameters == other.fqNameWithTypeParameters
-                    && isDefinitelyNotNullType == other.isDefinitelyNotNullType
         }
         else -> false
     }

@@ -14,7 +14,6 @@ class FunctionCommonizer(cache: CirClassifiersCache) : AbstractFunctionOrPropert
     private val modifiers = FunctionModifiersCommonizer()
     private val valueParameters = ValueParameterListCommonizer(cache)
     private var hasStableParameterNames = true
-    private var hasSynthesizedParameterNames = false
 
     override fun commonizationResult() = CirFunctionFactory.create(
         annotations = annotations.result,
@@ -25,8 +24,6 @@ class FunctionCommonizer(cache: CirClassifiersCache) : AbstractFunctionOrPropert
         containingClassDetails = null,
         valueParameters = valueParameters.result,
         hasStableParameterNames = hasStableParameterNames,
-        hasSynthesizedParameterNames = hasSynthesizedParameterNames,
-        isExternal = false,
         extensionReceiver = extensionReceiver.result,
         returnType = returnType.result,
         kind = kind,
@@ -41,7 +38,6 @@ class FunctionCommonizer(cache: CirClassifiersCache) : AbstractFunctionOrPropert
 
         if (result) {
             hasStableParameterNames = hasStableParameterNames && next.hasStableParameterNames
-            hasSynthesizedParameterNames = hasSynthesizedParameterNames || next.hasSynthesizedParameterNames
         }
 
         return result

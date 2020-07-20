@@ -22,10 +22,15 @@ private class ListStorageFirScope(val result: List<FirScope>) : FirScope()
 fun createImportingScopes(
     file: FirFile,
     session: FirSession,
-    scopeSession: ScopeSession
-): List<FirScope> = scopeSession.getOrBuild(file, FileImportingScopeKey) {
-    ListStorageFirScope(doCreateImportingScopes(file, session, scopeSession))
-}.result
+    scopeSession: ScopeSession,
+    useCaching: Boolean = true
+): List<FirScope> = if (useCaching) {
+    scopeSession.getOrBuild(file, FileImportingScopeKey) {
+        ListStorageFirScope(doCreateImportingScopes(file, session, scopeSession))
+    }.result
+} else {
+    doCreateImportingScopes(file, session, scopeSession)
+}
 
 private fun doCreateImportingScopes(
     file: FirFile,
@@ -56,4 +61,3 @@ private fun doCreateImportingScopes(
 }
 
 private val PACKAGE_MEMBER = scopeSessionKey<FqName, FirPackageMemberScope>()
-

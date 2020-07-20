@@ -229,14 +229,19 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
                     mainArguments = mainCallArguments,
                     generateFullJs = !arguments.irDce,
                     generateDceJs = arguments.irDce,
-                    dceDriven = arguments.irDceDriven
+                    dceDriven = arguments.irDceDriven,
+                    multiModule = arguments.irPerModule,
+                    relativeRequirePath = true
                 )
             } catch (e: JsIrCompilationError) {
                 return COMPILATION_ERROR
             }
 
             val jsCode = if (arguments.irDce && !arguments.irDceDriven) compiledModule.dceJsCode!! else compiledModule.jsCode!!
-            outputFile.writeText(jsCode)
+            outputFile.writeText(jsCode.mainModule)
+            jsCode.dependencies.forEach { (name, content) ->
+                outputFile.resolveSibling("$name.js").writeText(content)
+            }
             if (arguments.generateDts) {
                 val dtsFile = outputFile.withReplacedExtensionOrNull(outputFile.extension, "d.ts")!!
                 dtsFile.writeText(compiledModule.tsDefinitions ?: error("No ts definitions"))
@@ -322,6 +327,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
         }
 
         configuration.put(JSConfigurationKeys.PRINT_REACHABILITY_INFO, arguments.irDcePrintReachabilityInfo)
+        configuration.put(JSConfigurationKeys.DISABLE_FAKE_OVERRIDE_VALIDATOR, arguments.disableFakeOverrideValidator)
     }
 
     override fun executableScriptFileName(): String {

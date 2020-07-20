@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.js.JsDeclarationFactory
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.js.JsCommonBackendContext
 import org.jetbrains.kotlin.ir.backend.js.JsMapping
@@ -60,7 +61,7 @@ class WasmBackendContext(
         builtIns.builtInsModule, FqName("kotlin.wasm.internal")
     )
 
-    override val sharedVariablesManager = JsSharedVariablesManager(irBuiltIns, internalPackageFragment)
+    override val sharedVariablesManager = JsSharedVariablesManager(TODO("..."))
 
     val wasmSymbols: WasmSymbols = WasmSymbols(this@WasmBackendContext, symbolTable)
     override val ir = object : Ir<WasmBackendContext>(this, irModuleFragment) {
@@ -80,6 +81,7 @@ class WasmBackendContext(
 }
 
 class DescriptorlessExternalPackageFragmentSymbol : IrExternalPackageFragmentSymbol {
+    @ObsoleteDescriptorBasedAPI
     override val descriptor: PackageFragmentDescriptor
         get() = error("Operation is unsupported")
 

@@ -23,10 +23,12 @@ object SerializationAnnotations {
     val serializerAnnotationFqName = FqName("kotlinx.serialization.Serializer")
     internal val serialNameAnnotationFqName = FqName("kotlinx.serialization.SerialName")
     internal val requiredAnnotationFqName = FqName("kotlinx.serialization.Required")
-    internal val serialTransientFqName = FqName("kotlinx.serialization.Transient")
+    val serialTransientFqName = FqName("kotlinx.serialization.Transient")
     internal val serialInfoFqName = FqName("kotlinx.serialization.SerialInfo")
 
-    internal val contextualFqName = FqName("kotlinx.serialization.ContextualSerialization")
+    internal val contextualFqName = FqName("kotlinx.serialization.ContextualSerialization") // this one is deprecated
+    internal val contextualOnFileFqName = FqName("kotlinx.serialization.UseContextualSerialization")
+    internal val contextualOnPropertyFqName = FqName("kotlinx.serialization.Contextual")
     internal val polymorphicFqName = FqName("kotlinx.serialization.Polymorphic")
     internal val additionalSerializersFqName = FqName("kotlinx.serialization.UseSerializers")
 }
@@ -59,7 +61,7 @@ object SerialEntityNames {
     const val SERIAL_LOADER_CLASS = "DeserializationStrategy"
 
     const val SERIAL_DESCRIPTOR_CLASS = "SerialDescriptor"
-    const val SERIAL_DESCRIPTOR_CLASS_IMPL = "SerialClassDescImpl"
+    const val SERIAL_DESCRIPTOR_CLASS_IMPL = "PluginGeneratedSerialDescriptor"
     const val SERIAL_DESCRIPTOR_FOR_ENUM = "EnumDescriptor"
 
     //exceptions

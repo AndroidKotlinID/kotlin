@@ -10,12 +10,14 @@ import com.intellij.codeInsight.editorActions.moveUpDown.StatementUpDownMover
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.idea.core.util.getLineCount
 import org.jetbrains.kotlin.idea.core.util.isMultiLine
 import org.jetbrains.kotlin.idea.formatter.trailingComma.TrailingCommaHelper
 import org.jetbrains.kotlin.idea.util.isComma
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfTypesAndPredicate
+import org.jetbrains.kotlin.psi.psiUtil.getPrevSiblingIgnoringWhitespaceAndComments
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.util.function.Predicate
 
@@ -30,7 +32,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         sibling: PsiElement,
         down: Boolean
     ): LineRange? {
-        val next = if (sibling.node.elementType === KtTokens.COMMA) {
+        val next = if (sibling.node.elementType === KtTokens.COMMA || sibling is PsiComment) {
             firstNonWhiteSibling(sibling, down)
         } else {
             sibling
@@ -498,6 +500,8 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                 return element
             }
 
+            if (getParentFileAnnotationEntry(element) != null) return null
+
             val movableElement = element.getParentOfTypesAndPredicate(
                 strict = false,
                 parentClasses = *MOVABLE_ELEMENT_CLASSES,
@@ -543,7 +547,17 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             down: Boolean
         ): PsiElement? {
             val element = if (down) sourceRange.lastElement else sourceRange.firstElement
-            var sibling = if (down) element.nextSibling else element.prevSibling
+            var sibling = if (down) {
+                val elementToCheck = sourceRange.firstElement
+                if (element is PsiComment && (elementToCheck is KtParameter || elementToCheck is KtValueArgument)) {
+                    element.getPrevSiblingIgnoringWhitespaceAndComments()
+                } else {
+                    element.nextSibling
+                }
+            } else {
+                element.prevSibling
+            }
+
             val whiteSpaceTestSubject = sibling ?: kotlin.run {
                 val parent = element.parent
                 if (parent == null || !isBracelessBlock(parent)) return@run null
@@ -552,7 +566,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             }
 
             if (whiteSpaceTestSubject is PsiWhiteSpace) {
-                if (whiteSpaceTestSubject.isMultiLine()) {
+                if (whiteSpaceTestSubject.getLineCount() >= 3) {
                     val nearLine = if (down) sourceRange.endLine else sourceRange.startLine - 1
                     info.toMove = sourceRange
                     info.toMove2 = LineRange(nearLine, nearLine + 1)
@@ -588,8 +602,9 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             if (willBeLast && comma != null && !withTrailingComma) {
                 comma.delete()
             } else if (!willBeLast && comma == null) {
-                val parent = element.parent
-                parent.addAfter(KtPsiFactory(parent.project).createComma(), element)
+                element.children.lastOrNull()?.let {
+                    element.addAfter(KtPsiFactory(element.project).createComma(), it)
+                }
             }
         }
 

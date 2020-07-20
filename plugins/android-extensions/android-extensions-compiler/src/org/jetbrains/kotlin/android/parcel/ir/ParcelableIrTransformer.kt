@@ -18,10 +18,10 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 class ParcelableIrTransformer(private val context: IrPluginContext, private val androidSymbols: AndroidSymbols) :
     ParcelableExtensionBase, IrElementVisitorVoid {
     private val serializerFactory = IrParcelSerializerFactory(androidSymbols)
@@ -120,7 +121,7 @@ class ParcelableIrTransformer(private val context: IrPluginContext, private val 
                     irExprBody(irInt(flags))
                 }
 
-                (this as IrFunctionImpl).metadata = MetadataSource.Function(
+                metadata = MetadataSource.Function(
                     declaration.descriptor.findFunction(ParcelableSyntheticComponent.ComponentKind.DESCRIBE_CONTENTS)!!
                 )
             }
@@ -175,7 +176,7 @@ class ParcelableIrTransformer(private val context: IrPluginContext, private val 
                     }
                 }
 
-                (this as IrFunctionImpl).metadata = MetadataSource.Function(
+                metadata = MetadataSource.Function(
                     declaration.descriptor.findFunction(ParcelableSyntheticComponent.ComponentKind.WRITE_TO_PARCEL)!!
                 )
             }

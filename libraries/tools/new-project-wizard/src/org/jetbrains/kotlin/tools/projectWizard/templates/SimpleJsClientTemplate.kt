@@ -17,8 +17,6 @@ import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.*
 import org.jetbrains.kotlin.tools.projectWizard.ir.buildsystem.gradle.multiplatform.DefaultTargetConfigurationIR
 import org.jetbrains.kotlin.tools.projectWizard.library.MavenArtifact
 import org.jetbrains.kotlin.tools.projectWizard.library.NpmArtifact
-import org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators.JsBrowserTargetConfigurator
-import org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators.JsSingleplatformModuleConfigurator
 import org.jetbrains.kotlin.tools.projectWizard.phases.GenerationPhase
 import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModuleSubType
 import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.ModuleType
@@ -29,7 +27,9 @@ import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.Templa
 import org.jetbrains.kotlin.tools.projectWizard.transformers.interceptors.interceptTemplate
 import org.jetbrains.kotlin.tools.projectWizard.KotlinNewProjectWizardBundle
 import org.jetbrains.kotlin.tools.projectWizard.Versions
+import org.jetbrains.kotlin.tools.projectWizard.moduleConfigurators.*
 import org.jetbrains.kotlin.tools.projectWizard.plugins.kotlin.KotlinPlugin
+import org.jetbrains.kotlin.tools.projectWizard.templates.withSettingsOf
 
 class SimpleJsClientTemplate : Template() {
     override val title: String = KotlinNewProjectWizardBundle.message("module.template.js.simple.title")
@@ -40,9 +40,20 @@ class SimpleJsClientTemplate : Template() {
     @NonNls
     override val id: String = "simpleJsClient"
 
-    override fun isApplicableTo(module: Module): Boolean =
-        module.configurator == JsBrowserTargetConfigurator
-                || module.configurator == JsSingleplatformModuleConfigurator
+    override fun isApplicableTo(
+        reader: Reader,
+        module: Module
+    ): Boolean = when (module.configurator) {
+        JsBrowserTargetConfigurator -> true
+        JsSingleplatformModuleConfigurator -> {
+            with(reader) {
+                withSettingsOf(module, module.configurator) {
+                    JSConfigurator.kind.reference.notRequiredSettingValue == JsTargetKind.APPLICATION
+                }
+            }
+        }
+        else -> false
+    }
 
     val renderEngine by enumSetting<RenderEngine>(
         KotlinNewProjectWizardBundle.message("module.template.js.simple.setting.rendering.engine"),
@@ -71,22 +82,17 @@ class SimpleJsClientTemplate : Template() {
     override fun Writer.getRequiredLibraries(module: ModuleIR): List<DependencyIR> = withSettingsOf(module.originalModule) {
         buildList {
             +ArtifactBasedLibraryDependencyIR(
-                MavenArtifact(DefaultRepository.JCENTER, "org.jetbrains.kotlinx", "kotlinx-html-js"),
-                Versions.KOTLINX.KOTLINX_HTML,
+                MavenArtifact(Repositories.KOTLINX, "org.jetbrains.kotlinx", "kotlinx-html-js"),
+                Versions.KOTLINX.KOTLINX_HTML(KotlinPlugin::version.propertyValue.version),
                 DependencyType.MAIN
             )
 
             val kotlinVersion = KotlinPlugin::version.propertyValue
             if (renderEngine.reference.settingValue != RenderEngine.KOTLINX_HTML) {
-                +Dependencies.KOTLIN_REACT(kotlinVersion)
-                +Dependencies.KOTLIN_REACT_DOM(kotlinVersion)
-                +Dependencies.NPM_REACT
-                +Dependencies.NPM_REACT_DOM
+                +Dependencies.KOTLIN_REACT(kotlinVersion.version)
+                +Dependencies.KOTLIN_REACT_DOM(kotlinVersion.version)
                 if (renderEngine.reference.settingValue == RenderEngine.REACT_WITH_STYLED) {
-                    +Dependencies.NPM_REACT_IS
-                    +Dependencies.KOTLIN_STYLED(kotlinVersion)
-                    +Dependencies.NPM_STYLED_COMPONENTS
-                    +Dependencies.NPM_INLINE_STYLE_PREFIXER
+                    +Dependencies.KOTLIN_STYLED(kotlinVersion.version)
                 }
             }
         }
@@ -268,32 +274,6 @@ class SimpleJsClientTemplate : Template() {
                 DependencyType.MAIN
             )
         }
-
-        val NPM_REACT = ArtifactBasedLibraryDependencyIR(
-            NpmArtifact("react"),
-            Versions.NPM.REACT,
-            DependencyType.MAIN
-        )
-        val NPM_REACT_DOM = ArtifactBasedLibraryDependencyIR(
-            NpmArtifact("react-dom"),
-            Versions.NPM.REACT_DOM,
-            DependencyType.MAIN
-        )
-        val NPM_REACT_IS = ArtifactBasedLibraryDependencyIR(
-            NpmArtifact("react-is"),
-            Versions.NPM.REACT_IS,
-            DependencyType.MAIN
-        )
-        val NPM_STYLED_COMPONENTS = ArtifactBasedLibraryDependencyIR(
-            NpmArtifact("styled-components"),
-            Versions.NPM.STYLED_COMPONENTS,
-            DependencyType.MAIN
-        )
-        val NPM_INLINE_STYLE_PREFIXER = ArtifactBasedLibraryDependencyIR(
-            NpmArtifact("inline-style-prefixer"),
-            Versions.NPM.INLINE_STYLE_PREFIXER,
-            DependencyType.MAIN
-        )
     }
 
     enum class RenderEngine(@Nls override val text: String) : DisplayableSettingItem {

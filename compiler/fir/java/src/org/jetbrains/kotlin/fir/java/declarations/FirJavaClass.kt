@@ -80,7 +80,7 @@ class FirJavaClass @FirImplementationDetail internal constructor(
     }
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirJavaClass {
-        typeParameters.transformInplace(transformer, data)
+        transformTypeParameters(transformer, data)
         transformDeclarations(transformer, data)
         status = status.transformSingle(transformer, data)
         transformSuperTypeRefs(transformer, data)
@@ -115,6 +115,11 @@ class FirJavaClass @FirImplementationDetail internal constructor(
     override fun <D> transformCompanionObject(transformer: FirTransformer<D>, data: D): FirJavaClass {
         return this
     }
+
+    override fun <D> transformTypeParameters(transformer: FirTransformer<D>, data: D): FirRegularClass {
+        typeParameters.transformInplace(transformer, data)
+        return this
+    }
 }
 
 @FirBuilderDsl
@@ -143,6 +148,7 @@ internal class FirJavaClassBuilder : FirRegularClassBuilder(), FirAnnotationCont
             isCompanion = false
             isData = false
             isInline = false
+            isFun = classKind == ClassKind.INTERFACE
         }
 
         return FirJavaClass(

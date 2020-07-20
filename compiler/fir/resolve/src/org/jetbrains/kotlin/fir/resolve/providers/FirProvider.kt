@@ -5,13 +5,15 @@
 
 package org.jetbrains.kotlin.fir.resolve.providers
 
-import org.jetbrains.kotlin.fir.declarations.FirClassLikeDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirFile
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+
+@RequiresOptIn
+annotation class FirProviderInternals
 
 abstract class FirProvider : FirSymbolProvider() {
 
@@ -41,4 +43,10 @@ abstract class FirProvider : FirSymbolProvider() {
     abstract fun getFirCallableContainerFile(symbol: FirCallableSymbol<*>): FirFile?
 
     abstract fun getFirFilesByPackage(fqName: FqName): List<FirFile>
+
+    @FirProviderInternals
+    abstract fun recordGeneratedClass(owner: FirAnnotatedDeclaration, klass: FirRegularClass)
+
+    @FirProviderInternals
+    abstract fun recordGeneratedMember(owner: FirAnnotatedDeclaration, klass: FirDeclaration)
 }

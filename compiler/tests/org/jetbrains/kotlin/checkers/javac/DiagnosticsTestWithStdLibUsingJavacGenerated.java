@@ -562,6 +562,52 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             public void testTarget8() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/target8.kt");
             }
+
+            @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/allCompatibility")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class AllCompatibility extends AbstractDiagnosticsTestWithStdLibUsingJavac {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInAllCompatibility() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/allCompatibility"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("specialization.kt")
+                public void testSpecialization() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/allCompatibility/specialization.kt");
+                }
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/jvmDefaultWithoutCompatibility")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class JvmDefaultWithoutCompatibility extends AbstractDiagnosticsTestWithStdLibUsingJavac {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInJvmDefaultWithoutCompatibility() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/jvmDefaultWithoutCompatibility"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("target6.kt")
+                public void testTarget6() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/jvmDefaultWithoutCompatibility/target6.kt");
+                }
+
+                @TestMetadata("target8.kt")
+                public void testTarget8() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/jvmDefaultWithoutCompatibility/target8.kt");
+                }
+
+                @TestMetadata("target8Disabled.kt")
+                public void testTarget8Disabled() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmDefault/jvmDefaultWithoutCompatibility/target8Disabled.kt");
+                }
+            }
         }
 
         @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/annotations/jvmField")
@@ -2062,6 +2108,21 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
                 runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/nestedSuspendCallInsideLambda.kt");
             }
 
+            @TestMetadata("plusAssignInCoroutineContext.kt")
+            public void testPlusAssignInCoroutineContext() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/plusAssignInCoroutineContext.kt");
+            }
+
+            @TestMetadata("plusAssignWithLambda.kt")
+            public void testPlusAssignWithLambda() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/plusAssignWithLambda.kt");
+            }
+
+            @TestMetadata("plusAssignWithLambda2.kt")
+            public void testPlusAssignWithLambda2() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/plusAssignWithLambda2.kt");
+            }
+
             @TestMetadata("qualifiedResolvedExpressionInsideBuilderInference.kt")
             public void testQualifiedResolvedExpressionInsideBuilderInference() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/qualifiedResolvedExpressionInsideBuilderInference.kt");
@@ -2850,6 +2911,11 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             runTest("compiler/testData/diagnostics/testsWithStdLib/factoryPattern/overloadByLambdaReturnType_enabled_no_annotation.kt");
         }
 
+        @TestMetadata("referenceWithTheSameNameAsContainingProperty.kt")
+        public void testReferenceWithTheSameNameAsContainingProperty() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/factoryPattern/referenceWithTheSameNameAsContainingProperty.kt");
+        }
+
         @TestMetadata("resolutionInOldInference.kt")
         public void testResolutionInOldInference() throws Exception {
             runTest("compiler/testData/diagnostics/testsWithStdLib/factoryPattern/resolutionInOldInference.kt");
@@ -3034,6 +3100,11 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             @TestMetadata("exactAnnotation.kt")
             public void testExactAnnotation() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/exactAnnotation.kt");
+            }
+
+            @TestMetadata("exactAnnotationWithUpperBoundConstraint.kt")
+            public void testExactAnnotationWithUpperBoundConstraint() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/inference/annotationsForResolve/exactAnnotationWithUpperBoundConstraint.kt");
             }
 
             @TestMetadata("explicitTypeArgumentAsValidInputType.kt")

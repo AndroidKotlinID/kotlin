@@ -6,7 +6,7 @@
 package org.jetbrains.kotlin.fir.declarations.builder
 
 import kotlin.contracts.*
-import org.jetbrains.kotlin.contracts.description.InvocationKind
+import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.fir.FirLabel
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSourceElement
@@ -49,7 +49,7 @@ class FirAnonymousFunctionBuilder : FirFunctionBuilder, FirAnnotationContainerBu
     override var typeRef: FirTypeRef = FirImplicitTypeRefImpl(null)
     lateinit var symbol: FirAnonymousFunctionSymbol
     var label: FirLabel? = null
-    var invocationKind: InvocationKind? = null
+    var invocationKind: EventOccurrencesRange? = null
     var isLambda: Boolean by kotlin.properties.Delegates.notNull<Boolean>()
     val typeParameters: MutableList<FirTypeParameter> = mutableListOf()
 

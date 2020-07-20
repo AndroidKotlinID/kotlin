@@ -14,6 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.ui.EditorNotifications
+import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.TestOnly
@@ -158,8 +159,8 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
         file: KtFile,
         isFirstLoad: Boolean,
         forceSync: Boolean,
-        isPostponedLoad: Boolean,
-        fromCacheOnly: Boolean
+        fromCacheOnly: Boolean,
+        skipNotification: Boolean
     ): Boolean {
         val virtualFile = file.originalFile.virtualFile ?: return false
 
@@ -175,14 +176,19 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
                     loaders.firstOrNull { it.loadDependencies(isFirstLoad, file, scriptDefinition, loadingContext) }
                 } else {
                     val autoReloadEnabled = KotlinScriptingSettings.getInstance(project).autoReloadConfigurations(scriptDefinition)
-                    val postponeLoading = isPostponedLoad && !autoReloadEnabled
+                    val forceSkipNotification = skipNotification || autoReloadEnabled
 
-                    if (postponeLoading) {
-                        LoadScriptConfigurationNotificationFactory.showNotification(virtualFile, project) {
-                            runAsyncLoaders(file, virtualFile, scriptDefinition, async, isLoadingPostponed = true)
+                    // sync loaders can do something, let's recheck
+                    val isFirstLoadActual = getCachedConfigurationState(virtualFile)?.applied == null
+
+                    val intercepted = !forceSkipNotification && async.any {
+                        it.interceptBackgroundLoading(virtualFile, isFirstLoadActual) {
+                            runAsyncLoaders(file, virtualFile, scriptDefinition, listOf(it), true)
                         }
-                    } else {
-                        runAsyncLoaders(file, virtualFile, scriptDefinition, async, isLoadingPostponed = false)
+                    }
+
+                    if (!intercepted) {
+                        runAsyncLoaders(file, virtualFile, scriptDefinition, async, forceSkipNotification)
                     }
                 }
             }
@@ -198,7 +204,7 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
         virtualFile: VirtualFile,
         scriptDefinition: ScriptDefinition,
         loaders: List<ScriptConfigurationLoader>,
-        isLoadingPostponed: Boolean
+        forceSkipNotification: Boolean
     ) {
         backgroundExecutor.ensureScheduled(virtualFile) {
             val cached = getCachedConfigurationState(virtualFile)
@@ -206,8 +212,7 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
             val applied = cached?.applied
             if (applied != null && applied.inputs.isUpToDate(project, virtualFile)) {
                 // in case user reverted to applied configuration
-                val skipNotification = isLoadingPostponed || KotlinScriptingSettings.getInstance(project).autoReloadConfigurations(scriptDefinition)
-                suggestOrSaveConfiguration(virtualFile, applied, skipNotification)
+                suggestOrSaveConfiguration(virtualFile, applied, forceSkipNotification)
             } else if (cached == null || !cached.isUpToDate(project, virtualFile)) {
                 // don't start loading if nothing was changed
                 // (in case we checking for up-to-date and loading concurrently)
@@ -217,20 +222,15 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
         }
     }
 
-    fun forceReloadConfiguration(file: KtFile, loader: ScriptConfigurationLoader): ScriptCompilationConfigurationWrapper? {
+    @TestOnly
+    fun runLoader(file: KtFile, loader: ScriptConfigurationLoader): ScriptCompilationConfigurationWrapper? {
         val virtualFile = file.originalFile.virtualFile ?: return null
 
         if (!ScriptDefinitionsManager.getInstance(project).isReady()) return null
         val scriptDefinition = file.findScriptDefinition() ?: return null
 
         manager.updater.update {
-            if (!loader.shouldRunInBackground(scriptDefinition)) {
-                loader.loadDependencies(false, file, scriptDefinition, loadingContext)
-            } else {
-                backgroundExecutor.ensureScheduled(virtualFile) {
-                    loader.loadDependencies(false, file, scriptDefinition, loadingContext)
-                }
-            }
+            loader.loadDependencies(false, file, scriptDefinition, loadingContext)
         }
 
         return getAppliedConfiguration(virtualFile)?.configuration
@@ -260,14 +260,14 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
     private fun suggestOrSaveConfiguration(
         file: VirtualFile,
         newResult: ScriptConfigurationSnapshot,
-        skipNotification: Boolean
+        forceSkipNotification: Boolean
     ) {
         saveLock.withLock {
             debug(file) { "configuration received = $newResult" }
 
             setLoadedConfiguration(file, newResult)
 
-            LoadScriptConfigurationNotificationFactory.hideNotification(file, project)
+            hideInterceptedNotification(file)
 
             val newConfiguration = newResult.configuration
             if (newConfiguration == null) {
@@ -279,11 +279,11 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
                     saveReports(file, newResult.reports)
                     file.removeScriptDependenciesNotificationPanel(project)
                 } else {
-                    val autoReload = skipNotification
+                    val skipNotification = forceSkipNotification
                             || oldConfiguration == null
                             || ApplicationManager.getApplication().isUnitTestModeWithoutScriptLoadingNotification
 
-                    if (autoReload) {
+                    if (skipNotification) {
                         if (oldConfiguration != null) {
                             file.removeScriptDependenciesNotificationPanel(project)
                         }
@@ -337,6 +337,33 @@ class DefaultScriptingSupport(manager: CompositeScriptConfigurationManager) : De
         }
     }
 
+    fun ensureNotificationsRemoved(file: VirtualFile) {
+        if (cache.remove(file)) {
+            saveReports(file, listOf())
+            file.removeScriptDependenciesNotificationPanel(project)
+        }
+
+        // this notification can be shown before something will be in cache
+        hideInterceptedNotification(file)
+    }
+
+    fun updateScriptDefinitionsReferences() {
+        // remove notification for all files
+        cache.allApplied().forEach { (file, _) ->
+            saveReports(file, listOf())
+            file.removeScriptDependenciesNotificationPanel(project)
+            hideInterceptedNotification(file)
+        }
+
+        cache.clear()
+    }
+
+    fun hideInterceptedNotification(file: VirtualFile) {
+        loaders.forEach {
+            it.hideInterceptedNotification(file)
+        }
+    }
+
     companion object {
         fun getInstance(project: Project) =
             (ScriptConfigurationManager.getInstance(project) as CompositeScriptConfigurationManager).default
@@ -380,8 +407,8 @@ abstract class DefaultScriptingSupportBase(val manager: CompositeScriptConfigura
         file: KtFile,
         isFirstLoad: Boolean = getAppliedConfiguration(file.originalFile.virtualFile) == null,
         forceSync: Boolean = false,
-        isPostponedLoad: Boolean = false,
-        fromCacheOnly: Boolean = false
+        fromCacheOnly: Boolean = false,
+        skipNotification: Boolean = false
     ): Boolean
 
     fun getCachedConfigurationState(file: VirtualFile?): ScriptConfigurationState? {
@@ -396,7 +423,7 @@ abstract class DefaultScriptingSupportBase(val manager: CompositeScriptConfigura
         getAppliedConfiguration(file.originalFile.virtualFile) != null
 
     fun isConfigurationLoadingInProgress(file: KtFile): Boolean {
-        return !hasCachedConfiguration(file) && !ScriptConfigurationManager.isManualConfigurationLoading(file.originalFile.virtualFile)
+        return !hasCachedConfiguration(file)
     }
 
     fun getOrLoadConfiguration(
@@ -417,18 +444,11 @@ abstract class DefaultScriptingSupportBase(val manager: CompositeScriptConfigura
     /**
      * Load new configuration and suggest to apply it (only if it is changed)
      */
-    fun ensureUpToDatedConfigurationSuggested(file: KtFile) {
-        reloadIfOutOfDate(file)
+    fun ensureUpToDatedConfigurationSuggested(file: KtFile, skipNotification: Boolean = false) {
+        reloadIfOutOfDate(file, skipNotification)
     }
 
-    /**
-     * Show notification about changed script configuration with action to start loading it
-     */
-    fun suggestToUpdateConfigurationIfOutOfDate(file: KtFile) {
-        reloadIfOutOfDate(file, isPostponedLoad = true)
-    }
-
-    private fun reloadIfOutOfDate(file: KtFile, isPostponedLoad: Boolean = false) {
+    private fun reloadIfOutOfDate(file: KtFile, skipNotification: Boolean = false) {
         if (!ScriptDefinitionsManager.getInstance(project).isReady()) return
 
         manager.updater.update {
@@ -439,7 +459,7 @@ abstract class DefaultScriptingSupportBase(val manager: CompositeScriptConfigura
                     reloadOutOfDateConfiguration(
                         file,
                         isFirstLoad = state == null,
-                        isPostponedLoad = isPostponedLoad
+                        skipNotification = skipNotification
                     )
                 }
             }
@@ -509,10 +529,8 @@ abstract class DefaultScriptingSupportBase(val manager: CompositeScriptConfigura
         manager.updater.update {
             reloadOutOfDateConfiguration(file, forceSync = true)
         }
-    }
 
-    fun updateScriptDefinitionsReferences() {
-        cache.clear()
+        UIUtil.dispatchAllInvocationEvents()
     }
 
     fun collectConfigurations(builder: ScriptClassRootsBuilder) {

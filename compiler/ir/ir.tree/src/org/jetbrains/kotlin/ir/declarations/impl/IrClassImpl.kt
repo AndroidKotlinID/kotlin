@@ -17,16 +17,16 @@
 package org.jetbrains.kotlin.ir.declarations.impl
 
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.carriers.ClassCarrier
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.transform
-import org.jetbrains.kotlin.ir.util.mapOptimized
+import org.jetbrains.kotlin.ir.util.transformIfNeeded
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyExternal
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -45,35 +45,18 @@ class IrClassImpl(
     override val isExternal: Boolean = false,
     override val isInline: Boolean = false,
     override val isExpect: Boolean = false,
-    override val isFun: Boolean = false
+    override val isFun: Boolean = false,
+    override val source: SourceElement = SourceElement.NO_SOURCE
 ) :
     IrDeclarationBase<ClassCarrier>(startOffset, endOffset, origin),
     IrClass,
     ClassCarrier {
 
-    constructor(
-        startOffset: Int,
-        endOffset: Int,
-        origin: IrDeclarationOrigin,
-        symbol: IrClassSymbol,
-        descriptor: ClassDescriptor,
-        name: Name = descriptor.name,
-        visibility: Visibility = descriptor.visibility,
-        modality: Modality = descriptor.modality
-    ) : this(
-        startOffset, endOffset, origin, symbol,
-        name, kind = descriptor.kind,
-        visibility = visibility, modality = modality,
-        isCompanion = descriptor.isCompanionObject, isInner = descriptor.isInner,
-        isData = descriptor.isData, isExternal = descriptor.isEffectivelyExternal(),
-        isInline = descriptor.isInline, isExpect = descriptor.isExpect,
-        isFun = descriptor.isFun
-    )
-
     init {
         symbol.bind(this)
     }
 
+    @ObsoleteDescriptorBasedAPI
     override val descriptor: ClassDescriptor get() = symbol.descriptor
 
     override var visibilityField: Visibility = visibility
@@ -173,7 +156,7 @@ class IrClassImpl(
 
     override fun <D> transformChildren(transformer: IrElementTransformer<D>, data: D) {
         thisReceiver = thisReceiver?.transform(transformer, data)
-        typeParameters = typeParameters.mapOptimized { it.transform(transformer, data) }
+        typeParameters = typeParameters.transformIfNeeded(transformer, data)
         declarations.transform { it.transform(transformer, data) }
     }
 }

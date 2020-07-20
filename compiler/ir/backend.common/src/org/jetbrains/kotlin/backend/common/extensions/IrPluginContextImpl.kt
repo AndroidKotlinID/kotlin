@@ -12,11 +12,12 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
+import org.jetbrains.kotlin.ir.linkage.IrDeserializer
 import org.jetbrains.kotlin.ir.symbols.*
-import org.jetbrains.kotlin.ir.util.IrDeserializer
 import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
 import org.jetbrains.kotlin.ir.util.TypeTranslator
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 
@@ -27,9 +28,11 @@ open class IrPluginContextImpl(
     private val st: ReferenceSymbolTable,
     override val typeTranslator: TypeTranslator,
     override val irBuiltIns: IrBuiltIns,
-    private val linker: IrDeserializer,
+    val linker: IrDeserializer,
     override val symbols: BuiltinSymbolsBase = BuiltinSymbolsBase(irBuiltIns, irBuiltIns.builtIns, st)
 ) : IrPluginContext {
+
+    override val platform: TargetPlatform? = module.platform
 
     override val moduleDescriptor: ModuleDescriptor = module
     override val symbolTable: ReferenceSymbolTable = st

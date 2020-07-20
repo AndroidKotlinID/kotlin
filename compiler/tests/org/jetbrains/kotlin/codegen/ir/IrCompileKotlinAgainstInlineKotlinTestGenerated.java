@@ -121,6 +121,11 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
             runTest("compiler/testData/codegen/boxInline/anonymousObject/defineClass.kt");
         }
 
+        @TestMetadata("functionExpression.kt")
+        public void testFunctionExpression() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/anonymousObject/functionExpression.kt");
+        }
+
         @TestMetadata("inlineCallInsideInlineLambda.kt")
         public void testInlineCallInsideInlineLambda() throws Exception {
             runTest("compiler/testData/codegen/boxInline/anonymousObject/inlineCallInsideInlineLambda.kt");
@@ -1896,6 +1901,11 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
             runTest("compiler/testData/codegen/boxInline/inlineClasses/noReturnTypeManglingFun.kt");
         }
 
+        @TestMetadata("noReturnTypeManglingFunJvmName.kt")
+        public void testNoReturnTypeManglingFunJvmName() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/inlineClasses/noReturnTypeManglingFunJvmName.kt");
+        }
+
         @TestMetadata("noReturnTypeManglingVal.kt")
         public void testNoReturnTypeManglingVal() throws Exception {
             runTest("compiler/testData/codegen/boxInline/inlineClasses/noReturnTypeManglingVal.kt");
@@ -1904,6 +1914,11 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
         @TestMetadata("withReturnTypeManglingFun.kt")
         public void testWithReturnTypeManglingFun() throws Exception {
             runTest("compiler/testData/codegen/boxInline/inlineClasses/withReturnTypeManglingFun.kt");
+        }
+
+        @TestMetadata("withReturnTypeManglingFunJvmName.kt")
+        public void testWithReturnTypeManglingFunJvmName() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/inlineClasses/withReturnTypeManglingFunJvmName.kt");
         }
 
         @TestMetadata("withReturnTypeManglingVal.kt")
@@ -3786,6 +3801,11 @@ public class IrCompileKotlinAgainstInlineKotlinTestGenerated extends AbstractIrC
         @TestMetadata("crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt")
         public void testCrossinlineSuspendLambdaInsideCrossinlineSuspendLambda_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("delegatedProperties.kt")
+        public void testDelegatedProperties_1_3() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/delegatedProperties.kt", "kotlin.coroutines");
         }
 
         @TestMetadata("doubleRegenerationWithNonSuspendingLambda.kt")

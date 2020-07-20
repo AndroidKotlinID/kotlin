@@ -313,17 +313,13 @@ class FirResolveBench(val withProgress: Boolean) {
                         resolvedTypes++
                         val type = resolvedTypeRef.type
                         if (type is ConeKotlinErrorType || type is ConeClassErrorType) {
-                            if (resolvedTypeRef.psi == null) {
-                                implicitTypes++
-                            } else {
-                                errorTypes++
-                                if (resolvedTypeRef is FirErrorTypeRef && resolvedTypeRef.diagnostic is ConeStubDiagnostic) {
-                                    return
-                                }
-                                val psi = resolvedTypeRef.psi!!
-                                val problem = "${resolvedTypeRef::class.simpleName} -> ${type::class.simpleName}: ${type.render()}"
-                                reportProblem(problem, psi)
+                            errorTypes++
+                            if (resolvedTypeRef is FirErrorTypeRef && resolvedTypeRef.diagnostic is ConeStubDiagnostic) {
+                                return
                             }
+                            val psi = resolvedTypeRef.psi ?: return
+                            val problem = "${resolvedTypeRef::class.simpleName} -> ${type::class.simpleName}: ${type.render()}"
+                            reportProblem(problem, psi)
                         }
                     }
                 })
@@ -456,15 +452,23 @@ private fun RTableContext.printMeasureAsTable(measure: FirResolveBench.Measure, 
         timeCell(measure.gcTime, inputUnit = TableTimeUnit.MS)
         cell(measure.gcCollections.toString())
 
-        run {
-            val linePerSec = statistics.totalLines / TableTimeUnit.S.convert(time, TableTimeUnit.NS)
-            val df = DecimalFormat().apply {
-                maximumFractionDigits = 1
-                isGroupingUsed = true
-            }
-            cell(df.format(linePerSec))
-        }
+        linePerSecondCell(statistics.totalLines, time, timeUnit = TableTimeUnit.NS)
     }
 }
+
+
+
+fun RTableContext.RTableRowContext.linePerSecondCell(linePerSec: Double) {
+    val df = DecimalFormat().apply {
+        maximumFractionDigits = 1
+        isGroupingUsed = true
+    }
+    cell(df.format(linePerSec))
+}
+fun RTableContext.RTableRowContext.linePerSecondCell(lines: Int, time: Long, timeUnit: TableTimeUnit = TableTimeUnit.NS) {
+    val linePerSec = lines / TableTimeUnit.S.convert(time, from = timeUnit)
+    linePerSecondCell(linePerSec)
+}
+
 
 class FirRuntimeException(override val message: String, override val cause: Throwable) : RuntimeException(message, cause)

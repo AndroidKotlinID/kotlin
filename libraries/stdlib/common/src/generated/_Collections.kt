@@ -504,8 +504,8 @@ public fun <T> Collection<T>.random(random: Random): T {
 /**
  * Returns a random element from this collection, or `null` if this collection is empty.
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
 public inline fun <T> Collection<T>.randomOrNull(): T? {
     return randomOrNull(Random)
@@ -514,8 +514,8 @@ public inline fun <T> Collection<T>.randomOrNull(): T? {
 /**
  * Returns a random element from this collection using the specified source of randomness, or `null` if this collection is empty.
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun <T> Collection<T>.randomOrNull(random: Random): T? {
     if (isEmpty())
         return null
@@ -1300,6 +1300,72 @@ public inline fun <T, R> Iterable<T>.flatMap(transform: (T) -> Sequence<R>): Lis
 }
 
 /**
+ * Returns a single list of all elements yielded from results of [transform] function being invoked on each element
+ * and its index in the original collection.
+ * 
+ * @sample samples.collections.Collections.Transformations.flatMapIndexed
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedIterable")
+@kotlin.internal.InlineOnly
+public inline fun <T, R> Iterable<T>.flatMapIndexed(transform: (index: Int, T) -> Iterable<R>): List<R> {
+    return flatMapIndexedTo(ArrayList<R>(), transform)
+}
+
+/**
+ * Returns a single list of all elements yielded from results of [transform] function being invoked on each element
+ * and its index in the original collection.
+ * 
+ * @sample samples.collections.Collections.Transformations.flatMapIndexed
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedSequence")
+@kotlin.internal.InlineOnly
+public inline fun <T, R> Iterable<T>.flatMapIndexed(transform: (index: Int, T) -> Sequence<R>): List<R> {
+    return flatMapIndexedTo(ArrayList<R>(), transform)
+}
+
+/**
+ * Appends all elements yielded from results of [transform] function being invoked on each element
+ * and its index in the original collection, to the given [destination].
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedIterableTo")
+@kotlin.internal.InlineOnly
+public inline fun <T, R, C : MutableCollection<in R>> Iterable<T>.flatMapIndexedTo(destination: C, transform: (index: Int, T) -> Iterable<R>): C {
+    var index = 0
+    for (element in this) {
+        val list = transform(checkIndexOverflow(index++), element)
+        destination.addAll(list)
+    }
+    return destination
+}
+
+/**
+ * Appends all elements yielded from results of [transform] function being invoked on each element
+ * and its index in the original collection, to the given [destination].
+ */
+@SinceKotlin("1.4")
+@OptIn(kotlin.experimental.ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+@kotlin.jvm.JvmName("flatMapIndexedSequenceTo")
+@kotlin.internal.InlineOnly
+public inline fun <T, R, C : MutableCollection<in R>> Iterable<T>.flatMapIndexedTo(destination: C, transform: (index: Int, T) -> Sequence<R>): C {
+    var index = 0
+    for (element in this) {
+        val list = transform(checkIndexOverflow(index++), element)
+        destination.addAll(list)
+    }
+    return destination
+}
+
+/**
  * Appends all elements yielded from results of [transform] function being invoked on each element of original collection, to the given [destination].
  */
 public inline fun <T, R, C : MutableCollection<in R>> Iterable<T>.flatMapTo(destination: C, transform: (T) -> Iterable<R>): C {
@@ -1719,60 +1785,39 @@ public inline fun <T> Iterable<T>.forEachIndexed(action: (index: Int, T) -> Unit
     for (item in this) action(checkIndexOverflow(index++), item)
 }
 
-/**
- * Returns the largest element or `null` if there are no elements.
- * 
- * If any of elements is `NaN` returns `NaN`.
- */
+@Deprecated("Use maxOrNull instead.", ReplaceWith("maxOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 @SinceKotlin("1.1")
 public fun Iterable<Double>.max(): Double? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var max = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        max = maxOf(max, e)
-    }
-    return max
+    return maxOrNull()
 }
 
-/**
- * Returns the largest element or `null` if there are no elements.
- * 
- * If any of elements is `NaN` returns `NaN`.
- */
+@Deprecated("Use maxOrNull instead.", ReplaceWith("maxOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 @SinceKotlin("1.1")
 public fun Iterable<Float>.max(): Float? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var max = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        max = maxOf(max, e)
-    }
-    return max
+    return maxOrNull()
 }
 
-/**
- * Returns the largest element or `null` if there are no elements.
- */
+@Deprecated("Use maxOrNull instead.", ReplaceWith("maxOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 public fun <T : Comparable<T>> Iterable<T>.max(): T? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var max = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        if (max < e) max = e
-    }
-    return max
+    return maxOrNull()
+}
+
+@Deprecated("Use maxByOrNull instead.", ReplaceWith("maxByOrNull(selector)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public inline fun <T, R : Comparable<R>> Iterable<T>.maxBy(selector: (T) -> R): T? {
+    return maxByOrNull(selector)
 }
 
 /**
  * Returns the first element yielding the largest value of the given function or `null` if there are no elements.
  * 
- * @sample samples.collections.Collections.Aggregates.maxBy
+ * @sample samples.collections.Collections.Aggregates.maxByOrNull
  */
-public inline fun <T, R : Comparable<R>> Iterable<T>.maxBy(selector: (T) -> R): T? {
+@SinceKotlin("1.4")
+public inline fun <T, R : Comparable<R>> Iterable<T>.maxByOrNull(selector: (T) -> R): T? {
     val iterator = iterator()
     if (!iterator.hasNext()) return null
     var maxElem = iterator.next()
@@ -1966,9 +2011,65 @@ public inline fun <T, R> Iterable<T>.maxOfWithOrNull(comparator: Comparator<in R
 }
 
 /**
+ * Returns the largest element or `null` if there are no elements.
+ * 
+ * If any of elements is `NaN` returns `NaN`.
+ */
+@SinceKotlin("1.4")
+public fun Iterable<Double>.maxOrNull(): Double? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var max = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        max = maxOf(max, e)
+    }
+    return max
+}
+
+/**
+ * Returns the largest element or `null` if there are no elements.
+ * 
+ * If any of elements is `NaN` returns `NaN`.
+ */
+@SinceKotlin("1.4")
+public fun Iterable<Float>.maxOrNull(): Float? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var max = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        max = maxOf(max, e)
+    }
+    return max
+}
+
+/**
+ * Returns the largest element or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+public fun <T : Comparable<T>> Iterable<T>.maxOrNull(): T? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var max = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        if (max < e) max = e
+    }
+    return max
+}
+
+@Deprecated("Use maxWithOrNull instead.", ReplaceWith("maxWithOrNull(comparator)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public fun <T> Iterable<T>.maxWith(comparator: Comparator<in T>): T? {
+    return maxWithOrNull(comparator)
+}
+
+/**
  * Returns the first element having the largest value according to the provided [comparator] or `null` if there are no elements.
  */
-public fun <T> Iterable<T>.maxWith(comparator: Comparator<in T>): T? {
+@SinceKotlin("1.4")
+public fun <T> Iterable<T>.maxWithOrNull(comparator: Comparator<in T>): T? {
     val iterator = iterator()
     if (!iterator.hasNext()) return null
     var max = iterator.next()
@@ -1979,60 +2080,39 @@ public fun <T> Iterable<T>.maxWith(comparator: Comparator<in T>): T? {
     return max
 }
 
-/**
- * Returns the smallest element or `null` if there are no elements.
- * 
- * If any of elements is `NaN` returns `NaN`.
- */
+@Deprecated("Use minOrNull instead.", ReplaceWith("minOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 @SinceKotlin("1.1")
 public fun Iterable<Double>.min(): Double? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var min = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        min = minOf(min, e)
-    }
-    return min
+    return minOrNull()
 }
 
-/**
- * Returns the smallest element or `null` if there are no elements.
- * 
- * If any of elements is `NaN` returns `NaN`.
- */
+@Deprecated("Use minOrNull instead.", ReplaceWith("minOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 @SinceKotlin("1.1")
 public fun Iterable<Float>.min(): Float? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var min = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        min = minOf(min, e)
-    }
-    return min
+    return minOrNull()
 }
 
-/**
- * Returns the smallest element or `null` if there are no elements.
- */
+@Deprecated("Use minOrNull instead.", ReplaceWith("minOrNull()"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
 public fun <T : Comparable<T>> Iterable<T>.min(): T? {
-    val iterator = iterator()
-    if (!iterator.hasNext()) return null
-    var min = iterator.next()
-    while (iterator.hasNext()) {
-        val e = iterator.next()
-        if (min > e) min = e
-    }
-    return min
+    return minOrNull()
+}
+
+@Deprecated("Use minByOrNull instead.", ReplaceWith("minByOrNull(selector)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public inline fun <T, R : Comparable<R>> Iterable<T>.minBy(selector: (T) -> R): T? {
+    return minByOrNull(selector)
 }
 
 /**
  * Returns the first element yielding the smallest value of the given function or `null` if there are no elements.
  * 
- * @sample samples.collections.Collections.Aggregates.minBy
+ * @sample samples.collections.Collections.Aggregates.minByOrNull
  */
-public inline fun <T, R : Comparable<R>> Iterable<T>.minBy(selector: (T) -> R): T? {
+@SinceKotlin("1.4")
+public inline fun <T, R : Comparable<R>> Iterable<T>.minByOrNull(selector: (T) -> R): T? {
     val iterator = iterator()
     if (!iterator.hasNext()) return null
     var minElem = iterator.next()
@@ -2226,9 +2306,65 @@ public inline fun <T, R> Iterable<T>.minOfWithOrNull(comparator: Comparator<in R
 }
 
 /**
+ * Returns the smallest element or `null` if there are no elements.
+ * 
+ * If any of elements is `NaN` returns `NaN`.
+ */
+@SinceKotlin("1.4")
+public fun Iterable<Double>.minOrNull(): Double? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var min = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        min = minOf(min, e)
+    }
+    return min
+}
+
+/**
+ * Returns the smallest element or `null` if there are no elements.
+ * 
+ * If any of elements is `NaN` returns `NaN`.
+ */
+@SinceKotlin("1.4")
+public fun Iterable<Float>.minOrNull(): Float? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var min = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        min = minOf(min, e)
+    }
+    return min
+}
+
+/**
+ * Returns the smallest element or `null` if there are no elements.
+ */
+@SinceKotlin("1.4")
+public fun <T : Comparable<T>> Iterable<T>.minOrNull(): T? {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return null
+    var min = iterator.next()
+    while (iterator.hasNext()) {
+        val e = iterator.next()
+        if (min > e) min = e
+    }
+    return min
+}
+
+@Deprecated("Use minWithOrNull instead.", ReplaceWith("minWithOrNull(comparator)"))
+@DeprecatedSinceKotlin(warningSince = "1.4")
+public fun <T> Iterable<T>.minWith(comparator: Comparator<in T>): T? {
+    return minWithOrNull(comparator)
+}
+
+/**
  * Returns the first element having the smallest value according to the provided [comparator] or `null` if there are no elements.
  */
-public fun <T> Iterable<T>.minWith(comparator: Comparator<in T>): T? {
+@SinceKotlin("1.4")
+public fun <T> Iterable<T>.minWithOrNull(comparator: Comparator<in T>): T? {
     val iterator = iterator()
     if (!iterator.hasNext()) return null
     var min = iterator.next()
@@ -2358,8 +2494,8 @@ public inline fun <S, T : S> Iterable<T>.reduceIndexedOrNull(operation: (index: 
  * 
  * @sample samples.collections.Collections.Aggregates.reduceOrNull
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <S, T : S> Iterable<T>.reduceOrNull(operation: (acc: S, T) -> S): S? {
     val iterator = this.iterator()
     if (!iterator.hasNext()) return null
@@ -2452,8 +2588,8 @@ public inline fun <S, T : S> List<T>.reduceRightIndexedOrNull(operation: (index:
  * 
  * @sample samples.collections.Collections.Aggregates.reduceRightOrNull
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <S, T : S> List<T>.reduceRightOrNull(operation: (T, acc: S) -> S): S? {
     val iterator = listIterator(size)
     if (!iterator.hasPrevious())
@@ -2526,8 +2662,8 @@ public inline fun <T, R> Iterable<T>.runningFoldIndexed(initial: R, operation: (
  * 
  * @sample samples.collections.Collections.Aggregates.runningReduce
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <S, T : S> Iterable<T>.runningReduce(operation: (acc: S, T) -> S): List<S> {
     val iterator = this.iterator()
     if (!iterator.hasNext()) return emptyList()
@@ -2577,8 +2713,8 @@ public inline fun <S, T : S> Iterable<T>.runningReduceIndexed(operation: (index:
  * 
  * @sample samples.collections.Collections.Aggregates.scan
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <T, R> Iterable<T>.scan(initial: R, operation: (acc: R, T) -> R): List<R> {
     return runningFold(initial, operation)
 }
@@ -2595,20 +2731,20 @@ public inline fun <T, R> Iterable<T>.scan(initial: R, operation: (acc: R, T) -> 
  * 
  * @sample samples.collections.Collections.Aggregates.scan
  */
-@SinceKotlin("1.3")
-@ExperimentalStdlibApi
+@SinceKotlin("1.4")
+@WasExperimental(ExperimentalStdlibApi::class)
 public inline fun <T, R> Iterable<T>.scanIndexed(initial: R, operation: (index: Int, acc: R, T) -> R): List<R> {
     return runningFoldIndexed(initial, operation)
 }
 
-@Deprecated("Use runningReduce instead.", ReplaceWith("runningReduce(operation)"))
+@Deprecated("Use runningReduce instead.", ReplaceWith("runningReduce(operation)"), level = DeprecationLevel.ERROR)
 @SinceKotlin("1.3")
 @ExperimentalStdlibApi
 public inline fun <S, T : S> Iterable<T>.scanReduce(operation: (acc: S, T) -> S): List<S> {
     return runningReduce(operation)
 }
 
-@Deprecated("Use runningReduceIndexed instead.", ReplaceWith("runningReduceIndexed(operation)"))
+@Deprecated("Use runningReduceIndexed instead.", ReplaceWith("runningReduceIndexed(operation)"), level = DeprecationLevel.ERROR)
 @SinceKotlin("1.3")
 @ExperimentalStdlibApi
 public inline fun <S, T : S> Iterable<T>.scanReduceIndexed(operation: (index: Int, acc: S, T) -> S): List<S> {

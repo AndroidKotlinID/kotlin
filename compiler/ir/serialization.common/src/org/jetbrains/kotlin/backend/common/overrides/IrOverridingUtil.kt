@@ -194,7 +194,7 @@ class IrOverridingUtil(
         toFilter: Collection<IrOverridableMember>
     ): Collection<IrOverridableMember> {
         return toFilter.filter { member: IrOverridableMember ->
-            !Visibilities.isPrivate(member.visibility) && isVisibleIgnoringReceiver(member.original, current)
+            !Visibilities.isPrivate(member.visibility)
         }
     }
 
@@ -284,7 +284,7 @@ class IrOverridingUtil(
             "Unexpected fake override accessor kind: $this"
         }
         // For descriptors it gets INVISIBLE_FAKE.
-        if (newVisibility == Visibilities.PRIVATE) return null
+        if (this.visibility == Visibilities.PRIVATE) return null
 
         this.visibility = newVisibility
         this.modality = newModality

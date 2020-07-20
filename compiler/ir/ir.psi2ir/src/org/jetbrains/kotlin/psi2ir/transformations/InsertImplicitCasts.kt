@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.ir.util.TypeTranslator
 import org.jetbrains.kotlin.ir.util.coerceToUnit
+import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
@@ -113,14 +114,14 @@ internal class InsertImplicitCasts(
     private val IrDeclarationReference.substitutedDescriptor
         get() = callToSubstitutedDescriptorMap[this] ?: symbol.descriptor as CallableDescriptor
 
-    override fun visitCallableReference(expression: IrCallableReference): IrExpression {
+    override fun visitCallableReference(expression: IrCallableReference<*>): IrExpression {
         val substitutedDescriptor = expression.substitutedDescriptor
         return expression.transformPostfix {
             transformReceiverArguments(substitutedDescriptor)
         }
     }
 
-    private fun IrMemberAccessExpression.transformReceiverArguments(substitutedDescriptor: CallableDescriptor) {
+    private fun IrMemberAccessExpression<*>.transformReceiverArguments(substitutedDescriptor: CallableDescriptor) {
         dispatchReceiver = dispatchReceiver?.cast(getEffectiveDispatchReceiverType(substitutedDescriptor))
         val extensionReceiverType = substitutedDescriptor.extensionReceiverParameter?.type
         val originalExtensionReceiverType = substitutedDescriptor.original.extensionReceiverParameter?.type
@@ -144,7 +145,7 @@ internal class InsertImplicitCasts(
                 descriptor.dispatchReceiverParameter?.type
         }
 
-    override fun visitMemberAccess(expression: IrMemberAccessExpression): IrExpression {
+    override fun visitMemberAccess(expression: IrMemberAccessExpression<*>): IrExpression {
         val substitutedDescriptor = expression.substitutedDescriptor
         return expression.transformPostfix {
             transformReceiverArguments(substitutedDescriptor)
@@ -341,7 +342,7 @@ internal class InsertImplicitCasts(
 
         val notNullableExpectedType = expectedType.makeNotNullable()
 
-        val valueType = this.type.originalKotlinType!!
+        val valueType = this.type.originalKotlinType ?: error("Expecting original kotlin type for IrType ${type.render()}")
 
         return when {
             expectedType.isUnit() ->

@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.KotlinScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
+import org.jetbrains.kotlin.scripting.definitions.runReadAction
 import org.jetbrains.kotlin.scripting.resolve.KtFileScriptSource
 import org.jetbrains.kotlin.scripting.resolve.LegacyResolverWrapper
 import org.jetbrains.kotlin.scripting.resolve.refineScriptCompilationConfiguration
@@ -39,8 +40,6 @@ open class DefaultScriptConfigurationLoader(val project: Project) : ScriptConfig
         context: ScriptConfigurationLoadingContext
     ): Boolean {
         val virtualFile = ktFile.originalFile.virtualFile
-
-        if (ScriptConfigurationManager.isManualConfigurationLoading(virtualFile)) return false
 
         val result = getConfigurationThroughScriptingApi(ktFile, virtualFile, scriptDefinition)
 

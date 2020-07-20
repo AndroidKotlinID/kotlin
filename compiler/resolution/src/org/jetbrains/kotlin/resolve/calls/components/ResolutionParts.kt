@@ -28,6 +28,8 @@ import org.jetbrains.kotlin.types.model.typeConstructor
 import org.jetbrains.kotlin.types.typeUtil.contains
 import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 import org.jetbrains.kotlin.types.typeUtil.makeNullable
+import org.jetbrains.kotlin.utils.SmartList
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 internal object CheckVisibility : ResolutionPart() {
@@ -236,6 +238,10 @@ internal object PostponedVariablesInitializerResolutionPart : ResolutionPart() {
             if (!callComponents.statelessCallbacks.isCoroutineCall(argument, parameter)) continue
             val receiverType = parameter.type.getReceiverTypeFromFunctionType() ?: continue
 
+            if (argument is LambdaKotlinCallArgument && !argument.hasBuilderInferenceAnnotation) {
+                argument.hasBuilderInferenceAnnotation = true
+            }
+
             for (freshVariable in resolvedCall.freshVariablesSubstitutor.freshVariables) {
                 if (resolvedCall.typeArgumentMappingByOriginal.getTypeArgument(freshVariable.originalTypeParameter) is SimpleTypeArgument)
                     continue
@@ -246,6 +252,24 @@ internal object PostponedVariablesInitializerResolutionPart : ResolutionPart() {
                 }
             }
         }
+    }
+}
+
+internal object CompatibilityOfTypeVariableAsIntersectionTypePart : ResolutionPart() {
+    override fun KotlinResolutionCandidate.process(workIndex: Int) {
+        for ((_, variableWithConstraints) in csBuilder.currentStorage().notFixedTypeVariables) {
+            val constraints = variableWithConstraints.constraints.filter { csBuilder.isProperType(it.type) }
+
+            if (constraints.size <= 1) continue
+            if (constraints.any { it.kind.isLower() || it.kind.isEqual() }) continue
+
+            // See TypeBoundsImpl.computeValues(). It returns several values for such situation which means an error in OI
+            if (callComponents.statelessCallbacks.isOldIntersectionIsEmpty(constraints.map { it.type }.cast())) {
+                markCandidateForCompatibilityResolve()
+                return
+            }
+        }
+
     }
 }
 
@@ -314,27 +338,28 @@ internal object CollectionTypeVariableUsagesInfo : ResolutionPart() {
         dependentTypeParametersSeen: List<Pair<TypeConstructorMarker, KotlinTypeMarker?>> = listOf()
     ): List<Pair<TypeConstructorMarker, KotlinTypeMarker?>> {
         val context = asConstraintSystemCompleterContext()
-        val dependentTypeParameters = getBuilder().currentStorage().notFixedTypeVariables.mapNotNull { (typeConstructor, constraints) ->
-            val upperBounds = constraints.constraints.filter {
-                it.position.from is DeclaredUpperBoundConstraintPosition && it.kind == ConstraintKind.UPPER
-            }
+        val dependentTypeParameters = getBuilder().currentStorage().notFixedTypeVariables.asSequence()
+            .flatMap { (typeConstructor, constraints) ->
+                val upperBounds = constraints.constraints.filter {
+                    it.position.from is DeclaredUpperBoundConstraintPosition && it.kind == ConstraintKind.UPPER
+                }
 
-            upperBounds.mapNotNull { constraint ->
-                if (constraint.type.typeConstructor(context) != variable) {
-                    val suitableUpperBound = upperBounds.find { upperBound ->
-                        with(context) { upperBound.type.contains { it.typeConstructor() == variable } }
-                    }?.type
+                upperBounds.mapNotNull { constraint ->
+                    if (constraint.type.typeConstructor(context) != variable) {
+                        val suitableUpperBound = upperBounds.find { upperBound ->
+                            with(context) { upperBound.type.contains { it.typeConstructor() == variable } }
+                        }?.type
 
-                    if (suitableUpperBound != null) typeConstructor to suitableUpperBound else null
-                } else typeConstructor to null
-            }
-        }.flatten().filter { it !in dependentTypeParametersSeen && it.first != variable }
+                        if (suitableUpperBound != null) typeConstructor to suitableUpperBound else null
+                    } else typeConstructor to null
+                }
+            }.filter { it !in dependentTypeParametersSeen && it.first != variable }.toList()
 
-        return dependentTypeParameters + dependentTypeParameters.mapNotNull { (typeConstructor, _) ->
+        return dependentTypeParameters + dependentTypeParameters.flatMapTo(SmartList()) { (typeConstructor, _) ->
             if (typeConstructor != variable) {
                 getDependentTypeParameters(typeConstructor, dependentTypeParameters + dependentTypeParametersSeen)
-            } else null
-        }.flatten()
+            } else emptyList()
+        }
     }
 
     private fun NewConstraintSystem.isContainedInInvariantOrContravariantPositionsAmongUpperBound(
@@ -429,7 +454,7 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
     val unsubstitutedExpectedType = conversionDataBeforeSubtyping?.convertedType ?: candidateExpectedType
     val expectedType = unsubstitutedExpectedType?.let { prepareExpectedType(it) }
 
-    val convertedArgument = if (expectedType != null && shouldRunConversionForConstants(expectedType)) {
+    val convertedArgument = if (expectedType != null && !isReceiver && shouldRunConversionForConstants(expectedType)) {
         val convertedConstant = resolutionCallbacks.convertSignedConstantToUnsigned(argument)
         if (convertedConstant != null) {
             resolvedCall.registerArgumentWithConstantConversion(argument, convertedConstant)
@@ -617,7 +642,7 @@ internal object EagerResolveOfCallableReferences : ResolutionPart() {
         getSubResolvedAtoms()
             .filterIsInstance<EagerCallableReferenceAtom>()
             .forEach {
-                callableReferenceResolver.processCallableReferenceArgument(csBuilder, it, this)
+                callableReferenceResolver.processCallableReferenceArgument(csBuilder, it, this, resolutionCallbacks)
             }
     }
 }

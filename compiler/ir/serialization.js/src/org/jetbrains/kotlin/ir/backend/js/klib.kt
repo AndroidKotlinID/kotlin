@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.ir.backend.js.lower.serialization.metadata.KlibMetad
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.descriptors.IrFunctionFactory
+import org.jetbrains.kotlin.ir.linkage.IrDeserializer
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
@@ -146,6 +147,7 @@ fun generateKLib(
     irBuiltIns.functionFactory = functionFactory
 
     val expectDescriptorToSymbol = mutableMapOf<DeclarationDescriptor, IrSymbol>()
+    val deserializeFakeOverrides = configuration.getBoolean(CommonConfigurationKeys.DESERIALIZE_FAKE_OVERRIDES)
 
     val irLinker = JsIrLinker(
         psi2IrContext.moduleDescriptor,
@@ -153,7 +155,8 @@ fun generateKLib(
         psi2IrContext.irBuiltIns,
         psi2IrContext.symbolTable,
         functionFactory,
-        serializedIrFiles
+        serializedIrFiles,
+        deserializeFakeOverrides
     )
 
     val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
@@ -163,8 +166,10 @@ fun generateKLib(
     val moduleFragment = psi2IrContext.generateModuleFragmentWithPlugins(project, files, irLinker, expectDescriptorToSymbol)
 
     moduleFragment.acceptVoid(ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc)))
-    val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
-    irLinker.modules.forEach{ fakeOverrideChecker.check(it) }
+    if (!configuration.getBoolean(JSConfigurationKeys.DISABLE_FAKE_OVERRIDE_VALIDATOR)) {
+        val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
+        irLinker.modules.forEach { fakeOverrideChecker.check(it) }
+    }
 
     val moduleName = configuration[CommonConfigurationKeys.MODULE_NAME]!!
 
@@ -213,6 +218,7 @@ fun loadIr(
     friendDependencies: List<KotlinLibrary>
 ): IrModuleInfo {
     val depsDescriptors = ModulesStructure(project, mainModule, analyzer, configuration, allDependencies, friendDependencies)
+    val deserializeFakeOverrides = configuration.getBoolean(CommonConfigurationKeys.DESERIALIZE_FAKE_OVERRIDES)
 
     when (mainModule) {
         is MainModule.SourceFiles -> {
@@ -221,9 +227,7 @@ fun loadIr(
             val symbolTable = psi2IrContext.symbolTable
             val functionFactory = IrFunctionFactory(irBuiltIns, symbolTable)
             irBuiltIns.functionFactory = functionFactory
-
-            val irLinker = JsIrLinker(psi2IrContext.moduleDescriptor, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, null)
-
+            val irLinker = JsIrLinker(psi2IrContext.moduleDescriptor, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, null, deserializeFakeOverrides)
             val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
                 irLinker.deserializeIrModuleHeader(depsDescriptors.getModuleDescriptor(it), it)
             }
@@ -235,8 +239,10 @@ fun loadIr(
             val mangleChecker = ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc))
             moduleFragment.acceptVoid(mangleChecker)
 
-            val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
-            irLinker.modules.forEach{ fakeOverrideChecker.check(it) }
+            if (!configuration.getBoolean(JSConfigurationKeys.DISABLE_FAKE_OVERRIDE_VALIDATOR)) {
+                val fakeOverrideChecker = FakeOverrideChecker(JsManglerIr, JsManglerDesc)
+                irLinker.modules.forEach { fakeOverrideChecker.check(it) }
+            }
 
             irBuiltIns.knownBuiltins.forEach { it.acceptVoid(mangleChecker) }
 
@@ -257,7 +263,7 @@ fun loadIr(
             constantValueGenerator.typeTranslator = typeTranslator
             val irBuiltIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, symbolTable)
             val functionFactory = IrFunctionFactory(irBuiltIns, symbolTable)
-            val irLinker = JsIrLinker(null, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, null)
+            val irLinker = JsIrLinker(null, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, null, deserializeFakeOverrides)
 
             val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
                 val strategy =
@@ -272,7 +278,7 @@ fun loadIr(
 
             val moduleFragment = deserializedModuleFragments.last()
 
-            irLinker.init(null)
+            irLinker.init(null, emptyList())
             ExternalDependenciesGenerator(symbolTable, listOf(irLinker), configuration.languageVersionSettings).generateUnboundSymbolsAsDependencies()
             irLinker.postProcess()
 
@@ -324,7 +330,7 @@ fun GeneratorContext.generateModuleFragmentWithPlugins(
         }
     }
 
-    return psi2Ir.generateModuleFragment(this, files, listOf(irLinker), expectDescriptorToSymbol)
+    return psi2Ir.generateModuleFragment(this, files, listOf(irLinker), extensions, expectDescriptorToSymbol)
 }
 
 private fun createBuiltIns(storageManager: StorageManager) = object : KotlinBuiltIns(storageManager) {}

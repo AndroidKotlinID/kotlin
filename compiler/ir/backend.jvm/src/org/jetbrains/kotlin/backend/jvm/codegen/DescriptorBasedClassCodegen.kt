@@ -45,7 +45,9 @@ class DescriptorBasedClassCodegen internal constructor(
         val localDelegatedProperties = (irClass.attributeOwnerId as? IrClass)?.let(context.localDelegatedProperties::get)
         if (localDelegatedProperties != null && localDelegatedProperties.isNotEmpty()) {
             state.bindingTrace.record(
-                CodegenBinding.DELEGATED_PROPERTIES_WITH_METADATA, type, localDelegatedProperties.map { it.descriptor }
+                CodegenBinding.DELEGATED_PROPERTIES_WITH_METADATA,
+                type,
+                localDelegatedProperties.mapNotNull { (it.owner.metadata as? MetadataSource.LocalDelegatedProperty)?.descriptor }
             )
         }
 
@@ -134,7 +136,7 @@ class DescriptorBasedClassCodegen internal constructor(
     }
 
     override fun bindFieldMetadata(field: IrField, fieldType: Type, fieldName: String) {
-        val descriptor = field.metadata?.descriptor
+        val descriptor = (field.metadata as? MetadataSource.Property)?.descriptor
         if (descriptor != null) {
             state.globalSerializationBindings.put(JvmSerializationBindings.FIELD_FOR_PROPERTY, descriptor, fieldType to fieldName)
         }

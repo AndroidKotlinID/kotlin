@@ -6,10 +6,7 @@
 package org.jetbrains.kotlin.ir.util
 
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.SourceManager
-import org.jetbrains.kotlin.ir.SourceRangeInfo
-import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -70,18 +67,6 @@ val IrFunction.isSuspend get() = this is IrSimpleFunction && this.isSuspend
 val IrFunction.isReal get() = !(this is IrSimpleFunction && isFakeOverride)
 
 fun IrSimpleFunction.overrides(other: IrSimpleFunction): Boolean {
-    if (this == other) return true
-
-    this.overriddenSymbols.forEach {
-        if (it.owner.overrides(other)) {
-            return true
-        }
-    }
-
-    return false
-}
-
-fun IrField.overrides(other: IrField): Boolean {
     if (this == other) return true
 
     this.overriddenSymbols.forEach {
@@ -160,6 +145,7 @@ val IrDeclaration.isLocal: Boolean
         return false
     }
 
+@ObsoleteDescriptorBasedAPI
 val IrDeclaration.module get() = this.descriptor.module
 
 const val SYNTHETIC_OFFSET = -2

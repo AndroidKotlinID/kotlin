@@ -17,11 +17,11 @@
 package org.jetbrains.kotlin.ir.declarations.impl
 
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrTypeParameter
 import org.jetbrains.kotlin.ir.declarations.impl.carriers.TypeParameterCarrier
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
-import org.jetbrains.kotlin.ir.symbols.impl.IrTypeParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
@@ -43,23 +43,11 @@ class IrTypeParameterImpl(
     IrTypeParameter,
     TypeParameterCarrier {
 
-    @Deprecated("Use constructor which takes symbol instead of descriptor")
-    constructor(
-        startOffset: Int,
-        endOffset: Int,
-        origin: IrDeclarationOrigin,
-        descriptor: TypeParameterDescriptor,
-        name: Name = descriptor.name,
-        symbol: IrTypeParameterSymbol = IrTypeParameterSymbolImpl(descriptor)
-    ) : this(
-        startOffset, endOffset, origin, symbol, name,
-        index = descriptor.index, isReified = descriptor.isReified, variance = descriptor.variance
-    )
-
     init {
         symbol.bind(this)
     }
 
+    @ObsoleteDescriptorBasedAPI
     override val descriptor: TypeParameterDescriptor get() = symbol.descriptor
 
     override val superTypes: MutableList<IrType> = SmartList()

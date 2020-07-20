@@ -1,6 +1,4 @@
 Test key, Issue, State (optional: MUTE or FAIL), Status (optional: FLAKY)
-org.jetbrains.kotlin.checkers.JavaAgainstKotlinBinariesCheckerTestGenerated.testClassObjects, ERROR: Access to tree elements not allowed.,,
-org.jetbrains.kotlin.checkers.JavaAgainstKotlinBinariesCheckerTestGenerated.testUsingKotlinPackageDeclarations, ERROR: Access to tree elements not allowed.,,
 org.jetbrains.kotlin.idea.codeInsight.gradle.GradleFacetImportTest.testAndroidGradleJsDetection, NPE during import,,
 org.jetbrains.kotlin.idea.codeInsight.gradle.GradleFacetImportTest.testKotlinAndroidPluginDetection, NPE during import,,
 org.jetbrains.kotlin.idea.codeInsight.gradle.GradleMigrateTest.testMigrateStdlib, Can't get migration information,,
@@ -20,3 +18,4 @@ org.jetbrains.kotlin.idea.debugger.test.KotlinSteppingTestGenerated.StepOverForc
 org.jetbrains.kotlin.idea.quickfix.QuickFixMultiFileTestGenerated.AutoImports.testAmbiguousNamePreferFromJdk, Class from JDK is not prioritized,,
 org.jetbrains.kotlin.idea.codeInsight.gradle.GradleKtsImportTest.testError[0: with Gradle-6.0.1], KT-37864,,
 org.jetbrains.kotlin.idea.codeInsight.gradle.GradleConfiguratorTest.testAddNonKotlinLibraryGSK[1: with Gradle-5.6.4], unresolved kotlinModule,,
+org.jetbrains.kotlin.idea.debugger.test.KotlinSteppingTestGenerated.Custom.testFunctionBreakpointInStdlib, Unprocessed,,

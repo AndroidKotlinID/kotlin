@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -70,8 +70,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 value = "annotationTypeRef"
                 withGetter = true
             }
-
-            defaultFalse("resolved")
         }
 
         impl(arrayOfCall)
@@ -105,7 +103,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(expression, "FirElseIfTrueCondition") {
-            default("typeRef", "FirImplicitBooleanTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitBooleanTypeRef")
             useTypes(implicitBooleanTypeRefType)
             publicImplementation()
         }
@@ -148,6 +146,18 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
             }
         }
 
+        val errorTypeRefImpl = impl(errorTypeRef) {
+            default("type", "ConeClassErrorType(diagnostic.reason)")
+            default("delegatedTypeRef") {
+                value = "null"
+                withGetter = true
+            }
+            default("annotations", "mutableListOf()")
+            defaultFalse("isSuspend")
+            useTypes(coneClassErrorTypeType)
+        }
+
+
         impl(property) {
             default("isVal") {
                 value = "!isVar"
@@ -156,6 +166,22 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
             default("backingFieldSymbol", "FirBackingFieldSymbol(symbol.callableId)")
             useTypes(backingFieldSymbolType, delegateFieldSymbolType)
+        }
+
+        impl(errorProperty) {
+            defaultTrue("isVal", withGetter = true)
+            defaultFalse("isVar", withGetter = true)
+
+            defaultNull(
+                "receiverTypeRef",
+                "initializer",
+                "delegate",
+                "delegateFieldSymbol",
+                "getter", "setter",
+                withGetter = true
+            )
+            default("returnTypeRef", "FirErrorTypeRefImpl(null, diagnostic)")
+            useTypes(errorTypeRefImpl)
         }
 
         impl(field) {
@@ -233,17 +259,17 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         impl(resolvedReifiedParameterReference)
 
         impl(returnExpression) {
-            default("typeRef", "FirImplicitNothingTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitNothingTypeRef")
             useTypes(implicitNothingTypeRefType)
         }
 
         impl(stringConcatenationCall) {
-            default("typeRef", "FirImplicitStringTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitStringTypeRef")
             useTypes(implicitStringTypeRefType)
         }
 
         impl(throwExpression) {
-            default("typeRef", "FirImplicitNothingTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitNothingTypeRef")
             useTypes(implicitNothingTypeRefType)
         }
 
@@ -253,7 +279,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(expression, "FirUnitExpression") {
-            default("typeRef", "FirImplicitUnitTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitUnitTypeRef")
             useTypes(implicitUnitTypeRefType)
             publicImplementation()
         }
@@ -354,17 +380,8 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
             kind = Object
         }
 
-        impl(resolvedTypeRef)
-
-        val errorTypeRefImpl = impl(errorTypeRef) {
-            default("type", "ConeClassErrorType(diagnostic.reason)")
-            default("delegatedTypeRef") {
-                value = "null"
-                withGetter = true
-            }
-            default("annotations", "mutableListOf()")
-            defaultFalse("isSuspend")
-            useTypes(coneClassErrorTypeType)
+        impl(resolvedTypeRef) {
+            publicImplementation()
         }
 
         impl(errorExpression) {
@@ -412,12 +429,12 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(breakExpression) {
-            default("typeRef", "FirImplicitNothingTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitNothingTypeRef")
             useTypes(implicitNothingTypeRefType)
         }
 
         impl(continueExpression) {
-            default("typeRef", "FirImplicitNothingTypeRef(source)")
+            defaultTypeRefWithSource("FirImplicitNothingTypeRef")
             useTypes(implicitNothingTypeRefType)
         }
 

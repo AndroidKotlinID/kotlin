@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.ir.util.getSimpleFunction
 internal class OperatorExpressionGenerator(
     private val components: Fir2IrComponents,
     private val visitor: Fir2IrVisitor,
-    private val callGenerator: CallAndReferenceGenerator,
     private val conversionScope: Fir2IrConversionScope
 ) : Fir2IrComponents by components {
 
@@ -146,17 +145,23 @@ internal class OperatorExpressionGenerator(
         targetType: ConeClassLikeType?
     ): IrExpression {
         if (targetType == null) return this
-        if (operandType == null) throw AssertionError("operandType should be non-null")
+        if (operandType == null) error("operandType should be non-null if targetType is non-null")
 
         val operandClassId = operandType.lookupTag.classId
         val targetClassId = targetType.lookupTag.classId
         if (operandClassId == targetClassId) return this
         val conversionFunction =
             typeConverter.classIdToSymbolMap[operandClassId]?.getSimpleFunction("to${targetType.lookupTag.classId.shortClassName.asString()}")
-                ?: throw AssertionError("No conversion function for $operandType ~> $targetType")
+                ?: error("No conversion function for $operandType ~> $targetType")
 
         val dispatchReceiver = this@asComparisonOperand
-        val unsafeIrCall = IrCallImpl(startOffset, endOffset, conversionFunction.owner.returnType, conversionFunction).also {
+        val unsafeIrCall = IrCallImpl(
+            startOffset, endOffset,
+            conversionFunction.owner.returnType,
+            conversionFunction,
+            valueArgumentsCount = 0,
+            typeArgumentsCount = 0
+        ).also {
             it.dispatchReceiver = dispatchReceiver
         }
         return if (operandType.isNullable) {

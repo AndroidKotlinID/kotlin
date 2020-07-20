@@ -98,7 +98,7 @@ class FirElementSerializer private constructor(
             regularClass?.isExternal == true,
             regularClass?.isExpect == true,
             regularClass?.isInline == true,
-            false // TODO: klass.isFun not supported yet
+            regularClass?.isFun == true
         )
         if (flags != builder.flags) {
             builder.flags = flags
@@ -135,7 +135,7 @@ class FirElementSerializer private constructor(
                 ?: klass.declarations.filterIsInstance<FirCallableMemberDeclaration<*>>()
 
         for (declaration in callableMembers) {
-            if (declaration.isStatic) continue // ??? Miss values() & valueOf()
+            if (declaration !is FirEnumEntry && declaration.isStatic) continue // ??? Miss values() & valueOf()
             when (declaration) {
                 is FirProperty -> propertyProto(declaration)?.let { builder.addProperty(it) }
                 is FirSimpleFunction -> functionProto(declaration)?.let { builder.addFunction(it) }
@@ -488,13 +488,11 @@ class FirElementSerializer private constructor(
         }
 
         if (parameter.isVararg) {
-            val varargElementType = parameter.returnTypeRef.coneTypeSafe<ConeKotlinType>()?.varargElementType(session)
-            if (varargElementType != null) {
-                if (useTypeTable()) {
-                    builder.varargElementTypeId = typeId(varargElementType)
-                } else {
-                    builder.setVarargElementType(typeProto(varargElementType))
-                }
+            val varargElementType = parameter.returnTypeRef.coneType.varargElementType(session)
+            if (useTypeTable()) {
+                builder.varargElementTypeId = typeId(varargElementType)
+            } else {
+                builder.setVarargElementType(typeProto(varargElementType))
             }
         }
 
@@ -544,7 +542,7 @@ class FirElementSerializer private constructor(
     fun typeId(type: ConeKotlinType): Int = typeTable[typeProto(type)]
 
     internal fun typeProto(typeRef: FirTypeRef): ProtoBuf.Type.Builder {
-        return typeProto((typeRef as FirResolvedTypeRef).type)
+        return typeProto(typeRef.coneType)
     }
 
     internal fun typeProto(type: ConeKotlinType): ProtoBuf.Type.Builder {
@@ -609,9 +607,11 @@ class FirElementSerializer private constructor(
 
     private fun transformSuspendFunctionToRuntimeFunctionType(type: ConeClassLikeType): ConeClassLikeType {
         val suspendClassId = type.classId!!
-        val runtimeClassId = FunctionClassDescriptor.Kind.Function.let {
-            ClassId(it.packageFqName, Name.identifier(suspendClassId.relativeClassName.asString().drop("Suspend".length)))
-        }
+        val relativeClassName = suspendClassId.relativeClassName.asString()
+        val kind =
+            if (relativeClassName.startsWith("K")) FunctionClassDescriptor.Kind.KFunction
+            else FunctionClassDescriptor.Kind.Function
+        val runtimeClassId = ClassId(kind.packageFqName, Name.identifier(relativeClassName.replaceFirst("Suspend", "")))
         val continuationClassId = CONTINUATION_INTERFACE_CLASS_ID
         return ConeClassLikeLookupTagImpl(runtimeClassId).constructClassType(
             (type.typeArguments.toList() + ConeClassLikeLookupTagImpl(continuationClassId).constructClassType(
@@ -623,7 +623,7 @@ class FirElementSerializer private constructor(
     }
 
     private fun fillFromPossiblyInnerType(builder: ProtoBuf.Type.Builder, type: ConeClassLikeType) {
-        val classifierSymbol = type.lookupTag.toSymbol(session)!!
+        val classifierSymbol = type.lookupTag.toSymbol(session) ?: error("Can't lookup $type")
         val classifier = classifierSymbol.fir
         val classifierId = getClassifierId(classifier)
         builder.className = classifierId
@@ -667,15 +667,18 @@ class FirElementSerializer private constructor(
     }
 
     private fun getAccessorFlags(accessor: FirPropertyAccessor, property: FirProperty): Int {
+        // [FirDefaultPropertyAccessor]---a property accessor without body---can still hold other information, such as annotations,
+        // user-contributed visibility, and modifiers, such as `external` or `inline`.
         val isDefault = accessor is FirDefaultPropertyAccessor &&
-                accessor.annotations.isEmpty() && accessor.visibility == property.visibility
+                accessor.annotations.isEmpty() && accessor.visibility == property.visibility &&
+                !accessor.isExternal && !accessor.isInline
         return Flags.getAccessorFlags(
             accessor.nonSourceAnnotations(session).isNotEmpty(),
             ProtoEnumFlags.visibility(normalizeVisibility(accessor)),
             ProtoEnumFlags.modality(accessor.modality!!),
             !isDefault,
-            accessor.status.isExternal,
-            accessor.status.isInline
+            accessor.isExternal,
+            accessor.isInline
         )
     }
 

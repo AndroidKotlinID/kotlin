@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.buildAssertionsDisabledField
 import org.jetbrains.kotlin.backend.jvm.lower.hasAssertionsDisabledField
-import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.Modality
@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_SYNTHETIC_ANNOTATION_FQ_NAME
@@ -93,6 +94,8 @@ abstract class ClassCodegen protected constructor(
         )
     }
 
+    private val innerClasses = linkedSetOf<IrClass>()
+
     private var regeneratedObjectNameGenerators = mutableMapOf<String, NameGenerator>()
 
     fun getRegeneratedObjectNameGenerator(function: IrFunction): NameGenerator {
@@ -155,6 +158,9 @@ abstract class ClassCodegen protected constructor(
 
         visitor.done()
         jvmSignatureClashDetector.reportErrors(classOrigin)
+
+        generateInnerClasses()
+
         return reifiedTypeParametersUsages
     }
 
@@ -224,28 +230,30 @@ abstract class ClassCodegen protected constructor(
     protected abstract fun bindFieldMetadata(field: IrField, fieldType: Type, fieldName: String)
 
     private fun generateField(field: IrField) {
-        if (field.isFakeOverride) return
-
         val fieldType = typeMapper.mapType(field)
         val fieldSignature =
             if (field.origin == IrDeclarationOrigin.PROPERTY_DELEGATE) null
             else context.methodSignatureMapper.mapFieldSignature(field)
         val fieldName = field.name.asString()
+        val flags = field.flags
         val fv = visitor.newField(
-            field.OtherOrigin, field.flags, fieldName, fieldType.descriptor,
+            field.OtherOrigin, flags, fieldName, fieldType.descriptor,
             fieldSignature, (field.initializer?.expression as? IrConst<*>)?.value
         )
 
         jvmSignatureClashDetector.trackField(field, RawSignature(fieldName, fieldType.descriptor, MemberKind.FIELD))
 
         if (field.origin != JvmLoweredDeclarationOrigin.CONTINUATION_CLASS_RESULT_FIELD) {
-            object : AnnotationCodegen(this@ClassCodegen, context) {
+            val skipNullabilityAnnotations =
+                flags and (Opcodes.ACC_SYNTHETIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_ENUM) != 0 ||
+                        field.origin == JvmLoweredDeclarationOrigin.FIELD_FOR_STATIC_LAMBDA_INSTANCE
+            object : AnnotationCodegen(this@ClassCodegen, context, skipNullabilityAnnotations) {
                 override fun visitAnnotation(descr: String?, visible: Boolean): AnnotationVisitor {
                     return fv.visitAnnotation(descr, visible)
                 }
 
                 override fun visitTypeAnnotation(descr: String?, path: TypePath?, visible: Boolean): AnnotationVisitor {
-                    return fv.visitTypeAnnotation(TypeReference.newTypeReference(TypeReference.FIELD).value,path, descr, visible)
+                    return fv.visitTypeAnnotation(TypeReference.newTypeReference(TypeReference.FIELD).value, path, descr, visible)
                 }
             }.genAnnotations(field, fieldType, field.type)
         }
@@ -335,8 +343,14 @@ abstract class ClassCodegen protected constructor(
         // See FileBasedKotlinClass.convertAnnotationVisitor
         generateSequence<IrDeclaration>(innerClass) { it.parent as? IrDeclaration }.takeWhile { !it.isTopLevelDeclaration }.forEach {
             if (it is IrClass) {
-                writeInnerClass(it, typeMapper, context, visitor)
+                innerClasses.add(it)
             }
+        }
+    }
+
+    private fun generateInnerClasses() {
+        for (klass in innerClasses) {
+            writeInnerClass(klass, typeMapper, context, visitor)
         }
     }
 }
@@ -350,12 +364,21 @@ private val IrClass.flags: Int
     }
 
 private val IrField.flags: Int
-    get() = origin.flags or visibility.flags or (correspondingPropertySymbol?.owner?.deprecationFlags ?: 0) or
+    get() = origin.flags or visibility.flags or
+            this.specialDeprecationFlag or (correspondingPropertySymbol?.owner?.deprecationFlags ?: 0) or
             (if (isFinal) Opcodes.ACC_FINAL else 0) or
             (if (isStatic) Opcodes.ACC_STATIC else 0) or
             (if (hasAnnotation(VOLATILE_ANNOTATION_FQ_NAME)) Opcodes.ACC_VOLATILE else 0) or
             (if (hasAnnotation(TRANSIENT_ANNOTATION_FQ_NAME)) Opcodes.ACC_TRANSIENT else 0) or
             (if (hasAnnotation(JVM_SYNTHETIC_ANNOTATION_FQ_NAME)) Opcodes.ACC_SYNTHETIC else 0)
+
+private val IrField.specialDeprecationFlag: Int
+    get() = if (shouldHaveSpecialDeprecationFlag()) Opcodes.ACC_DEPRECATED else 0
+
+private fun IrField.shouldHaveSpecialDeprecationFlag(): Boolean {
+    return origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE &&
+            annotations.hasAnnotation(FqName("java.lang.Deprecated"))
+}
 
 private val IrDeclarationOrigin.flags: Int
     get() = (if (isSynthetic) Opcodes.ACC_SYNTHETIC else 0) or

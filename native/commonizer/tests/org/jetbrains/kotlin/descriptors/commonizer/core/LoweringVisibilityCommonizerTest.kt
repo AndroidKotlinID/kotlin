@@ -9,16 +9,15 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities.*
 import org.jetbrains.kotlin.descriptors.Visibility
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirContainingClassDetails
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirDeclarationWithVisibility
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirFunctionOrProperty
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirHasVisibility
+import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirContainingClassDetailsFactory
 import org.jetbrains.kotlin.descriptors.commonizer.cir.impl.unsupported
 import org.junit.Test
 
 abstract class LoweringVisibilityCommonizerTest(
-    private val allowPrivate: Boolean,
     private val areMembersVirtual: Boolean
-) : AbstractCommonizerTest<CirDeclarationWithVisibility, Visibility>() {
+) : AbstractCommonizerTest<CirHasVisibility, Visibility>() {
 
     @Test
     fun publicOnly() = doTestSuccess(
@@ -43,7 +42,7 @@ abstract class LoweringVisibilityCommonizerTest(
         PUBLIC.toMock(), LOCAL.toMock()
     )
 
-    final override fun createCommonizer() = VisibilityCommonizer.lowering(allowPrivate = allowPrivate)
+    final override fun createCommonizer() = VisibilityCommonizer.lowering()
 
     protected fun Visibility.toMock() = object : CirFunctionOrProperty {
         override val annotations get() = unsupported()
@@ -51,47 +50,18 @@ abstract class LoweringVisibilityCommonizerTest(
         override val typeParameters get() = unsupported()
         override val visibility = this@toMock
         override val modality get() = if (areMembersVirtual) Modality.OPEN else Modality.FINAL
-        override val containingClassDetails =
-            if (areMembersVirtual) CirContainingClassDetails(kind = ClassKind.CLASS, modality = Modality.OPEN, isData = false) else null
-        override val isExternal get() = unsupported()
+        override val containingClassDetails = if (areMembersVirtual)
+            CirContainingClassDetailsFactory.create(
+                kind = ClassKind.CLASS,
+                modality = Modality.OPEN,
+                isData = false
+            ) else null
         override val extensionReceiver get() = unsupported()
         override val returnType get() = unsupported()
         override val kind get() = unsupported()
     }
 
-    class PrivateMembers : LoweringVisibilityCommonizerTest(true, false) {
-
-        @Test
-        fun publicAndProtected() = doTestSuccess(
-            expected = PROTECTED,
-            PUBLIC.toMock(), PROTECTED.toMock(), PUBLIC.toMock()
-        )
-
-        @Test
-        fun publicAndInternal() = doTestSuccess(
-            expected = INTERNAL,
-            PUBLIC.toMock(), INTERNAL.toMock(), PUBLIC.toMock()
-        )
-
-        @Test(expected = IllegalCommonizerStateException::class)
-        fun publicAndInternalAndProtected() = doTestFailure(
-            PUBLIC.toMock(), INTERNAL.toMock(), PROTECTED.toMock()
-        )
-
-        @Test
-        fun publicAndInternalAndPrivate() = doTestSuccess(
-            expected = PRIVATE,
-            PUBLIC.toMock(), INTERNAL.toMock(), PRIVATE.toMock()
-        )
-
-        @Test
-        fun privateOnly() = doTestSuccess(
-            expected = PRIVATE,
-            PRIVATE.toMock(), PRIVATE.toMock(), PRIVATE.toMock()
-        )
-    }
-
-    class NonVirtualMembers : LoweringVisibilityCommonizerTest(false, false) {
+    class NonVirtualMembers : LoweringVisibilityCommonizerTest(false) {
 
         @Test
         fun publicAndProtected() = doTestSuccess(
@@ -121,7 +91,7 @@ abstract class LoweringVisibilityCommonizerTest(
         )
     }
 
-    class VirtualMembers : LoweringVisibilityCommonizerTest(false, true) {
+    class VirtualMembers : LoweringVisibilityCommonizerTest(true) {
 
         @Test(expected = IllegalCommonizerStateException::class)
         fun publicAndProtected1() = doTestFailure(

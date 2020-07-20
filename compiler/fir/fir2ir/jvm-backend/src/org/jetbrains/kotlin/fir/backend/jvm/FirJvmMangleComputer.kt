@@ -79,9 +79,13 @@ open class FirJvmMangleComputer(
             else -> return
         }
         if (parentClassId != null && !parentClassId.isLocal) {
-            val parentClass = session.firSymbolProvider.getClassLikeSymbolByFqName(parentClassId)?.fir as? FirRegularClass
-                ?: throw AssertionError("Attempt to find parent for probably-local declaration!")
-            parentClass.accept(this@FirJvmMangleComputer, false)
+            val parentClassLike = session.firSymbolProvider.getClassLikeSymbolByFqName(parentClassId)?.fir
+                ?: error("Attempt to find parent ($parentClassId) for probably-local declaration!")
+            if (parentClassLike is FirRegularClass || parentClassLike is FirTypeAlias) {
+                parentClassLike.accept(this@FirJvmMangleComputer, false)
+            } else {
+                error("Strange class-like declaration: ${parentClassLike.render()}")
+            }
         } else if (parentClassId == null && !parentPackageFqName.isRoot) {
             builder.appendName(parentPackageFqName.asString())
         }
@@ -131,7 +135,7 @@ open class FirJvmMangleComputer(
 
         receiverTypeRef?.let {
             builder.appendSignature(MangleConstant.EXTENSION_RECEIVER_PREFIX)
-            mangleType(builder, it.coneTypeUnsafe())
+            mangleType(builder, it.coneType)
         }
 
         valueParameters.collectForMangler(builder, MangleConstant.VALUE_PARAMETERS) {
@@ -144,7 +148,7 @@ open class FirJvmMangleComputer(
             }
 
         if (!isCtor && !returnTypeRef.isUnit && addReturnType()) {
-            mangleType(builder, returnTypeRef.coneTypeUnsafe())
+            mangleType(builder, returnTypeRef.coneType)
         }
     }
 
@@ -167,7 +171,7 @@ open class FirJvmMangleComputer(
     }
 
     private fun mangleValueParameter(vpBuilder: StringBuilder, param: FirValueParameter) {
-        mangleType(vpBuilder, param.returnTypeRef.coneTypeUnsafe())
+        mangleType(vpBuilder, param.returnTypeRef.coneType)
 
         if (param.isVararg) {
             vpBuilder.appendSignature(MangleConstant.VAR_ARG_MARK)
@@ -178,7 +182,7 @@ open class FirJvmMangleComputer(
         tpBuilder.appendSignature(index)
         tpBuilder.appendSignature(MangleConstant.UPPER_BOUND_SEPARATOR)
 
-        param.bounds.map { it.coneTypeUnsafe<ConeKotlinType>() }.collectForMangler(tpBuilder, MangleConstant.UPPER_BOUNDS) {
+        param.bounds.map { it.coneType }.collectForMangler(tpBuilder, MangleConstant.UPPER_BOUNDS) {
             mangleType(this, it)
         }
     }
@@ -230,6 +234,10 @@ open class FirJvmMangleComputer(
                     tBuilder.appendSignature(suffix)
                 }
             }
+            is ConeDefinitelyNotNullType -> {
+                // E.g. not-null type parameter in Java
+                mangleType(tBuilder, type.original)
+            }
             else -> error("Unexpected type $type")
         }
     }
@@ -254,7 +262,7 @@ open class FirJvmMangleComputer(
 
         property.receiverTypeRef?.let {
             builder.appendSignature(MangleConstant.EXTENSION_RECEIVER_PREFIX)
-            mangleType(builder, it.coneTypeUnsafe())
+            mangleType(builder, it.coneType)
         }
 
         property.typeParameters.withIndex().toList().collectForMangler(builder, MangleConstant.TYPE_PARAMETERS) { (index, typeParameter) ->

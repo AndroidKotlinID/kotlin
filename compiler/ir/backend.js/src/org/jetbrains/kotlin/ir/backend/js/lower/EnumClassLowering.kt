@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.backend.common.BodyLoweringPass
-import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.DeclarationTransformer
 import org.jetbrains.kotlin.backend.common.getOrPut
 import org.jetbrains.kotlin.backend.common.ir.copyParameterDeclarationsFrom
@@ -16,23 +15,20 @@ import org.jetbrains.kotlin.backend.common.lower.irBlockBody
 import org.jetbrains.kotlin.backend.common.lower.irIfThen
 import org.jetbrains.kotlin.backend.common.lower.parents
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.backend.js.JsCommonBackendContext
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
 import org.jetbrains.kotlin.ir.backend.js.utils.toJsArrayLiteral
 import org.jetbrains.kotlin.ir.builders.*
+import org.jetbrains.kotlin.ir.builders.declarations.buildConstructor
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrConstructorImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrFieldImpl
-import org.jetbrains.kotlin.ir.descriptors.WrappedClassConstructorDescriptor
-import org.jetbrains.kotlin.ir.descriptors.WrappedFieldDescriptor
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.expressions.impl.*
-import org.jetbrains.kotlin.ir.symbols.impl.IrConstructorSymbolImpl
-import org.jetbrains.kotlin.ir.symbols.impl.IrFieldSymbolImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.*
@@ -64,25 +60,24 @@ class EnumUsageLowering(val context: JsIrBackendContext) : BodyLoweringPass {
         return JsIrBuilder.buildCall(intrinsic, context.irBuiltIns.anyType, listOf(irClass.defaultType))
     }
 
-    private fun createFieldForEntry(entry: IrEnumEntry, irClass: IrClass): IrField {
-        val descriptor = WrappedFieldDescriptor()
-        val symbol = IrFieldSymbolImpl(descriptor)
-        return entry.run {
-            IrFieldImpl(
-                startOffset, endOffset, origin, symbol, name, irClass.defaultType, Visibilities.PUBLIC,
-                isFinal = false, isExternal = true, isStatic = true,
-                isFakeOverride = entry.isFakeOverride
-            ).also {
-                descriptor.bind(it)
-                it.parent = irClass
+    private fun createFieldForEntry(entry: IrEnumEntry, irClass: IrClass): IrField =
+        buildField {
+            startOffset = entry.startOffset
+            endOffset = entry.endOffset
+            origin = entry.origin
+            name = entry.name
+            type = irClass.defaultType
+            isFinal = false
+            isExternal = true
+            isStatic = true
+        }.also {
+            it.parent = irClass
 
-                // TODO need a way to emerge local declarations from BodyLoweringPass
-                stageController.unrestrictDeclarationListsAccess {
-                    irClass.declarations += it
-                }
+            // TODO need a way to emerge local declarations from BodyLoweringPass
+            stageController.unrestrictDeclarationListsAccess {
+                irClass.declarations += it
             }
         }
-    }
 
     private fun lowerEnumEntry(enumEntry: IrEnumEntry, klass: IrClass) =
         enumEntry.getInstanceFun!!.run { JsIrBuilder.buildCall(symbol) }
@@ -121,26 +116,13 @@ class EnumClassConstructorLowering(val context: JsCommonBackendContext) : Declar
     }
 
     private fun transformEnumConstructor(enumConstructor: IrConstructor, enumClass: IrClass): IrConstructor {
-        val loweredConstructorDescriptor = WrappedClassConstructorDescriptor()
-        val loweredConstructorSymbol = IrConstructorSymbolImpl(loweredConstructorDescriptor)
-
-        return IrConstructorImpl(
-            enumConstructor.startOffset,
-            enumConstructor.endOffset,
-            enumConstructor.origin,
-            loweredConstructorSymbol,
-            enumConstructor.name,
-            enumConstructor.visibility,
-            enumConstructor.returnType,
-            isInline = enumConstructor.isInline,
-            isExternal = enumConstructor.isExternal,
-            isPrimary = enumConstructor.isPrimary,
-            isExpect = enumConstructor.isExpect
-        ).apply {
-            loweredConstructorDescriptor.bind(this)
+        return buildConstructor {
+            updateFrom(enumConstructor)
+            returnType = enumConstructor.returnType
+        }.apply {
             parent = enumClass
-            valueParameters += JsIrBuilder.buildValueParameter("name", 0, context.irBuiltIns.stringType).also { it.parent = this }
-            valueParameters += JsIrBuilder.buildValueParameter("ordinal", 1, context.irBuiltIns.intType).also { it.parent = this }
+            valueParameters += JsIrBuilder.buildValueParameter(this, "name", 0, context.irBuiltIns.stringType)
+            valueParameters += JsIrBuilder.buildValueParameter(this, "ordinal", 1, context.irBuiltIns.intType)
             copyParameterDeclarationsFrom(enumConstructor)
 
             val newConstructor = this
@@ -528,7 +510,12 @@ class EnumSyntheticFunctionsLowering(val context: JsIrBackendContext): Declarati
     private fun List<IrExpression>.toArrayLiteral(arrayType: IrType, elementType: IrType): IrExpression {
         val irVararg = IrVarargImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, arrayType, elementType, this)
 
-        return IrCallImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, arrayType, context.intrinsics.arrayLiteral).apply {
+        return IrCallImpl(
+            UNDEFINED_OFFSET, UNDEFINED_OFFSET, arrayType,
+            context.intrinsics.arrayLiteral,
+            typeArgumentsCount = 0,
+            valueArgumentsCount = 1
+        ).apply {
             putValueArgument(0, irVararg)
         }
     }

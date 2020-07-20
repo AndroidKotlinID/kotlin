@@ -17,10 +17,10 @@
 package org.jetbrains.kotlin.ir.declarations.impl
 
 import org.jetbrains.kotlin.descriptors.VariableDescriptorWithAccessors
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.carriers.LocalDelegatedPropertyCarrier
 import org.jetbrains.kotlin.ir.symbols.IrLocalDelegatedPropertySymbol
-import org.jetbrains.kotlin.ir.symbols.impl.IrLocalDelegatedPropertySymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
@@ -44,6 +44,7 @@ class IrLocalDelegatedPropertyImpl(
         symbol.bind(this)
     }
 
+    @ObsoleteDescriptorBasedAPI
     override val descriptor: VariableDescriptorWithAccessors
         get() = symbol.descriptor
 
@@ -74,6 +75,16 @@ class IrLocalDelegatedPropertyImpl(
         set(v) {
             if (setter !== v) {
                 setCarrier().setterField = v
+            }
+        }
+
+    override var metadataField: MetadataSource? = null
+
+    override var metadata: MetadataSource?
+        get() = getCarrier().metadataField
+        set(v) {
+            if (metadata !== v) {
+                setCarrier().metadataField = v
             }
         }
 

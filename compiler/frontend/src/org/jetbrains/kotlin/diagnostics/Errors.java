@@ -100,6 +100,12 @@ public interface Errors {
     DiagnosticFactory3<PsiElement, DeclarationDescriptor, VersionRequirement.Version, Pair<LanguageVersion, String>>
             VERSION_REQUIREMENT_DEPRECATION_ERROR = DiagnosticFactory3.create(ERROR);
 
+    DiagnosticFactory0<PsiElement> DEPRECATED_SINCE_KOTLIN_WITHOUT_DEPRECATED = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> DEPRECATED_SINCE_KOTLIN_WITH_DEPRECATED_LEVEL = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> DEPRECATED_SINCE_KOTLIN_WITH_UNORDERED_VERSIONS = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> DEPRECATED_SINCE_KOTLIN_WITHOUT_ARGUMENTS = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> DEPRECATED_SINCE_KOTLIN_OUTSIDE_KOTLIN_SUBPACKAGE = DiagnosticFactory0.create(ERROR);
+
     DiagnosticFactory2<PsiElement, String, String> API_NOT_AVAILABLE = DiagnosticFactory2.create(ERROR);
 
     DiagnosticFactory1<PsiElement, FqName> MISSING_DEPENDENCY_CLASS = DiagnosticFactory1.create(ERROR);
@@ -369,6 +375,7 @@ public interface Errors {
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_CANNOT_HAVE_ABSTRACT_PROPERTIES = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_ABSTRACT_METHOD_WITH_TYPE_PARAMETERS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_ABSTRACT_METHOD_WITH_DEFAULT_VALUE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> FUN_INTERFACE_CONSTRUCTOR_REFERENCE = DiagnosticFactory0.create(ERROR);
 
     // Secondary constructors
 
@@ -802,6 +809,8 @@ public interface Errors {
     DiagnosticFactory1<KtExpression, KotlinType> EXPRESSION_OF_NULLABLE_TYPE_IN_CLASS_LITERAL_LHS = DiagnosticFactory1.create(ERROR);
 
     DiagnosticFactory0<PsiElement> CALLABLE_REFERENCE_TO_JAVA_SYNTHETIC_PROPERTY = DiagnosticFactory0.create(WARNING);
+
+    DiagnosticFactory0<PsiElement> ADAPTED_CALLABLE_REFERENCE_AGAINST_REFLECTION_TYPE = DiagnosticFactory0.create(ERROR);
 
     // Destructuring-declarations
 

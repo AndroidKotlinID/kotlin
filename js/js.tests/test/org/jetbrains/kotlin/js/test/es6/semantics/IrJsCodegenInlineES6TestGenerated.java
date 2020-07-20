@@ -121,6 +121,11 @@ public class IrJsCodegenInlineES6TestGenerated extends AbstractIrJsCodegenInline
             runTest("compiler/testData/codegen/boxInline/anonymousObject/defineClass.kt");
         }
 
+        @TestMetadata("functionExpression.kt")
+        public void testFunctionExpression() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/anonymousObject/functionExpression.kt");
+        }
+
         @TestMetadata("inlineCallInsideInlineLambda.kt")
         public void testInlineCallInsideInlineLambda() throws Exception {
             runTest("compiler/testData/codegen/boxInline/anonymousObject/inlineCallInsideInlineLambda.kt");
@@ -3386,6 +3391,11 @@ public class IrJsCodegenInlineES6TestGenerated extends AbstractIrJsCodegenInline
         @TestMetadata("crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt")
         public void testCrossinlineSuspendLambdaInsideCrossinlineSuspendLambda_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("delegatedProperties.kt")
+        public void testDelegatedProperties_1_3() throws Exception {
+            runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/delegatedProperties.kt", "kotlin.coroutines");
         }
 
         @TestMetadata("doubleRegenerationWithNonSuspendingLambda.kt")

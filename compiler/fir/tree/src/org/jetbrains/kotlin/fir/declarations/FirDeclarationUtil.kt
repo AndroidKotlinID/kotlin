@@ -9,15 +9,14 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.declarations.builder.FirRegularClassBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
-import org.jetbrains.kotlin.fir.declarations.impl.FirRegularClassImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirFileImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirRegularClassImpl
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousObjectSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-import org.jetbrains.kotlin.fir.types.ConeClassLikeType
-import org.jetbrains.kotlin.fir.types.ConeFlexibleType
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.coneTypeSafe
+import org.jetbrains.kotlin.name.ClassId
 
 fun FirTypeParameterBuilder.addDefaultBoundIfNecessary(isFlexible: Boolean = false) {
     if (bounds.isEmpty()) {
@@ -37,6 +36,7 @@ inline val FirRegularClass.isInner get() = status.isInner
 inline val FirRegularClass.isCompanion get() = status.isCompanion
 inline val FirRegularClass.isData get() = status.isData
 inline val FirRegularClass.isInline get() = status.isInline
+inline val FirRegularClass.isFun get() = status.isFun
 inline val FirMemberDeclaration.modality get() = status.modality
 inline val FirMemberDeclaration.visibility get() = status.visibility
 inline val FirMemberDeclaration.allowsToHaveFakeOverride: Boolean
@@ -60,10 +60,13 @@ inline val FirMemberDeclaration.isFromEnumClass: Boolean get() = status.isFromEn
 
 inline val FirPropertyAccessor.modality get() = status.modality
 inline val FirPropertyAccessor.visibility get() = status.visibility
+inline val FirPropertyAccessor.isInline get() = status.isInline
+inline val FirPropertyAccessor.isExternal get() = status.isExternal
 inline val FirPropertyAccessor.allowsToHaveFakeOverride: Boolean
     get() = !Visibilities.isPrivate(visibility) && visibility != Visibilities.INVISIBLE_FAKE
 
 inline val FirRegularClass.isLocal get() = symbol.classId.isLocal
+inline val FirSimpleFunction.isLocal get() = status.visibility == Visibilities.LOCAL
 
 fun FirRegularClassBuilder.addDeclaration(declaration: FirDeclaration) {
     declarations += declaration
@@ -88,6 +91,9 @@ val FirClassSymbol<*>.superConeTypes
 
 val FirClass<*>.superConeTypes get() = superTypeRefs.mapNotNull { it.coneTypeSafe<ConeClassLikeType>() }
 
+fun FirClass<*>.getPrimaryConstructorIfAny(): FirConstructor? =
+    declarations.filterIsInstance<FirConstructor>().firstOrNull()?.takeIf { it.isPrimary }
+
 fun FirRegularClass.collectEnumEntries(): Collection<FirEnumEntry> {
     assert(classKind == ClassKind.ENUM_CLASS)
     return declarations.filterIsInstance<FirEnumEntry>()
@@ -106,5 +112,20 @@ fun FirRegularClass.addDeclaration(declaration: FirDeclaration) {
     }
 }
 
-private object IsFromVarargKey: FirDeclarationDataKey()
+private object IsFromVarargKey : FirDeclarationDataKey()
 var FirProperty.isFromVararg: Boolean? by FirDeclarationDataRegistry.data(IsFromVarargKey)
+
+inline val FirProperty.hasJvmFieldAnnotation: Boolean
+    get() = annotations.any {
+        val classId = it.annotationTypeRef.coneTypeSafe<ConeClassLikeType>()?.classId
+        classId?.packageFqName?.asString() == "kotlin.jvm" && classId.relativeClassName.asString() == "JvmField"
+    }
+
+fun FirAnnotatedDeclaration.hasAnnotation(classId: ClassId): Boolean {
+    return annotations.any { it.annotationTypeRef.coneTypeSafe<ConeClassLikeType>()?.classId == classId }
+}
+
+inline val FirDeclaration.isFromLibrary: Boolean
+    get() = origin == FirDeclarationOrigin.Library
+inline val FirDeclaration.isSynthetic: Boolean
+    get() = origin == FirDeclarationOrigin.Synthetic

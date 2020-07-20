@@ -26,7 +26,6 @@ import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildConstructor
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrConstructorImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
@@ -37,7 +36,6 @@ import org.jetbrains.kotlin.load.java.JavaVisibilities
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTransformerVoidWithContext(), FileLoweringPass {
     data class LambdaCallSite(val scope: IrDeclaration, val crossinline: Boolean)
@@ -160,10 +158,9 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
                 val symbol = expression.symbol
                 val parent =
                     symbol.owner.accessorParent(dispatchReceiverType?.classOrNull?.owner ?: symbol.owner.parent) as IrClass
-                val symbolToAccess = symbol.owner.findDescendantIn(parent)?.symbol ?: symbol
                 modifyGetterExpression(
                     expression,
-                    getterMap.getOrPut(Pair(symbolToAccess, parent)) { makeGetterAccessorSymbol(symbolToAccess, parent) }
+                    getterMap.getOrPut(Pair(symbol, parent)) { makeGetterAccessorSymbol(symbol, parent) }
                 )
             } else {
                 expression
@@ -178,21 +175,15 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
                 val symbol = expression.symbol
                 val parent =
                     symbol.owner.accessorParent(dispatchReceiverType?.classOrNull?.owner ?: symbol.owner.parent) as IrClass
-                val symbolToAccess = symbol.owner.findDescendantIn(parent)?.symbol ?: symbol
                 modifySetterExpression(
                     expression,
-                    setterMap.getOrPut(Pair(symbolToAccess, parent)) { makeSetterAccessorSymbol(symbolToAccess, parent) }
+                    setterMap.getOrPut(Pair(symbol, parent)) { makeSetterAccessorSymbol(symbol, parent) }
                 )
             } else {
                 expression
             }
         )
     }
-
-    private fun IrField.findDescendantIn(derivedClass: IrClass): IrField? =
-        derivedClass.fields.singleOrNull { candidate ->
-            candidate.name == this.name && candidate.overrides(this)
-        }
 
     override fun visitConstructor(declaration: IrConstructor): IrStatement {
         if (declaration.isOrShouldBeHidden) {
@@ -224,19 +215,22 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
         get() = this in context.hiddenConstructors || (
                 !Visibilities.isPrivate(visibility) && !constructedClass.isInline && hasMangledParameters &&
                         origin != IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER &&
-                        origin != JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR)
+                        origin != JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR &&
+                        origin != JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR_FOR_HIDDEN_CONSTRUCTOR)
 
-    private fun handleHiddenConstructor(declaration: IrConstructor): IrConstructorImpl {
+    private fun handleHiddenConstructor(declaration: IrConstructor): IrConstructor {
         require(declaration.isOrShouldBeHidden, declaration::render)
         return context.hiddenConstructors.getOrPut(declaration) {
-            declaration.makeConstructorAccessor().also { accessor ->
+            declaration.makeConstructorAccessor(JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR_FOR_HIDDEN_CONSTRUCTOR).also { accessor ->
                 // There's a special case in the JVM backend for serializing the metadata of hidden
                 // constructors - we serialize the descriptor of the original constructor, but the
                 // signature of the accessor. We implement this special case in the JVM IR backend by
                 // attaching the metadata directly to the accessor. We also have to move all annotations
                 // to the accessor. Parameter annotations are already moved by the copyTo method.
-                accessor.metadata = declaration.metadata
-                declaration.safeAs<IrConstructorImpl>()?.metadata = null
+                if (declaration.metadata != null) {
+                    accessor.metadata = declaration.metadata
+                    declaration.metadata = null
+                }
                 accessor.annotations += declaration.annotations
                 declaration.annotations = emptyList()
                 declaration.valueParameters.forEach { it.annotations = emptyList() }
@@ -256,11 +250,14 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
             candidates.lastOrNull { parent is IrClass && it.isSubclassOf(parent) } ?: classes.last()
         } else parent
 
-    private fun IrConstructor.makeConstructorAccessor(): IrConstructorImpl {
+    private fun IrConstructor.makeConstructorAccessor(
+        originForConstructorAccessor: IrDeclarationOrigin =
+            JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
+    ): IrConstructor {
         val source = this
 
         return buildConstructor {
-            origin = JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
+            origin = originForConstructorAccessor
             name = source.name
             visibility = Visibilities.PUBLIC
         }.also { accessor ->
@@ -272,8 +269,8 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
 
             accessor.addValueParameter(
                 "constructor_marker".synthesizedString,
-                context.ir.symbols.defaultConstructorMarker.defaultType,
-                JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
+                context.ir.symbols.defaultConstructorMarker.defaultType.makeNullable(),
+                JvmLoweredDeclarationOrigin.SYNTHETIC_MARKER_PARAMETER
             )
 
             accessor.body = IrExpressionBodyImpl(
@@ -326,7 +323,7 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
             copyAllParamsToArgs(it, accessor)
         }
 
-    private fun makeGetterAccessorSymbol(fieldSymbol: IrFieldSymbol, parent: IrDeclarationParent): IrSimpleFunctionSymbol =
+    private fun makeGetterAccessorSymbol(fieldSymbol: IrFieldSymbol, parent: IrClass): IrSimpleFunctionSymbol =
         buildFun {
             origin = JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
             name = fieldSymbol.owner.accessorNameForGetter()
@@ -338,8 +335,9 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
             pendingAccessorsToAdd.add(accessor)
 
             if (!fieldSymbol.owner.isStatic) {
+                // Accessors are always to one's own fields.
                 accessor.addValueParameter(
-                    "\$this", fieldSymbol.owner.parentAsClass.defaultType, JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
+                    "\$this", parent.defaultType, JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
                 )
             }
 
@@ -347,22 +345,21 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
         }.symbol
 
     private fun createAccessorBodyForGetter(targetField: IrField, accessor: IrSimpleFunction): IrBody {
-        val resolvedTargetField = targetField.resolveFakeOverride()!!
         val maybeDispatchReceiver =
-            if (resolvedTargetField.isStatic) null
+            if (targetField.isStatic) null
             else IrGetValueImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, accessor.valueParameters[0].symbol)
         return IrExpressionBodyImpl(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET,
             IrGetFieldImpl(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                resolvedTargetField.symbol,
-                resolvedTargetField.type,
+                targetField.symbol,
+                targetField.type,
                 maybeDispatchReceiver
             )
         )
     }
 
-    private fun makeSetterAccessorSymbol(fieldSymbol: IrFieldSymbol, parent: IrDeclarationParent): IrSimpleFunctionSymbol =
+    private fun makeSetterAccessorSymbol(fieldSymbol: IrFieldSymbol, parent: IrClass): IrSimpleFunctionSymbol =
         buildFun {
             origin = JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
             name = fieldSymbol.owner.accessorNameForSetter()
@@ -374,8 +371,9 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
             pendingAccessorsToAdd.add(accessor)
 
             if (!fieldSymbol.owner.isStatic) {
+                // Accessors are always to one's own fields.
                 accessor.addValueParameter(
-                    "\$this", fieldSymbol.owner.parentAsClass.defaultType, JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
+                    "\$this", parent.defaultType, JvmLoweredDeclarationOrigin.SYNTHETIC_ACCESSOR
                 )
             }
 
@@ -385,19 +383,18 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
         }.symbol
 
     private fun createAccessorBodyForSetter(targetField: IrField, accessor: IrSimpleFunction): IrBody {
-        val resolvedTargetField = targetField.resolveFakeOverride()!!
         val maybeDispatchReceiver =
-            if (resolvedTargetField.isStatic) null
+            if (targetField.isStatic) null
             else IrGetValueImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, accessor.valueParameters[0].symbol)
         val value = IrGetValueImpl(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-            accessor.valueParameters[if (resolvedTargetField.isStatic) 0 else 1].symbol
+            accessor.valueParameters[if (targetField.isStatic) 0 else 1].symbol
         )
         return IrExpressionBodyImpl(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET,
             IrSetFieldImpl(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                resolvedTargetField.symbol,
+                targetField.symbol,
                 maybeDispatchReceiver,
                 value,
                 context.irBuiltIns.unitType
@@ -574,11 +571,13 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
         val symbolOwner = owner
         val declarationRaw = symbolOwner as IrDeclarationWithVisibility
         val declaration =
-            (declarationRaw as? IrSimpleFunction)?.resolveFakeOverride()
-                ?: (declarationRaw as? IrField)?.resolveFakeOverride() ?: declarationRaw
+            (declarationRaw as? IrSimpleFunction)?.resolveFakeOverride() ?: declarationRaw
 
         // There is never a problem with visibility of inline functions, as those don't end up as Java entities
         if (declaration is IrFunction && declaration.isInline) return true
+
+        // Enum entry constructors are generated as package-private and are accessed only from corresponding enum class
+        if (declaration is IrConstructor && declaration.constructedClass.isEnumEntry) return true
 
         // `internal` maps to public and requires no accessor.
         if (!withSuper && !declaration.visibility.isPrivate && !declaration.visibility.isProtected) return true

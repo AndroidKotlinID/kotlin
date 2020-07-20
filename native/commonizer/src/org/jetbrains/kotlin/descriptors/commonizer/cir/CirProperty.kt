@@ -8,9 +8,10 @@ package org.jetbrains.kotlin.descriptors.commonizer.cir
 import org.jetbrains.kotlin.resolve.constants.ConstantValue
 
 interface CirProperty : CirFunctionOrProperty, CirLiftedUpDeclaration {
+    val isExternal: Boolean
     val isVar: Boolean
     val isLateInit: Boolean
-    val isConst: Boolean
+    var isConst: Boolean
     val isDelegate: Boolean
     val getter: CirPropertyGetter?
     val setter: CirPropertySetter?

@@ -37,20 +37,19 @@ class FirTypeResolveTransformer(
     private val scopeSession: ScopeSession,
     initialScopes: List<FirScope> = emptyList()
 ) : FirAbstractTreeTransformerWithSuperTypes(
-    phase = FirResolvePhase.TYPES,
-    reversedScopePriority = true
+    phase = FirResolvePhase.TYPES
 ) {
 
     init {
-        towerScope.addScopes(initialScopes.asReversed())
+        scopes.addAll(initialScopes.asReversed())
     }
 
-    private val typeResolverTransformer: FirSpecificTypeResolverTransformer = FirSpecificTypeResolverTransformer(towerScope, session)
+    private val typeResolverTransformer: FirSpecificTypeResolverTransformer = FirSpecificTypeResolverTransformer(session)
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
         checkSessionConsistency(file)
         return withScopeCleanup {
-            towerScope.addScopes(createImportingScopes(file, session, scopeSession))
+            scopes.addAll(createImportingScopes(file, session, scopeSession))
             super.transformFile(file, data)
         }
     }
@@ -91,13 +90,18 @@ class FirTypeResolveTransformer(
     override fun transformProperty(property: FirProperty, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
             property.addTypeParametersScope()
-            val result = transformDeclaration(property, data).single as FirProperty
+            property.replaceResolvePhase(FirResolvePhase.TYPES)
+            property.transformTypeParameters(this, data)
+                .transformReturnTypeRef(this, data)
+                .transformReceiverTypeRef(this, data)
+                .transformGetter(this, data)
+                .transformSetter(this, data)
             if (property.isFromVararg == true) {
-                result.transformTypeToArrayType()
+                property.transformTypeToArrayType()
                 property.getter?.transformReturnTypeRef(StoreType, property.returnTypeRef)
                 property.setter?.valueParameters?.map { it.transformReturnTypeRef(StoreType, property.returnTypeRef) }
             }
-            result.compose()
+            property.compose()
         }
     }
 
@@ -114,7 +118,7 @@ class FirTypeResolveTransformer(
     }
 
     override fun transformTypeRef(typeRef: FirTypeRef, data: Nothing?): CompositeTransformResult<FirTypeRef> {
-        return typeResolverTransformer.transformTypeRef(typeRef, data)
+        return typeResolverTransformer.transformTypeRef(typeRef, towerScope)
     }
 
     override fun transformValueParameter(valueParameter: FirValueParameter, data: Nothing?): CompositeTransformResult<FirStatement> {

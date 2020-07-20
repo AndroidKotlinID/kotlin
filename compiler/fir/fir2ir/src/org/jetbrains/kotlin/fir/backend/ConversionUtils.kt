@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.SyntheticPropertySymbol
 import org.jetbrains.kotlin.fir.resolve.providers.FirProvider
 import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
+import org.jetbrains.kotlin.fir.symbols.Fir2IrClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.IrElement
@@ -42,7 +43,6 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
-import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassPublicSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
@@ -100,13 +100,13 @@ fun FirClassifierSymbol<*>.toSymbol(
         }
         is FirTypeAliasSymbol -> {
             val typeAlias = fir
-            val coneClassLikeType = (typeAlias.expandedTypeRef as FirResolvedTypeRef).type as ConeClassLikeType
+            val coneClassLikeType = typeAlias.expandedTypeRef.coneType as ConeClassLikeType
             coneClassLikeType.lookupTag.toSymbol(session)!!.toSymbol(session, classifierStorage)
         }
         is FirClassSymbol -> {
             classifierStorage.getIrClassSymbol(this)
         }
-        else -> throw AssertionError("Should not be here: $this")
+        else -> error("Unknown symbol: $this")
     }
 }
 
@@ -127,7 +127,7 @@ fun FirReference.toSymbol(
                     resolvedSymbol.toSymbol(session, classifierStorage)
                 }
                 else -> {
-                    throw AssertionError("Unknown symbol: $resolvedSymbol")
+                    error("Unknown symbol: $resolvedSymbol")
                 }
             }
         }
@@ -302,9 +302,10 @@ internal fun IrClass.findMatchingOverriddenSymbolsFromSupertypes(
     visited: MutableSet<IrClass> = mutableSetOf()
 ): List<IrSymbol> {
     for (superType in superTypes) {
-        val superTypeClass = superType.classOrNull
-        if (superTypeClass is IrClassSymbolImpl || superTypeClass is IrClassPublicSymbolImpl) {
-            superTypeClass.owner.findMatchingOverriddenSymbolsFromThisAndSupertypes(irBuiltIns, target, result, visited)
+        when (val superTypeClass = superType.classOrNull) {
+            is IrClassSymbolImpl, is IrClassPublicSymbolImpl, is Fir2IrClassSymbol -> {
+                superTypeClass.owner.findMatchingOverriddenSymbolsFromThisAndSupertypes(irBuiltIns, target, result, visited)
+            }
         }
     }
     return result
@@ -380,6 +381,7 @@ fun isOverriding(
 ): Boolean {
     val typeCheckerContext = IrTypeCheckerContext(irBuiltIns) as AbstractTypeCheckerContext
     fun equalTypes(first: IrType, second: IrType): Boolean {
+        if (first is IrErrorType || second is IrErrorType) return false
         return AbstractTypeChecker.equalTypes(
             typeCheckerContext, first, second
         ) ||
@@ -403,6 +405,10 @@ fun isOverriding(
         }
         target is IrField && superCandidate is IrField -> {
             // Not checking the field type (they should match each other if everything other match, otherwise it's a compilation error)
+            target.name == superCandidate.name
+        }
+        target is IrProperty && superCandidate is IrProperty -> {
+            // Not checking the property type (they should match each other if names match, otherwise it's a compilation error)
             target.name == superCandidate.name
         }
         else -> false
@@ -443,9 +449,6 @@ internal fun FirReference.statementOrigin(): IrStatementOrigin? {
         else -> null
     }
 }
-
-fun FirClass<*>.getPrimaryConstructorIfAny(): FirConstructor? =
-    declarations.filterIsInstance<FirConstructor>().firstOrNull()?.takeIf { it.isPrimary }
 
 internal fun IrDeclarationParent.declareThisReceiverParameter(
     symbolTable: SymbolTable,
@@ -501,7 +504,11 @@ fun Fir2IrComponents.createSafeCallConstruction(
         statements += receiverVariable
         statements += IrWhenImpl(startOffset, endOffset, resultType).apply {
             val condition = IrCallImpl(
-                startOffset, endOffset, irBuiltIns.booleanType, irBuiltIns.eqeqSymbol, origin = IrStatementOrigin.EQEQ
+                startOffset, endOffset, irBuiltIns.booleanType,
+                irBuiltIns.eqeqSymbol,
+                valueArgumentsCount = 2,
+                typeArgumentsCount = 0,
+                origin = IrStatementOrigin.EQEQ
             ).apply {
                 putValueArgument(0, IrGetValueImpl(startOffset, endOffset, receiverVariableSymbol))
                 putValueArgument(1, IrConstImpl.constNull(startOffset, endOffset, irBuiltIns.nothingNType))
@@ -524,7 +531,7 @@ fun Fir2IrComponents.createTemporaryVariableForSafeCallConstruction(
     val receiverVariable = declarationStorage.declareTemporaryVariable(receiverExpression, "safe_receiver").apply {
         parent = conversionScope.parentFromStack()
     }
-    val variableSymbol = symbolTable.referenceValue(receiverVariable.descriptor)
+    val variableSymbol = receiverVariable.symbol
 
     return Pair(receiverVariable, variableSymbol)
 }

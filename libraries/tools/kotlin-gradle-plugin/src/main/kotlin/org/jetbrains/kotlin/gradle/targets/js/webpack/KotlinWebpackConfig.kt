@@ -30,7 +30,7 @@ data class KotlinWebpackConfig(
     val bundleAnalyzerReportDir: File? = null,
     val reportEvaluatedConfigFile: File? = null,
     val devServer: DevServer? = null,
-    val cssSettings: KotlinWebpackCssSettings = KotlinWebpackCssSettings(),
+    val cssSupport: KotlinWebpackCssSupport = KotlinWebpackCssSupport(),
     val devtool: String? = WebpackDevtool.EVAL_SOURCE_MAP,
     val showProgress: Boolean = false,
     val sourceMaps: Boolean = false,
@@ -40,7 +40,7 @@ data class KotlinWebpackConfig(
     val resolveFromModulesFirst: Boolean = false
 ) {
     fun getRequiredDependencies(versions: NpmVersions) =
-        mutableListOf<RequiredKotlinJsDependency>().also {
+        mutableSetOf<RequiredKotlinJsDependency>().also {
             it.add(versions.kotlinJsTestRunner)
             it.add(versions.webpack)
             it.add(versions.webpackCli)
@@ -50,7 +50,6 @@ data class KotlinWebpackConfig(
             }
 
             if (sourceMaps) {
-                it.add(versions.kotlinSourceMapLoader)
                 it.add(versions.sourceMapLoader)
             }
 
@@ -58,10 +57,10 @@ data class KotlinWebpackConfig(
                 it.add(versions.webpackDevServer)
             }
 
-            if (!cssSettings.enabled || cssSettings.rules.isEmpty()) return@also
+            if (!cssSupport.enabled || cssSupport.rules.isEmpty()) return@also
 
             it.add(versions.cssLoader)
-            cssSettings.rules.forEach { rule ->
+            cssSupport.rules.forEach { rule ->
                 when (rule.mode) {
                     EXTRACT -> it.add(versions.miniCssExtractPlugin)
                     INLINE -> it.add(versions.styleLoader)
@@ -131,7 +130,7 @@ data class KotlinWebpackConfig(
             appendDevServer()
             appendReport()
             appendProgressReporter()
-            appendCssSettings()
+            appendCssSupport()
             appendErrorPlugin()
             appendFromConfigDir()
             appendEvaluatedFileReport()
@@ -214,10 +213,14 @@ data class KotlinWebpackConfig(
                 // source maps
                 config.module.rules.push({
                         test: /\.js${'$'}/,
-                        use: ["kotlin-source-map-loader"],
+                        use: ["source-map-loader"],
                         enforce: "pre"
                 });
                 config.devtool = ${devtool?.let { "'$it'" } ?: false};
+                config.stats = config.stats || {}
+                Object.assign(config.stats, config.stats, {
+                    warningsFilter: [/Failed to parse source map/]
+                })
                 
             """.trimIndent()
         )
@@ -250,14 +253,15 @@ data class KotlinWebpackConfig(
                     },
                     library: "${output.library}",
                     libraryTarget: "${output.libraryTarget}",
+                    globalObject: "${output.globalObject}"
                 };
                 
             """.trimIndent()
         )
     }
 
-    private fun Appendable.appendCssSettings() {
-        if (!cssSettings.enabled || cssSettings.rules.isEmpty())
+    private fun Appendable.appendCssSupport() {
+        if (!cssSupport.enabled || cssSupport.rules.isEmpty())
             return
 
         appendln(
@@ -295,7 +299,7 @@ data class KotlinWebpackConfig(
             |       
             """.trimMargin()
 
-        cssSettings.rules.forEach { rule ->
+        cssSupport.rules.forEach { rule ->
             appendln(
                 """
             |    ;(function(config) {
@@ -367,6 +371,11 @@ data class KotlinWebpackConfig(
                 ;(function(config) {
                     const tcErrorPlugin = require('kotlin-test-js-runner/tc-log-error-webpack');
                     config.plugins.push(new tcErrorPlugin(tcErrorPlugin))
+                    config.stats = config.stats || {}
+                    Object.assign(config.stats, config.stats, {
+                        warnings: false,
+                        errors: false
+                    })
                 })(config);
             """.trimIndent()
         )
@@ -398,9 +407,11 @@ data class KotlinWebpackConfig(
                     const handler = (percentage, message, ...args) => {
                         const p = percentage * 100;
                         let msg = `${"$"}{Math.trunc(p / 10)}${"$"}{Math.trunc(p % 10)}% ${"$"}{message} ${"$"}{args.join(' ')}`;
-                        ${if (progressReporterPathFilter == null) "" else """
+                        ${
+                if (progressReporterPathFilter == null) "" else """
                             msg = msg.replace(new RegExp(${progressReporterPathFilter.jsQuoted()}, 'g'), '');
-                        """.trimIndent()};
+                        """.trimIndent()
+            };
                         console.log(msg);
                     };
             
@@ -414,7 +425,7 @@ data class KotlinWebpackConfig(
     private fun cssError() {
         throw IllegalStateException(
             """
-                    Possible values for cssSettings.mode:
+                    Possible values for cssSupport.mode:
                     - EXTRACT
                     - INLINE
                     - IMPORT

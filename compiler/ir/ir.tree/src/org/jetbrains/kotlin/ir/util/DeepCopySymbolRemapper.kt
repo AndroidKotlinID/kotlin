@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.ir.util
 
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrBlock
@@ -26,6 +27,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 open class DeepCopySymbolRemapper(
     private val descriptorsRemapper: DescriptorsRemapper = DescriptorsRemapper.Default
 ) : IrElementVisitorVoid, SymbolRemapper {

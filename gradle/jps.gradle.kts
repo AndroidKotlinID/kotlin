@@ -27,6 +27,7 @@ fun JUnit.configureForKotlin(xmx: String = "1600m") {
         "-Djna.nosys=true",
         if (Platform[201].orHigher()) "-Didea.platform.prefix=Idea" else null,
         "-Didea.is.unit.test=true",
+        if (Platform[202].orHigher()) "-Didea.ignore.disabled.plugins=true" else null,
         "-Didea.home.path=$ideaSdkPath",
         "-Djps.kotlin.home=${ideaPluginDir.absolutePath}",
         "-Dkotlin.ni=" + if (rootProject.hasProperty("newInferenceTests")) "true" else "false",
@@ -63,7 +64,7 @@ fun setupGenerateAllTestsRunConfiguration() {
 fun setupFirRunConfiguration() {
 
     val junit = JUnit("_stub").apply { configureForKotlin("2048m") }
-    junit.moduleName = "kotlin.compiler.test"
+    junit.moduleName = "kotlin.compiler.tests-spec.test"
     junit.pattern = "^(org\\.jetbrains\\.kotlin\\.fir((?!\\.lightTree\\.benchmark)(\\.\\w+)*)\\.((?!(TreesCompareTest|TotalKotlinTest|RawFirBuilderTotalKotlinTestCase))\\w+)|org\\.jetbrains\\.kotlin\\.codegen\\.ir\\.FirBlackBoxCodegenTestGenerated|org\\.jetbrains\\.kotlin\\.spec\\.checkers\\.FirDiagnosticsTestSpecGenerated)\$"
     junit.vmParameters = junit.vmParameters.replace(rootDir.absolutePath, "\$PROJECT_DIR\$")
     junit.workingDirectory = junit.workingDirectory.replace(rootDir.absolutePath, "\$PROJECT_DIR\$")
@@ -102,20 +103,33 @@ if (kotlinBuildProperties.isInJpsBuildIdeaSync) {
         apply(mapOf("plugin" to "idea"))
         // Make Idea import embedded configuration as transitive dependency for some configurations
         afterEvaluate {
+            val jpsBuildTestDependencies = configurations.maybeCreate("jpsBuildTestDependencies").apply {
+                isCanBeConsumed = false
+                isCanBeResolved = true
+                attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, objects.named("embedded-java-runtime"))
+                }
+            }
+
             listOf(
                 "testCompile",
                 "testCompileOnly",
                 "testRuntime",
                 "testRuntimeOnly"
             ).forEach { configurationName ->
-                val dependencyProjects = configurations
-                    .findByName(configurationName)
+                val configuration = configurations.findByName(configurationName)
+
+                configuration?.apply {
+                    extendsFrom(jpsBuildTestDependencies)
+                }
+
+                val dependencyProjects = configuration
                     ?.dependencies
                     ?.mapNotNull { (it as? ProjectDependency)?.dependencyProject }
 
                 dependencies {
                     dependencyProjects?.forEach {dependencyProject ->
-                        add(configurationName, project(dependencyProject.path, configuration = "embedded"))
+                        add(jpsBuildTestDependencies.name, project(dependencyProject.path))
                     }
                 }
             }

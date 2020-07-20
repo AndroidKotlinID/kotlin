@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirModifiableQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
 import org.jetbrains.kotlin.fir.expressions.impl.FirStubStatement
-import org.jetbrains.kotlin.fir.expressions.impl.buildSingleExpressionBlock
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildDelegateFieldReference
 import org.jetbrains.kotlin.fir.references.builder.buildImplicitThisReference
@@ -33,10 +32,8 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertyAccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
-import org.jetbrains.kotlin.fir.types.ConeStarProjection
-import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.builder.buildImplicitTypeRef
-import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
+import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.Name
@@ -143,42 +140,12 @@ fun IElementType.toFirOperation(): FirOperation =
     }
 
 fun FirExpression.generateNotNullOrOther(
-    session: FirSession, other: FirExpression, caseId: String, baseSource: FirSourceElement?,
-): FirWhenExpression {
-    val subjectName = Name.special("<$caseId>")
-    val subjectVariable = generateTemporaryVariable(session, baseSource, subjectName, this)
-
-    @OptIn(FirContractViolation::class)
-    val ref = FirExpressionRef<FirWhenExpression>()
-    val subjectExpression = buildWhenSubjectExpression {
+    other: FirExpression, baseSource: FirSourceElement?,
+): FirElvisExpression {
+    return buildElvisExpression {
         source = baseSource
-        whenRef = ref
-    }
-
-    return buildWhenExpression {
-        source = baseSource
-        this.subject = this@generateNotNullOrOther
-        this.subjectVariable = subjectVariable
-        branches += buildWhenBranch {
-            source = baseSource
-            condition = buildOperatorCall {
-                source = baseSource
-                operation = FirOperation.EQ
-                argumentList = buildBinaryArgumentList(
-                    subjectExpression, buildConstExpression(baseSource, FirConstKind.Null, null)
-                )
-            }
-            result = buildSingleExpressionBlock(other)
-        }
-        branches += buildWhenBranch {
-            source = other.source
-            condition = buildElseIfTrueCondition {
-                source = baseSource
-            }
-            result = buildSingleExpressionBlock(generateResolvedAccessExpression(baseSource, subjectVariable))
-        }
-    }.also {
-        ref.bind(it)
+        lhs = this@generateNotNullOrOther
+        rhs = other
     }
 }
 
@@ -203,9 +170,9 @@ fun FirExpression.generateContainsOperation(
     if (!inverted) return containsCall
 
     return buildFunctionCall {
-        source = baseSource
+        source = baseSource?.fakeElement(FirFakeSourceElementKind.DesugaredInvertedContains)
         calleeReference = buildSimpleNamedReference {
-            source = operationReferenceSource
+            source = operationReferenceSource?.fakeElement(FirFakeSourceElementKind.DesugaredInvertedContains)
             name = OperatorNameConventions.NOT
         }
         explicitReceiver = containsCall
@@ -222,7 +189,12 @@ fun FirExpression.generateComparisonExpression(
         "$operatorToken is not in ${OperatorConventions.COMPARISON_OPERATIONS}"
     }
 
-    val compareToCall = createConventionCall(operationReferenceSource, baseSource, argument, OperatorNameConventions.COMPARE_TO)
+    val compareToCall = createConventionCall(
+        operationReferenceSource,
+        baseSource?.fakeElement(FirFakeSourceElementKind.GeneratedCompararisonExpression),
+        argument,
+        OperatorNameConventions.COMPARE_TO
+    )
 
     val firOperation = when (operatorToken) {
         KtTokens.LT -> FirOperation.LT
@@ -511,6 +483,6 @@ fun FirModifiableQualifiedAccess.wrapWithSafeCall(receiver: FirExpression): FirS
             bind(checkedSafeCallSubject)
         }
         this.regularQualifiedAccess = this@wrapWithSafeCall
-        this.source = this@wrapWithSafeCall.source
+        this.source = this@wrapWithSafeCall.source?.fakeElement(FirFakeSourceElementKind.DesugaredSafeCallExpression)
     }
 }

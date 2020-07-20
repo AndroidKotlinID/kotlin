@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.RootPackageJsonTask
 import org.jetbrains.kotlin.gradle.tasks.CleanDataTask
+import org.jetbrains.kotlin.gradle.tasks.registerTask
 
 open class YarnPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
@@ -25,8 +26,8 @@ open class YarnPlugin : Plugin<Project> {
         val yarnRootExtension = this.extensions.create(YarnRootExtension.YARN, YarnRootExtension::class.java, this)
         val nodeJs = NodeJsRootPlugin.apply(this)
 
-        tasks.create(YarnSetupTask.NAME, YarnSetupTask::class.java) {
-            it.dependsOn(nodeJs.nodeJsSetupTask)
+        registerTask<YarnSetupTask>(YarnSetupTask.NAME) {
+            it.dependsOn(nodeJs.nodeJsSetupTaskProvider)
         }
 
         val rootClean = project.rootProject.tasks.named(BasePlugin.CLEAN_TASK_NAME)
