@@ -1632,7 +1632,7 @@ class RawFirBuilder(
                         (this as KtExpression).toFirExpression("Incorrect expression in assignment: ${expression.text}")
                     }
                 } else {
-                    buildOperatorCall {
+                    buildEqualityOperatorCall {
                         this.source = source
                         operation = firOperation
                         argumentList = buildBinaryArgumentList(leftArgument, rightArgument)
@@ -1687,13 +1687,7 @@ class RawFirBuilder(
                         explicitReceiver = argument.toFirExpression("No operand")
                     }
                 }
-                else -> {
-                    buildOperatorCall {
-                        source = expression.toFirSourceElement()
-                        operation = operationToken.toFirOperation()
-                        argumentList = buildUnaryArgumentList(argument.toFirExpression("No operand"))
-                    }
-                }
+                else -> throw IllegalStateException("Unexpected expression: ${expression.text}")
             }
         }
 

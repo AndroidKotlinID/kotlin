@@ -17,7 +17,8 @@ object ExtendedDeclarationCheckers : DeclarationCheckers() {
     )
 
     override val memberDeclarationCheckers = listOf(
-        RedundantExplicitTypeChecker,
-        RedundantModalityModifierChecker
+        RedundantModalityModifierChecker,
+        RedundantExplicitTypeChecker
     )
+
 }

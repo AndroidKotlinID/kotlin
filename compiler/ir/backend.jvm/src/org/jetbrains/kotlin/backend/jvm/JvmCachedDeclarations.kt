@@ -3,23 +3,24 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.backend.jvm.descriptors
+package org.jetbrains.kotlin.backend.jvm
 
-import org.jetbrains.kotlin.backend.common.ir.*
+import org.jetbrains.kotlin.backend.common.ir.copyParameterDeclarationsFrom
+import org.jetbrains.kotlin.backend.common.ir.createImplicitParameterDeclarationWithWrappedDescriptor
+import org.jetbrains.kotlin.backend.common.ir.createStaticFunctionWithReceivers
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
-import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
-import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.backend.jvm.ir.copyCorrespondingPropertyFrom
 import org.jetbrains.kotlin.backend.jvm.ir.replaceThisByStaticReference
 import org.jetbrains.kotlin.builtins.CompanionObjectMapping.isMappedIntrinsicCompanionObject
-import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.ir.builders.declarations.*
+import org.jetbrains.kotlin.ir.builders.declarations.buildClass
+import org.jetbrains.kotlin.ir.builders.declarations.buildField
+import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.setSourceRange
 import org.jetbrains.kotlin.ir.declarations.*
@@ -29,25 +30,21 @@ import org.jetbrains.kotlin.load.java.JavaVisibilities
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
-import java.util.*
 
-class JvmDeclarationFactory(
+class JvmCachedDeclarations(
     private val context: JvmBackendContext,
     private val methodSignatureMapper: MethodSignatureMapper,
     private val languageVersionSettings: LanguageVersionSettings
-) : DeclarationFactory {
+) {
     private val singletonFieldDeclarations = HashMap<IrSymbolOwner, IrField>()
     private val interfaceCompanionFieldDeclarations = HashMap<IrSymbolOwner, IrField>()
-    private val outerThisDeclarations = HashMap<IrClass, IrField>()
-    private val innerClassConstructors = HashMap<IrConstructor, IrConstructor>()
-    private val originalInnerClassPrimaryConstructorByClass = HashMap<IrClass, IrConstructor>()
     private val staticBackingFields = HashMap<IrProperty, IrField>()
 
     private val defaultImplsMethods = HashMap<IrSimpleFunction, IrSimpleFunction>()
     private val defaultImplsClasses = HashMap<IrClass, IrClass>()
     private val defaultImplsRedirections = HashMap<IrSimpleFunction, IrSimpleFunction>()
 
-    override fun getFieldForEnumEntry(enumEntry: IrEnumEntry): IrField =
+    fun getFieldForEnumEntry(enumEntry: IrEnumEntry): IrField =
         singletonFieldDeclarations.getOrPut(enumEntry) {
             buildField {
                 setSourceRange(enumEntry)
@@ -61,60 +58,7 @@ class JvmDeclarationFactory(
             }
         }
 
-    override fun getOuterThisField(innerClass: IrClass): IrField =
-        outerThisDeclarations.getOrPut(innerClass) {
-            assert(innerClass.isInner) { "Class is not inner: ${innerClass.dump()}" }
-            buildField {
-                name = Name.identifier("this$0")
-                type = innerClass.parentAsClass.defaultType
-                origin = DeclarationFactory.FIELD_FOR_OUTER_THIS
-                visibility = JavaVisibilities.PACKAGE_VISIBILITY
-                isFinal = true
-            }.apply {
-                parent = innerClass
-            }
-        }
-
-    override fun getInnerClassConstructorWithOuterThisParameter(innerClassConstructor: IrConstructor): IrConstructor {
-        val innerClass = innerClassConstructor.parent as IrClass
-        assert(innerClass.isInner) { "Class is not inner: ${(innerClassConstructor.parent as IrClass).dump()}" }
-
-        return innerClassConstructors.getOrPut(innerClassConstructor) {
-            createInnerClassConstructorWithOuterThisParameter(innerClassConstructor)
-        }.also {
-            if (innerClassConstructor.isPrimary) {
-                originalInnerClassPrimaryConstructorByClass[innerClass] = innerClassConstructor
-            }
-        }
-    }
-
-    override fun getInnerClassOriginalPrimaryConstructorOrNull(innerClass: IrClass): IrConstructor? {
-        assert(innerClass.isInner) { "Class is not inner: $innerClass" }
-
-        return originalInnerClassPrimaryConstructorByClass[innerClass]
-    }
-
-    private fun createInnerClassConstructorWithOuterThisParameter(oldConstructor: IrConstructor): IrConstructor =
-        buildConstructor(oldConstructor.descriptor) {
-            updateFrom(oldConstructor)
-            returnType = oldConstructor.returnType
-        }.apply {
-            annotations = oldConstructor.annotations.map { it.deepCopyWithSymbols(this) }
-            parent = oldConstructor.parent
-            returnType = oldConstructor.returnType
-            copyTypeParametersFrom(oldConstructor)
-
-            val outerThisValueParameter = buildValueParameter(this) {
-                origin = JvmLoweredDeclarationOrigin.FIELD_FOR_OUTER_THIS
-                name = Name.identifier(AsmUtil.CAPTURED_THIS_FIELD)
-                index = 0
-                type = oldConstructor.parentAsClass.parentAsClass.defaultType
-            }
-            valueParameters = listOf(outerThisValueParameter) + oldConstructor.valueParameters.map { it.copyTo(this, index = it.index + 1) }
-            metadata = oldConstructor.metadata
-        }
-
-    override fun getFieldForObjectInstance(singleton: IrClass): IrField =
+    fun getFieldForObjectInstance(singleton: IrClass): IrField =
         singletonFieldDeclarations.getOrPut(singleton) {
             val originalVisibility = singleton.visibility
             val isNotMappedCompanion = singleton.isCompanion && !isMappedIntrinsicCompanionObject(singleton.descriptor)
@@ -179,7 +123,7 @@ class JvmDeclarationFactory(
                     oldParent
                 annotations += oldField.annotations
                 initializer = oldField.initializer
-                    ?.replaceThisByStaticReference(this@JvmDeclarationFactory, oldParent, oldParent.thisReceiver!!)
+                    ?.replaceThisByStaticReference(this@JvmCachedDeclarations, oldParent, oldParent.thisReceiver!!)
                     ?.patchDeclarationParents(this) as IrExpressionBody?
                 origin = if (irProperty.parentAsClass.isCompanion) JvmLoweredDeclarationOrigin.COMPANION_PROPERTY_BACKING_FIELD else origin
             }
@@ -228,8 +172,8 @@ class JvmDeclarationFactory(
                 if (it.origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY &&
                     !it.annotations.hasAnnotation(DeprecationResolver.JAVA_DEPRECATED)
                 ) {
-                    this@JvmDeclarationFactory.context.createIrBuilder(it.symbol).run {
-                        it.annotations += irCall(this@JvmDeclarationFactory.context.ir.symbols.javaLangDeprecatedConstructor)
+                    this@JvmCachedDeclarations.context.createIrBuilder(it.symbol).run {
+                        it.annotations += irCall(this@JvmCachedDeclarations.context.ir.symbols.javaLangDeprecatedConstructor)
                     }
                 }
             }

@@ -49,6 +49,21 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         runTest("compiler/testData/codegen/bytecodeListing/defaultImpls.kt");
     }
 
+    @TestMetadata("deprecatedEnumEntryFields.kt")
+    public void testDeprecatedEnumEntryFields() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/deprecatedEnumEntryFields.kt");
+    }
+
+    @TestMetadata("deprecatedLateinitVar.kt")
+    public void testDeprecatedLateinitVar() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/deprecatedLateinitVar.kt");
+    }
+
+    @TestMetadata("deprecatedProperty.kt")
+    public void testDeprecatedProperty() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/deprecatedProperty.kt");
+    }
+
     @TestMetadata("emptyMultifileFacade.kt")
     public void testEmptyMultifileFacade() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/emptyMultifileFacade.kt");

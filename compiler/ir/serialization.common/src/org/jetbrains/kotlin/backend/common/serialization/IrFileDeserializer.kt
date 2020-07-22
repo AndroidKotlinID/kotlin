@@ -6,7 +6,7 @@
 package org.jetbrains.kotlin.backend.common.serialization
 
 import org.jetbrains.kotlin.backend.common.LoggingContext
-import org.jetbrains.kotlin.backend.common.ir.DeclarationFactory
+import org.jetbrains.kotlin.backend.common.lower.InnerClassesSupport
 import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.common.overrides.PlatformFakeOverrideClassFilter
 import org.jetbrains.kotlin.backend.common.peek
@@ -110,7 +110,8 @@ abstract class IrFileDeserializer(
     val builtIns: IrBuiltIns,
     val symbolTable: SymbolTable,
     protected var deserializeBodies: Boolean,
-    private val deserializeFakeOverrides: Boolean
+    private val deserializeFakeOverrides: Boolean,
+    private val fakeOverrideQueue: MutableList<IrClass>
 ) {
 
     abstract fun deserializeIrSymbolToDeclare(code: Long): Pair<IrSymbol, IdSignature>
@@ -1051,6 +1052,12 @@ abstract class IrFileDeserializer(
                 thisReceiver = deserializeIrValueParameter(proto.thisReceiver, -1)
 
                 (descriptor as? WrappedClassDescriptor)?.bind(this)
+
+                if (!deserializeFakeOverrides) {
+                    if (symbol.isPublicApi) {
+                        fakeOverrideQueue.add(this)
+                    }
+                }
             }
         }
 
@@ -1363,7 +1370,7 @@ abstract class IrFileDeserializer(
         }
 
     private val allKnownDeclarationOrigins =
-        IrDeclarationOrigin::class.nestedClasses.toList() + DeclarationFactory.FIELD_FOR_OUTER_THIS::class
+        IrDeclarationOrigin::class.nestedClasses.toList() + InnerClassesSupport.FIELD_FOR_OUTER_THIS::class
 
     private val declarationOriginIndex =
         allKnownDeclarationOrigins.map { it.objectInstance as IrDeclarationOriginImpl }.associateBy { it.name }

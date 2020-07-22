@@ -14,18 +14,18 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-abstract class FirOperatorCall : FirExpression(), FirCall {
+abstract class FirEqualityOperatorCall : FirExpression(), FirCall {
     abstract override val source: FirSourceElement?
     abstract override val typeRef: FirTypeRef
     abstract override val annotations: List<FirAnnotationCall>
     abstract override val argumentList: FirArgumentList
     abstract val operation: FirOperation
 
-    override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitOperatorCall(this, data)
+    override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitEqualityOperatorCall(this, data)
 
     abstract override fun replaceTypeRef(newTypeRef: FirTypeRef)
 
     abstract override fun replaceArgumentList(newArgumentList: FirArgumentList)
 
-    abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirOperatorCall
+    abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirEqualityOperatorCall
 }
