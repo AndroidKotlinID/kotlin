@@ -17,27 +17,20 @@
 package org.jetbrains.kotlin.backend.common.overrides
 
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
-import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.IrOverridableMember
-import org.jetbrains.kotlin.ir.declarations.impl.IrFakeOverrideFunctionImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrFakeOverridePropertyImpl
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.descriptors.WrappedPropertyDescriptor
 import org.jetbrains.kotlin.ir.descriptors.WrappedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrPropertySymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.IrTypeProjection
+import org.jetbrains.kotlin.ir.types.extractTypeParameters
 import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.util.SymbolTable
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
-import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
-import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.types.Variance
 
 interface PlatformFakeOverrideClassFilter {
@@ -76,22 +69,24 @@ class FakeOverrideBuilder(
         val classifier = superType.classifier
         require(classifier is IrClassSymbol) { "superType classifier is not IrClassSymbol: $classifier" }
 
-        val typeParameters = classifier.owner.typeParameters.map { it.symbol }
-        val typeArguments = superType.arguments.map {
-            require(it is IrTypeProjection) { "Unexpected super type argument: $it" }
-            assert(it.variance == Variance.INVARIANT) { "Unexpected variance in super type argument: ${it.variance}" }
-            it.type
+        val typeParameters = extractTypeParameters(classifier.owner)
+        val superArguments = superType.arguments
+        assert(typeParameters.size == superArguments.size) {
+            "typeParameters = $typeParameters size != typeArguments = $superArguments size "
         }
 
-        assert(typeParameters.size == typeArguments.size) {
-            "typeParameters = $typeParameters size != typeArguments = $typeArguments size "
+        val substitutionMap = mutableMapOf<IrTypeParameterSymbol, IrType>()
+
+        for (i in typeParameters.indices) {
+            val tp = typeParameters[i]
+            val ta = superArguments[i]
+            require(ta is IrTypeProjection) { "Unexpected super type argument: $ta @ $i" }
+            assert(ta.variance == Variance.INVARIANT) { "Unexpected variance in super type argument: ${ta.variance} @$i" }
+            substitutionMap[tp.symbol] = ta.type
         }
 
-        val substitutionMap = typeParameters.zip(typeArguments).toMap()
-        val copier =
-            DeepCopyIrTreeWithSymbolsForFakeOverrides(substitutionMap, superType, clazz)
-
-        val deepCopyFakeOverride = copier.copy(member) as IrOverridableMember
+        val copier = DeepCopyIrTreeWithSymbolsForFakeOverrides(substitutionMap)
+        val deepCopyFakeOverride = copier.copy(member, clazz) as IrOverridableMember
         deepCopyFakeOverride.parent = clazz
 
         return deepCopyFakeOverride
@@ -117,22 +112,21 @@ class FakeOverrideBuilder(
 
     override fun linkFakeOverride(fakeOverride: IrOverridableMember) {
         when (fakeOverride) {
-            is IrFakeOverrideFunctionImpl -> linkFunctionFakeOverride(fakeOverride)
-            is IrFakeOverridePropertyImpl -> linkPropertyFakeOverride(fakeOverride)
+            is IrFakeOverrideFunction -> linkFunctionFakeOverride(fakeOverride)
+            is IrFakeOverrideProperty -> linkPropertyFakeOverride(fakeOverride)
             else -> error("Unexpected fake override: $fakeOverride")
         }
     }
 
-    private fun linkFunctionFakeOverride(declaration: IrFakeOverrideFunctionImpl) {
+    private fun linkFunctionFakeOverride(declaration: IrFakeOverrideFunction) {
         val signature = signaturer.composePublicIdSignature(declaration)
 
         symbolTable.declareSimpleFunctionFromLinker(WrappedSimpleFunctionDescriptor(), signature) {
             declaration.acquireSymbol(it)
-            declaration
         }
     }
 
-    private fun linkPropertyFakeOverride(declaration: IrFakeOverridePropertyImpl) {
+    private fun linkPropertyFakeOverride(declaration: IrFakeOverrideProperty) {
         // To compute a signature for a property with type parameters,
         // we must have its accessor's correspondingProperty pointing to the property's symbol.
         // See IrMangleComputer.mangleTypeParameterReference() for details.
@@ -140,7 +134,7 @@ class FakeOverrideBuilder(
         // To break this loop we use temp symbol in correspondingProperty.
 
         val tempSymbol = IrPropertySymbolImpl(WrappedPropertyDescriptor()).also {
-            it.bind(declaration)
+            it.bind(declaration as IrProperty)
         }
         declaration.getter?.let {
             it.correspondingPropertySymbol = tempSymbol
@@ -153,25 +147,22 @@ class FakeOverrideBuilder(
 
         symbolTable.declarePropertyFromLinker(WrappedPropertyDescriptor(), signature) {
             declaration.acquireSymbol(it)
-            declaration
         }
 
         declaration.getter?.let {
             it.correspondingPropertySymbol = declaration.symbol
-            linkFunctionFakeOverride(it as? IrFakeOverrideFunctionImpl
-                ?: error("Unexpected fake override getter: $it")
-            )
+            linkFunctionFakeOverride(it as? IrFakeOverrideFunction ?: error("Unexpected fake override getter: $it"))
         }
         declaration.setter?.let {
             it.correspondingPropertySymbol = declaration.symbol
-            linkFunctionFakeOverride(it as? IrFakeOverrideFunctionImpl
-                ?: error("Unexpected fake override setter: $it")
-            )
+            linkFunctionFakeOverride(it as? IrFakeOverrideFunction ?: error("Unexpected fake override setter: $it"))
         }
     }
 
     fun provideFakeOverrides(klass: IrClass) {
         buildFakeOverrideChainsForClass(klass)
+        propertyOverriddenSymbols.clear()
+        irOverridingUtil.clear()
         haveFakeOverrides.add(klass)
     }
 }

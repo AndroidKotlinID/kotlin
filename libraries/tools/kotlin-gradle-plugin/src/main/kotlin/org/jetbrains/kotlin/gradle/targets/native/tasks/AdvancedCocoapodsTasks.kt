@@ -10,6 +10,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.Optional
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.CocoapodsExtension
+import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.cocoapodsBuildDirs
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -124,19 +125,19 @@ open class PodGenTask : CocoapodsWithSyntheticTask() {
 
     @TaskAction
     fun generate() {
-        val podspecDir = podspecProvider.get().parentFile
+        val syntheticDir = project.cocoapodsBuildDirs.synthetic(kotlinNativeTarget).apply { mkdirs() }
         val localPodspecPaths = cocoapodsExtension.pods.mapNotNull { it.podspec?.parentFile?.absolutePath }
 
         val podGenProcessArgs = listOfNotNull(
             "pod", "gen",
             "--platforms=${kotlinNativeTarget.platformLiteral}",
-            "--gen-directory=${project.cocoapodsBuildDirs.synthetic(kotlinNativeTarget).absolutePath}",
+            "--gen-directory=${syntheticDir.absolutePath}",
             localPodspecPaths.takeIf { it.isNotEmpty() }?.joinToString(separator = ",")?.let { "--local-sources=$it" },
-            podspecProvider.get().name
+            podspecProvider.get().absolutePath
         )
 
         val podGenProcess = ProcessBuilder(podGenProcessArgs).apply {
-            directory(podspecDir)
+            directory(syntheticDir)
         }.start()
         val podGenRetCode = podGenProcess.waitFor()
         val outputText = podGenProcess.inputStream.use { it.reader().readText() }
@@ -177,6 +178,9 @@ open class PodSetupBuildTask : CocoapodsWithSyntheticTask() {
     @Internal
     lateinit var kotlinNativeTarget: KotlinNativeTarget
 
+    @Input
+    lateinit var schemeName: Provider<String>
+
     @get:OutputFile
     internal val buildSettingsFileProvider: Provider<File> = project.provider {
         project.cocoapodsBuildDirs
@@ -191,7 +195,7 @@ open class PodSetupBuildTask : CocoapodsWithSyntheticTask() {
         val buildSettingsReceivingCommand = listOf(
             "xcodebuild", "-showBuildSettings",
             "-project", podsXcodeProjDir.name,
-            "-scheme", cocoapodsExtension.frameworkName,
+            "-scheme", schemeName.get(),
             "-sdk", kotlinNativeTarget.toValidSDK
         )
 

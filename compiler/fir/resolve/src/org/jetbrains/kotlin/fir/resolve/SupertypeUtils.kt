@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
-import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.name.ClassId
@@ -42,6 +41,18 @@ fun lookupSuperTypes(
     }
 }
 
+fun lookupSuperTypes(
+    symbol: FirClassifierSymbol<*>,
+    lookupInterfaces: Boolean,
+    deep: Boolean,
+    useSiteSession: FirSession,
+    supertypeSupplier: SupertypeSupplier = SupertypeSupplier.Default
+): List<ConeClassLikeType> {
+    return mutableListOf<ConeClassLikeType>().also {
+        symbol.collectSuperTypes(it, mutableSetOf(), deep, lookupInterfaces, false, useSiteSession, supertypeSupplier)
+    }
+}
+
 inline fun <reified ID : Any, reified FS : FirScope> scopeSessionKey(): ScopeSessionKey<ID, FS> {
     return object : ScopeSessionKey<ID, FS>() {}
 }
@@ -49,10 +60,6 @@ inline fun <reified ID : Any, reified FS : FirScope> scopeSessionKey(): ScopeSes
 val USE_SITE = scopeSessionKey<FirClassSymbol<*>, FirTypeScope>()
 
 data class SubstitutionScopeKey(val type: ConeClassLikeType) : ScopeSessionKey<FirClassLikeSymbol<*>, FirClassSubstitutionScope>()
-
-fun FirClass<*>.buildUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope? {
-    return this.unsubstitutedScope(useSiteSession, builder)
-}
 
 /* TODO REMOVE */
 fun createSubstitution(

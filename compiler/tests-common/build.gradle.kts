@@ -12,6 +12,7 @@ dependencies {
     testCompile(project(":compiler:util"))
     testCompile(project(":compiler:tests-mutes"))
     testCompile(project(":compiler:backend"))
+    testCompile(project(":compiler:ir.tree.impl"))
     testCompile(project(":compiler:fir:tree"))
     testCompile(project(":compiler:fir:raw-fir:psi2fir"))
     testCompile(project(":compiler:fir:raw-fir:light-tree2fir"))
@@ -66,7 +67,7 @@ dependencies {
         testCompile(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-1") }
     }
     Platform[203].orHigher {
-        testCompile(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-2") }
+        testCompile(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-3") }
     }
     testCompile(intellijDep()) {
         includeJars(

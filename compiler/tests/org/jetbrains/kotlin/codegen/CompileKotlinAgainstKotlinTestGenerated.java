@@ -38,6 +38,11 @@ public class CompileKotlinAgainstKotlinTestGenerated extends AbstractCompileKotl
         runTest("compiler/testData/compileKotlinAgainstKotlin/annotationInInterface.kt");
     }
 
+    @TestMetadata("annotationOnTypeUseInTypeAlias.kt")
+    public void testAnnotationOnTypeUseInTypeAlias() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/annotationOnTypeUseInTypeAlias.kt");
+    }
+
     @TestMetadata("annotationsOnTypeAliases.kt")
     public void testAnnotationsOnTypeAliases() throws Exception {
         runTest("compiler/testData/compileKotlinAgainstKotlin/annotationsOnTypeAliases.kt");
@@ -508,6 +513,16 @@ public class CompileKotlinAgainstKotlinTestGenerated extends AbstractCompileKotl
 
                 public void testAllFilesPresentInInterop() throws Exception {
                     KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/interop"), Pattern.compile("^(.+)\\.kt$"), null, true);
+                }
+
+                @TestMetadata("likeMemberClash.kt")
+                public void testLikeMemberClash() throws Exception {
+                    runTest("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/interop/likeMemberClash.kt");
+                }
+
+                @TestMetadata("likeSpecialization.kt")
+                public void testLikeSpecialization() throws Exception {
+                    runTest("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/interop/likeSpecialization.kt");
                 }
 
                 @TestMetadata("newAndOldSchemes.kt")

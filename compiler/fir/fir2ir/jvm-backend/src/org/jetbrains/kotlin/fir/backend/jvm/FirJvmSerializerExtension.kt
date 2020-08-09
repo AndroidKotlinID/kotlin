@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.fir.FirEffectiveVisibilityImpl
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.backend.FirMetadataSource
 import org.jetbrains.kotlin.fir.declarations.*
@@ -73,7 +72,7 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
     }
 
     override fun shouldSerializeNestedClass(nestedClass: FirRegularClass): Boolean {
-        return classBuilderMode != ClassBuilderMode.ABI || nestedClass.effectiveVisibility != FirEffectiveVisibilityImpl.Private
+        return classBuilderMode != ClassBuilderMode.ABI || nestedClass.visibility != Visibilities.PRIVATE
     }
 
     @OptIn(ObsoleteDescriptorBasedAPI::class)
@@ -183,12 +182,11 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
         }
     }
 
-    override fun serializeType(type: ConeKotlinType, proto: ProtoBuf.Type.Builder) {
+    override fun serializeType(type: FirTypeRef, proto: ProtoBuf.Type.Builder) {
         // TODO: don't store type annotations in our binary metadata on Java 8, use *TypeAnnotations attributes instead
-        // TODO: (FIR) ConeKotlinType does not store annotations, see KT-30066
-//        for (annotation in type.annotations) {
-//            proto.addExtension(JvmProtoBuf.typeAnnotation, annotationSerializer.serializeAnnotation(annotation))
-//        }
+        for (annotation in type.annotations) {
+            proto.addExtension(JvmProtoBuf.typeAnnotation, annotationSerializer.serializeAnnotation(annotation))
+        }
     }
 
     override fun serializeTypeParameter(typeParameter: FirTypeParameter, proto: ProtoBuf.TypeParameter.Builder) {
@@ -310,7 +308,7 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
         super.serializeErrorType(type, builder)
     }
 
-    private fun <K, V> getBinding(slice: JvmSerializationBindings.SerializationMappingSlice<K, V>, key: K): V? =
+    private fun <K : Any, V : Any> getBinding(slice: JvmSerializationBindings.SerializationMappingSlice<K, V>, key: K): V? =
         bindings.get(slice, key) ?: globalBindings.get(slice, key)
 
     private inner class SignatureSerializer {

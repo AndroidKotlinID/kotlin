@@ -42,6 +42,10 @@ interface IrDeclaration : IrStatement, IrMutableAnnotationContainer {
 
     var parent: IrDeclarationParent
 
+    val factory: IrFactory
+}
+
+abstract class IrDeclarationBase : IrDeclaration {
     override fun <D> transform(transformer: IrElementTransformer<D>, data: D): IrStatement =
         accept(transformer, data) as IrStatement
 }

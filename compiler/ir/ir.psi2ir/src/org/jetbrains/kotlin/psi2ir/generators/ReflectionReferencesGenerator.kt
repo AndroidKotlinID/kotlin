@@ -26,8 +26,6 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.MetadataSource
-import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.ir.descriptors.WrappedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.ir.descriptors.WrappedValueParameterDescriptor
 import org.jetbrains.kotlin.ir.expressions.*
@@ -35,10 +33,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrVariableSymbol
-import org.jetbrains.kotlin.ir.util.isImmutable
-import org.jetbrains.kotlin.ir.util.referenceClassifier
-import org.jetbrains.kotlin.ir.util.referenceFunction
-import org.jetbrains.kotlin.ir.util.withScope
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
@@ -143,7 +138,7 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
             createAdapterFun(startOffset, endOffset, adapteeDescriptor, ktExpectedParameterTypes, ktExpectedReturnType, callBuilder, callableReferenceType)
         val irCall = createAdapteeCall(startOffset, endOffset, adapteeSymbol, callBuilder, irAdapterFun)
 
-        irAdapterFun.body = IrBlockBodyImpl(startOffset, endOffset).apply {
+        irAdapterFun.body = context.irFactory.createBlockBody(startOffset, endOffset).apply {
             if (KotlinBuiltIns.isUnit(ktExpectedReturnType))
                 statements.add(irCall)
             else
@@ -236,12 +231,6 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
 
         return irCall
     }
-
-    private fun IrExpression.isSafeToUseWithoutCopying() =
-        this is IrGetObjectValue ||
-                this is IrGetEnumValue ||
-                this is IrConst<*> ||
-                this is IrGetValue && symbol.isBound && symbol.owner.isImmutable
 
     private fun putAdaptedValueArguments(
         startOffset: Int,
@@ -345,7 +334,7 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
         return context.symbolTable.declareSimpleFunction(
             adapterFunctionDescriptor
         ) { irAdapterSymbol ->
-            IrFunctionImpl(
+            context.irFactory.createFunction(
                 startOffset, endOffset,
                 IrDeclarationOrigin.ADAPTER_FOR_CALLABLE_REFERENCE,
                 irAdapterSymbol,
@@ -400,7 +389,7 @@ class ReflectionReferencesGenerator(statementGenerator: StatementGenerator) : St
         return context.symbolTable.declareValueParameter(
             startOffset, endOffset, IrDeclarationOrigin.ADAPTER_PARAMETER_FOR_CALLABLE_REFERENCE, descriptor, type.toIrType()
         ) { irAdapterParameterSymbol ->
-            IrValueParameterImpl(
+            context.irFactory.createValueParameter(
                 startOffset, endOffset,
                 IrDeclarationOrigin.ADAPTER_PARAMETER_FOR_CALLABLE_REFERENCE,
                 irAdapterParameterSymbol,

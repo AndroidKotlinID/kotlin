@@ -314,6 +314,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/declarations/fileWithTypeAliasesOnly.kt");
         }
 
+        @TestMetadata("genericDelegatedProperty.kt")
+        public void testGenericDelegatedProperty() throws Exception {
+            runTest("compiler/testData/ir/irText/declarations/genericDelegatedProperty.kt");
+        }
+
         @TestMetadata("interfaceProperties.kt")
         public void testInterfaceProperties() throws Exception {
             runTest("compiler/testData/ir/irText/declarations/interfaceProperties.kt");
@@ -1687,6 +1692,24 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             public void testSamOperators() throws Exception {
                 runTest("compiler/testData/ir/irText/expressions/sam/samOperators.kt");
             }
+        }
+    }
+
+    @TestMetadata("compiler/testData/ir/irText/firProblems")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class FirProblems extends AbstractFir2IrTextTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTestWithCustomIgnoreDirective(this::doTest, TargetBackend.ANY, testDataFilePath, "// IGNORE_BACKEND_FIR: ");
+        }
+
+        public void testAllFilesPresentInFirProblems() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/firProblems"), Pattern.compile("^(.+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("deprecated.kt")
+        public void testDeprecated() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/deprecated.kt");
         }
     }
 

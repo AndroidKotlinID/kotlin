@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.builder
 
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -27,6 +28,7 @@ import org.jetbrains.kotlin.fir.expressions.impl.FirModifiableQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.builder.*
+import org.jetbrains.kotlin.fir.references.impl.FirReferenceForUnresolvedAnnotations
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.CallableId
@@ -35,6 +37,7 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirQualifierPartImpl
+import org.jetbrains.kotlin.fir.types.impl.FirTypeArgumentListImpl
 import org.jetbrains.kotlin.fir.types.impl.FirTypePlaceholderProjection
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.name.ClassId
@@ -1092,8 +1095,12 @@ class RawFirBuilder(
             delegatedSelfTypeRef: FirTypeRef,
             hasPrimaryConstructor: Boolean,
         ): FirDelegatedConstructorCall {
-            val isThis = isCallToThis || (isImplicit && hasPrimaryConstructor)
-            val source = this.toFirSourceElement()
+            val isThis = isCallToThis //|| (isImplicit && hasPrimaryConstructor)
+            val source = if (isImplicit) {
+                this.toFirSourceElement(FirFakeSourceElementKind.ImplicitConstructor)
+            } else {
+                this.toFirSourceElement()
+            }
             val delegatedType = when {
                 isThis -> delegatedSelfTypeRef
                 else -> delegatedSuperTypeRef
@@ -1225,14 +1232,19 @@ class RawFirBuilder(
                             this.source = source
                             isMarkedNullable = isNullable
                             var ktQualifier: KtUserType? = unwrappedElement
+
                             do {
-                                val firQualifier = FirQualifierPartImpl(referenceExpression!!.getReferencedNameAsName())
-                                for (typeArgument in ktQualifier!!.typeArguments) {
-                                    firQualifier.typeArguments += typeArgument.convert<FirTypeProjection>()
-                                }
+                                val firQualifier = FirQualifierPartImpl(
+                                    referenceExpression!!.getReferencedNameAsName(),
+                                    FirTypeArgumentListImpl(source).apply {
+                                        for (typeArgument in ktQualifier!!.typeArguments) {
+                                            typeArguments += typeArgument.convert<FirTypeProjection>()
+                                        }
+                                    }
+                                )
                                 qualifier.add(firQualifier)
 
-                                ktQualifier = ktQualifier.qualifier
+                                ktQualifier = ktQualifier!!.qualifier
                                 referenceExpression = ktQualifier?.referenceExpression
                             } while (referenceExpression != null)
 
@@ -1280,6 +1292,11 @@ class RawFirBuilder(
                 useSiteTarget = annotationEntry.useSiteTarget?.getAnnotationUseSiteTarget()
                 annotationTypeRef = annotationEntry.typeReference.toFirOrErrorType()
                 annotationEntry.extractArgumentsTo(this)
+                val name = (annotationTypeRef as? FirUserTypeRef)?.qualifier?.last()?.name ?: Name.special("<no-annotation-name>")
+                calleeReference = buildSimpleNamedReference {
+                    source = this@buildAnnotationCall.source
+                    this.name = name
+                }
             }
         }
 
@@ -1929,6 +1946,10 @@ class RawFirBuilder(
                 emptyArray(),
                 isNullable = false
             )
+        }
+        // TODO: actually we know where to resolve, but we don't have any symbol providers at this point
+        calleeReference = buildSimpleNamedReference {
+            name = Name.identifier("ExtensionFunctionType")
         }
     }
 }

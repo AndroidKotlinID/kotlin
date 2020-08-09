@@ -61,6 +61,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/annotations/annotationProperty.kt");
         }
 
+        @TestMetadata("annotationTargets.kt")
+        public void testAnnotationTargets() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/annotationTargets.kt");
+        }
+
         @TestMetadata("annotationWithKotlinProperty.kt")
         public void testAnnotationWithKotlinProperty() throws Exception {
             runTest("compiler/testData/codegen/box/annotations/annotationWithKotlinProperty.kt");
@@ -4358,6 +4363,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/closures/localFunctionInFunction.kt");
         }
 
+        @TestMetadata("localFunctionInInitBlock.kt")
+        public void testLocalFunctionInInitBlock() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/localFunctionInInitBlock.kt");
+        }
+
         @TestMetadata("localFunctionInInitializer.kt")
         public void testLocalFunctionInInitializer() throws Exception {
             runTest("compiler/testData/codegen/box/closures/localFunctionInInitializer.kt");
@@ -5121,6 +5131,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/contracts/exception.kt");
         }
 
+        @TestMetadata("fieldReadInConstructor.kt")
+        public void testFieldReadInConstructor() throws Exception {
+            runTest("compiler/testData/codegen/box/contracts/fieldReadInConstructor.kt");
+        }
+
         @TestMetadata("forLoop.kt")
         public void testForLoop() throws Exception {
             runTest("compiler/testData/codegen/box/contracts/forLoop.kt");
@@ -5139,6 +5154,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("lambdaParameter.kt")
         public void testLambdaParameter() throws Exception {
             runTest("compiler/testData/codegen/box/contracts/lambdaParameter.kt");
+        }
+
+        @TestMetadata("listAppend.kt")
+        public void testListAppend() throws Exception {
+            runTest("compiler/testData/codegen/box/contracts/listAppend.kt");
         }
 
         @TestMetadata("valInWhen.kt")
@@ -6643,6 +6663,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("recursiveSuspend.kt")
         public void testRecursiveSuspend_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/recursiveSuspend.kt", "kotlin.coroutines");
+        }
+
+        @TestMetadata("restrictedSuspendLambda.kt")
+        public void testRestrictedSuspendLambda() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/restrictedSuspendLambda.kt");
         }
 
         @TestMetadata("returnByLabel.kt")
@@ -9553,6 +9578,21 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties/inSeparateModuleWithNonNullParameter.kt");
             }
 
+            @TestMetadata("kt40815.kt")
+            public void testKt40815() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties/kt40815.kt");
+            }
+
+            @TestMetadata("kt40815_2.kt")
+            public void testKt40815_2() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties/kt40815_2.kt");
+            }
+
+            @TestMetadata("kt40815_3.kt")
+            public void testKt40815_3() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties/kt40815_3.kt");
+            }
+
             @TestMetadata("lazy.kt")
             public void testLazy() throws Exception {
                 runTest("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties/lazy.kt");
@@ -12394,6 +12434,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
         }
 
+        @TestMetadata("approximateNonTopLevelCapturedTypes.kt")
+        public void testApproximateNonTopLevelCapturedTypes() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/approximateNonTopLevelCapturedTypes.kt");
+        }
+
         @TestMetadata("builderInference.kt")
         public void testBuilderInference() throws Exception {
             runTest("compiler/testData/codegen/box/inference/builderInference.kt");
@@ -14660,6 +14705,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/ir/kt29833.kt");
         }
 
+        @TestMetadata("kt40083.kt")
+        public void testKt40083() throws Exception {
+            runTest("compiler/testData/codegen/box/ir/kt40083.kt");
+        }
+
         @TestMetadata("objectClass.kt")
         public void testObjectClass() throws Exception {
             runTest("compiler/testData/codegen/box/ir/objectClass.kt");
@@ -15628,6 +15678,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 @TestMetadata("defaultArgsViaAnonymousObject.kt")
                 public void testDefaultArgsViaAnonymousObject() throws Exception {
                     runTest("compiler/testData/codegen/box/jvm8/defaults/compatibility/defaultArgsViaAnonymousObject.kt");
+                }
+
+                @TestMetadata("deprecatedAnnotation.kt")
+                public void testDeprecatedAnnotation() throws Exception {
+                    runTest("compiler/testData/codegen/box/jvm8/defaults/compatibility/deprecatedAnnotation.kt");
                 }
 
                 @TestMetadata("inheritedFunctionWithDefaultParameters.kt")
@@ -20596,6 +20651,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
                 runTest("compiler/testData/codegen/box/ranges/contains/rangeContainsString.kt");
             }
 
+            @TestMetadata("userDefinedContainsExtension.kt")
+            public void testUserDefinedContainsExtension() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/contains/userDefinedContainsExtension.kt");
+            }
+
             @TestMetadata("compiler/testData/codegen/box/ranges/contains/generated")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -24339,6 +24399,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("kt36953_continue.kt")
             public void testKt36953_continue() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/unsigned/kt36953_continue.kt");
+            }
+
+            @TestMetadata("outOfBoundsInMixedContains.kt")
+            public void testOutOfBoundsInMixedContains() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/unsigned/outOfBoundsInMixedContains.kt");
             }
 
             @TestMetadata("compiler/testData/codegen/box/ranges/unsigned/expression")

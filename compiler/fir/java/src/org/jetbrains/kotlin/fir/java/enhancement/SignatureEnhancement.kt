@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.java.enhancement
 
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.fir.FirAnnotationContainer
 import org.jetbrains.kotlin.fir.FirSession
@@ -14,6 +15,7 @@ import org.jetbrains.kotlin.fir.declarations.builder.FirPrimaryConstructorBuilde
 import org.jetbrains.kotlin.fir.declarations.builder.FirSimpleFunctionBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
 import org.jetbrains.kotlin.fir.declarations.synthetic.buildSyntheticProperty
 import org.jetbrains.kotlin.fir.expressions.FirConstKind
@@ -35,6 +37,7 @@ import org.jetbrains.kotlin.load.java.typeEnhancement.*
 import org.jetbrains.kotlin.load.kotlin.SignatureBuildingComponents
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.Jsr305State
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 class FirSignatureEnhancement(
     private val owner: FirRegularClass,
@@ -98,6 +101,7 @@ class FirSignatureEnhancement(
                     isVar = firElement.isVar
                     isStatic = firElement.isStatic
                     annotations += firElement.annotations
+                    status = firElement.status
                 }
                 return symbol
             }
@@ -196,9 +200,18 @@ class FirSignatureEnhancement(
                 if (firMethod.isPrimary) {
                     FirPrimaryConstructorBuilder().apply {
                         returnTypeRef = newReturnTypeRef
-                        status = FirDeclarationStatusImpl(firMethod.visibility, Modality.FINAL).apply {
+                        val resolvedStatus = firMethod.status.safeAs<FirResolvedDeclarationStatus>()
+                        status = if (resolvedStatus != null) {
+                            FirResolvedDeclarationStatusImpl(
+                                firMethod.visibility,
+                                Modality.FINAL
+                            )
+                        } else {
+                            FirDeclarationStatusImpl(firMethod.visibility, Modality.FINAL)
+                        }.apply {
                             isExpect = false
                             isActual = false
+                            isOverride = false
                             isInner = firMethod.isInner
                         }
                         this.symbol = symbol
@@ -277,7 +290,12 @@ class FirSignatureEnhancement(
             parameterContainer = ownerParameter,
             methodContext = memberContext,
             typeInSignature = TypeInSignature.ValueParameter(hasReceiver, index)
-        ).enhance(session, jsr305State, predefinedEnhancementInfo?.parametersInfo?.getOrNull(index))
+        ).enhance(
+            session,
+            jsr305State,
+            predefinedEnhancementInfo?.parametersInfo?.getOrNull(index),
+            forAnnotationValueParameter = owner.classKind == ClassKind.ANNOTATION_CLASS
+        )
         val firResolvedTypeRef = signatureParts.type
         val defaultValueExpression = when (val defaultValue = ownerParameter.getDefaultValueFromAnnotation()) {
             NullDefaultValue -> buildConstExpression(null, FirConstKind.Null, null)

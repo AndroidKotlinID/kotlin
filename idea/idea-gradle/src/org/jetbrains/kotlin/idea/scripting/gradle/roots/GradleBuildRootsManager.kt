@@ -21,6 +21,9 @@ import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.core.script.configuration.CompositeScriptConfigurationManager
 import org.jetbrains.kotlin.idea.core.script.configuration.DefaultScriptingSupport
 import org.jetbrains.kotlin.idea.core.script.configuration.ScriptingSupport
+import org.jetbrains.kotlin.idea.core.script.scriptingDebugLog
+import org.jetbrains.kotlin.idea.core.script.scriptingErrorLog
+import org.jetbrains.kotlin.idea.core.script.scriptingInfoLog
 import org.jetbrains.kotlin.idea.core.script.ucache.ScriptClassRootsBuilder
 import org.jetbrains.kotlin.idea.core.util.EDT
 import org.jetbrains.kotlin.idea.scripting.gradle.*
@@ -60,7 +63,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   - [New] - not yet imported
  *   - [Imported] - imported
  */
-class GradleBuildRootsManager(val project: Project) : GradleBuildRootsLocator(), ScriptingSupport {
+class GradleBuildRootsManager(val project: Project) : GradleBuildRootsLocator(project), ScriptingSupport {
     private val manager: CompositeScriptConfigurationManager
         get() = ScriptConfigurationManager.getInstance(project) as CompositeScriptConfigurationManager
 

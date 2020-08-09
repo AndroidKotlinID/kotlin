@@ -15,16 +15,16 @@ import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.Scope
-import org.jetbrains.kotlin.ir.builders.declarations.buildConstructor
+import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildReceiverParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildTypeParameter
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.ir.descriptors.*
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.expressions.impl.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrDelegatingConstructorCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
@@ -40,7 +40,7 @@ import java.io.StringWriter
 
 fun ir2string(ir: IrElement?): String = ir?.render() ?: ""
 
-// NB: this function is used in native
+@Suppress("unused") // Used in kotlin-native
 fun ir2stringWhole(ir: IrElement?): String {
     val strWriter = StringWriter()
     ir?.accept(DumpIrTreeVisitor(strWriter), "")
@@ -53,23 +53,19 @@ fun IrClass.addSimpleDelegatingConstructor(
     isPrimary: Boolean = false,
     origin: IrDeclarationOrigin? = null
 ): IrConstructor =
-    buildConstructor {
+    addConstructor {
         val klass = this@addSimpleDelegatingConstructor
         this.startOffset = klass.startOffset
         this.endOffset = klass.endOffset
         this.origin = origin ?: klass.origin
         this.visibility = superConstructor.visibility
-        this.returnType = klass.defaultType
         this.isPrimary = isPrimary
     }.also { constructor ->
-        constructor.parent = this
-        declarations += constructor
-
         constructor.valueParameters = superConstructor.valueParameters.mapIndexed { index, parameter ->
             parameter.copyTo(constructor, index = index)
         }
 
-        constructor.body = IrBlockBodyImpl(
+        constructor.body = factory.createBlockBody(
             startOffset, endOffset,
             listOf(
                 IrDelegatingConstructorCallImpl(
@@ -111,15 +107,6 @@ fun IrReturnTarget.returnType(context: CommonBackendContext) =
 val IrClass.isFinalClass: Boolean
     get() = modality == Modality.FINAL && kind != ClassKind.ENUM_CLASS
 
-// For an annotation, get the annotation class.
-fun IrCall.getAnnotationClass(): IrClass {
-    val callable = symbol.owner
-    assert(callable is IrConstructor) { "Constructor call expected, got ${ir2string(this)}" }
-    val annotationClass = callable.parentAsClass
-    assert(annotationClass.isAnnotationClass) { "Annotation class expected, got ${ir2string(annotationClass)}" }
-    return annotationClass
-}
-
 val IrTypeParametersContainer.classIfConstructor get() = if (this is IrConstructor) parentAsClass else this
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
@@ -148,13 +135,13 @@ fun IrValueParameter.copyTo(
     }
     val symbol = IrValueParameterSymbolImpl(descriptor)
     val defaultValueCopy = defaultValue?.let { originalDefault ->
-        IrExpressionBodyImpl(originalDefault.startOffset, originalDefault.endOffset) {
+        factory.createExpressionBody(originalDefault.startOffset, originalDefault.endOffset) {
             expression = originalDefault.expression.deepCopyWithVariables().also {
                 it.patchDeclarationParents(irFunction)
             }
         }
     }
-    return IrValueParameterImpl(
+    return factory.createValueParameter(
         startOffset, endOffset, origin, symbol,
         name, index, type, varargElementType, isCrossinline, isNoinline
     ).also {
@@ -179,7 +166,7 @@ fun IrTypeParameter.copyToWithoutSuperTypes(
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 fun IrFunction.copyReceiverParametersFrom(from: IrFunction) {
     dispatchReceiverParameter = from.dispatchReceiverParameter?.run {
-        IrValueParameterImpl(
+        factory.createValueParameter(
             startOffset, endOffset, origin, IrValueParameterSymbolImpl(descriptor), descriptor.name,
             descriptor.indexOrMinusOne, type, varargElementType, descriptor.isCrossinline,
             descriptor.isNoinline
@@ -352,10 +339,6 @@ fun IrDeclarationContainer.addChild(declaration: IrDeclaration) {
     declaration.setDeclarationsParent(this)
 }
 
-fun IrDeclarationContainer.addChildren(declarations: List<IrDeclaration>) {
-    declarations.forEach { this.addChild(it) }
-}
-
 fun <T : IrElement> T.setDeclarationsParent(parent: IrDeclarationParent): T {
     accept(SetDeclarationsParentVisitor, parent)
     return this
@@ -368,7 +351,7 @@ object SetDeclarationsParentVisitor : IrElementVisitor<Unit, IrDeclarationParent
         }
     }
 
-    override fun visitDeclaration(declaration: IrDeclaration, data: IrDeclarationParent) {
+    override fun visitDeclaration(declaration: IrDeclarationBase, data: IrDeclarationParent) {
         declaration.parent = data
         super.visitDeclaration(declaration, data)
     }
@@ -427,7 +410,7 @@ fun IrClass.createParameterDeclarations() {
 fun IrFunction.createDispatchReceiverParameter(origin: IrDeclarationOrigin? = null) {
     assert(dispatchReceiverParameter == null)
 
-    dispatchReceiverParameter = IrValueParameterImpl(
+    dispatchReceiverParameter = factory.createValueParameter(
         startOffset, endOffset,
         origin ?: parentAsClass.origin,
         IrValueParameterSymbolImpl(parentAsClass.thisReceiver!!.descriptor),
@@ -479,7 +462,7 @@ fun IrClass.addFakeOverridesViaIncorrectHeuristic(implementedMembers: List<IrSim
 
     fun createFakeOverride(overriddenFunctions: List<IrSimpleFunction>) =
         overriddenFunctions.first().let { irFunction ->
-            buildFun {
+            irFunction.factory.buildFun {
                 origin = IrDeclarationOrigin.FAKE_OVERRIDE
                 name = irFunction.name
                 visibility = Visibilities.PUBLIC
@@ -512,7 +495,7 @@ fun IrClass.addFakeOverridesViaIncorrectHeuristic(implementedMembers: List<IrSim
 }
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
-fun createStaticFunctionWithReceivers(
+fun IrFactory.createStaticFunctionWithReceivers(
     irParent: IrDeclarationParent,
     name: Name,
     oldFunction: IrFunction,
@@ -527,7 +510,7 @@ fun createStaticFunctionWithReceivers(
     val descriptor = (oldFunction.descriptor as? DescriptorWithContainerSource)?.let {
         WrappedFunctionDescriptorWithContainerSource(it.containerSource)
     } ?: WrappedSimpleFunctionDescriptor(Annotations.EMPTY, oldFunction.descriptor.source)
-    return IrFunctionImpl(
+    return createFunction(
         oldFunction.startOffset, oldFunction.endOffset,
         origin,
         IrSimpleFunctionSymbolImpl(descriptor),

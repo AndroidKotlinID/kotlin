@@ -10,21 +10,20 @@ import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
 import org.jetbrains.kotlin.ir.util.DeclarationStubGenerator
 import org.jetbrains.kotlin.ir.util.TypeTranslator
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.hasBackingField
 
-@OptIn(ObsoleteDescriptorBasedAPI::class)
 class IrLazyProperty(
-    startOffset: Int,
-    endOffset: Int,
-    origin: IrDeclarationOrigin,
+    override val startOffset: Int,
+    override val endOffset: Int,
+    override var origin: IrDeclarationOrigin,
     override val symbol: IrPropertySymbol,
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override val descriptor: PropertyDescriptor,
     override val name: Name,
     override var visibility: Visibility,
@@ -36,16 +35,17 @@ class IrLazyProperty(
     override val isExternal: Boolean,
     override val isExpect: Boolean,
     override val isFakeOverride: Boolean,
-    stubGenerator: DeclarationStubGenerator,
-    typeTranslator: TypeTranslator,
+    override val stubGenerator: DeclarationStubGenerator,
+    override val typeTranslator: TypeTranslator,
     bindingContext: BindingContext? = null
-) :
-    IrLazyDeclarationBase(startOffset, endOffset, origin, stubGenerator, typeTranslator),
-    IrProperty {
-
+) : IrProperty(), IrLazyDeclarationBase {
     init {
         symbol.bind(this)
     }
+
+    override var parent: IrDeclarationParent by createLazyParent()
+
+    override var annotations: List<IrConstructorCall> by createLazyAnnotations()
 
     private val hasBackingField: Boolean =
         descriptor.hasBackingField(bindingContext) || stubGenerator.extensions.isPropertyWithPlatformField(descriptor)
@@ -73,19 +73,4 @@ class IrLazyProperty(
     override var metadata: MetadataSource?
         get() = null
         set(_) = error("We should never need to store metadata of external declarations.")
-
-    override fun <R, D> accept(visitor: IrElementVisitor<R, D>, data: D): R =
-        visitor.visitProperty(this, data)
-
-    override fun <D> acceptChildren(visitor: IrElementVisitor<Unit, D>, data: D) {
-        backingField?.accept(visitor, data)
-        getter?.accept(visitor, data)
-        setter?.accept(visitor, data)
-    }
-
-    override fun <D> transformChildren(transformer: IrElementTransformer<D>, data: D) {
-        backingField = backingField?.transform(transformer, data) as? IrField
-        getter = getter?.run { transform(transformer, data) as IrSimpleFunction }
-        setter = setter?.run { transform(transformer, data) as IrSimpleFunction }
-    }
 }

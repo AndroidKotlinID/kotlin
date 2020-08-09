@@ -9,9 +9,10 @@ import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
-import org.jetbrains.kotlin.fir.declarations.FirTypeParametersOwner
 import org.jetbrains.kotlin.fir.declarations.addDefaultBoundIfNecessary
 import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
+import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.firUnsafe
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
@@ -104,7 +105,7 @@ class FirTypeDeserializer(
             //c.components.flexibleTypeDeserializer.create(proto, id, lowerBound, upperBound)
         }
 
-        return simpleType(proto, attributes) ?: ConeKotlinErrorType("?!id:0")
+        return simpleType(proto, attributes) ?: ConeKotlinErrorType(ConeSimpleDiagnostic("?!id:0", DiagnosticKind.DeserializationError))
     }
 
     private fun typeParameterSymbol(typeParameterId: Int): ConeTypeParameterLookupTag? =
@@ -203,7 +204,12 @@ class FirTypeDeserializer(
                 }
                 else -> null
             }
-        return result ?: ConeClassErrorType("Bad suspend function in metadata with constructor: $functionTypeConstructor")
+        return result ?: ConeClassErrorType(
+            ConeSimpleDiagnostic(
+                "Bad suspend function in metadata with constructor: $functionTypeConstructor",
+                DiagnosticKind.DeserializationError
+            )
+        )
     }
 
     private fun typeSymbol(proto: ProtoBuf.Type): ConeClassifierLookupTag? {
@@ -227,7 +233,8 @@ class FirTypeDeserializer(
         }
 
         val variance = ProtoEnumFlags.variance(typeArgumentProto.projection)
-        val type = typeArgumentProto.type(typeTable) ?: return ConeKotlinErrorType("No type recorded")
+        val type = typeArgumentProto.type(typeTable)
+            ?: return ConeKotlinErrorType(ConeSimpleDiagnostic("No type recorded", DiagnosticKind.DeserializationError))
 
         // TODO: check that here we don't have any attributes
         val coneType = type(type, ConeAttributes.Empty)

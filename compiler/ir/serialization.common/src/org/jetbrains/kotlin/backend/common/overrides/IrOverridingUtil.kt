@@ -21,8 +21,6 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrFakeOverrideFunctionImpl
-import org.jetbrains.kotlin.ir.declarations.impl.IrFakeOverridePropertyImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -61,6 +59,11 @@ class IrOverridingUtil(
     private val IrOverridableMember.original get() = originals[this] ?: error("No original for ${this.render()}")
     private val originalSuperTypes = mutableMapOf<IrOverridableMember, IrType>()
 
+    fun clear() {
+        originals.clear()
+        originalSuperTypes.clear()
+    }
+
     private var IrOverridableMember.overriddenSymbols: List<IrSymbol>
         get() = when (this) {
             is IrSimpleFunction -> this.overriddenSymbols
@@ -97,18 +100,16 @@ class IrOverridingUtil(
     fun buildFakeOverridesForClass(clazz: IrClass) {
         val superTypes = allPublicApiSuperTypesOrAny(clazz)
 
-        val fromCurrent = clazz.declarations
-            .filterIsInstance<IrOverridableMember>()
-            .filter { it.symbol.isPublicApi }
+        val fromCurrent = clazz.declarations.filter { it is IrOverridableMember && it.symbol.isPublicApi } as List<IrOverridableMember>
 
         val allFromSuper = superTypes.flatMap { superType ->
             val superClass = superType.getClass() ?: error("Unexpected super type: $superType")
             superClass.declarations
-                .filterIsInstance<IrOverridableMember>()
-                .filter { it.symbol.isPublicApi }
+                .filter { it is IrOverridableMember && it.symbol.isPublicApi }
                 .map {
-                    val fakeOverride = fakeOverrideBuilder.fakeOverrideMember(superType, it, clazz)
-                    originals[fakeOverride] = it
+                    val overridenMember = it as IrOverridableMember
+                    val fakeOverride = fakeOverrideBuilder.fakeOverrideMember(superType, overridenMember, clazz)
+                    originals[fakeOverride] = overridenMember
                     originalSuperTypes[fakeOverride] = superType
                     fakeOverride
                 }
@@ -280,7 +281,7 @@ class IrOverridingUtil(
     }
 
     private fun IrSimpleFunction.updateAccessorModalityAndVisibility(newModality: Modality, newVisibility: Visibility): IrSimpleFunction? {
-        require(this is IrFakeOverrideFunctionImpl) {
+        require(this is IrFakeOverrideFunction) {
             "Unexpected fake override accessor kind: $this"
         }
         // For descriptors it gets INVISIBLE_FAKE.
@@ -307,13 +308,13 @@ class IrOverridingUtil(
 
         val fakeOverride = mostSpecific.apply {
             when (this) {
-                is IrFakeOverridePropertyImpl -> {
+                is IrFakeOverrideProperty -> {
                     this.visibility = visibility
                     this.modality = modality
                     this.getter = this.getter?.updateAccessorModalityAndVisibility(modality, visibility)
                     this.setter = this.setter?.updateAccessorModalityAndVisibility(modality, visibility)
                 }
-                is IrFakeOverrideFunctionImpl -> {
+                is IrFakeOverrideFunction -> {
                     this.visibility = visibility
                     this.modality = modality
                 }

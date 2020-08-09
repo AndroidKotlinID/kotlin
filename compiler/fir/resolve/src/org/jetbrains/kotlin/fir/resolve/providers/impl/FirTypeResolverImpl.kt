@@ -7,8 +7,13 @@ package org.jetbrains.kotlin.fir.resolve.providers.impl
 
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.ConeUnexpectedTypeArgumentsError
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.*
+import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeWrongNumberOfTypeArgumentsError
 import org.jetbrains.kotlin.fir.resolve.providers.bindSymbolToLookupTag
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.FirScope
@@ -91,7 +96,16 @@ class FirTypeResolverImpl(private val session: FirSession) : FirTypeResolver {
         areBareTypesAllowed: Boolean
     ): ConeKotlinType {
         if (symbol == null) {
-            return ConeKotlinErrorType("Symbol not found, for `${typeRef.render()}`")
+            return ConeKotlinErrorType(ConeSimpleDiagnostic("Symbol not found, for `${typeRef.render()}`", DiagnosticKind.SymbolNotFound))
+        }
+        if (symbol is FirTypeParameterSymbol) {
+            for (part in typeRef.qualifier) {
+                if (part.typeArgumentList.typeArguments.isNotEmpty()) {
+                    return ConeClassErrorType(
+                        ConeUnexpectedTypeArgumentsError("Type arguments not allowed", part.typeArgumentList.source)
+                    )
+                }
+            }
         }
         var typeArguments = typeRef.qualifier.toTypeProjections()
         if (symbol is FirRegularClassSymbol) {
@@ -101,11 +115,18 @@ class FirTypeResolverImpl(private val session: FirSession) : FirTypeResolver {
                 val substitutor = substitutor ?: ConeSubstitutor.Empty
                 val n = symbol.fir.typeParameters.size - typeArguments.size
                 if (n < 0) {
-                    typeArguments = (1..symbol.fir.typeParameters.size).map { ConeClassErrorType("Type arguments number mismatch") }.toTypedArray()
+                    typeArguments = (1..symbol.fir.typeParameters.size).map {
+                        ConeClassErrorType(ConeWrongNumberOfTypeArgumentsError(typeArguments.size, symbol))
+                    }.toTypedArray()
                 } else {
                     val argumentsFromOuterClassesAndParents = symbol.fir.typeParameters.takeLast(n).map {
                         val type = ConeTypeParameterTypeImpl(ConeTypeParameterLookupTag(it.symbol), isNullable = false)
-                        substitutor.substituteOrNull(type) ?: ConeClassErrorType("Type argument not defined")
+                        // we should report ConeSimpleDiagnostic(..., WrongNumberOfTypeArguments)
+                        // but genericArgumentNumberMismatch.kt test fails with
+                        // index out of bounds exception for start offset of
+                        // the source
+                        substitutor.substituteOrNull(type)
+                            ?: ConeClassErrorType(ConeIntermediateDiagnostic("Type argument not defined"))
                     }.toTypedArray<ConeTypeProjection>()
                     typeArguments += argumentsFromOuterClassesAndParents
                 }
@@ -152,7 +173,7 @@ class FirTypeResolverImpl(private val session: FirSession) : FirTypeResolver {
             }
             is FirFunctionTypeRef -> createFunctionalType(typeRef)
             is FirDelegatedTypeRef -> resolveType(typeRef.typeRef, scope, areBareTypesAllowed)
-            is FirDynamicTypeRef -> ConeKotlinErrorType("Not supported: ${typeRef::class.simpleName}")
+            is FirDynamicTypeRef -> ConeKotlinErrorType(ConeIntermediateDiagnostic("Not supported: ${typeRef::class.simpleName}"))
             else -> error("!")
         }
     }

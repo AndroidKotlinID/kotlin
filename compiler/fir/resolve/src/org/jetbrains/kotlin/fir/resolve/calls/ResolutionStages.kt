@@ -8,21 +8,22 @@ package org.jetbrains.kotlin.fir.resolve.calls
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
-import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.inference.*
-import org.jetbrains.kotlin.fir.resolve.inference.extractInputOutputTypesFromCallableReferenceExpectedType
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.SyntheticSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.load.java.JavaVisibilities
 import org.jetbrains.kotlin.name.ClassId
@@ -93,7 +94,7 @@ internal sealed class CheckReceivers : ResolutionStage() {
 
         override fun Candidate.getReceiverType(): ConeKotlinType? {
             val callableSymbol = symbol as? FirCallableSymbol<*> ?: return null
-            val callable = callableSymbol.fir
+            val callable = with(bodyResolveComponents) { callableSymbol.phasedFir }
             val receiverType = callable.receiverTypeRef?.coneType
             if (receiverType != null) return receiverType
             val returnTypeRef = callable.returnTypeRef as? FirResolvedTypeRef ?: return null
@@ -156,7 +157,7 @@ private fun FirExpression.isSuperReferenceExpression(): Boolean {
 internal object MapArguments : ResolutionStage() {
     override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
         val symbol = candidate.symbol as? FirFunctionSymbol<*> ?: return sink.reportApplicability(CandidateApplicability.HIDDEN)
-        val function = symbol.fir
+        val function = with(candidate.bodyResolveComponents) { symbol.phasedFir }
 
         val mapping = mapArguments(callInfo.arguments, function)
         candidate.argumentMapping = mapping.toArgumentToParameterMapping()
@@ -221,16 +222,22 @@ internal object CheckCallableReferenceExpectedType : CheckerStage() {
         }
 
         val returnTypeRef = candidate.bodyResolveComponents.returnTypeCalculator.tryCalculateReturnType(fir)
-
+        // If the expected type is a suspend function type and the current argument of interest is a function reference, we need to do
+        // "suspend conversion." Here, during resolution, we bypass constraint system by making resulting type be KSuspendFunction.
+        // Then, during conversion, we need to create an adapter function and replace the function reference created here with an adapted
+        // callable reference.
+        // TODO: should refer to LanguageVersionSettings.SuspendConversion
+        val requireSuspendConversion = expectedType?.isSuspendFunctionType(callInfo.session) == true
         val resultingType: ConeKotlinType = when (fir) {
-            is FirFunction -> callInfo.session.createKFunctionType(
+            is FirFunction -> callInfo.session.createAdaptedKFunctionType(
+                callInfo.session,
                 fir, resultingReceiverType, returnTypeRef,
-                expectedParameterNumberWithReceiver = expectedType?.let { it.typeArguments.size - 1 },
-                isSuspend = (fir as? FirSimpleFunction)?.isSuspend == true,
+                expectedParameterTypes = expectedType?.typeArguments,
+                isSuspend = (fir as? FirSimpleFunction)?.isSuspend == true || requireSuspendConversion,
                 expectedReturnType = extractInputOutputTypesFromCallableReferenceExpectedType(expectedType, callInfo.session)?.outputType
             )
             is FirVariable<*> -> createKPropertyType(fir, resultingReceiverType, returnTypeRef)
-            else -> ConeKotlinErrorType("Unknown callable kind: ${fir::class}")
+            else -> ConeKotlinErrorType(ConeSimpleDiagnostic("Unknown callable kind: ${fir::class}", DiagnosticKind.UnknownCallableKind))
         }.let(candidate.substitutor::substituteOrSelf)
 
         candidate.resultingTypeForCallableReference = resultingType
@@ -279,27 +286,67 @@ private fun createKPropertyType(
     )
 }
 
-private fun FirSession.createKFunctionType(
+private fun FirSession.createAdaptedKFunctionType(
+    session: FirSession,
     function: FirFunction<*>,
     receiverType: ConeKotlinType?,
     returnTypeRef: FirResolvedTypeRef,
-    expectedParameterNumberWithReceiver: Int?,
+    expectedParameterTypes: Array<out ConeTypeProjection>?,
     isSuspend: Boolean,
     expectedReturnType: ConeKotlinType?
 ): ConeKotlinType {
     // The similar adaptations: defaults and coercion-to-unit happen at org.jetbrains.kotlin.resolve.calls.components.CallableReferencesCandidateFactory.getCallableReferenceAdaptation
     val parameterTypes = mutableListOf<ConeKotlinType>()
-    val expectedParameterNumber = when {
-        expectedParameterNumberWithReceiver == null -> null
-        receiverType != null -> expectedParameterNumberWithReceiver - 1
-        else -> expectedParameterNumberWithReceiver
-    }
+    val shift = if (receiverType != null) 1 else 0
+    val expectedParameterNumber =
+        if (expectedParameterTypes == null) null
+        // Drop the last one: return type, and the first one: receiver type, if needed
+        else expectedParameterTypes.size - 1 - shift
+
+    fun ConeKotlinType?.isPotentiallyArray(): Boolean =
+        this != null && (this.arrayElementType() != null || this is ConeTypeVariableType)
+
+    var lastVarargParameter: FirValueParameter? = null
     for ((index, valueParameter) in function.valueParameters.withIndex()) {
-        if (expectedParameterNumber == null ||
-            index < expectedParameterNumber ||
-            (valueParameter.defaultValue == null && !valueParameter.isVararg)
-        ) {
+        // Update the last vararg parameter in preparation for adaptation.
+        if (valueParameter.isVararg) {
+            lastVarargParameter = valueParameter
+        }
+        // Pack value parameters until the expected parameter number is met.
+        if (expectedParameterNumber == null || index < expectedParameterNumber) {
+            // But, if the value parameter is vararg, make sure it matches with the expected parameter type.
+            if (expectedParameterTypes != null && valueParameter.isVararg) {
+                val expectedParameterType = (expectedParameterTypes[index + shift] as? ConeKotlinTypeProjection)?.type
+                if (!expectedParameterType.isPotentiallyArray()) {
+                    // Expect an element. Will spread vararg parameter later.
+                    continue
+                }
+            }
             parameterTypes += valueParameter.returnTypeRef.coneType
+            continue
+        }
+        // After expected parameters are fulfilled, a value parameter which doesn't have a default value or isn't vararg should be added to
+        // the resulting type (so that it can reject incompatible function reference). In either case, we can't assume no actual arguments
+        // are given.
+        if (valueParameter.defaultValue == null && !valueParameter.isVararg) {
+            parameterTypes += valueParameter.returnTypeRef.coneType
+        }
+    }
+
+    // If a function with vararg is passed to a place where a spread of elements is expected, we can adapt the function reference to
+    // literally spread such vararg argument. E.g., foo(vararg xs: Char): String => bar(::foo) where bar(f: (Char, Char) -> String)
+    if (expectedParameterNumber != null && expectedParameterTypes != null && parameterTypes.size < expectedParameterNumber && lastVarargParameter != null) {
+        val varargArrayType = lastVarargParameter.returnTypeRef.coneType
+        val varargElementType = varargArrayType.varargElementType(session)
+        val expectedParameterType = (expectedParameterTypes[parameterTypes.size + shift] as? ConeKotlinTypeProjection)?.type
+        // Expect an array or potentially array (i.e., type variable). Pass vararg parameter as-is.
+        if (expectedParameterType.isPotentiallyArray()) {
+            parameterTypes += varargArrayType
+        } else {
+            // Expect an element. Spread vararg parameter.
+            while (parameterTypes.size < expectedParameterNumber) {
+                parameterTypes += varargElementType
+            }
         }
     }
 
@@ -310,7 +357,8 @@ private fun FirSession.createKFunctionType(
             returnTypeRef.type
 
     return createFunctionalType(
-        parameterTypes, receiverType = receiverType,
+        parameterTypes,
+        receiverType = receiverType,
         rawReturnType = returnType,
         isKFunctionType = true,
         isSuspend = isSuspend
@@ -438,7 +486,7 @@ internal object CheckVisibility : CheckerStage() {
                         canSeePrivateMemberOf(containingDeclarations, ownerId, session)
                     }
                 } else {
-                    false
+                    declaration is FirSimpleFunction && declaration.isAllowedToBeAccessedFromOutside()
                 }
             }
             Visibilities.PROTECTED -> {
@@ -459,6 +507,16 @@ internal object CheckVisibility : CheckerStage() {
             return false
         }
         return true
+    }
+
+    // monitorEnter/monitorExit are the only functions which are accessed "illegally" (see kotlin/util/Synchronized.kt).
+    // Since they are intrinsified in the codegen, FIR should treat it as visible.
+    private fun FirSimpleFunction.isAllowedToBeAccessedFromOutside(): Boolean {
+        if (!isFromLibrary) return false
+        val packageName = symbol.callableId.packageName.asString()
+        val name = name.asString()
+        return packageName == "kotlin.jvm.internal.unsafe" &&
+                (name == "monitorEnter" || name == "monitorExit")
     }
 
     private fun AbstractFirBasedSymbol<*>.getOwnerId(): ClassId? {

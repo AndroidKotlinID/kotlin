@@ -47,7 +47,11 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
             functionCall.typeArguments[it].safeAs<FirTypeProjectionWithVariance>()
                 ?.typeRef.safeAs<FirResolvedTypeRef>()
                 ?.let { that ->
-                    parameterPairs[calleeFir.typeParameters[it].symbol] = that
+                    if (that !is FirErrorTypeRef) {
+                        parameterPairs[calleeFir.typeParameters[it].symbol] = that
+                    } else {
+                        return
+                    }
                 }
         }
 
@@ -64,7 +68,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
             }
 
             if (!satisfiesBounds(proto, actual.type, substitutor, typeCheckerContext)) {
-                reporter.report(actual.source)
+                reporter.report(actual.source, proto, actual.type)
                 return
             }
 
@@ -124,7 +128,11 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         for (it in 0 until count) {
             actualConstructor.typeArguments[it].safeAs<ConeSimpleKotlinType>()
                 ?.let { that ->
-                    constructorsParameterPairs[protoConstructor.typeParameters[it].symbol] = that
+                    if (that !is ConeClassErrorType) {
+                        constructorsParameterPairs[protoConstructor.typeParameters[it].symbol] = that
+                    } else {
+                        return
+                    }
                 }
         }
 
@@ -150,7 +158,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
             val satisfiesBounds = AbstractTypeChecker.isSubtypeOf(typeCheckerContext, target, intersection)
 
             if (!satisfiesBounds) {
-                reporter.report(functionCall.source)
+                reporter.report(functionCall.source, proto, actual)
                 return
             }
         }
@@ -180,7 +188,11 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         for (it in 0 until count) {
             type.typeArguments[it].safeAs<ConeClassLikeType>()
                 ?.let { that ->
-                    parameterPairs[prototypeClass.typeParameters[it].symbol] = that
+                    if (that !is ConeClassErrorType) {
+                        parameterPairs[prototypeClass.typeParameters[it].symbol] = that
+                    } else {
+                        return true
+                    }
                 }
         }
 
@@ -191,7 +203,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         parameterPairs.forEach { (proto, actual) ->
             if (!satisfiesBounds(proto, actual.type, substitutor, typeCheckerContext)) {
                 // should report on the parameter instead!
-                reporter.report(reportTarget)
+                reporter.report(reportTarget, proto, actual)
                 return true
             }
 
@@ -223,9 +235,9 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         return AbstractTypeChecker.isSubtypeOf(typeCheckerContext, target, intersection)
     }
 
-    private fun DiagnosticReporter.report(source: FirSourceElement?) {
+    private fun DiagnosticReporter.report(source: FirSourceElement?, proto: FirTypeParameterSymbol, actual: ConeKotlinType) {
         source?.let {
-            report(FirErrors.UPPER_BOUND_VIOLATED.on(it))
+            report(FirErrors.UPPER_BOUND_VIOLATED.on(it, proto, actual))
         }
     }
 }

@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.backend.Fir2IrComponents
 import org.jetbrains.kotlin.fir.backend.declareThisReceiverParameter
-import org.jetbrains.kotlin.fir.backend.findMatchingOverriddenSymbolsFromSupertypes
+import org.jetbrains.kotlin.fir.backend.generateOverriddenFunctionSymbols
 import org.jetbrains.kotlin.fir.backend.toIrType
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.symbols.Fir2IrSimpleFunctionSymbol
@@ -18,29 +18,30 @@ import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.lazy.lazyVar
 import org.jetbrains.kotlin.ir.expressions.IrBody
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.util.transformIfNeeded
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
 
 class Fir2IrLazySimpleFunction(
     components: Fir2IrComponents,
-    startOffset: Int,
-    endOffset: Int,
-    origin: IrDeclarationOrigin,
-    fir: FirSimpleFunction,
-    symbol: Fir2IrSimpleFunctionSymbol,
+    override val startOffset: Int,
+    override val endOffset: Int,
+    override var origin: IrDeclarationOrigin,
+    override val fir: FirSimpleFunction,
+    firParent: FirRegularClass,
+    override val symbol: Fir2IrSimpleFunctionSymbol,
     override val isFakeOverride: Boolean
-) : AbstractFir2IrLazyDeclaration<FirSimpleFunction, IrSimpleFunction>(
-    components, startOffset, endOffset, origin, fir, symbol
-), IrSimpleFunction {
+) : IrSimpleFunction(), AbstractFir2IrLazyDeclaration<FirSimpleFunction, IrSimpleFunction>, Fir2IrComponents by components {
     init {
         symbol.bind(this)
         classifierStorage.preCacheTypeParameters(fir)
     }
+
+    override var annotations: List<IrConstructorCall> by createLazyAnnotations()
+    override lateinit var typeParameters: List<IrTypeParameter>
+    override lateinit var parent: IrDeclarationParent
 
     override val isTailrec: Boolean
         get() = fir.isTailRec
@@ -56,10 +57,7 @@ class Fir2IrLazySimpleFunction(
 
     @ObsoleteDescriptorBasedAPI
     override val descriptor: FunctionDescriptor
-        get() = super.descriptor as FunctionDescriptor
-
-    override val symbol: Fir2IrSimpleFunctionSymbol
-        get() = super.symbol as Fir2IrSimpleFunctionSymbol
+        get() = symbol.descriptor
 
     override val isInline: Boolean
         get() = fir.isInline
@@ -133,36 +131,10 @@ class Fir2IrLazySimpleFunction(
     }
 
     override var overriddenSymbols: List<IrSimpleFunctionSymbol> by lazyVar {
-        val containingClass = parent as? IrClass
-        containingClass?.findMatchingOverriddenSymbolsFromSupertypes(irBuiltIns, this)
-            ?.filterIsInstance<IrSimpleFunctionSymbol>().orEmpty()
+        fir.generateOverriddenFunctionSymbols(firParent, session, scopeSession, declarationStorage)
     }
 
     override var metadata: MetadataSource?
         get() = null
         set(_) = error("We should never need to store metadata of external declarations.")
-
-    override fun <R, D> accept(visitor: IrElementVisitor<R, D>, data: D): R {
-        return visitor.visitSimpleFunction(this, data)
-    }
-
-    override fun <D> acceptChildren(visitor: IrElementVisitor<Unit, D>, data: D) {
-        typeParameters.forEach { it.accept(visitor, data) }
-
-        dispatchReceiverParameter?.accept(visitor, data)
-        extensionReceiverParameter?.accept(visitor, data)
-        valueParameters.forEach { it.accept(visitor, data) }
-
-        body?.accept(visitor, data)
-    }
-
-    override fun <D> transformChildren(transformer: IrElementTransformer<D>, data: D) {
-        typeParameters = typeParameters.transformIfNeeded(transformer, data)
-
-        dispatchReceiverParameter = dispatchReceiverParameter?.transform(transformer, data)
-        extensionReceiverParameter = extensionReceiverParameter?.transform(transformer, data)
-        valueParameters = valueParameters.transformIfNeeded(transformer, data)
-
-        body = body?.transform(transformer, data)
-    }
 }

@@ -39,6 +39,9 @@ import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeProjectionModifier
 import org.jetbrains.kotlin.fir.references.builder.buildImplicitThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildSimpleNamedReference
+import org.jetbrains.kotlin.fir.references.impl.FirReferenceForUnresolvedAnnotations
+import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolvedAnnotations
+import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.CallableId
@@ -47,6 +50,7 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirQualifierPartImpl
+import org.jetbrains.kotlin.fir.types.impl.FirTypeArgumentListImpl
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.name.ClassId
@@ -319,10 +323,15 @@ class DeclarationsConverter(
                 CONSTRUCTOR_CALLEE -> constructorCalleePair = convertConstructorInvocation(unescapedAnnotation)
             }
         }
+        val name = (constructorCalleePair.first as? FirUserTypeRef)?.qualifier?.last()?.name ?: Name.special("<no-annotation-name>")
         return buildAnnotationCall {
             source = unescapedAnnotation.toFirSourceElement()
             useSiteTarget = annotationUseSiteTarget ?: defaultAnnotationUseSiteTarget
             annotationTypeRef = constructorCalleePair.first
+            calleeReference = buildSimpleNamedReference {
+                source = this@buildAnnotationCall.source
+                this.name = name
+            }
             extractArgumentsFrom(constructorCalleePair.second, stubMode)
         }
     }
@@ -456,7 +465,7 @@ class DeclarationsConverter(
                     )
                     //parse primary constructor
                     val primaryConstructorWrapper = convertPrimaryConstructor(
-                        primaryConstructor, classWrapper, delegatedConstructorSource,
+                        primaryConstructor, selfType.source, classWrapper, delegatedConstructorSource,
                         delegationSpecifiers?.primaryConstructorBody
                     )
                     val firPrimaryConstructor = primaryConstructorWrapper?.firConstructor
@@ -563,7 +572,7 @@ class DeclarationsConverter(
                     superTypeCallEntry = superTypeCallEntry
                 )
                 //parse primary constructor
-                convertPrimaryConstructor(primaryConstructor, classWrapper, delegatedConstructorSource, primaryConstructorBody)
+                convertPrimaryConstructor(primaryConstructor, typeRef.source, classWrapper, delegatedConstructorSource, primaryConstructorBody)
                     ?.let { this.declarations += it.firConstructor }
 
                 //parse declarations
@@ -634,7 +643,7 @@ class DeclarationsConverter(
                         superTypeCallEntry = enumSuperTypeCallEntry
                     )
                     superTypeRefs += enumClassWrapper.delegatedSuperTypeRef
-                    convertPrimaryConstructor(null, enumClassWrapper, null)?.let { declarations += it.firConstructor }
+                    convertPrimaryConstructor(null, null, enumClassWrapper, null)?.let { declarations += it.firConstructor }
                     classBodyNode?.also { declarations += convertClassBody(it, enumClassWrapper) }
                 }
             }
@@ -682,6 +691,7 @@ class DeclarationsConverter(
      */
     private fun convertPrimaryConstructor(
         primaryConstructor: LighterASTNode?,
+        selfTypeSource: FirSourceElement?,
         classWrapper: ClassWrapper,
         delegatedConstructorSource: FirLightSourceElement?,
         body: FirBlock? = null
@@ -700,7 +710,7 @@ class DeclarationsConverter(
 
         val defaultVisibility = classWrapper.defaultConstructorVisibility()
         val firDelegatedCall = buildDelegatedConstructorCall {
-            source = delegatedConstructorSource
+            source = delegatedConstructorSource ?: selfTypeSource?.fakeElement(FirFakeSourceElementKind.DelegatingConstructorCall)
             constructedTypeRef = classWrapper.delegatedSuperTypeRef
             isThis = false
             extractArgumentsFrom(classWrapper.superTypeCallEntry, stubMode)
@@ -718,6 +728,7 @@ class DeclarationsConverter(
         return PrimaryConstructor(
             buildPrimaryConstructor {
                 source = primaryConstructor?.toFirSourceElement()
+                    ?: selfTypeSource?.fakeElement(FirFakeSourceElementKind.ImplicitConstructor)
                 session = baseSession
                 origin = FirDeclarationOrigin.Source
                 returnTypeRef = classWrapper.delegatedSelfTypeRef
@@ -821,7 +832,7 @@ class DeclarationsConverter(
         }
 
         val isImplicit = constructorDelegationCall.asText.isEmpty()
-        val isThis = (isImplicit && classWrapper.hasPrimaryConstructor) || thisKeywordPresent
+        val isThis = thisKeywordPresent //|| (isImplicit && classWrapper.hasPrimaryConstructor)
         val delegatedType =
             when {
                 isThis -> classWrapper.delegatedSelfTypeRef
@@ -829,7 +840,11 @@ class DeclarationsConverter(
             }
 
         return buildDelegatedConstructorCall {
-            source = constructorDelegationCall.toFirSourceElement()
+            source = if (isImplicit) {
+                constructorDelegationCall.toFirSourceElement().fakeElement(FirFakeSourceElementKind.ImplicitConstructor)
+            } else {
+                constructorDelegationCall.toFirSourceElement()
+            }
             constructedTypeRef = delegatedType
             this.isThis = isThis
             extractArgumentsFrom(firValueArguments, stubMode)
@@ -1327,7 +1342,11 @@ class DeclarationsConverter(
         val primaryConstructorBody: FirBlock?
     )
 
-    private fun convertDelegationSpecifiers(delegationSpecifiers: LighterASTNode, containerSymbol: AbstractFirBasedSymbol<*>, delegatedTypeRef: FirTypeRef): DelegationSpecifiers {
+    private fun convertDelegationSpecifiers(
+        delegationSpecifiers: LighterASTNode,
+        containerSymbol: AbstractFirBasedSymbol<*>,
+        delegatedTypeRef: FirTypeRef
+    ): DelegationSpecifiers {
         val superTypeRefs = mutableListOf<FirTypeRef>()
         val superTypeCallEntry = mutableListOf<FirExpression>()
         var delegatedSuperTypeRef: FirTypeRef? = null
@@ -1337,15 +1356,24 @@ class DeclarationsConverter(
         var delegateNumber = 0
         delegationSpecifiers.forEachChildren {
             when (it.tokenType) {
-                SUPER_TYPE_ENTRY -> superTypeRefs += convertType(it)
+                SUPER_TYPE_ENTRY -> {
+                    superTypeRefs += convertType(it)
+                }
                 SUPER_TYPE_CALL_ENTRY -> convertConstructorInvocation(it).apply {
                     delegatedSuperTypeRef = first
                     superTypeRefs += first
                     superTypeCallEntry += second
-                    delegateConstructorSource = it.toFirSourceElement()
+                    delegateConstructorSource = it.toFirSourceElement(FirFakeSourceElementKind.DelegatingConstructorCall)
                 }
                 DELEGATED_SUPER_TYPE_ENTRY -> {
-                    superTypeRefs += convertExplicitDelegation(it, delegateNumber, delegateFields, initializeDelegateStatements, containerSymbol, delegatedTypeRef)
+                    superTypeRefs += convertExplicitDelegation(
+                        it,
+                        delegateNumber,
+                        delegateFields,
+                        initializeDelegateStatements,
+                        containerSymbol,
+                        delegatedTypeRef
+                    )
                     delegateNumber++
                 }
             }
@@ -1601,10 +1629,16 @@ class DeclarationsConverter(
         if (identifier == null)
             return buildErrorTypeRef { diagnostic = ConeSimpleDiagnostic("Incomplete user type", DiagnosticKind.Syntax) }
 
-        val qualifierPart = FirQualifierPartImpl(identifier.nameAsSafeName()).apply { typeArguments += firTypeArguments }
+        val theSource = userType.toFirSourceElement()
+        val qualifierPart = FirQualifierPartImpl(
+            identifier.nameAsSafeName(),
+            FirTypeArgumentListImpl(theSource).apply {
+                typeArguments += firTypeArguments
+            }
+        )
 
         return buildUserTypeRef {
-            source = userType.toFirSourceElement()
+            source = theSource
             isMarkedNullable = isNullable
             qualifier.add(qualifierPart)
             simpleFirUserType?.qualifier?.let { this.qualifier.addAll(0, it) }
@@ -1733,5 +1767,6 @@ class DeclarationsConverter(
                 false
             )
         }
+        calleeReference = FirReferencePlaceholderForResolvedAnnotations
     }
 }

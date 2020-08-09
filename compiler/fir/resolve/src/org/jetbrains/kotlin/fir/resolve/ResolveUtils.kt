@@ -10,11 +10,10 @@ import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.diagnostics.ConeStubDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.*
 import org.jetbrains.kotlin.fir.expressions.*
-import org.jetbrains.kotlin.fir.expressions.builder.FirResolvedReifiedParameterReferenceBuilder
-import org.jetbrains.kotlin.fir.expressions.builder.buildExpressionWithSmartcast
-import org.jetbrains.kotlin.fir.expressions.builder.buildResolvedQualifier
+import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
@@ -26,10 +25,8 @@ import org.jetbrains.kotlin.fir.resolve.calls.ImplicitDispatchReceiverValue
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeUnresolvedNameError
 import org.jetbrains.kotlin.fir.resolve.providers.FirProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.providers.bindSymbolToLookupTag
 import org.jetbrains.kotlin.fir.resolve.providers.getSymbolByTypeRef
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
-import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.resultType
 import org.jetbrains.kotlin.fir.scopes.impl.FirDeclaredMemberScopeProvider
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
@@ -62,6 +59,7 @@ val FirSession.correspondingSupertypesCache: FirCorrespondingSupertypesCache by 
 val FirSession.declaredMemberScopeProvider: FirDeclaredMemberScopeProvider by FirSession.sessionComponentAccessor()
 val FirSession.qualifierResolver: FirQualifierResolver by FirSession.sessionComponentAccessor()
 val FirSession.typeResolver: FirTypeResolver by FirSession.sessionComponentAccessor()
+val FirSession.effectiveVisibilityResolver: FirEffectiveVisibilityResolver by FirSession.sessionComponentAccessor()
 
 fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): FirClassLikeSymbol<*>? {
     if (this is ConeClassLookupTagWithFixedSymbol) {
@@ -175,7 +173,14 @@ fun FirClassifierSymbol<*>.constructType(
             ConeTypeParameterTypeImpl(this.toLookupTag(), isNullable, attributes)
         }
         is FirClassSymbol -> {
-            ConeClassLikeTypeImpl(this.toLookupTag(), typeArguments, isNullable, attributes)
+            val errorTypeRef = typeArguments.find {
+                it is ConeClassErrorType
+            }
+            if (errorTypeRef is ConeClassErrorType) {
+                ConeClassErrorType(errorTypeRef.diagnostic)
+            } else {
+                ConeClassLikeTypeImpl(this.toLookupTag(), typeArguments, isNullable, attributes)
+            }
         }
         is FirTypeAliasSymbol -> {
             ConeClassLikeTypeImpl(
@@ -189,11 +194,8 @@ fun FirClassifierSymbol<*>.constructType(
     }
 }
 
-fun FirClassifierSymbol<*>.constructType(parts: List<FirQualifierPart>, isNullable: Boolean): ConeKotlinType =
-    constructType(parts.toTypeProjections(), isNullable)
-
 fun List<FirQualifierPart>.toTypeProjections(): Array<ConeTypeProjection> =
-    asReversed().flatMap { it.typeArguments.map { typeArgument -> typeArgument.toConeTypeProjection() } }.toTypedArray()
+    asReversed().flatMap { it.typeArgumentList.typeArguments.map { typeArgument -> typeArgument.toConeTypeProjection() } }.toTypedArray()
 
 fun FirFunction<*>.constructFunctionalTypeRef(isSuspend: Boolean = false): FirResolvedTypeRef {
     val receiverTypeRef = when (this) {
@@ -202,7 +204,12 @@ fun FirFunction<*>.constructFunctionalTypeRef(isSuspend: Boolean = false): FirRe
         else -> null
     }
     val parameters = valueParameters.map {
-        it.returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: ConeKotlinErrorType("No type for parameter")
+        it.returnTypeRef.coneTypeSafe<ConeKotlinType>() ?: ConeKotlinErrorType(
+            ConeSimpleDiagnostic(
+                "No type for parameter",
+                DiagnosticKind.NoTypeForTypeParameter
+            )
+        )
     }
     val rawReturnType = (this as FirTypedDeclaration).returnTypeRef.coneType
 
@@ -248,16 +255,24 @@ fun BodyResolveComponents.buildResolvedQualifierForClass(
     regularClass: FirClassLikeSymbol<*>,
     sourceElement: FirSourceElement? = null,
     // TODO: Clarify if we actually need type arguments for qualifier?
-    typeArgumentsForQualifier: List<FirTypeProjection> = emptyList()
+    typeArgumentsForQualifier: List<FirTypeProjection> = emptyList(),
+    diagnostic: ConeDiagnostic? = null
 ): FirResolvedQualifier {
     val classId = regularClass.classId
-    return buildResolvedQualifier {
+
+    val builder: FirAbstractResolvedQualifierBuilder = if (diagnostic == null) {
+        FirResolvedQualifierBuilder()
+    } else {
+        FirErrorResolvedQualifierBuilder().apply { this.diagnostic = diagnostic }
+    }
+
+    return builder.apply {
         source = sourceElement
         packageFqName = classId.packageFqName
         relativeClassFqName = classId.relativeClassName
         typeArguments.addAll(typeArgumentsForQualifier)
         symbol = regularClass
-    }.apply {
+    }.build().apply {
         resultType = if (classId.isLocal) {
             typeForQualifierByDeclaration(regularClass.fir, resultType, session)
                 ?: session.builtinTypes.unitType
@@ -326,7 +341,12 @@ fun <T : FirResolvable> BodyResolveComponents.typeFromCallee(access: T): FirReso
             val implicitReceiver = implicitReceiverStack[labelName]
             buildResolvedTypeRef {
                 source = null
-                type = implicitReceiver?.type ?: ConeKotlinErrorType("Unresolved this@$labelName")
+                type = implicitReceiver?.type ?: ConeKotlinErrorType(
+                    ConeSimpleDiagnostic(
+                        "Unresolved this@$labelName",
+                        DiagnosticKind.UnresolvedLabel
+                    )
+                )
             }
         }
         is FirSuperReference -> {
@@ -449,20 +469,13 @@ private fun FirQualifiedAccess.expressionTypeOrUnitForAssignment(): ConeKotlinTy
     return StandardClassIds.Unit.constructClassLikeType(emptyArray(), isNullable = false)
 }
 
-fun FirAnnotationCall.getCorrespondingConstructorReferenceOrNull(session: FirSession): FirResolvedNamedReference? =
-    annotationTypeRef.coneType.classId?.let {
+fun FirAnnotationCall.getCorrespondingClassSymbolOrNull(session: FirSession): FirRegularClassSymbol? {
+    return annotationTypeRef.coneType.fullyExpandedType(session).classId?.let {
         if (it.isLocal) {
             // TODO: How to retrieve local annotaiton's constructor?
             null
         } else {
-            (session.firSymbolProvider.getClassLikeSymbolByFqName(it) as? FirRegularClassSymbol)?.fir
-                ?.getPrimaryConstructorIfAny()
-                ?.let { annotationConstructor ->
-                    buildResolvedNamedReference {
-                        source = this@getCorrespondingConstructorReferenceOrNull.source
-                        name = it.shortClassName
-                        resolvedSymbol = annotationConstructor.symbol
-                    }
-                }
+            (session.firSymbolProvider.getClassLikeSymbolByFqName(it) as? FirRegularClassSymbol)
         }
     }
+}

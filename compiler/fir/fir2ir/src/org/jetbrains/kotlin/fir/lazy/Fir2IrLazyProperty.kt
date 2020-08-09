@@ -18,37 +18,33 @@ import org.jetbrains.kotlin.fir.symbols.Fir2IrPropertySymbol
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.lazy.lazyVar
-import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.types.IrErrorType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.isInterface
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
 
 class Fir2IrLazyProperty(
     components: Fir2IrComponents,
-    startOffset: Int,
-    endOffset: Int,
-    origin: IrDeclarationOrigin,
-    fir: FirProperty,
-    symbol: Fir2IrPropertySymbol,
+    override val startOffset: Int,
+    override val endOffset: Int,
+    override var origin: IrDeclarationOrigin,
+    override val fir: FirProperty,
+    override val symbol: Fir2IrPropertySymbol,
     override val isFakeOverride: Boolean
-) : AbstractFir2IrLazyDeclaration<FirProperty, IrProperty>(
-    components, startOffset, endOffset, origin, fir, symbol
-), IrProperty {
+) : IrProperty(), AbstractFir2IrLazyDeclaration<FirProperty, IrProperty>, Fir2IrComponents by components {
     init {
         symbol.bind(this)
         classifierStorage.preCacheTypeParameters(fir)
-        typeParameters = emptyList()
     }
+
+    override var annotations: List<IrConstructorCall> by createLazyAnnotations()
+    override var typeParameters: List<IrTypeParameter> = emptyList()
+    override lateinit var parent: IrDeclarationParent
 
     @ObsoleteDescriptorBasedAPI
     override val descriptor: PropertyDescriptor
-        get() = super.descriptor as PropertyDescriptor
-
-    override val symbol: Fir2IrPropertySymbol
-        get() = super.symbol as Fir2IrPropertySymbol
+        get() = symbol.descriptor
 
     override val isVar: Boolean
         get() = fir.isVar
@@ -103,7 +99,7 @@ class Fir2IrLazyProperty(
                         if (initializer is FirConstExpression<*>) {
                             // TODO: Normally we shouldn't have error type here
                             val constType = with(typeConverter) { initializer.typeRef.toIrType().takeIf { it !is IrErrorType } ?: type }
-                            field.initializer = IrExpressionBodyImpl(initializer.toIrConst(constType))
+                            field.initializer = factory.createExpressionBody(initializer.toIrConst(constType))
                         }
                     }
                 }
@@ -153,20 +149,4 @@ class Fir2IrLazyProperty(
     override var metadata: MetadataSource?
         get() = null
         set(_) = error("We should never need to store metadata of external declarations.")
-
-    override fun <R, D> accept(visitor: IrElementVisitor<R, D>, data: D): R {
-        return visitor.visitProperty(this, data)
-    }
-
-    override fun <D> acceptChildren(visitor: IrElementVisitor<Unit, D>, data: D) {
-        backingField?.accept(visitor, data)
-        getter?.accept(visitor, data)
-        setter?.accept(visitor, data)
-    }
-
-    override fun <D> transformChildren(transformer: IrElementTransformer<D>, data: D) {
-        backingField = backingField?.transform(transformer, data) as? IrField
-        getter = getter?.run { transform(transformer, data) as IrSimpleFunction }
-        setter = setter?.run { transform(transformer, data) as IrSimpleFunction }
-    }
 }

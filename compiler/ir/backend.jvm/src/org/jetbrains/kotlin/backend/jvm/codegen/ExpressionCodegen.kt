@@ -104,7 +104,8 @@ class ExpressionCodegen(
     val mv: InstructionAdapter,
     val classCodegen: ClassCodegen,
     val inlinedInto: ExpressionCodegen?,
-    val smap: SourceMapper
+    val smap: SourceMapper,
+    val delegatedPropertyOptimizer: DelegatedPropertyOptimizer?,
 ) : IrElementVisitor<PromisedValue, BlockInfo>, BaseExpressionCodegen {
 
     var finallyDepth = 0
@@ -126,6 +127,7 @@ class ExpressionCodegen(
         get() = typeMapper.typeSystem
 
     override var lastLineNumber: Int = -1
+    var noLineNumberScope: Boolean = false
 
     private val closureReifiedMarkers = hashMapOf<IrClass, ReifiedTypeParametersUsages>()
 
@@ -150,6 +152,7 @@ class ExpressionCodegen(
     private fun getLineNumberForOffset(offset: Int): Int = fileEntry?.getLineNumber(offset)?.plus(1) ?: -1
 
     private fun IrElement.markLineNumber(startOffset: Boolean) {
+        if (noLineNumberScope) return
         val offset = if (startOffset) this.startOffset else endOffset
         if (offset < 0) {
             return
@@ -165,6 +168,13 @@ class ExpressionCodegen(
     }
 
     fun markLineNumber(element: IrElement) = element.markLineNumber(true)
+
+    fun noLineNumberScope(block: () -> Unit) {
+        val previousState = noLineNumberScope
+        noLineNumberScope = true
+        block()
+        noLineNumberScope = previousState
+    }
 
     // TODO remove
     fun gen(expression: IrExpression, type: Type, irType: IrType, data: BlockInfo): StackValue {
@@ -364,7 +374,7 @@ class ExpressionCodegen(
     private fun visitStatementContainer(container: IrStatementContainer, data: BlockInfo) =
         container.statements.fold(unitValue) { prev, exp ->
             prev.discard()
-            exp.accept(this, data).also { (exp as? IrExpression)?.markEndOfStatementIfNeeded() }
+            exp.accept(this, data)
         }
 
     override fun visitBlockBody(body: IrBlockBody, data: BlockInfo): PromisedValue {
@@ -557,7 +567,7 @@ class ExpressionCodegen(
         expression.receiver?.let { receiver ->
             receiver.accept(this, data).materializeAt(ownerType, receiver.type)
         }
-        
+
         return if (expression is IrSetField) {
             val value = expression.value.accept(this, data)
 
@@ -725,7 +735,8 @@ class ExpressionCodegen(
     override fun visitClass(declaration: IrClass, data: BlockInfo): PromisedValue {
         if (declaration.origin != JvmLoweredDeclarationOrigin.CONTINUATION_CLASS) {
             closureReifiedMarkers[declaration] =
-                ClassCodegen.getOrCreate(declaration, context, generateSequence(this) { it.inlinedInto }.last().irFunction).generate()
+                ClassCodegen.getOrCreate(declaration, context, generateSequence(this) { it.inlinedInto }.last().irFunction)
+                    .generate(delegatedPropertyOptimizer)
         }
         return unitValue
     }
@@ -765,7 +776,18 @@ class ExpressionCodegen(
     override fun visitWhen(expression: IrWhen, data: BlockInfo): PromisedValue {
         expression.markLineNumber(startOffset = true)
         SwitchGenerator(expression, data, this).generate()?.let { return it }
-
+        // When a lookup/table switch instruction is not generate, output a nop
+        // for the line number of the when itself. Otherwise, there will be
+        // no option of breaking on the line of the `when` if there is no
+        // subject:
+        //
+        // when {
+        //   cond1 -> exp1
+        //   else -> exp2
+        // }
+        if (expression.origin == IrStatementOrigin.WHEN) {
+            mv.nop()
+        }
         val endLabel = Label()
         val exhaustive = expression.branches.any { it.condition.isTrueConst() } && !expression.type.isUnit()
         assert(exhaustive || expression.type.isUnit()) {
@@ -844,19 +866,6 @@ class ExpressionCodegen(
             }
 
             else -> throw AssertionError("type operator ${expression.operator} should have been lowered")
-        }
-    }
-
-    private fun IrExpression.markEndOfStatementIfNeeded() {
-        when (this) {
-            is IrWhen -> if (this.branches.size > 1) {
-                this.markLineNumber(false)
-            }
-            is IrTry -> this.markLineNumber(false)
-            is IrContainerExpression -> when (this.origin) {
-                IrStatementOrigin.WHEN, IrStatementOrigin.IF ->
-                    this.markLineNumber(false)
-            }
         }
     }
 

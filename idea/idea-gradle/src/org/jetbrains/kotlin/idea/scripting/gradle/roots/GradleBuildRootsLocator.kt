@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.scripting.gradle.roots
 
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
 /**
@@ -13,8 +14,8 @@ import com.intellij.openapi.vfs.VirtualFile
  *
  * @see GradleBuildRootsManager for details.
  */
-abstract class GradleBuildRootsLocator {
-    protected val roots = GradleBuildRootIndex()
+abstract class GradleBuildRootsLocator(project: Project) {
+    protected val roots = GradleBuildRootIndex(project)
 
     abstract fun getScriptInfo(localPath: String): GradleScriptInfo?
 
@@ -133,8 +134,7 @@ abstract class GradleBuildRootsLocator {
             return ScriptUnderRoot(filePath, it, scriptInfo)
         }
 
-        // stand-alone scripts: "included", "precompiled" scripts, scripts in unlinked projects,
-        // or just random files with ".gradle.kts" ending OR scripts those Gradle has not provided
+        // stand-alone scripts
         roots.getStandaloneScriptRoot(filePath)?.let { 
             return ScriptUnderRoot(filePath, it, standalone = true) 
         }
@@ -149,6 +149,8 @@ abstract class GradleBuildRootsLocator {
             }
         }
 
+        // other scripts: "included", "precompiled" scripts, scripts in unlinked projects,
+        // or just random files with ".gradle.kts" ending OR scripts those Gradle has not provided
         val nearest =
             if (searchNearestLegacy) roots.findNearestRoot(filePath)
             else null

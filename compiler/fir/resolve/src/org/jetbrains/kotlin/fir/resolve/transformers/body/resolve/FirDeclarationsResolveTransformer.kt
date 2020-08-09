@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
+import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.*
@@ -293,7 +294,9 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             enhancedTypeRef = returnTypeRef
         }
         setter?.let {
-            it.valueParameters[0].transformReturnTypeRef(StoreType, enhancedTypeRef)
+            if (it.valueParameters[0].returnTypeRef is FirImplicitTypeRef) {
+                it.valueParameters[0].transformReturnTypeRef(StoreType, enhancedTypeRef)
+            }
             transformAccessor(it, enhancedTypeRef, this)
         }
     }
@@ -400,7 +403,11 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 this.type = type
             }
         }
-        var result = withScopesForClass(null, anonymousObject, type) {
+        val labelName =
+            if (anonymousObject.classKind == ClassKind.ENUM_ENTRY) {
+                anonymousObject.getPrimaryConstructorIfAny()?.symbol?.callableId?.className?.shortName()
+            } else null
+        var result = withScopesForClass(labelName, anonymousObject, type) {
             transformDeclarationContent(anonymousObject, data).single as FirAnonymousObject
         }
         if (!implicitTypeOnly && result.controlFlowGraphReference == FirEmptyControlFlowGraphReference) {
@@ -862,7 +869,15 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                         is FirImplicitTypeRef -> buildErrorTypeRef {
                             diagnostic = ConeSimpleDiagnostic("No result type for initializer", DiagnosticKind.InferenceError)
                         }
-                        else -> resultType
+                        else -> {
+                            buildResolvedTypeRef {
+                                type = resultType.coneType
+                                annotations.addAll(resultType.annotations)
+                                resultType.source.psi?.let {
+                                    source = FirFakeSourceElement(it, FirFakeSourceElementKind.PropertyFromParameter)
+                                }
+                            }
+                        }
                     }
                     variable.transformReturnTypeRef(
                         transformer,
@@ -874,7 +889,17 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                         is FirImplicitTypeRef -> buildErrorTypeRef {
                             diagnostic = ConeSimpleDiagnostic("No result type for getter", DiagnosticKind.InferenceError)
                         }
-                        else -> resultType
+                        else -> {
+                            resultType?.let {
+                                buildResolvedTypeRef {
+                                    type = resultType.coneType
+                                    annotations.addAll(resultType.annotations)
+                                    resultType.source.psi?.let {
+                                        source = FirFakeSourceElement(it, FirFakeSourceElementKind.PropertyFromParameter)
+                                    }
+                                }
+                            }
+                        }
                     }
                     variable.transformReturnTypeRef(
                         transformer,
@@ -910,7 +935,9 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             if (valueParameter.returnTypeRef is FirImplicitTypeRef) {
                 valueParameter.transformReturnTypeRef(
                     StoreType,
-                    valueParameter.returnTypeRef.resolvedTypeFromPrototype(ConeKotlinErrorType("No type for parameter"))
+                    valueParameter.returnTypeRef.resolvedTypeFromPrototype(
+                        ConeKotlinErrorType(ConeSimpleDiagnostic("No type for parameter", DiagnosticKind.NoTypeForTypeParameter))
+                    )
                 )
             }
             return valueParameter.compose()

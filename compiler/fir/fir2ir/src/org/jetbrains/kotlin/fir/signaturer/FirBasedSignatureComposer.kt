@@ -6,11 +6,9 @@
 package org.jetbrains.kotlin.fir.signaturer
 
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.fir.FirEffectiveVisibilityImpl
-import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.backend.Fir2IrSignatureComposer
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.ir.util.IdSignature
@@ -63,30 +61,30 @@ class FirBasedSignatureComposer(private val mangler: FirMangler) : Fir2IrSignatu
 
     override fun composeSignature(declaration: FirDeclaration): IdSignature? {
         if (declaration is FirAnonymousObject || declaration is FirAnonymousFunction) return null
-        if (declaration is FirMemberDeclaration && declaration.effectiveVisibility == FirEffectiveVisibilityImpl.Local) {
-            return null
-        }
         val builder = SignatureBuilder()
-        declaration.accept(builder)
-        return when {
-            declaration is FirRegularClass && declaration.visibility != Visibilities.LOCAL -> {
+        try {
+            declaration.accept(builder)
+        } catch (t: Throwable) {
+            throw IllegalStateException("Error while composing signature for ${declaration.render()}", t)
+        }
+        return when (declaration) {
+            is FirRegularClass -> {
                 // TODO: private classes are probably not acceptable here too
                 val classId = declaration.classId
                 IdSignature.PublicSignature(
                     classId.packageFqName.asString(), classId.relativeClassName.asString(), builder.hashId, builder.mask
                 )
             }
-            declaration is FirTypeAlias -> {
+            is FirTypeAlias -> {
                 if (declaration.visibility == Visibilities.PRIVATE) return null
                 val classId = declaration.symbol.classId
                 IdSignature.PublicSignature(
                     classId.packageFqName.asString(), classId.relativeClassName.asString(), builder.hashId, builder.mask
                 )
             }
-            declaration is FirCallableMemberDeclaration<*> -> {
+            is FirCallableMemberDeclaration<*> -> {
                 if (declaration.visibility == Visibilities.PRIVATE) return null
                 val callableId = declaration.symbol.callableId
-                if (callableId.classId?.isLocal == true) return null
                 IdSignature.PublicSignature(
                     callableId.packageName.asString(), callableId.relativeCallableName.asString(), builder.hashId, builder.mask
                 )

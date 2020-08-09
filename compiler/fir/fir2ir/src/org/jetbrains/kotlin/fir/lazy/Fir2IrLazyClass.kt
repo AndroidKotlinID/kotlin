@@ -10,46 +10,43 @@ import org.jetbrains.kotlin.fir.backend.Fir2IrComponents
 import org.jetbrains.kotlin.fir.backend.declareThisReceiverParameter
 import org.jetbrains.kotlin.fir.backend.toIrType
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.resolve.buildUseSiteMemberScope
+import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.Fir2IrClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
+import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.isNullableAny
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.lazy.lazyVar
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
-import org.jetbrains.kotlin.ir.util.transform
-import org.jetbrains.kotlin.ir.util.transformIfNeeded
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.name.Name
 
 class Fir2IrLazyClass(
     components: Fir2IrComponents,
-    startOffset: Int,
-    endOffset: Int,
-    origin: IrDeclarationOrigin,
-    fir: FirRegularClass,
-    symbol: Fir2IrClassSymbol
-) : AbstractFir2IrLazyDeclaration<FirRegularClass, IrClass>(
-    components, startOffset, endOffset, origin, fir, symbol
-), IrClass {
+    override val startOffset: Int,
+    override val endOffset: Int,
+    override var origin: IrDeclarationOrigin,
+    override val fir: FirRegularClass,
+    override val symbol: Fir2IrClassSymbol,
+) : IrClass(), AbstractFir2IrLazyDeclaration<FirRegularClass, IrClass>, Fir2IrComponents by components {
     init {
         symbol.bind(this)
         classifierStorage.preCacheTypeParameters(fir)
     }
+
+    override var annotations: List<IrConstructorCall> by createLazyAnnotations()
+    override lateinit var typeParameters: List<IrTypeParameter>
+    override lateinit var parent: IrDeclarationParent
 
     override val source: SourceElement
         get() = SourceElement.NO_SOURCE
 
     @ObsoleteDescriptorBasedAPI
     override val descriptor: ClassDescriptor
-        get() = super.descriptor as ClassDescriptor
-
-    override val symbol: Fir2IrClassSymbol
-        get() = super.symbol as Fir2IrClassSymbol
+        get() = symbol.descriptor
 
     override val name: Name
         get() = fir.name
@@ -122,7 +119,7 @@ class Fir2IrLazyClass(
         val processedNames = mutableSetOf<Name>()
         // NB: it's necessary to take all callables from scope,
         // e.g. to avoid accessing un-enhanced Java declarations with FirJavaTypeRef etc. inside
-        val scope = fir.buildUseSiteMemberScope(session, scopeSession)!!
+        val scope = fir.unsubstitutedScope(session, scopeSession)
         scope.processDeclaredConstructors {
             result += declarationStorage.getIrConstructorSymbol(it).owner
         }
@@ -131,12 +128,20 @@ class Fir2IrLazyClass(
                 is FirSimpleFunction -> {
                     if (declaration.name !in processedNames) {
                         processedNames += declaration.name
-                        scope.processFunctionsByName(declaration.name) {
-                            if (it is FirNamedFunctionSymbol && it.callableId.classId == fir.symbol.classId) {
-                                if (it.isAbstractMethodOfAny()) {
-                                    return@processFunctionsByName
+                        if (fir.classKind == ClassKind.ENUM_CLASS && declaration.isStatic &&
+                            declaration.returnTypeRef is FirResolvedTypeRef
+                        ) {
+                            // Handle values() / valueOf() separately
+                            // TODO: handle other static functions / properties properly
+                            result += declarationStorage.getIrFunctionSymbol(declaration.symbol).owner
+                        } else {
+                            scope.processFunctionsByName(declaration.name) {
+                                if (it is FirNamedFunctionSymbol && it.callableId.classId == fir.symbol.classId) {
+                                    if (it.isAbstractMethodOfAny()) {
+                                        return@processFunctionsByName
+                                    }
+                                    result += declarationStorage.getIrFunctionSymbol(it).owner
                                 }
-                                result += declarationStorage.getIrFunctionSymbol(it).owner
                             }
                         }
                     }
@@ -182,20 +187,5 @@ class Fir2IrLazyClass(
             "hashCode", "toString" -> fir.valueParameters.isEmpty()
             else -> false
         }
-    }
-
-    override fun <R, D> accept(visitor: IrElementVisitor<R, D>, data: D): R =
-        visitor.visitClass(this, data)
-
-    override fun <D> acceptChildren(visitor: IrElementVisitor<Unit, D>, data: D) {
-        thisReceiver?.accept(visitor, data)
-        typeParameters.forEach { it.accept(visitor, data) }
-        declarations.forEach { it.accept(visitor, data) }
-    }
-
-    override fun <D> transformChildren(transformer: IrElementTransformer<D>, data: D) {
-        thisReceiver = thisReceiver?.transform(transformer, data)
-        typeParameters = typeParameters.transformIfNeeded(transformer, data)
-        declarations.transform { it.transform(transformer, data) }
     }
 }

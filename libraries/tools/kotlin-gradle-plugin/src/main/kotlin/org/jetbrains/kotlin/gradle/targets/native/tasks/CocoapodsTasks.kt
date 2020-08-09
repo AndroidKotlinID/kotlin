@@ -31,7 +31,8 @@ import java.io.File
  */
 open class PodspecTask : DefaultTask() {
 
-    private val specName = project.name.asValidFrameworkName()
+    @get:Input
+    internal val specName = project.name.asValidFrameworkName()
 
     @get:OutputFile
     internal val outputFileProvider: Provider<File>
@@ -225,7 +226,7 @@ open class DummyFrameworkTask : DefaultTask() {
         // Copy files for the dummy framework.
         copyFrameworkFile("Info.plist")
         copyFrameworkFile("dummy", frameworkNameProvider.get())
-        copyFrameworkFile("Headers/dummy.h")
+        copyFrameworkFile("Headers/placeholder.h")
         copyFrameworkTextFile("Modules/module.modulemap") {
             if (it == "framework module dummy {") {
                 it.replace("dummy", frameworkNameProvider.get())

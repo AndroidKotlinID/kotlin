@@ -81,7 +81,7 @@ class FirIntegerLiteralTypeScope(private val session: FirSession, val isUnsigned
         FirILTTypeRefPlaceHolder(isUnsigned),
         receiverTypeRef = null,
         ALL_OPERATORS.getValue(name),
-        FirResolvedDeclarationStatusImpl(Visibilities.PUBLIC, FirEffectiveVisibilityImpl.Public, Modality.FINAL),
+        FirResolvedDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL),
         symbol
     ).apply {
         resolvePhase = FirResolvePhase.BODY_RESOLVE
@@ -124,7 +124,6 @@ class FirIntegerOperator @FirImplementationDetail constructor(
     FirDeclarationOrigin.Synthetic,
     returnTypeRef,
     receiverTypeRef,
-    typeParameters = mutableListOf(),
     valueParameters = mutableListOf(),
     body = null,
     status,
@@ -133,6 +132,7 @@ class FirIntegerOperator @FirImplementationDetail constructor(
     kind.operatorName,
     symbol,
     annotations = mutableListOf(),
+    typeParameters = mutableListOf(),
 ) {
     enum class Kind(val unary: Boolean, val operatorName: Name) {
         PLUS(false, OperatorNameConventions.PLUS),
