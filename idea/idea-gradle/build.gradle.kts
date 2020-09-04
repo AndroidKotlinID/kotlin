@@ -105,7 +105,11 @@ sourceSets {
 testsJar()
 
 projectTest(parallel = false) {
+    dependsOn(":dist")
     dependsOnKotlinPluginInstall()
+    if (!Ide.AS41.orHigher()) {
+        systemProperty("android.studio.sdk.manager.disabled", "true")
+    }
     workingDir = rootDir
     useAndroidSdk()
 

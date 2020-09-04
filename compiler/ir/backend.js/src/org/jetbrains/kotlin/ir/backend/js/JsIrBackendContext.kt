@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.DescriptorlessExternalPackageFragmen
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrDynamicTypeImpl
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.js.config.ErrorTolerancePolicy
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -59,6 +60,7 @@ class JsIrBackendContext(
     override val irFactory: IrFactory = PersistentIrFactory
 
     val devMode = configuration[JSConfigurationKeys.DEVELOPER_MODE] ?: false
+    val errorPolicy = configuration[JSConfigurationKeys.ERROR_TOLERANCE_POLICY] ?: ErrorTolerancePolicy.DEFAULT
 
     val externalPackageFragment = mutableMapOf<IrFileSymbol, IrFile>()
     val externalDeclarations = hashSetOf<IrDeclaration>()
@@ -173,19 +175,19 @@ class JsIrBackendContext(
 
     override val ir = object : Ir<JsIrBackendContext>(this, irModuleFragment) {
         override val symbols = object : Symbols<JsIrBackendContext>(this@JsIrBackendContext, irBuiltIns, symbolTable) {
-            override val ThrowNullPointerException =
+            override val throwNullPointerException =
                 symbolTable.referenceSimpleFunction(getFunctions(kotlinPackageFqn.child(Name.identifier("THROW_NPE"))).single())
 
-            override val ThrowNoWhenBranchMatchedException =
+            override val throwNoWhenBranchMatchedException =
                 symbolTable.referenceSimpleFunction(getFunctions(kotlinPackageFqn.child(Name.identifier("noWhenBranchMatchedException"))).single())
 
-            override val ThrowTypeCastException =
+            override val throwTypeCastException =
                 symbolTable.referenceSimpleFunction(getFunctions(kotlinPackageFqn.child(Name.identifier("THROW_CCE"))).single())
 
-            override val ThrowUninitializedPropertyAccessException =
+            override val throwUninitializedPropertyAccessException =
                 symbolTable.referenceSimpleFunction(getFunctions(FqName("kotlin.throwUninitializedPropertyAccessException")).single())
 
-            override val ThrowKotlinNothingValueException: IrSimpleFunctionSymbol =
+            override val throwKotlinNothingValueException: IrSimpleFunctionSymbol =
                 symbolTable.referenceSimpleFunction(getFunctions(FqName("kotlin.throwKotlinNothingValueException")).single())
 
             override val defaultConstructorMarker =
@@ -215,6 +217,9 @@ class JsIrBackendContext(
             override val coroutineGetContext = symbolTable.referenceSimpleFunction(getJsInternalFunction(GET_COROUTINE_CONTEXT_NAME))
 
             override val returnIfSuspended = symbolTable.referenceSimpleFunction(getJsInternalFunction("returnIfSuspended"))
+
+            override val functionAdapter: IrClassSymbol
+                get() = TODO("Not implemented")
         }
 
         override fun unfoldInlineClassType(irType: IrType): IrType? {
@@ -225,6 +230,9 @@ class JsIrBackendContext(
     }
 
     // classes forced to be loaded
+
+    val errorCodeSymbol: IrSimpleFunctionSymbol? =
+        if (errorPolicy.allowErrors) symbolTable.referenceSimpleFunction(getJsInternalFunction("errorCode")) else null
 
     val primitiveClassesObject = getIrClass(FqName("kotlin.reflect.js.internal.PrimitiveClasses"))
 

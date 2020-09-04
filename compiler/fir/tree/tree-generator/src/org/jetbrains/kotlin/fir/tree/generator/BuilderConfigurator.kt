@@ -197,9 +197,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
 
         builder(anonymousFunction) {
             parents += functionBuilder
-            defaultNull("invocationKind", "label", "body")
-            default("controlFlowGraphReference", "FirEmptyControlFlowGraphReference")
-            useTypes(emptyCfgReferenceType)
+            defaultNull("invocationKind", "label", "body", "controlFlowGraphReference")
         }
 
         builder(propertyAccessor) {
@@ -222,10 +220,6 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         }
 
         builder(errorTypeRef) {
-            withCopy()
-        }
-
-        builder(delegatedTypeRef) {
             withCopy()
         }
 
@@ -271,6 +265,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             default("contractDescription", "FirEmptyContractDescription")
             useTypes(emptyContractDescriptionType)
             openBuilder()
+            withCopy()
         }
 
         builder(tryExpression) {
@@ -352,7 +347,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         // -----------------------------------------------------------------------
 
         findImplementationsWithElementInParents(annotationContainer) {
-            it.type !in setOf("FirDelegatedTypeRefImpl", "FirImplicitTypeRefImpl")
+            it.type !in setOf("FirImplicitTypeRefImpl")
         }.forEach {
             it.builder?.parents?.add(annotationContainerBuilder)
         }

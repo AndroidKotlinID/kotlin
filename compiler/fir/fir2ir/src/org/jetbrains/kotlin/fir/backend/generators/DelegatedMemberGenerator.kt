@@ -9,15 +9,14 @@ import org.jetbrains.kotlin.backend.common.ir.isFinalClass
 import org.jetbrains.kotlin.backend.common.ir.isOverridable
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.fir.backend.Fir2IrComponents
-import org.jetbrains.kotlin.fir.backend.FirMetadataSource
+import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.backend.declareThisReceiverParameter
-import org.jetbrains.kotlin.fir.backend.isOverriding
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.buildProperty
 import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameterCopy
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
+import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -35,13 +34,11 @@ import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
-import org.jetbrains.kotlin.ir.util.classId
-import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.hasAnnotation
-import org.jetbrains.kotlin.ir.util.isFakeOverride
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
+import org.jetbrains.kotlin.utils.DFS
 
 /**
  * A generator for delegated members from implementation by delegation.
@@ -55,22 +52,85 @@ internal class DelegatedMemberGenerator(
 ) : Fir2IrComponents by components {
 
     // Generate delegated members for [subClass]. The synthetic field [irField] has the super interface type.
-    fun generate(irField: IrField, subClass: IrClass) {
-        val superClass = (irField.type as IrSimpleTypeImpl).classOrNull?.owner ?: return
-        val superClassId = superClass.classId ?: return
-        superClass.declarations.filter {
-            it.isDelegatable() && !subClass.declarations.any { decl -> isOverriding(irBuiltIns, decl, it) }
-        }.forEach {
-            if (it is IrSimpleFunction) {
-                val firFunction = declarationStorage.findOverriddenFirFunction(it, superClassId) ?: return
-                val function = generateDelegatedFunction(subClass, irField, it, firFunction)
-                subClass.addMember(function)
-            } else if (it is IrProperty) {
-                val firProperty = declarationStorage.findOverriddenFirProperty(it, superClassId) ?: return
-                generateDelegatedProperty(subClass, irField, it, firProperty)
+    fun generate(irField: IrField, firSubClass: FirClass<*>, subClass: IrClass) {
+        val delegateClass = (irField.type as IrSimpleTypeImpl).classOrNull?.owner ?: return
+        val subClasses = mutableMapOf(delegateClass to mutableListOf(subClass))
+        DFS.dfs(
+            listOf(delegateClass), { node -> node.superTypes.mapNotNull { it.classOrNull?.owner } },
+            object : DFS.NodeHandler<IrClass, Unit> {
+                override fun beforeChildren(current: IrClass): Boolean {
+                    for (superType in current.superTypes) {
+                        superType.classOrNull?.owner?.let { subClasses.getOrPut(it) { mutableListOf() }.add(current) }
+                    }
+                    return true
+                }
+
+                override fun afterChildren(current: IrClass) = Unit
+                override fun result() = Unit
+            }
+        )
+
+        for ((superClass, mayOverride) in subClasses) {
+            val superClassId = superClass.classId ?: continue
+            if (superClassId == irBuiltIns.anyClass.owner.classId) continue
+            for (member in superClass.declarations) {
+                val delegatable = member.isDelegatable() && !DFS.ifAny(mayOverride, { subClasses[it] ?: emptyList() }) {
+                    // Delegate to the most specific version of each member.
+                    it.declarations.any { !it.isFakeOverride && it.overrides(member) }
+                }
+                if (!delegatable) continue
+                val scope = firSubClass.unsubstitutedScope(session, scopeSession)
+                if (member is IrSimpleFunction) {
+                    val firSuperFunction = declarationStorage.findOverriddenFirFunction(member, superClassId) ?: return
+                    var firSubFunction: FirSimpleFunction? = null
+                    scope.processFunctionsByName(member.name) {
+                        if (it.callableId.classId == firSubClass.classId) {
+                            var overriddenFunctionSymbol = it.overriddenSymbol
+                            while (overriddenFunctionSymbol != null) {
+                                if (overriddenFunctionSymbol.fir == firSuperFunction) {
+                                    firSubFunction = it.fir as FirSimpleFunction
+                                    break
+                                }
+                                overriddenFunctionSymbol = overriddenFunctionSymbol.overriddenSymbol
+                            }
+                        }
+                    }
+                    val irSubFunction = generateDelegatedFunction(subClass, irField, member, firSuperFunction)
+                    firSubFunction?.let { declarationStorage.cacheIrSimpleFunction(it, irSubFunction) }
+                    subClass.addMember(irSubFunction)
+                } else if (member is IrProperty) {
+                    val firSuperProperty = declarationStorage.findOverriddenFirProperty(member, superClassId) ?: return
+                    var firSubProperty: FirProperty? = null
+                    scope.processPropertiesByName(member.name) {
+                        if (it.callableId.classId == firSubClass.classId) {
+                            var overriddenPropertySymbol = it.overriddenSymbol
+                            while (overriddenPropertySymbol != null) {
+                                if (overriddenPropertySymbol.fir == firSuperProperty) {
+                                    firSubProperty = it.fir as FirProperty
+                                    break
+                                }
+                                overriddenPropertySymbol = overriddenPropertySymbol.overriddenSymbol
+                            }
+                        }
+                    }
+                    val irSubProperty = generateDelegatedProperty(subClass, irField, member, firSuperProperty)
+                    firSubProperty?.let { declarationStorage.cacheIrProperty(it, irSubProperty) }
+                }
             }
         }
     }
+
+    private fun IrDeclaration.overrides(other: IrDeclaration) = when {
+        // Imported declarations have overridden symbols, so check that first.
+        this is IrProperty && other is IrProperty ->
+            getter?.let { getter -> other.getter?.symbol in getter.overriddenSymbols }
+                ?: setter?.let { setter -> other.setter?.symbol in setter.overriddenSymbols }
+                ?: false
+        this is IrSimpleFunction && other is IrSimpleFunction ->
+            other.symbol in overriddenSymbols
+        else ->
+            false
+    } || isOverriding(irBuiltIns, this, other) // TODO check if this behaves correctly with generic arguments
 
     private fun IrDeclaration.isDelegatable(): Boolean {
         return isOverridable()
@@ -81,7 +141,7 @@ internal class DelegatedMemberGenerator(
     private fun IrDeclaration.isOverridable(): Boolean {
         return when (this) {
             is IrSimpleFunction -> this.isOverridable
-            is IrProperty -> visibility != Visibilities.PRIVATE && modality != Modality.FINAL && (parent as? IrClass)?.isFinalClass != true
+            is IrProperty -> visibility != org.jetbrains.kotlin.descriptors.DescriptorVisibilities.PRIVATE && modality != Modality.FINAL && (parent as? IrClass)?.isFinalClass != true
             else -> false
         }
     }
@@ -140,9 +200,9 @@ internal class DelegatedMemberGenerator(
                     val substParameters = mutableListOf<IrTypeParameterSymbol>()
                     val substArguments = mutableListOf<IrTypeArgument>()
                     initializeTypeSubstitution(substParameters, substArguments, irField.type)
-                    superFunction.typeParameters.forEach { typeParameter ->
+                    typeParameters = superFunction.typeParameters.map { typeParameter ->
                         val parameterDescriptor = WrappedTypeParameterDescriptor()
-                        typeParameters += symbolTable.declareScopedTypeParameter(
+                        symbolTable.declareScopedTypeParameter(
                             startOffset, endOffset, origin, parameterDescriptor
                         ) { symbol ->
                             irFactory.createTypeParameter(
@@ -164,15 +224,20 @@ internal class DelegatedMemberGenerator(
                                         type = IrSimpleTypeImpl(it.symbol, false, emptyList(), emptyList())
                                     )
                                 )
+                                it.superTypes += typeParameter.superTypes
                             }
                         }
                     }
                     irTypeSubstitutor = IrTypeSubstitutor(substParameters, substArguments, irBuiltIns)
                 }
-                superFunction.valueParameters.forEach { valueParameter ->
+                superFunction.extensionReceiverParameter?.let {
+                    val substitutedType = if (addTypeSubstitution) irTypeSubstitutor.substitute(it.type) else it.type
+                    extensionReceiverParameter = declareThisReceiverParameter(symbolTable, substitutedType, origin)
+                }
+                valueParameters = superFunction.valueParameters.map { valueParameter ->
                     val parameterDescriptor = WrappedValueParameterDescriptor()
                     val substedType = if (addTypeSubstitution) irTypeSubstitutor.substitute(valueParameter.type) else valueParameter.type
-                    valueParameters += symbolTable.declareValueParameter(
+                    symbolTable.declareValueParameter(
                         startOffset, endOffset, origin, parameterDescriptor, substedType
                     ) { symbol ->
                         irFactory.createValueParameter(
@@ -189,7 +254,7 @@ internal class DelegatedMemberGenerator(
                 val visibility = when (firSuperFunction) {
                     is FirSimpleFunction -> firSuperFunction.status.visibility
                     is FirPropertyAccessor -> firSuperFunction.status.visibility
-                    else -> Visibilities.PUBLIC
+                    else -> Visibilities.Public
                 }
                 metadata = FirMetadataSource.Function(
                     buildSimpleFunction {
@@ -272,12 +337,12 @@ internal class DelegatedMemberGenerator(
         irField: IrField,
         superProperty: IrProperty,
         firSuperProperty: FirProperty
-    ) {
+    ): IrProperty {
         val startOffset = irField.startOffset
         val endOffset = irField.endOffset
         val descriptor = WrappedPropertyDescriptor()
         val modality = if (superProperty.modality == Modality.ABSTRACT) Modality.OPEN else superProperty.modality
-        symbolTable.declareProperty(
+        return symbolTable.declareProperty(
             startOffset, endOffset,
             IrDeclarationOrigin.DELEGATED_MEMBER, descriptor, superProperty.isDelegated
         ) { symbol ->

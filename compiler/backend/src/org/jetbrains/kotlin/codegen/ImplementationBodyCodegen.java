@@ -62,12 +62,15 @@ import org.jetbrains.org.objectweb.asm.commons.Method;
 
 import java.util.*;
 
+import static org.jetbrains.kotlin.builtins.StandardNames.ENUM_VALUES;
+import static org.jetbrains.kotlin.builtins.StandardNames.ENUM_VALUE_OF;
 import static org.jetbrains.kotlin.codegen.AsmUtil.*;
 import static org.jetbrains.kotlin.codegen.CodegenUtilKt.isGenericToArray;
 import static org.jetbrains.kotlin.codegen.CodegenUtilKt.isNonGenericToArray;
 import static org.jetbrains.kotlin.codegen.JvmCodegenUtil.*;
 import static org.jetbrains.kotlin.codegen.binding.CodegenBinding.enumEntryNeedSubclass;
 import static org.jetbrains.kotlin.codegen.binding.CodegenBinding.getDelegatedLocalVariableMetadata;
+import static org.jetbrains.kotlin.load.java.DescriptorsJvmAbiUtil.*;
 import static org.jetbrains.kotlin.load.java.JvmAbi.*;
 import static org.jetbrains.kotlin.resolve.BindingContext.INDEXED_LVALUE_GET;
 import static org.jetbrains.kotlin.resolve.BindingContext.INDEXED_LVALUE_SET;
@@ -814,7 +817,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         }
         if (properVisibilityForCompanionObjectInstanceField &&
             JvmCodegenUtil.isCompanionObjectInInterfaceNotIntrinsic(companionObjectDescriptor) &&
-            Visibilities.isPrivate(companionObjectDescriptor.getVisibility())) {
+            DescriptorVisibilities.isPrivate(companionObjectDescriptor.getVisibility())) {
             fieldAccessFlags |= ACC_SYNTHETIC;
         }
         StackValue.Field field = StackValue.singleton(companionObjectDescriptor, typeMapper);

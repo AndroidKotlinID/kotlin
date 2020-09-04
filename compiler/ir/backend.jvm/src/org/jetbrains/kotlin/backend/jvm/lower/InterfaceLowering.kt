@@ -14,15 +14,15 @@ import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.backend.jvm.ir.*
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.impl.*
-import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrLocalDelegatedPropertySymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
@@ -36,7 +36,7 @@ import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
  */
 internal class InterfaceLowering(val context: JvmBackendContext) : IrElementTransformerVoid(), ClassLoweringPass {
 
-    private val removedFunctions = hashMapOf<IrFunctionSymbol, IrFunctionSymbol>()
+    private val removedFunctions = hashMapOf<IrSimpleFunctionSymbol, IrSimpleFunctionSymbol>()
 
     override fun lower(irClass: IrClass) {
         if (!irClass.isJvmInterface) return
@@ -104,7 +104,7 @@ internal class InterfaceLowering(val context: JvmBackendContext) : IrElementTran
                     val implementation = function.resolveFakeOverride() ?: error("No single implementation found for: ${function.render()}")
 
                     when {
-                        Visibilities.isPrivate(implementation.visibility) || implementation.isMethodOfAny() ->
+                        DescriptorVisibilities.isPrivate(implementation.visibility) || implementation.isMethodOfAny() ->
                             continue
                         !function.isDefinitelyNotDefaultImplsMethod(jvmDefaultMode, implementation) -> {
                             val defaultImpl = createDefaultImpl(function)
@@ -123,7 +123,7 @@ internal class InterfaceLowering(val context: JvmBackendContext) : IrElementTran
                  * 3) Private methods (not compiled to JVM defaults), default parameter dispatchers (not compiled to JVM defaults)
                  *    and $annotation methods are always moved without bridges
                  */
-                (Visibilities.isPrivate(function.visibility) && !function.isCompiledToJvmDefault(jvmDefaultMode))
+                (DescriptorVisibilities.isPrivate(function.visibility) && !function.isCompiledToJvmDefault(jvmDefaultMode))
                         || (function.origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER && !function.isCompiledToJvmDefault(jvmDefaultMode))
                         || function.origin == JvmLoweredDeclarationOrigin.SYNTHETIC_METHOD_FOR_PROPERTY_ANNOTATIONS -> {
                     val defaultImpl = createDefaultImpl(function)
@@ -199,7 +199,7 @@ internal class InterfaceLowering(val context: JvmBackendContext) : IrElementTran
 
     // Bridge from static to static method - simply fill the function arguments to the parameters.
     // By nature of the generation of both source and target of bridge, they line up.
-    private fun IrFunction.bridgeToStatic(callTarget: IrFunction) {
+    private fun IrFunction.bridgeToStatic(callTarget: IrSimpleFunction) {
         body = IrExpressionBodyImpl(IrCallImpl(startOffset, endOffset, returnType, callTarget.symbol).also { call ->
 
             callTarget.typeParameters.forEachIndexed { i, _ ->
@@ -214,7 +214,7 @@ internal class InterfaceLowering(val context: JvmBackendContext) : IrElementTran
 
     // Bridge from static DefaultImpl method to the interface method. Arguments need to
     // be shifted in presence of dispatch and extension receiver.
-    private fun IrFunction.bridgeViaAccessorTo(callTarget: IrFunction) {
+    private fun IrFunction.bridgeViaAccessorTo(callTarget: IrSimpleFunction) {
         body = IrExpressionBodyImpl(
             IrCallImpl(
                 startOffset,

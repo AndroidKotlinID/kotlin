@@ -94,11 +94,6 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         runTest("compiler/testData/codegen/bytecodeListing/jvmStaticWithDefaultParameters.kt");
     }
 
-    @TestMetadata("lateInitNotNull.kt")
-    public void testLateInitNotNull() throws Exception {
-        runTest("compiler/testData/codegen/bytecodeListing/lateInitNotNull.kt");
-    }
-
     @TestMetadata("localFunctionInInitBlock.kt")
     public void testLocalFunctionInInitBlock() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/localFunctionInInitBlock.kt");
@@ -139,11 +134,6 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         runTest("compiler/testData/codegen/bytecodeListing/noToArrayInJava.kt");
     }
 
-    @TestMetadata("platformTypes.kt")
-    public void testPlatformTypes() throws Exception {
-        runTest("compiler/testData/codegen/bytecodeListing/platformTypes.kt");
-    }
-
     @TestMetadata("privateDefaultImpls.kt")
     public void testPrivateDefaultImpls() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/privateDefaultImpls.kt");
@@ -157,6 +147,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
     @TestMetadata("privateNestedClassInInterface.kt")
     public void testPrivateNestedClassInInterface() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/privateNestedClassInInterface.kt");
+    }
+
+    @TestMetadata("rawTypeInSignature.kt")
+    public void testRawTypeInSignature() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/rawTypeInSignature.kt");
     }
 
     @TestMetadata("samAdapterAndInlinedOne.kt")
@@ -229,6 +224,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         @TestMetadata("onReceiver.kt")
         public void testOnReceiver() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/annotations/onReceiver.kt");
+        }
+
+        @TestMetadata("unsignedTypes.kt")
+        public void testUnsignedTypes() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/annotations/unsignedTypes.kt");
         }
     }
 
@@ -351,6 +351,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
 
             public void testAllFilesPresentInSpilling() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/coroutines/spilling"), Pattern.compile("^(.+)\\.kt$"), null, true);
+            }
+
+            @TestMetadata("booleanParameter.kt")
+            public void testBooleanParameter() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeListing/coroutines/spilling/booleanParameter.kt");
             }
 
             @TestMetadata("component1.kt")
@@ -656,6 +661,39 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         @TestMetadata("optionalExpectation.kt")
         public void testOptionalExpectation() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/multiplatform/optionalExpectation.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class NullabilityAnnotations extends AbstractBytecodeListingTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInNullabilityAnnotations() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations"), Pattern.compile("^(.+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("lateInitNotNull.kt")
+        public void testLateInitNotNull() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations/lateInitNotNull.kt");
+        }
+
+        @TestMetadata("nullabilityAnnotationsForReturnType.kt")
+        public void testNullabilityAnnotationsForReturnType() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations/nullabilityAnnotationsForReturnType.kt");
+        }
+
+        @TestMetadata("nullabilityAnnotationsOnDelegatedMembers.kt")
+        public void testNullabilityAnnotationsOnDelegatedMembers() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations/nullabilityAnnotationsOnDelegatedMembers.kt");
+        }
+
+        @TestMetadata("platformTypes.kt")
+        public void testPlatformTypes() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/nullabilityAnnotations/platformTypes.kt");
         }
     }
 

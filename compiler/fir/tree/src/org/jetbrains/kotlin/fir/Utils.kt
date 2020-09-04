@@ -23,7 +23,6 @@ private val PUBLIC_METHOD_NAMES_IN_OBJECT = setOf("equals", "hashCode", "getClas
 fun <R : FirTypeRef> R.copyWithNewSourceKind(newKind: FirFakeSourceElementKind): R {
     if (source == null) return this
     if (source?.kind == newKind) return this
-    if (this is FirDelegatedTypeRef) return this
     val newSource = source?.fakeElement(newKind)
 
     @Suppress("UNCHECKED_CAST")
@@ -51,6 +50,11 @@ fun <R : FirTypeRef> R.copyWithNewSourceKind(newKind: FirFakeSourceElementKind):
         }
         is FirFunctionTypeRefImpl -> buildFunctionTypeRefCopy(typeRef) {
             source = newSource
+        }
+        is FirDynamicTypeRef -> buildDynamicTypeRef {
+            source = newSource
+            isMarkedNullable = typeRef.isMarkedNullable
+            annotations += typeRef.annotations
         }
         is FirImplicitBuiltinTypeRef -> typeRef.withFakeSource(newKind)
         else -> TODO("Not implemented for ${typeRef::class}")

@@ -30,7 +30,6 @@ import org.jetbrains.kotlin.resolve.calls.inference.buildResultingSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.FreshVariableNewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutorByConstructorMap
-import org.jetbrains.kotlin.resolve.calls.inference.components.composeWith
 import org.jetbrains.kotlin.resolve.calls.inference.model.*
 import org.jetbrains.kotlin.resolve.calls.inference.substitute
 import org.jetbrains.kotlin.resolve.calls.inference.substituteAndApproximateTypes
@@ -155,6 +154,7 @@ class KotlinToResolvedCallTransformer(
                     }
                 }
 
+                @Suppress("UNCHECKED_CAST")
                 val resolvedCall = ktPrimitiveCompleter.completeResolvedCall(
                     candidate, baseResolvedCall.completedDiagnostic(resultSubstitutor),
                 ) as ResolvedCall<D>
@@ -808,10 +808,10 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
         shouldApproximate: Boolean = true
     ): CallableDescriptor {
         val inferredTypeVariablesSubstitutor = substitutor ?: FreshVariableNewTypeSubstitutor.Empty
-        val compositeSubstitutor = inferredTypeVariablesSubstitutor.composeWith(resolvedCallAtom.knownParametersSubstitutor)
 
-        return substitute(resolvedCallAtom.freshVariablesSubstitutor)
-            .substituteAndApproximateTypes(compositeSubstitutor, if (shouldApproximate) typeApproximator else null)
+        // TODO: merge last two substitutors to avoid redundant descriptor substitutions
+        return substitute(resolvedCallAtom.freshVariablesSubstitutor).substitute(resolvedCallAtom.knownParametersSubstitutor)
+            .substituteAndApproximateTypes(inferredTypeVariablesSubstitutor, if (shouldApproximate) typeApproximator else null)
     }
 
     fun getArgumentTypeForConstantConvertedArgument(valueArgument: ValueArgument): IntegerValueTypeConstant? {
@@ -903,12 +903,12 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
             }
 
         diagnostics.forEach {
-            val position = when (it) {
-                is NewConstraintError -> it.position.originalPosition()
-                is CapturedTypeFromSubtyping -> it.position.originalPosition()
-                is ConstrainingTypeIsError -> it.position.originalPosition()
+            val position = when (val error = it.constraintSystemError) {
+                is NewConstraintError -> error.position.originalPosition()
+                is CapturedTypeFromSubtyping -> error.position.originalPosition()
+                is ConstrainingTypeIsError -> error.position.originalPosition()
                 else -> null
-            } as? ArgumentConstraintPosition ?: return@forEach
+            } as? ArgumentConstraintPositionImpl ?: return@forEach
 
             val argument = position.argument.safeAs<PSIKotlinCallArgument>()?.valueArgument ?: return@forEach
             result += argument to it

@@ -586,6 +586,11 @@
     </intentionAction>
 
     <intentionAction>
+      <className>org.jetbrains.kotlin.idea.intentions.ConvertVariableAssignmentToExpressionIntention</className>
+      <category>Kotlin</category>
+    </intentionAction>
+
+    <intentionAction>
       <className>org.jetbrains.kotlin.idea.intentions.MergeIfsIntention</className>
       <category>Kotlin</category>
     </intentionAction>
@@ -1449,7 +1454,7 @@
 
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.UnusedEqualsInspection"
                      groupPath="Kotlin"
-                     groupName="Redundant constructs"
+                     groupName="Probable bugs"
                      enabledByDefault="true"
                      level="WARNING"
                      language="kotlin"
@@ -2498,6 +2503,14 @@
                      language="kotlin"
                      key="inspection.unused.unary.operator.display.name" bundle="messages.KotlinBundle"/>
 
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.ConvertInitializedValToNonNullTypeInspection"
+                     groupPath="Kotlin"
+                     groupName="Probable bugs"
+                     enabledByDefault="true"
+                     level="INFO"
+                     language="kotlin"
+                     key="inspection.convert.initialized.val.to.non.null.type.display.name" bundle="messages.KotlinBundle"/>
+
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.IncompleteDestructuringInspection"
                      groupPath="Kotlin"
                      groupName="Probable bugs"
@@ -2509,7 +2522,7 @@
     <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantInnerClassModifierInspection"
                      groupPath="Kotlin"
                      groupName="Redundant constructs"
-                     enabledByDefault="true"
+                     enabledByDefault="false"
                      level="WARNING"
                      language="kotlin"
                      key="inspection.redundant.inner.class.modifier.display.name" bundle="messages.KotlinBundle"/>
@@ -2537,6 +2550,23 @@
                      level="WEAK WARNING"
                      language="kotlin"
                      key="inspection.replace.with.ignore.case.equals.display.name" bundle="messages.KotlinBundle"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.RedundantNullableReturnTypeInspection"
+                     groupPath="Kotlin"
+                     groupName="Redundant constructs"
+                     enabledByDefault="true"
+                     level="WARNING"
+                     language="kotlin"
+                     key="inspection.redundant.nullable.return.type.display.name" bundle="messages.KotlinBundle"/>
+
+    <localInspection implementationClass="org.jetbrains.kotlin.idea.inspections.SimplifyNestedEachInScopeFunctionInspection"
+                     groupPath="Kotlin"
+                     groupName="Style issues"
+                     enabledByDefault="true"
+                     level="WEAK WARNING"
+                     language="kotlin"
+                     key="inspection.simplifiable.scope.function.display.name" bundle="messages.KotlinBundle"/>
+
   </extensions>
 
 </idea-plugin>

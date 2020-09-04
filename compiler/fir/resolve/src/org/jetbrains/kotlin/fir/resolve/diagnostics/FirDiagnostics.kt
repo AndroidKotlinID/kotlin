@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.calls.model.KotlinCallDiagnostic
+import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintSystemError
 
 class ConeUnresolvedReferenceError(val name: Name? = null) : ConeDiagnostic() {
     override val reason: String get() = "Unresolved reference" + if (name != null) ": ${name.asString()}" else ""
@@ -38,12 +38,12 @@ class ConeHiddenCandidateError(
 class ConeInapplicableCandidateError(
     val applicability: CandidateApplicability,
     val candidateSymbol: AbstractFirBasedSymbol<*>,
-    val diagnostics: List<KotlinCallDiagnostic>
+    val errors: List<ConstraintSystemError>
 ) : ConeDiagnostic() {
     constructor(applicability: CandidateApplicability, candidate: Candidate) : this(
         applicability,
         candidate.symbol,
-        candidate.system.diagnostics
+        candidate.system.errors
     )
 
     override val reason: String get() = "Inapplicable($applicability): ${describeSymbol(candidateSymbol)}"
@@ -74,6 +74,10 @@ class ConeIllegalAnnotationError(val name: Name) : ConeDiagnostic() {
 
 class ConeWrongNumberOfTypeArgumentsError(val desiredCount: Int, val type: FirRegularClassSymbol) : ConeDiagnostic() {
     override val reason: String get() = "Wrong number of type arguments"
+}
+
+class ConeInstanceAccessBeforeSuperCall(val target: String) : ConeDiagnostic() {
+    override val reason: String get() = "Cannot access ''${target}'' before superclass constructor has been called"
 }
 
 private fun describeSymbol(symbol: AbstractFirBasedSymbol<*>): String {

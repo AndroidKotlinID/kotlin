@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.gradle.targets.js.npm
 
+import com.google.gson.ExclusionStrategy
+import com.google.gson.FieldAttributes
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import org.jetbrains.kotlin.gradle.internal.ensureParentDirsCreated
@@ -15,6 +17,8 @@ class PackageJson(
     var name: String,
     var version: String
 ) {
+    private val customFields = mutableMapOf<String, Any>()
+
     val empty: Boolean
         get() = main == null &&
                 private == null &&
@@ -30,6 +34,10 @@ class PackageJson(
     var main: String? = null
 
     var workspaces: Collection<String>? = null
+
+    var resolutions: Map<String, String>? = null
+
+    var types: String? = null
 
     @Suppress("USELESS_ELVIS")
     val devDependencies = mutableMapOf<String, String>()
@@ -51,6 +59,10 @@ class PackageJson(
     val bundledDependencies = mutableListOf<String>()
         get() = field ?: mutableListOf()
 
+    fun customField(key: String, value: Any) {
+        customFields[key] = value
+    }
+
     companion object {
         fun scopedName(name: String): ScopedName = if (name.contains("/")) ScopedName(
             scope = name.substringBeforeLast("/").removePrefix("@"),
@@ -68,11 +80,26 @@ class PackageJson(
     fun saveTo(packageJsonFile: File) {
         val gson = GsonBuilder()
             .setPrettyPrinting()
+            .addSerializationExclusionStrategy(
+                object : ExclusionStrategy {
+                    override fun shouldSkipField(f: FieldAttributes?): Boolean =
+                        f?.name == this@PackageJson::customFields.name
+
+                    override fun shouldSkipClass(clazz: Class<*>?): Boolean =
+                        false
+                }
+            )
             .create()
 
         packageJsonFile.ensureParentDirsCreated()
+        val jsonTree = gson.toJsonTree(this)
+        customFields
+            .forEach { (key, value) ->
+                val valueElement = gson.toJsonTree(value)
+                jsonTree.asJsonObject.add(key, valueElement)
+            }
         packageJsonFile.writer().use {
-            gson.toJson(this, it)
+            gson.toJson(jsonTree, it)
         }
     }
 }

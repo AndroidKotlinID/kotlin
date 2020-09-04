@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.backend.jvm.ir.isStaticInlineClassReplacement
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.InlineClassAbi.mangledNameFor
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
@@ -44,7 +44,7 @@ class MemoizedInlineClassReplacements(private val mangleReturnTypes: Boolean, pr
             when {
                 // Don't mangle anonymous or synthetic functions
                 it.origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA ||
-                        (it.origin == IrDeclarationOrigin.DELEGATED_PROPERTY_ACCESSOR && it.visibility == Visibilities.LOCAL) ||
+                        (it.origin == IrDeclarationOrigin.DELEGATED_PROPERTY_ACCESSOR && it.visibility == DescriptorVisibilities.LOCAL) ||
                         it.isStaticInlineClassReplacement ||
                         it.origin.isSynthetic -> null
 
@@ -184,7 +184,7 @@ class MemoizedInlineClassReplacements(private val mangleReturnTypes: Boolean, pr
         replacementOrigin: IrDeclarationOrigin,
         noFakeOverride: Boolean = false,
         body: IrFunction.() -> Unit
-    ): IrSimpleFunction = irFactory.buildFun(function.descriptor) {
+    ): IrSimpleFunction = irFactory.buildFun {
         updateFrom(function)
         if (function is IrConstructor) {
             // The [updateFrom] call will set the modality to FINAL for constructors, while the JVM backend would use OPEN here.
@@ -211,16 +211,18 @@ class MemoizedInlineClassReplacements(private val mangleReturnTypes: Boolean, pr
             metadata = function.metadata
             function.metadata = null
         }
+        copyAttributes(function as? IrAttributeContainer)
 
         if (function is IrSimpleFunction) {
             val propertySymbol = function.correspondingPropertySymbol
             if (propertySymbol != null) {
                 val property = propertyMap.getOrPut(propertySymbol) {
-                    irFactory.buildProperty(propertySymbol.descriptor) {
+                    irFactory.buildProperty() {
                         name = propertySymbol.owner.name
                         updateFrom(propertySymbol.owner)
                     }.apply {
                         parent = propertySymbol.owner.parent
+                        copyAttributes(propertySymbol.owner)
                     }
                 }
                 correspondingPropertySymbol = property.symbol

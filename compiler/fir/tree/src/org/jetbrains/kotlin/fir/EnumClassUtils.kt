@@ -48,7 +48,7 @@ fun FirRegularClassBuilder.generateValuesFunction(
             )
         }
         name = ENUM_VALUES
-        this.status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
+        this.status = FirDeclarationStatusImpl(Visibilities.Public, Modality.FINAL).apply {
             isStatic = true
             isExpect = makeExpect
         }
@@ -75,7 +75,7 @@ fun FirRegularClassBuilder.generateValueOfFunction(
             )
         }
         name = ENUM_VALUE_OF
-        status = FirDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL).apply {
+        status = FirDeclarationStatusImpl(Visibilities.Public, Modality.FINAL).apply {
             isStatic = true
             isExpect = makeExpect
         }

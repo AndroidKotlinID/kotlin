@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.fir.declarations.impl
 
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibility
-import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.declarations.FirResolvedDeclarationStatus
 
 class FirResolvedDeclarationStatusImpl(

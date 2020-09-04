@@ -7,8 +7,8 @@ package org.jetbrains.kotlin.descriptors.commonizer.cir.factory
 
 import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
 import org.jetbrains.kotlin.descriptors.ClassifierDescriptorWithTypeParameters
-import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
 import org.jetbrains.kotlin.descriptors.commonizer.cir.impl.CirSimpleTypeImpl
 import org.jetbrains.kotlin.descriptors.commonizer.utils.Interner
@@ -25,29 +25,30 @@ object CirTypeFactory {
         }
     }
 
-    fun create(source: SimpleType): CirSimpleType {
-        val abbreviation: SimpleType = (source as? AbbreviatedType)?.abbreviation ?: source
-        val classifierDescriptor: ClassifierDescriptor = abbreviation.declarationDescriptor
+    fun create(source: SimpleType, useAbbreviation: Boolean = true): CirSimpleType {
+        @Suppress("NAME_SHADOWING")
+        val source = if (useAbbreviation && source is AbbreviatedType) source.abbreviation else source
+        val classifierDescriptor: ClassifierDescriptor = source.declarationDescriptor
 
         return create(
             classifierId = CirClassifierIdFactory.create(classifierDescriptor),
-            visibility = (classifierDescriptor as? ClassifierDescriptorWithTypeParameters)?.visibility ?: Visibilities.UNKNOWN,
-            arguments = abbreviation.arguments.map { projection ->
+            visibility = (classifierDescriptor as? ClassifierDescriptorWithTypeParameters)?.visibility ?: DescriptorVisibilities.UNKNOWN,
+            arguments = source.arguments.map { projection ->
                 CirTypeProjection(
                     projectionKind = projection.projectionKind,
                     isStarProjection = projection.isStarProjection,
                     type = create(projection.type)
                 )
             },
-            isMarkedNullable = abbreviation.isMarkedNullable
+            isMarkedNullable = source.isMarkedNullable
         )
     }
 
     fun create(
-        classifierId: CirClassifierId,
-        visibility: Visibility,
-        arguments: List<CirTypeProjection>,
-        isMarkedNullable: Boolean
+            classifierId: CirClassifierId,
+            visibility: DescriptorVisibility,
+            arguments: List<CirTypeProjection>,
+            isMarkedNullable: Boolean
     ): CirSimpleType {
         return interner.intern(
             CirSimpleTypeImpl(

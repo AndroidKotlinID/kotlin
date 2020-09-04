@@ -7,35 +7,31 @@ package org.jetbrains.kotlin.fir.analysis
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
+import org.jetbrains.kotlin.fir.SessionConfiguration
+import org.jetbrains.kotlin.fir.analysis.cfa.AbstractFirPropertyInitializationChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.cfa.FirControlFlowChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.*
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.*
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
 
 class CheckersComponent : FirSessionComponent {
-    companion object {
-        fun componentWithDefaultCheckers(): CheckersComponent {
-            return CheckersComponent().apply {
-                register(CommonDeclarationCheckers)
-                register(CommonExpressionCheckers)
-            }
-        }
-    }
-
     val declarationCheckers: DeclarationCheckers get() = _declarationCheckers
     private val _declarationCheckers = ComposedDeclarationCheckers()
 
     val expressionCheckers: ExpressionCheckers get() = _expressionCheckers
     private val _expressionCheckers = ComposedExpressionCheckers()
 
+    @SessionConfiguration
     fun register(checkers: DeclarationCheckers) {
         _declarationCheckers.register(checkers)
     }
 
+    @SessionConfiguration
     fun register(checkers: ExpressionCheckers) {
         _expressionCheckers.register(checkers)
     }
 
+    @SessionConfiguration
     fun register(checkers: FirAdditionalCheckersExtension) {
         register(checkers.declarationCheckers)
         register(checkers.expressionCheckers)
@@ -44,36 +40,38 @@ class CheckersComponent : FirSessionComponent {
 
 val FirSession.checkersComponent: CheckersComponent by FirSession.sessionComponentAccessor()
 
-/*
- * TODO: in future rename to `registerCheckersComponent` and configure
- *    exact checkers according to platforms of current session
- */
-fun FirSession.registerCheckersComponent() {
-    register(CheckersComponent::class, CheckersComponent.componentWithDefaultCheckers())
-}
-
 private class ComposedDeclarationCheckers : DeclarationCheckers() {
+    override val fileCheckers: List<FirFileChecker>
+        get() = _fileCheckers
     override val declarationCheckers: List<FirBasicDeclarationChecker>
         get() = _declarationCheckers
-
     override val memberDeclarationCheckers: List<FirMemberDeclarationChecker>
         get() = _memberDeclarationCheckers
-
+    override val regularClassCheckers: List<FirRegularClassChecker>
+        get() = _regularClassCheckers
     override val constructorCheckers: List<FirConstructorChecker>
         get() = _constructorCheckers
     override val controlFlowAnalyserCheckers: List<FirControlFlowChecker>
         get() = _controlFlowAnalyserCheckers
+    override val variableAssignmentCfaBasedCheckers: List<AbstractFirPropertyInitializationChecker>
+        get() = _variableAssignmentCfaBasedCheckers
 
+    private val _fileCheckers: MutableList<FirFileChecker> = mutableListOf()
     private val _declarationCheckers: MutableList<FirBasicDeclarationChecker> = mutableListOf()
     private val _memberDeclarationCheckers: MutableList<FirMemberDeclarationChecker> = mutableListOf()
+    private val _regularClassCheckers: MutableList<FirRegularClassChecker> = mutableListOf()
     private val _constructorCheckers: MutableList<FirConstructorChecker> = mutableListOf()
     private val _controlFlowAnalyserCheckers: MutableList<FirControlFlowChecker> = mutableListOf()
+    private val _variableAssignmentCfaBasedCheckers: MutableList<AbstractFirPropertyInitializationChecker> = mutableListOf()
 
     fun register(checkers: DeclarationCheckers) {
+        _fileCheckers += checkers.allFileCheckers
         _declarationCheckers += checkers.declarationCheckers
         _memberDeclarationCheckers += checkers.allMemberDeclarationCheckers
+        _regularClassCheckers += checkers.allRegularClassCheckers
         _constructorCheckers += checkers.allConstructorCheckers
         _controlFlowAnalyserCheckers += checkers.controlFlowAnalyserCheckers
+        _variableAssignmentCfaBasedCheckers += checkers.variableAssignmentCfaBasedCheckers
     }
 }
 

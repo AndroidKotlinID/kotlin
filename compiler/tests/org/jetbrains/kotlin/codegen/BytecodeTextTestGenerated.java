@@ -1421,6 +1421,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/nonLocalReturn.kt");
         }
 
+        @TestMetadata("returnResult.kt")
+        public void testReturnResult() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/coroutines/returnResult.kt");
+        }
+
         @TestMetadata("returnUnitInLambda.kt")
         public void testReturnUnitInLambda_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/bytecodeText/coroutines/returnUnitInLambda.kt", "kotlin.coroutines.experimental");
@@ -1954,6 +1959,64 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("primitive.kt")
         public void testPrimitive() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/exclExcl/primitive.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class FieldsForCapturedValues extends AbstractBytecodeTextTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInFieldsForCapturedValues() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+        }
+
+        @TestMetadata("extensionLambdaExtensionReceiver.kt")
+        public void testExtensionLambdaExtensionReceiver() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/extensionLambdaExtensionReceiver.kt");
+        }
+
+        @TestMetadata("extensionReceiver.kt")
+        public void testExtensionReceiver() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/extensionReceiver.kt");
+        }
+
+        @TestMetadata("innerAndOuterThis.kt")
+        public void testInnerAndOuterThis() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/innerAndOuterThis.kt");
+        }
+
+        @TestMetadata("labeledExtensionLambdaExtensionReceiver.kt")
+        public void testLabeledExtensionLambdaExtensionReceiver() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/labeledExtensionLambdaExtensionReceiver.kt");
+        }
+
+        @TestMetadata("multipleExtensionReceivers.kt")
+        public void testMultipleExtensionReceivers() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/multipleExtensionReceivers.kt");
+        }
+
+        @TestMetadata("outerThis.kt")
+        public void testOuterThis() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/outerThis.kt");
+        }
+
+        @TestMetadata("outerThisInInnerConstructor.kt")
+        public void testOuterThisInInnerConstructor() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/outerThisInInnerConstructor.kt");
+        }
+
+        @TestMetadata("outerThisInInnerInitBlock.kt")
+        public void testOuterThisInInnerInitBlock() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/outerThisInInnerInitBlock.kt");
+        }
+
+        @TestMetadata("this.kt")
+        public void testThis() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/fieldsForCapturedValues/this.kt");
         }
     }
 
@@ -3094,6 +3157,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/skipCallToUnderlyingValueOfInlineClass.kt");
         }
 
+        @TestMetadata("suspendFunctionMangling.kt")
+        public void testSuspendFunctionMangling() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/inlineClasses/suspendFunctionMangling.kt");
+        }
+
         @TestMetadata("toStringIsCalledByInlineClass.kt")
         public void testToStringIsCalledByInlineClass() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/inlineClasses/toStringIsCalledByInlineClass.kt");
@@ -4220,6 +4288,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/ranges/inMixedUnsignedRange.kt");
         }
 
+        @TestMetadata("inMixedUnsignedRange_2.kt")
+        public void testInMixedUnsignedRange_2() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/ranges/inMixedUnsignedRange_2.kt");
+        }
+
         @TestMetadata("inNonMatchingRangeIntrinsified.kt")
         public void testInNonMatchingRangeIntrinsified() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/ranges/inNonMatchingRangeIntrinsified.kt");
@@ -4863,19 +4936,14 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItems.kt");
         }
 
-        @TestMetadata("duplicatingItemsSameHashCode.kt")
-        public void testDuplicatingItemsSameHashCode() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItemsSameHashCode.kt");
+        @TestMetadata("duplicatingItemsSameHashCodeFewBranches.kt")
+        public void testDuplicatingItemsSameHashCodeFewBranches() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItemsSameHashCodeFewBranches.kt");
         }
 
-        @TestMetadata("duplicatingItemsSameHashCode2.kt")
-        public void testDuplicatingItemsSameHashCode2() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItemsSameHashCode2.kt");
-        }
-
-        @TestMetadata("duplicatingItemsSameHashCode3.kt")
-        public void testDuplicatingItemsSameHashCode3() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItemsSameHashCode3.kt");
+        @TestMetadata("duplicatingItemsSameHashCodeMoreBranches.kt")
+        public void testDuplicatingItemsSameHashCodeMoreBranches() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/whenStringOptimization/duplicatingItemsSameHashCodeMoreBranches.kt");
         }
 
         @TestMetadata("expression.kt")

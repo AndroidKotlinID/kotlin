@@ -27,7 +27,6 @@ class ProjectTemplateSettingComponent(
     context
 ) {
     override val validationIndicator: ValidationIndicator? get() = null
-    override val forceLabelCenteringOffset: Int? = 4
     private val templateDescriptionComponent = TemplateDescriptionComponent().asSubComponent()
 
     private val templateGroups = setting.type.values
@@ -44,6 +43,9 @@ class ProjectTemplateSettingComponent(
         },
         onValueSelected = { value = it }
     )
+
+    override val alignment: TitleComponentAlignment
+        get() = TitleComponentAlignment.AlignFormTopWithPadding(4)
 
     private val borderedPanel = list.addBorder(BorderFactory.createLineBorder(JBColor.border()))
 
@@ -85,6 +87,7 @@ private val ProjectTemplate.icon: Icon
         FullStackWebApplicationProjectTemplate -> KotlinIcons.Wizard.WEB
         NativeApplicationProjectTemplate -> KotlinIcons.Wizard.NATIVE
         FrontendApplicationProjectTemplate -> KotlinIcons.Wizard.JS
+        ReactApplicationProjectTemplate -> KotlinIcons.Wizard.REACT_JS
         MultiplatformMobileApplicationProjectTemplate -> KotlinIcons.Wizard.MULTIPLATFORM_MOBILE
         MultiplatformMobileLibraryProjectTemplate -> KotlinIcons.Wizard.MULTIPLATFORM_MOBILE_LIBRARY
         NodeJsApplicationProjectTemplate -> KotlinIcons.Wizard.NODE_JS

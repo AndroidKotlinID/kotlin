@@ -90,8 +90,7 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val equalityOperatorCall = element("EqualityOperatorCall", Expression, expression, call)
     val whenExpression = element("WhenExpression", Expression, expression, resolvable)
     val whenBranch = element("WhenBranch", Expression)
-    val qualifiedAccessWithoutCallee = element("QualifiedAccessWithoutCallee", Expression, statement)
-    val qualifiedAccess = element("QualifiedAccess", Expression, qualifiedAccessWithoutCallee, resolvable)
+    val qualifiedAccess = element("QualifiedAccess", Expression, resolvable, statement)
     val checkNotNullCall = element("CheckNotNullCall", Expression, expression, call, resolvable)
     val elvisExpression = element("ElvisExpression", Expression, expression, resolvable)
 
@@ -143,7 +142,6 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
 
     val resolvedTypeRef = element("ResolvedTypeRef", TypeRef, typeRef)
     val errorTypeRef = element("ErrorTypeRef", TypeRef, resolvedTypeRef, diagnosticHolder)
-    val delegatedTypeRef = element("DelegatedTypeRef", TypeRef, typeRef)
     val typeRefWithNullability = element("TypeRefWithNullability", TypeRef, typeRef)
     val userTypeRef = element("UserTypeRef", TypeRef, typeRefWithNullability)
     val dynamicTypeRef = element("DynamicTypeRef", TypeRef, typeRefWithNullability)
@@ -152,7 +150,10 @@ object FirTreeBuilder : AbstractFirTreeBuilder() {
     val implicitTypeRef = element("ImplicitTypeRef", TypeRef, typeRef)
     val composedSuperTypeRef = element("ComposedSuperTypeRef", TypeRef, typeRef)
 
+    val effectDeclaration = element("EffectDeclaration", Contracts)
+
     val contractDescription = element("ContractDescription", Contracts)
+    val legacyRawContractDescription = element("LegacyRawContractDescription", Contracts, contractDescription)
     val rawContractDescription = element("RawContractDescription", Contracts, contractDescription)
     val resolvedContractDescription = element("ResolvedContractDescription", Contracts, contractDescription)
 }

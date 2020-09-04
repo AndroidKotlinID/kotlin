@@ -6,8 +6,8 @@
 package org.jetbrains.kotlin.backend.jvm.codegen
 
 import org.jetbrains.kotlin.backend.common.CodegenUtil
+import org.jetbrains.kotlin.backend.common.ir.allOverridden
 import org.jetbrains.kotlin.backend.common.lower.LocalDeclarationsLowering
-import org.jetbrains.kotlin.backend.common.lower.allOverridden
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.ir.isStaticInlineClassReplacement
@@ -49,11 +49,26 @@ internal fun MethodNode.acceptWithStateMachine(
         irFunction.psiElement ?: classCodegen.irClass.psiElement
     else
         classCodegen.context.suspendLambdaToOriginalFunctionMap[classCodegen.irClass.attributeOwnerId]!!.psiElement
+
+    val lineNumber = if (irFunction.isSuspend) {
+        val irFile = irFunction.file
+        if (irFunction.startOffset >= 0) {
+            // if it suspend function like `suspend fun foo(...)`
+            irFile.fileEntry.getLineNumber(irFunction.startOffset)
+        } else {
+            val klass = classCodegen.irClass
+            if (klass.startOffset >= 0) {
+                // if it suspend lambda transformed into class `runSuspend { .... }`
+                irFile.fileEntry.getLineNumber(klass.startOffset)
+            } else 0
+        }
+    } else element?.let { CodegenUtil.getLineNumberForElement(it, false) } ?: 0
+
     val visitor = CoroutineTransformerMethodVisitor(
         methodVisitor, access, name, desc, signature, exceptions.toTypedArray(),
         obtainClassBuilderForCoroutineState = obtainContinuationClassBuilder,
         reportSuspensionPointInsideMonitor = { reportSuspensionPointInsideMonitor(element as KtElement, state, it) },
-        lineNumber = element?.let { CodegenUtil.getLineNumberForElement(it, false) } ?: 0,
+        lineNumber = lineNumber,
         sourceFile = classCodegen.irClass.file.name,
         languageVersionSettings = languageVersionSettings,
         shouldPreserveClassInitialization = state.constructorCallNormalizationMode.shouldPreserveClassInitialization,
@@ -71,11 +86,8 @@ internal fun MethodNode.acceptWithStateMachine(
     accept(visitor)
 }
 
-private fun IrFunction.anyOfOverriddenFunctionsReturnsNonUnit(): Boolean {
-    return (this as? IrSimpleFunction)?.allOverridden()?.toList()?.let { functions ->
-        functions.isNotEmpty() && functions.any { !it.returnType.isUnit() }
-    } == true
-}
+private fun IrFunction.anyOfOverriddenFunctionsReturnsNonUnit(): Boolean =
+    this is IrSimpleFunction && allOverridden().any { !it.returnType.isUnit() }
 
 internal fun IrFunction.suspendForInlineToOriginal(): IrSimpleFunction? {
     if (origin != JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE &&

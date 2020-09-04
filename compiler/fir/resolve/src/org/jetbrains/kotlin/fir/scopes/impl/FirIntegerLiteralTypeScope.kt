@@ -81,7 +81,7 @@ class FirIntegerLiteralTypeScope(private val session: FirSession, val isUnsigned
         FirILTTypeRefPlaceHolder(isUnsigned),
         receiverTypeRef = null,
         ALL_OPERATORS.getValue(name),
-        FirResolvedDeclarationStatusImpl(Visibilities.PUBLIC, Modality.FINAL),
+        FirResolvedDeclarationStatusImpl(Visibilities.Public, Modality.FINAL),
         symbol
     ).apply {
         resolvePhase = FirResolvePhase.BODY_RESOLVE
@@ -97,15 +97,19 @@ class FirIntegerLiteralTypeScope(private val session: FirSession, val isUnsigned
     override fun processPropertiesByName(name: Name, processor: (FirVariableSymbol<*>) -> Unit) {
     }
 
-    override fun processOverriddenFunctionsWithDepth(
+    override fun processDirectOverriddenFunctionsWithBaseScope(
         functionSymbol: FirFunctionSymbol<*>,
-        processor: (FirFunctionSymbol<*>, Int) -> ProcessorAction
+        processor: (FirFunctionSymbol<*>, FirTypeScope) -> ProcessorAction
     ): ProcessorAction = ProcessorAction.NEXT
 
-    override fun processOverriddenPropertiesWithDepth(
+    override fun processDirectOverriddenPropertiesWithBaseScope(
         propertySymbol: FirPropertySymbol,
-        processor: (FirPropertySymbol, Int) -> ProcessorAction
+        processor: (FirPropertySymbol, FirTypeScope) -> ProcessorAction
     ): ProcessorAction = ProcessorAction.NEXT
+
+    override fun getCallableNames(): Set<Name> = ALL_OPERATORS.keys
+
+    override fun getClassifierNames(): Set<Name> = emptySet()
 }
 
 @OptIn(FirImplementationDetail::class)

@@ -23,7 +23,9 @@ import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.resolve.calls.components.*
 import org.jetbrains.kotlin.resolve.calls.inference.NewConstraintSystem
 import org.jetbrains.kotlin.resolve.calls.inference.components.FreshVariableNewTypeSubstitutor
+import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
+import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintSystemError
 import org.jetbrains.kotlin.resolve.calls.inference.model.LowerPriorityToPreserveCompatibility
 import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintSystemImpl
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
@@ -60,6 +62,10 @@ interface KotlinDiagnosticsHolder {
 
 fun KotlinDiagnosticsHolder.addDiagnosticIfNotNull(diagnostic: KotlinCallDiagnostic?) {
     diagnostic?.let { addDiagnostic(it) }
+}
+
+fun KotlinDiagnosticsHolder.addError(error: ConstraintSystemError) {
+    addDiagnostic(error.asDiagnostic())
 }
 
 /**
@@ -161,7 +167,7 @@ class KotlinResolutionCandidate(
         get() {
             processParts(stopOnFirstError = false)
 
-            val systemApplicability = getResultApplicability(getSystem().diagnostics)
+            val systemApplicability = getResultApplicability(getSystem().errors)
             return maxOf(currentApplicability, systemApplicability, variableApplicability)
         }
 
@@ -189,7 +195,7 @@ class MutableResolvedCallAtom(
     override lateinit var typeArgumentMappingByOriginal: TypeArgumentsToParametersMapper.TypeArgumentsMapping
     override lateinit var argumentMappingByOriginal: Map<ValueParameterDescriptor, ResolvedCallArgument>
     override lateinit var freshVariablesSubstitutor: FreshVariableNewTypeSubstitutor
-    override lateinit var knownParametersSubstitutor: TypeSubstitutor
+    override lateinit var knownParametersSubstitutor: NewTypeSubstitutor
     lateinit var argumentToCandidateParameter: Map<KotlinCallArgument, ValueParameterDescriptor>
     private var samAdapterMap: HashMap<KotlinCallArgument, SamConversionDescription>? = null
     private var suspendAdapterMap: HashMap<KotlinCallArgument, UnwrappedType>? = null
@@ -252,10 +258,10 @@ class MutableResolvedCallAtom(
 
 fun KotlinResolutionCandidate.markCandidateForCompatibilityResolve() {
     if (callComponents.languageVersionSettings.supportsFeature(LanguageFeature.DisableCompatibilityModeForNewInference)) return
-    addDiagnostic(LowerPriorityToPreserveCompatibility)
+    addDiagnostic(LowerPriorityToPreserveCompatibility.asDiagnostic())
 }
 
 fun CallableReferencesCandidateFactory.markCandidateForCompatibilityResolve(diagnostics: SmartList<KotlinCallDiagnostic>) {
     if (callComponents.languageVersionSettings.supportsFeature(LanguageFeature.DisableCompatibilityModeForNewInference)) return
-    diagnostics.add(LowerPriorityToPreserveCompatibility)
+    diagnostics.add(LowerPriorityToPreserveCompatibility.asDiagnostic())
 }

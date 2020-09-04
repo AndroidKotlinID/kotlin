@@ -7,10 +7,8 @@ package org.jetbrains.kotlin.fir.resolve.inference
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.PrivateForInline
-import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculator
-import org.jetbrains.kotlin.fir.types.ConeClassErrorType
 import org.jetbrains.kotlin.fir.types.ConeInferenceContext
 import org.jetbrains.kotlin.resolve.calls.inference.components.ConstraintIncorporator
 import org.jetbrains.kotlin.resolve.calls.inference.components.ConstraintInjector
@@ -18,8 +16,6 @@ import org.jetbrains.kotlin.resolve.calls.inference.components.ResultTypeResolve
 import org.jetbrains.kotlin.resolve.calls.inference.components.TrivialConstraintTypeInferenceOracle
 import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintSystemImpl
 import org.jetbrains.kotlin.types.AbstractTypeApproximator
-import org.jetbrains.kotlin.types.checker.KotlinTypeRefiner
-import org.jetbrains.kotlin.types.model.SimpleTypeMarker
 
 class InferenceComponents(
     val ctx: ConeInferenceContext,
@@ -27,14 +23,10 @@ class InferenceComponents(
     val returnTypeCalculator: ReturnTypeCalculator,
     val scopeSession: ScopeSession
 ) {
-    val approximator: AbstractTypeApproximator = object : AbstractTypeApproximator(ctx) {
-        override fun createErrorType(message: String): SimpleTypeMarker {
-            return ConeClassErrorType(ConeIntermediateDiagnostic(message))
-        }
-    }
+    val approximator: AbstractTypeApproximator = object : AbstractTypeApproximator(ctx) {}
     val trivialConstraintTypeInferenceOracle = TrivialConstraintTypeInferenceOracle.create(ctx)
-    private val incorporator = ConstraintIncorporator(approximator, trivialConstraintTypeInferenceOracle)
-    private val injector = ConstraintInjector(incorporator, approximator, KotlinTypeRefiner.Default)
+    private val incorporator = ConstraintIncorporator(approximator, trivialConstraintTypeInferenceOracle, ConeConstraintSystemUtilContext)
+    private val injector = ConstraintInjector(incorporator, approximator)
     val resultTypeResolver = ResultTypeResolver(approximator, trivialConstraintTypeInferenceOracle)
 
     @set:PrivateForInline

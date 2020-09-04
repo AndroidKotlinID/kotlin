@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
-import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.codegen.ASSERTIONS_DISABLED_FIELD_NAME
 import org.jetbrains.kotlin.config.JVMAssertionsMode
 import org.jetbrains.kotlin.ir.IrElement
@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrCompositeImpl
 import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
-import org.jetbrains.kotlin.load.java.JavaVisibilities
+import org.jetbrains.kotlin.load.java.JavaDescriptorVisibilities
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
@@ -129,7 +129,7 @@ private class AssertionLowering(private val context: JvmBackendContext) :
     }
 
     private val IrFunction.isAssert: Boolean
-        get() = name.asString() == "assert" && getPackageFragment()?.fqName == KotlinBuiltIns.BUILT_INS_PACKAGE_FQ_NAME
+        get() = name.asString() == "assert" && getPackageFragment()?.fqName == StandardNames.BUILT_INS_PACKAGE_FQ_NAME
 }
 
 private fun IrBuilderWithScope.getJavaClass(backendContext: JvmBackendContext, irClass: IrClass) =
@@ -141,7 +141,7 @@ fun IrClass.buildAssertionsDisabledField(backendContext: JvmBackendContext, topL
     factory.buildField {
         name = Name.identifier(ASSERTIONS_DISABLED_FIELD_NAME)
         origin = JvmLoweredDeclarationOrigin.GENERATED_ASSERTION_ENABLED_FIELD
-        visibility = JavaVisibilities.PACKAGE_VISIBILITY
+        visibility = JavaDescriptorVisibilities.PACKAGE_VISIBILITY
         type = backendContext.irBuiltIns.booleanType
         isFinal = true
         isStatic = true

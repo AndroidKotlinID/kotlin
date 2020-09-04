@@ -5,12 +5,10 @@
 
 package org.jetbrains.kotlin.fir.scopes.jvm
 
-import org.jetbrains.kotlin.builtins.jvm.JvmBuiltInsSettings
+import org.jetbrains.kotlin.builtins.jvm.JvmBuiltInsSignatures
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
-import org.jetbrains.kotlin.fir.scopes.FirTypeScope
-import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.ProcessorAction
+import org.jetbrains.kotlin.fir.scopes.*
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.name.Name
 
@@ -36,12 +34,9 @@ class JvmMappedScope(
         declaredMemberScope.processFunctionsByName(name, processor)
     }
 
-    // JvmMappedScope is basically used as declaration scope but it's being wrapped into substitution scopes where
-    // a use-site (FirOverrideAwareScope) is expected
-    // So, we put here a stub implementation
-    override fun processOverriddenFunctionsWithDepth(
+    override fun processDirectOverriddenFunctionsWithBaseScope(
         functionSymbol: FirFunctionSymbol<*>,
-        processor: (FirFunctionSymbol<*>, Int) -> ProcessorAction
+        processor: (FirFunctionSymbol<*>, FirTypeScope) -> ProcessorAction
     ) = ProcessorAction.NONE
 
     override fun processDeclaredConstructors(processor: (FirConstructorSymbol) -> Unit) {
@@ -67,13 +62,21 @@ class JvmMappedScope(
         declaredMemberScope.processPropertiesByName(name, processor)
     }
 
-    override fun processOverriddenPropertiesWithDepth(
+    override fun processDirectOverriddenPropertiesWithBaseScope(
         propertySymbol: FirPropertySymbol,
-        processor: (FirPropertySymbol, Int) -> ProcessorAction
+        processor: (FirPropertySymbol, FirTypeScope) -> ProcessorAction
     ): ProcessorAction = ProcessorAction.NONE
 
     override fun processClassifiersByNameWithSubstitution(name: Name, processor: (FirClassifierSymbol<*>, ConeSubstitutor) -> Unit) {
         declaredMemberScope.processClassifiersByNameWithSubstitution(name, processor)
+    }
+
+    override fun getCallableNames(): Set<Name> {
+        return declaredMemberScope.getContainingCallableNamesIfPresent()
+    }
+
+    override fun getClassifierNames(): Set<Name> {
+        return declaredMemberScope.getContainingClassifierNamesIfPresent()
     }
 
     companion object {
@@ -111,7 +114,7 @@ class JvmMappedScope(
 
             val signaturePrefix = klass.symbol.classId.toString()
             val whiteListSignaturesByName = mutableMapOf<Name, MutableSet<String>>()
-            JvmBuiltInsSettings.WHITE_LIST_METHOD_SIGNATURES.filter { signature ->
+            JvmBuiltInsSignatures.WHITE_LIST_METHOD_SIGNATURES.filter { signature ->
                 signature.startsWith(signaturePrefix)
             }.map { signature ->
                 // +1 to delete dot before function name
@@ -121,7 +124,7 @@ class JvmMappedScope(
             }
 
             val constructorBlackList =
-                (JvmBuiltInsSettings.BLACK_LIST_CONSTRUCTOR_SIGNATURES + additionalConstructorBlackList)
+                (JvmBuiltInsSignatures.BLACK_LIST_CONSTRUCTOR_SIGNATURES + additionalConstructorBlackList)
                     .filter { it.startsWith(signaturePrefix) }
                     .mapTo(mutableSetOf()) { it.substring(signaturePrefix.length + 1) }
 

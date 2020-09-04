@@ -819,6 +819,11 @@ public class IrBoxJsES6TestGenerated extends AbstractIrBoxJsES6Test {
             runTest("js/js.translator/testData/box/crossModuleRefIR/constructor.kt");
         }
 
+        @TestMetadata("crossModuleJsExport.kt")
+        public void testCrossModuleJsExport() throws Exception {
+            runTest("js/js.translator/testData/box/crossModuleRefIR/crossModuleJsExport.kt");
+        }
+
         @TestMetadata("export.kt")
         public void testExport() throws Exception {
             runTest("js/js.translator/testData/box/crossModuleRefIR/export.kt");
@@ -5227,6 +5232,16 @@ public class IrBoxJsES6TestGenerated extends AbstractIrBoxJsES6Test {
             runTest("js/js.translator/testData/box/jsModule/importCountUmd.kt");
         }
 
+        @TestMetadata("interfaces.kt")
+        public void testInterfaces() throws Exception {
+            runTest("js/js.translator/testData/box/jsModule/interfaces.kt");
+        }
+
+        @TestMetadata("kt39378.kt")
+        public void testKt39378() throws Exception {
+            runTest("js/js.translator/testData/box/jsModule/kt39378.kt");
+        }
+
         @TestMetadata("topLevelVarargFun.kt")
         public void testTopLevelVarargFun() throws Exception {
             runTest("js/js.translator/testData/box/jsModule/topLevelVarargFun.kt");
@@ -5326,6 +5341,11 @@ public class IrBoxJsES6TestGenerated extends AbstractIrBoxJsES6Test {
         @TestMetadata("classes.kt")
         public void testClasses() throws Exception {
             runTest("js/js.translator/testData/box/jsQualifier/classes.kt");
+        }
+
+        @TestMetadata("interfaces.kt")
+        public void testInterfaces() throws Exception {
+            runTest("js/js.translator/testData/box/jsQualifier/interfaces.kt");
         }
 
         @TestMetadata("simple.kt")

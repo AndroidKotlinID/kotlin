@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.jvm.lower.inlineclasses
 
 import org.jetbrains.kotlin.backend.jvm.ir.erasedUpperBound
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.codegen.state.md5base64
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrStatementOriginImpl
@@ -13,7 +14,6 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.DescriptorUtils
 
 /**
  * Replace inline classes by their underlying types.
@@ -100,8 +100,17 @@ object InlineClassAbi {
     fun returnHashSuffix(irFunction: IrFunction) =
         md5base64(":${irFunction.returnType.eraseToString()}")
 
-    private fun hashSuffix(irFunction: IrFunction) =
-        md5base64(irFunction.fullValueParameterList.joinToString { it.type.eraseToString() })
+    private fun hashSuffix(irFunction: IrFunction): String {
+        val signatureElementsForMangling =
+            irFunction.fullValueParameterList.mapTo(mutableListOf()) { it.type.eraseToString() }
+        if (irFunction.isSuspend) {
+            // The JVM backend computes mangled names after creating suspend function views, but before default argument
+            // stub insertion. It would be nice if this part of the continuation lowering happened earlier in the pipeline.
+            // TODO: Move suspend function view creation before JvmInlineClassLowering.
+            signatureElementsForMangling += "Lkotlin.coroutines.Continuation;"
+        }
+        return md5base64(signatureElementsForMangling.joinToString())
+    }
 
     private fun IrType.eraseToString() = buildString {
         append('L')
@@ -114,7 +123,7 @@ object InlineClassAbi {
 internal val IrType.requiresMangling: Boolean
     get() {
         val irClass = erasedUpperBound
-        return irClass.isInline && irClass.fqNameWhenAvailable != DescriptorUtils.RESULT_FQ_NAME
+        return irClass.isInline && irClass.fqNameWhenAvailable != StandardNames.RESULT_FQ_NAME
     }
 
 internal val IrFunction.fullValueParameterList: List<IrValueParameter>

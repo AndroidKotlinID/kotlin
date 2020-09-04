@@ -708,7 +708,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(private val irBackend: Boolean) :
         build("clean", "browserDistribution") {
             assertTasksExecuted(
                 ":app:processResources",
-                ":app:browserDistributeResources"
+                if (irBackend) ":app:browserProductionExecutableDistributeResources" else ":app:browserDistributeResources"
             )
 
             assertFileExists("app/build/distributions/index.html")
@@ -746,6 +746,36 @@ abstract class AbstractKotlin2JsGradlePluginIT(private val irBackend: Boolean) :
             val dependency = "kotlinx-coroutines-core"
             assertFileVersion(basePackageJson, dependency)
             assertFileVersion(libPackageJson, dependency)
+        }
+    }
+
+    @Test
+    fun testYarnResolution() = with(Project("kotlin-js-yarn-resolutions")) {
+        setupWorkingDir()
+        gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+
+        fun assertYarnResolutions(
+            packageJson: PackageJson
+        ) {
+            val name = "lodash"
+            val version = packageJson.resolutions?.get(name)
+            val requiredVersion = ">=1.0.0 <1.2.1 || >1.4.0 <2.0.0"
+            assertTrue("Root package.json must have resolution $name with version $requiredVersion, but $version found") {
+                version == requiredVersion
+            }
+        }
+
+        build("packageJson", "rootPackageJson", "kotlinNpmInstall") {
+            assertSuccessful()
+
+            fun getPackageJson() =
+                fileInWorkingDir("build/js")
+                    .resolve(NpmProject.PACKAGE_JSON)
+                    .let {
+                        Gson().fromJson(it.readText(), PackageJson::class.java)
+                    }
+
+            assertYarnResolutions(getPackageJson())
         }
     }
 }

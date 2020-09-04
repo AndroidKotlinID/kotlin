@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.ir.declarations.lazy
 
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrBody
@@ -20,27 +20,29 @@ import org.jetbrains.kotlin.ir.util.TypeTranslator
 import org.jetbrains.kotlin.ir.util.withScope
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.propertyIfAccessor
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DescriptorWithContainerSource
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 class IrLazyFunction(
-    override val startOffset: Int,
-    override val endOffset: Int,
-    override var origin: IrDeclarationOrigin,
-    override val symbol: IrSimpleFunctionSymbol,
-    override val descriptor: FunctionDescriptor,
-    override val name: Name,
-    override var visibility: Visibility,
-    override val modality: Modality,
-    override val isInline: Boolean,
-    override val isExternal: Boolean,
-    override val isTailrec: Boolean,
-    override val isSuspend: Boolean,
-    override val isExpect: Boolean,
-    override val isFakeOverride: Boolean,
-    override val isOperator: Boolean,
-    override val isInfix: Boolean,
-    override val stubGenerator: DeclarationStubGenerator,
-    override val typeTranslator: TypeTranslator,
+        override val startOffset: Int,
+        override val endOffset: Int,
+        override var origin: IrDeclarationOrigin,
+        override val symbol: IrSimpleFunctionSymbol,
+        override val descriptor: FunctionDescriptor,
+        override val name: Name,
+        override var visibility: DescriptorVisibility,
+        override val modality: Modality,
+        override val isInline: Boolean,
+        override val isExternal: Boolean,
+        override val isTailrec: Boolean,
+        override val isSuspend: Boolean,
+        override val isExpect: Boolean,
+        override val isFakeOverride: Boolean,
+        override val isOperator: Boolean,
+        override val isInfix: Boolean,
+        override val stubGenerator: DeclarationStubGenerator,
+        override val typeTranslator: TypeTranslator,
 ) : IrSimpleFunction(), IrLazyFunctionBase {
     override var parent: IrDeclarationParent by createLazyParent()
 
@@ -84,9 +86,15 @@ class IrLazyFunction(
             stubGenerator.generateFunctionStub(it.original).symbol
         }
     }
-    override var attributeOwnerId: IrAttributeContainer = this
+
+    override var attributeOwnerId: IrAttributeContainer
+        get() = this
+        set(_) = error("We should never need to change attributeOwnerId of external declarations.")
 
     override var correspondingPropertySymbol: IrPropertySymbol? = null
+
+    override val containerSource: DeserializedContainerSource?
+        get() = (descriptor as? DescriptorWithContainerSource)?.containerSource
 
     init {
         symbol.bind(this)

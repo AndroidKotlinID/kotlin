@@ -187,6 +187,10 @@ dependencies {
     testRuntime(intellijPluginDep("smali"))
     testRuntime(intellijPluginDep("testng"))
 
+    if (isFirPlugin) {
+        testRuntime(project(":idea:idea-fir"))
+    }
+
     if (Ide.AS36.orHigher()) {
         testRuntime(intellijPluginDep("android-layoutlib"))
         testRuntime(intellijPluginDep("git4idea"))

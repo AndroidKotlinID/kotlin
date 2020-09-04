@@ -27,15 +27,11 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.extensions.BunchOfRegisteredExtensions
-import org.jetbrains.kotlin.fir.extensions.FirExtensionService
-import org.jetbrains.kotlin.fir.extensions.extensionService
-import org.jetbrains.kotlin.fir.extensions.registerExtensions
-import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
-import org.jetbrains.kotlin.fir.java.FirLibrarySession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.lightTree.LightTree2Fir
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.providers.impl.FirProviderImpl
+import org.jetbrains.kotlin.fir.session.FirSessionFactory
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
@@ -76,21 +72,22 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
 
         //For BuiltIns, registered in sessionProvider automatically
         val allProjectScope = GlobalSearchScope.allScope(project)
-        FirLibrarySession.create(
+
+        FirSessionFactory.createLibrarySession(
             builtInsModuleInfo, sessionProvider, allProjectScope, project,
             environment.createPackagePartProvider(allProjectScope)
-        ).also {
-            registerFirExtensions(it.extensionService)
-        }
+        )
 
         val configToSession = modules.mapValues { (config, info) ->
             val moduleFiles = groupedByModule.getValue(config)
             val scope = TopDownAnalyzerFacadeForJVM.newModuleSearchScope(
                 project,
                 moduleFiles.mapNotNull { it.ktFile })
-            FirJavaModuleBasedSession.create(info, sessionProvider, scope).also {
-                registerFirExtensions(it.extensionService)
-                configureSession(it)
+            FirSessionFactory.createJavaModuleBasedSession(info, sessionProvider, scope) {
+                configureSession()
+                getFirExtensions()?.let {
+                    registerExtensions(it)
+                }
             }
         }
 
@@ -110,8 +107,8 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
         runAnalysis(testDataFile, files, firFilesPerSession)
     }
 
-    open fun registerFirExtensions(service: FirExtensionService) {
-        service.registerExtensions(BunchOfRegisteredExtensions.empty())
+    protected open fun getFirExtensions(): BunchOfRegisteredExtensions? {
+        return null
     }
 
     private fun mapKtFilesToFirFiles(session: FirSession, ktFiles: List<KtFile>, firFiles: MutableList<FirFile>, useLightTree: Boolean) {
@@ -157,7 +154,7 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
             val dependencies = ArrayList<ModuleInfo>()
             dependencies.add(module)
             for (dependency in testModule.dependencies) {
-                dependencies.add(modules[dependency]!!)
+                dependencies.add(modules[dependency as TestModule?]!!)
             }
 
 
@@ -333,5 +330,5 @@ abstract class AbstractFirBaseDiagnosticsTest : BaseDiagnosticsTest() {
         return result
     }
 
-    protected open fun configureSession(session: FirSession) {}
+    protected open fun FirSessionFactory.FirSessionConfigurator.configureSession() {}
 }

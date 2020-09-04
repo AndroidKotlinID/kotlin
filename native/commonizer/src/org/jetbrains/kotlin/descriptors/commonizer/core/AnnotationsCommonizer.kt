@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.core
 
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirAnnotation
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirClassifierId
 import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirAnnotationFactory
@@ -61,7 +61,7 @@ private class DeprecatedAnnotationCommonizer : Commonizer<CirAnnotation, CirAnno
 
     override val result: CirAnnotation
         get() {
-            val level: DeprecationLevel = level ?: throw IllegalCommonizerStateException()
+            val level: DeprecationLevel = level ?: failInEmptyState()
             val messageValue: StringValue = message.toDeprecationMessageValue()
 
             val constantValueArguments: Map<Name, ConstantValue<*>> = if (level == WARNING) {
@@ -162,7 +162,7 @@ private class DeprecatedAnnotationCommonizer : Commonizer<CirAnnotation, CirAnno
 
         private fun buildAnnotationType(classId: ClassId) = CirTypeFactory.create(
             classifierId = CirClassifierIdFactory.createForClass(classId),
-            visibility = Visibilities.PUBLIC,
+            visibility = DescriptorVisibilities.PUBLIC,
             arguments = emptyList(),
             isMarkedNullable = false
         )

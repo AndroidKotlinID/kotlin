@@ -6,15 +6,15 @@
 package org.jetbrains.kotlin.fir.types
 
 import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
+import org.jetbrains.kotlin.fir.isPrimitiveNumberOrUnsignedNumberType
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.NoSubstitutor
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
+import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
+import org.jetbrains.kotlin.fir.symbols.ConeTypeParameterLookupTag
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassifierSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.types.AbstractTypeChecker
@@ -56,16 +56,15 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
         nullable: Boolean,
         isExtensionFunction: Boolean
     ): SimpleTypeMarker {
-        require(constructor is FirClassifierSymbol<*>)
         @Suppress("UNCHECKED_CAST")
         return when (constructor) {
-            is FirClassLikeSymbol<*> -> ConeClassLikeTypeImpl(
-                constructor.toLookupTag(),
+            is ConeClassLikeLookupTag -> ConeClassLikeTypeImpl(
+                constructor,
                 (arguments as List<ConeTypeProjection>).toTypedArray(),
                 nullable
             )
-            is FirTypeParameterSymbol -> ConeTypeParameterTypeImpl(
-                constructor.toLookupTag(),
+            is ConeTypeParameterLookupTag -> ConeTypeParameterTypeImpl(
+                constructor,
                 nullable
             )
             else -> error("!")
@@ -183,7 +182,7 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
     }
 
     override fun TypeConstructorMarker.isUnitTypeConstructor(): Boolean {
-        return this is FirClassLikeSymbol<*> && this.classId == StandardClassIds.Unit
+        return this is ConeClassLikeLookupTag && this.classId == StandardClassIds.Unit
     }
 
     override fun Collection<KotlinTypeMarker>.singleBestRepresentative(): KotlinTypeMarker? {
@@ -265,11 +264,6 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
         return this.typeConstructor
     }
 
-    override fun KotlinTypeMarker.mayBeTypeVariable(): Boolean {
-        require(this is ConeKotlinType)
-        return this.typeConstructor() is ConeTypeVariableTypeConstructor
-    }
-
     override fun CapturedTypeMarker.typeConstructorProjection(): TypeArgumentMarker {
         require(this is ConeCapturedType)
         return this.constructor.projection
@@ -323,8 +317,25 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
         return this.defaultType
     }
 
+    override fun KotlinTypeMarker.isSpecial(): Boolean {
+        // TODO
+        return false
+    }
+
+    override fun TypeConstructorMarker.isTypeVariable(): Boolean {
+        return this is ConeTypeVariableTypeConstructor
+    }
+
+    override fun TypeVariableTypeConstructorMarker.isContainedInInvariantOrContravariantPositions(): Boolean {
+        return false
+    }
+
     override fun captureFromExpression(type: KotlinTypeMarker): KotlinTypeMarker? {
         return type
+    }
+
+    override fun createErrorType(debugName: String): ConeClassErrorType {
+        return ConeClassErrorType(ConeIntermediateDiagnostic(debugName))
     }
 
     override fun createErrorTypeWithCustomConstructor(debugName: String, constructor: TypeConstructorMarker): KotlinTypeMarker {
@@ -346,8 +357,9 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
     }
 
     override fun TypeConstructorMarker.toErrorType(): SimpleTypeMarker {
-        require(this is ErrorTypeConstructor)
-        return ConeClassErrorType(ConeIntermediateDiagnostic(reason))
+        if (this is ErrorTypeConstructor) return createErrorType(reason)
+        if (this is ConeClassLikeLookupTag) return createErrorType("Not found classifier: $classId")
+        return createErrorType("Unknown reason")
     }
 
     override fun findCommonIntegerLiteralTypesSuperType(explicitSupertypes: List<SimpleTypeMarker>): SimpleTypeMarker? {
@@ -357,5 +369,11 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
     override fun TypeConstructorMarker.getApproximatedIntegerLiteralType(): KotlinTypeMarker {
         require(this is ConeIntegerLiteralType)
         return this.getApproximatedType()
+    }
+
+    override fun KotlinTypeMarker.isSignedOrUnsignedNumberType(): Boolean {
+        require(this is ConeKotlinType)
+        if (this !is ConeClassLikeType) return false
+        return isPrimitiveNumberOrUnsignedNumberType()
     }
 }

@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irIfThen
 import org.jetbrains.kotlin.backend.common.lower.irThrow
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
@@ -45,7 +44,6 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.UN
 // Is creating synthetic origin is a good idea or not?
 object SERIALIZABLE_PLUGIN_ORIGIN : IrDeclarationOriginImpl("SERIALIZER")
 
-@OptIn(ObsoleteDescriptorBasedAPI::class)
 open class SerializerIrGenerator(val irClass: IrClass, final override val compilerContext: SerializationPluginContext, bindingContext: BindingContext) :
     SerializerCodegen(irClass.descriptor, bindingContext), IrBuilderExtension {
 
@@ -53,11 +51,11 @@ open class SerializerIrGenerator(val irClass: IrClass, final override val compil
     protected val irAnySerialDescProperty = anySerialDescProperty?.let { compilerContext.symbolTable.referenceProperty(it) }
 
 
-    override fun generateSerialDesc() {
-        val desc: PropertyDescriptor = generatedSerialDescPropertyDescriptor ?: return
-        val serialDescImplClass = serializerDescriptor
+    protected open val serialDescImplClass: ClassDescriptor = serializerDescriptor
             .getClassFromInternalSerializationPackage(SERIAL_DESCRIPTOR_CLASS_IMPL)
 
+    override fun generateSerialDesc() {
+        val desc: PropertyDescriptor = generatedSerialDescPropertyDescriptor ?: return
         val addFuncS = serialDescImplClass.referenceMethod(CallingConventions.addElement)
 
         val thisAsReceiverParameter = irClass.thisReceiver!!

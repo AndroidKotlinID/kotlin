@@ -74,11 +74,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(arrayOfCall)
 
-        val modifiableQualifiedAccess = impl(qualifiedAccessWithoutCallee, "FirModifiableQualifiedAccess") {}
-
-        impl(callableReferenceAccess) {
-            parents += modifiableQualifiedAccess
-        }
+        impl(callableReferenceAccess)
 
         impl(componentCall) {
             default("calleeReference", "FirSimpleNamedReference(source, Name.identifier(\"component\$componentIndex\"), null)")
@@ -128,14 +124,10 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(functionCall) {
-            parents += modifiableQualifiedAccess
             kind = OpenClass
         }
 
-        impl(qualifiedAccessExpression) {
-            parents += modifiableQualifiedAccess
-        }
-
+        impl(qualifiedAccessExpression)
 
         noImpl(expressionWithSmartcast)
 
@@ -269,7 +261,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(thisReceiverExpression) {
-            parents += modifiableQualifiedAccess
             defaultNoReceivers()
         }
 
@@ -280,8 +271,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
         }
 
         impl(variableAssignment) {
-            parents += modifiableQualifiedAccess
-
             default("lValue") {
                 value = "calleeReference"
                 customSetter = "calleeReference = value"
@@ -370,10 +359,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(superReference, "FirExplicitSuperReference")
 
-        impl(controlFlowGraphReference, "FirEmptyControlFlowGraphReference") {
-            noSource()
-            kind = Object
-        }
+        noImpl(controlFlowGraphReference)
 
         impl(resolvedTypeRef) {
             publicImplementation()
@@ -448,14 +434,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
             kind = OpenClass
         }
 
-        impl(delegatedTypeRef) {
-            listOf("source", "annotations").forEach {
-                default(it) {
-                    delegate = "typeRef"
-                }
-            }
-        }
-
         impl(safeCallExpression) {
             useTypes(safeCallCheckedSubjectType)
         }
@@ -470,14 +448,12 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
     private fun configureAllImplementations() {
         configureFieldInAllImplementations(
             field = "controlFlowGraphReference",
-            implementationPredicate = { it.type != "FirAnonymousFunctionImpl"}
+            implementationPredicate = { it.type != "FirAnonymousFunctionImpl" }
         ) {
-            default(it, "FirEmptyControlFlowGraphReference")
-            useTypes(emptyCfgReferenceType)
+            defaultNull(it)
         }
 
         val implementationWithConfigurableTypeRef = listOf(
-            "FirDelegatedTypeRefImpl",
             "FirTypeProjectionWithVarianceImpl",
             "FirCallableReferenceAccessImpl",
             "FirThisReceiverExpressionImpl",

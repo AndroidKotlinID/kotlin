@@ -13,7 +13,6 @@ repositories {
 // PILL: used in pill importer
 val projectsToShadow by extra(listOf(
         ":plugins:annotation-based-compiler-plugins-ide-support",
-        ":core:type-system",
         ":compiler:backend",
         ":compiler:backend-common",
         ":compiler:backend.jvm",
@@ -27,6 +26,7 @@ val projectsToShadow by extra(listOf(
         ":daemon-common-new",
         ":core:metadata",
         ":core:metadata.jvm",
+        ":core:compiler.common",
         ":core:descriptors",
         ":core:descriptors.jvm",
         ":core:deserialization",
@@ -43,13 +43,15 @@ val projectsToShadow by extra(listOf(
         ":compiler:psi",
         ":compiler:fir:cones",
         ":compiler:fir:checkers",
+        ":compiler:fir:entrypoint",
         ":compiler:fir:resolve",
         ":compiler:fir:fir-serialization",
+        ":compiler:fir:fir-deserialization",
         ":compiler:fir:tree",
         ":compiler:fir:java",
         ":compiler:fir:jvm",
         ":compiler:fir:raw-fir:psi2fir",
-        ":compiler:fir:raw-fir:fir-common",
+        ":compiler:fir:raw-fir:raw-fir.common",
         ":compiler:fir:fir2ir",
         ":compiler:fir:fir2ir:jvm-backend",
         ":compiler:frontend",
@@ -75,6 +77,7 @@ val projectsToShadow by extra(listOf(
         ":compiler:light-classes",
         ":compiler:plugin-api",
         ":kotlin-preloader",
+        ":compiler:resolution.common",
         ":compiler:resolution",
         ":compiler:serialization",
         ":compiler:util",
@@ -164,7 +167,7 @@ dependencies {
     embedded(protobufFull())
     embedded(kotlinBuiltins(forJvm = true))
 
-    libraries(commonDep("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:${property("versions.kotlinx-collections-immutable")}"))
+    libraries(commonDep(kotlinxCollectionsImmutable()))
     libraries(commonDep("javax.inject"))
     libraries(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8"))
     libraries(commonDep("org.jetbrains", "markdown"))

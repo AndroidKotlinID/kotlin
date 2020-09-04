@@ -5,13 +5,11 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
-import com.intellij.openapi.progress.ProcessCanceledException
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.ConeStubDiagnostic
-import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.buildErrorExpression
@@ -31,14 +29,12 @@ import org.jetbrains.kotlin.fir.resolve.transformers.StoreReceiver
 import org.jetbrains.kotlin.fir.resolve.transformers.firClassLike
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.visitors.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.types.Variance
 
 open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) : FirPartialBodyResolveTransformer(transformer) {
     private inline val builtinTypes: BuiltinTypes get() = session.builtinTypes
@@ -77,8 +73,24 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                 implicitReceiver?.boundSymbol?.let {
                     callee.replaceBoundSymbol(it)
                 }
-                qualifiedAccessExpression.resultType = buildResolvedTypeRef {
-                    type = implicitReceiver?.type ?: ConeKotlinErrorType(ConeSimpleDiagnostic("Unresolved this@$labelName", DiagnosticKind.UnresolvedLabel))
+                val implicitType = implicitReceiver?.type
+                qualifiedAccessExpression.resultType = when {
+                    implicitReceiver is InaccessibleImplicitReceiverValue -> buildErrorTypeRef {
+                        source = qualifiedAccessExpression.source
+                        diagnostic = ConeInstanceAccessBeforeSuperCall("<this>")
+                    }
+                    implicitType != null -> buildResolvedTypeRef {
+                        source = callee.source
+                        type = implicitType
+                    }
+                    labelName != null -> buildErrorTypeRef {
+                        source = qualifiedAccessExpression.source
+                        diagnostic = ConeSimpleDiagnostic("Unresolved this@$labelName", DiagnosticKind.UnresolvedLabel)
+                    }
+                    else -> buildErrorTypeRef {
+                        source = qualifiedAccessExpression.source
+                        diagnostic = ConeSimpleDiagnostic("'this' is not defined in this context", DiagnosticKind.NoThis)
+                    }
                 }
                 qualifiedAccessExpression
             }
@@ -147,7 +159,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                 val actualSuperType = (superReference.superTypeRef.coneType as? ConeClassLikeType)
                     ?.fullyExpandedType(session)?.let { superType ->
                         val classId = superType.lookupTag.classId
-                        val superTypeRefs = implicitReceiver?.boundSymbol?.phasedFir?.superTypeRefs
+                        val superTypeRefs = implicitReceiver?.boundSymbol?.fir?.superTypeRefs
                         val correspondingDeclaredSuperType = superTypeRefs?.firstOrNull {
                             it.coneType.fullyExpandedType(session).classId == classId
                         }?.coneTypeSafe<ConeClassLikeType>()?.fullyExpandedType(session) ?: return@let superType
@@ -177,7 +189,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                 superReferenceContainer.resultType = actualSuperTypeRef
             }
             else -> {
-                val superTypeRefs = implicitReceiver?.boundSymbol?.phasedFir?.superTypeRefs
+                val superTypeRefs = implicitReceiver?.boundSymbol?.fir?.superTypeRefs
                 val resultType = when {
                     superTypeRefs?.isNotEmpty() != true || containingCall == null -> {
                         buildErrorTypeRef {
@@ -261,8 +273,6 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                     callCompleter.completeCall(resultExplicitReceiver, noExpectedType)
                 }
                 callCompleter.completeCall(resultExpression, expectedTypeRef)
-            } catch (e: ProcessCanceledException) {
-                throw e
             } catch (e: Throwable) {
                 throw RuntimeException("While resolving call ${functionCall.render()}", e)
             }
@@ -291,6 +301,9 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
 
         block.transformStatementsIndexed(transformer) { index ->
             val value = if (index == numberOfStatements - 1) data else ResolutionMode.ContextIndependent
+
+            transformer.onBeforeStatementResolution(block.statements[index])
+
             TransformData.Data(value)
         }
         if (data == ResolutionMode.ContextIndependent) {
@@ -311,8 +324,17 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         block.resultType = if (resultExpression == null) {
             block.resultType.resolvedTypeFromPrototype(session.builtinTypes.unitType.type)
         } else {
-            (resultExpression.resultType as? FirResolvedTypeRef) ?: buildErrorTypeRef {
-                diagnostic = ConeSimpleDiagnostic("No type for block", DiagnosticKind.InferenceError)
+            val theType = resultExpression.resultType
+            if (theType is FirResolvedTypeRef) {
+                buildResolvedTypeRef {
+                    source = theType.source?.fakeElement(FirFakeSourceElementKind.ImplicitTypeRef)
+                    type = theType.type
+                    annotations += theType.annotations
+                }
+            } else {
+                buildErrorTypeRef {
+                    diagnostic = ConeSimpleDiagnostic("No type for block", DiagnosticKind.InferenceError)
+                }
             }
         }
 
@@ -488,7 +510,11 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                 resolved.resultType = session.builtinTypes.booleanType
             }
             FirOperation.AS -> {
-                resolved.resultType = conversionTypeRef
+                resolved.resultType = buildResolvedTypeRef {
+                    source = conversionTypeRef.source?.fakeElement(FirFakeSourceElementKind.ImplicitTypeRef)
+                    type = conversionTypeRef.coneType
+                    annotations += conversionTypeRef.annotations
+                }
             }
             FirOperation.SAFE_AS -> {
                 resolved.resultType =
@@ -629,7 +655,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                         lhs.typeArguments.map { it.toConeTypeProjection() }.toTypedArray()
                     } else {
                         // Otherwise, prepare the star projections as many as the size of type parameters.
-                        Array((symbol?.phasedFir as? FirTypeParameterRefsOwner)?.typeParameters?.size ?: 0) {
+                        Array((symbol?.fir as? FirTypeParameterRefsOwner)?.typeParameters?.size ?: 0) {
                             ConeStarProjection
                         }
                     }
@@ -702,7 +728,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                     if (newConstKind == null) {
                         @Suppress("UNCHECKED_CAST")
                         constExpression.replaceKind(FirConstKind.Int as FirConstKind<T>)
-                        dataFlowAnalyzer.exitConstExpresion(constExpression as FirConstExpression<*>)
+                        dataFlowAnalyzer.exitConstExpression(constExpression as FirConstExpression<*>)
                         constExpression.resultType = buildErrorTypeRef {
                             source = constExpression.source
                             diagnostic = ConeTypeMismatchError(expectedType, integerLiteralType.getApproximatedType())
@@ -719,7 +745,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
             else -> kind.expectedConeType()
         }
 
-        dataFlowAnalyzer.exitConstExpresion(constExpression as FirConstExpression<*>)
+        dataFlowAnalyzer.exitConstExpression(constExpression as FirConstExpression<*>)
         constExpression.resultType = constExpression.resultType.resolvedTypeFromPrototype(type)
         return constExpression.compose()
     }
@@ -754,27 +780,6 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         }
     }
 
-    private fun ConeTypeProjection.toFirTypeProjection(): FirTypeProjection = when (this) {
-        is ConeStarProjection -> buildStarProjection()
-        else -> {
-            val type = when (this) {
-                is ConeKotlinTypeProjectionIn -> type
-                is ConeKotlinTypeProjectionOut -> type
-                is ConeStarProjection -> throw IllegalStateException()
-                else -> this as ConeKotlinType
-            }
-            buildTypeProjectionWithVariance {
-                typeRef = buildResolvedTypeRef { this.type = type }
-                variance = when (kind) {
-                    ProjectionKind.IN -> Variance.IN_VARIANCE
-                    ProjectionKind.OUT -> Variance.OUT_VARIANCE
-                    ProjectionKind.INVARIANT -> Variance.INVARIANT
-                    ProjectionKind.STAR -> throw IllegalStateException()
-                }
-            }
-        }
-    }
-
     override fun transformDelegatedConstructorCall(
         delegatedConstructorCall: FirDelegatedConstructorCall,
         data: ResolutionMode,
@@ -783,9 +788,10 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         when (delegatedConstructorCall.calleeReference) {
             is FirResolvedNamedReference, is FirErrorNamedReference -> return delegatedConstructorCall.compose()
         }
+        val containers = components.context.containers
+        val containingClass = containers[containers.lastIndex - 1] as FirClass<*>
+        val containingConstructor = containers.last() as FirConstructor
         if (delegatedConstructorCall.isSuper && delegatedConstructorCall.constructedTypeRef is FirImplicitTypeRef) {
-            val containers = components.context.containers
-            val containingClass = containers[containers.lastIndex - 1] as FirClass<*>
             val superClass = containingClass.superTypeRefs.firstOrNull {
                 if (it !is FirResolvedTypeRef) return@firstOrNull false
                 val declaration = extractSuperTypeDeclaration(it) ?: return@firstOrNull false
@@ -809,46 +815,57 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
                     context.getPrimaryConstructorParametersScope()?.let(context::addLocalScope)
                 }
 
-                delegatedConstructorCall.transformChildren(transformer, ResolutionMode.ContextDependent)
-            }
-            val typeArguments: List<FirTypeProjection>
-            val reference = delegatedConstructorCall.calleeReference
-            val symbol: FirClassSymbol<*> = when (reference) {
-                is FirThisReference -> {
-                    typeArguments = emptyList()
-                    if (reference.boundSymbol == null) {
-                        lastDispatchReceiver?.boundSymbol?.also {
-                            reference.replaceBoundSymbol(it)
-                        } ?: return delegatedConstructorCall.compose()
-                    } else {
-                        reference.boundSymbol!! as FirClassSymbol<*>
+                // it's just a constructor parameters scope created in
+                // `FirDeclarationResolveTransformer::doTransformConstructor()`
+                val parametersScope = context.towerDataContext.localScopes.lastOrNull()
+
+                // because there's a `context.saveContextForAnonymousFunction(anonymousFunction)`
+                // call inside of the FirDeclarationResolveTransformer and accessing `this`
+                // inside a lambda which is a value parameter of a constructor delegate
+                // is prohibited
+                context.withTowerDataContext(context.getTowerDataContextForConstructorResolution()) {
+                    parametersScope?.let {
+                        addLocalScope(it)
                     }
+                    if (containingClass is FirRegularClass && !containingConstructor.isPrimary) {
+                        context.addReceiver(
+                            null,
+                            InaccessibleImplicitReceiverValue(
+                                containingClass.symbol,
+                                containingClass.defaultType(),
+                                session,
+                                scopeSession
+                            )
+                        )
+                    }
+                    delegatedConstructorCall.transformChildren(transformer, ResolutionMode.ContextDependent)
+                }
+            }
+            val reference = delegatedConstructorCall.calleeReference
+            val constructorType: ConeClassLikeType = when (reference) {
+                is FirThisReference -> {
+                    lastDispatchReceiver?.type as? ConeClassLikeType ?: return delegatedConstructorCall.compose()
                 }
                 is FirSuperReference -> {
                     // TODO: unresolved supertype
-                    val supertype = reference.superTypeRef.coneTypeSafe<ConeClassLikeType>() ?: return delegatedConstructorCall.compose()
-                    val expandedSupertype = supertype.fullyExpandedType(session)
-                    val symbol =
-                        expandedSupertype.lookupTag.toSymbol(session) as? FirClassSymbol<*> ?: return delegatedConstructorCall.compose()
-                    val classTypeParametersCount =
-                        (symbol.fir as? FirTypeParameterRefsOwner)?.typeParameters?.count { it is FirTypeParameter } ?: 0
-                    typeArguments = expandedSupertype.typeArguments
-                        .takeLast(classTypeParametersCount) // Hack for KT-37525
-                        .takeIf { it.isNotEmpty() }
-                        ?.map { it.toFirTypeProjection() }
-                        ?: emptyList()
-                    symbol
+                    val supertype = reference.superTypeRef.coneTypeSafe<ConeClassLikeType>()
+                        ?.takeIf { it !is ConeClassErrorType } ?: return delegatedConstructorCall.compose()
+                    supertype.fullyExpandedType(session)
                 }
                 else -> return delegatedConstructorCall.compose()
             }
-            val resolvedCall = callResolver.resolveDelegatingConstructorCall(delegatedConstructorCall, symbol, typeArguments)
-                ?: return delegatedConstructorCall.compose()
+
+            val resolvedCall =
+                callResolver.resolveDelegatingConstructorCall(delegatedConstructorCall, constructorType)
+                    ?: return delegatedConstructorCall.compose()
             if (reference is FirThisReference && reference.boundSymbol == null) {
                 resolvedCall.dispatchReceiver.typeRef.coneTypeSafe<ConeClassLikeType>()?.lookupTag?.toSymbol(session)?.let {
                     reference.replaceBoundSymbol(it)
                 }
             }
 
+            // it seems that we may leave this code as is
+            // without adding `context.withTowerDataContext(context.getTowerDataContextForConstructorResolution())`
             val completionResult = callCompleter.completeCall(resolvedCall, noExpectedType)
             result = completionResult.result
             callCompleted = completionResult.callCompleted

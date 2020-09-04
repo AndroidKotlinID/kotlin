@@ -71,7 +71,7 @@ class FirCallCompletionResultsWriterTransformer(
         qualifiedAccessExpression: T, calleeReference: FirNamedReferenceWithCandidate
     ): T {
         val subCandidate = calleeReference.candidate
-        val declaration: FirDeclaration = subCandidate.symbol.phasedFir
+        val declaration: FirDeclaration = subCandidate.symbol.fir as FirDeclaration
         val typeArguments = computeTypeArguments(qualifiedAccessExpression, subCandidate)
         val typeRef = if (declaration is FirTypedDeclaration) {
             val calculated = typeCalculator.tryCalculateReturnType(declaration)
@@ -88,6 +88,13 @@ class FirCallCompletionResultsWriterTransformer(
                 }
             }
         } else {
+            // this branch is for cases when we have
+            // some invalid qualified access expression itself.
+            // e.g. `T::toString` where T is a generic type.
+            // in these cases we should report an error on
+            // the calleeReference.source which is not a fake source.
+            // uncommenting `?.fakeElement...` here removes reports
+            // of OTHER_ERROR from tests.
             buildErrorTypeRef {
                 source = calleeReference.source //?.fakeElement(FirFakeSourceElementKind.ImplicitTypeRef)
                 diagnostic = ConeSimpleDiagnostic("Callee reference to candidate without return type: ${declaration.render()}")
@@ -131,6 +138,7 @@ class FirCallCompletionResultsWriterTransformer(
         val subCandidate = calleeReference.candidate
 
         val resultType = typeRef.substituteTypeRef(subCandidate)
+        resultType.ensureResolvedTypeDeclaration(session)
         result.replaceTypeRef(resultType)
 
         if (mode == Mode.DelegatedPropertyCompletion) {
@@ -140,6 +148,13 @@ class FirCallCompletionResultsWriterTransformer(
         }
 
         return result.compose()
+    }
+
+    override fun transformCheckedSafeCallSubject(
+        checkedSafeCallSubject: FirCheckedSafeCallSubject,
+        data: ExpectedArgumentType?
+    ): CompositeTransformResult<FirStatement> {
+        return checkedSafeCallSubject.transform(integerApproximator, data?.getExpectedType(checkedSafeCallSubject))
     }
 
     override fun transformFunctionCall(functionCall: FirFunctionCall, data: ExpectedArgumentType?): CompositeTransformResult<FirStatement> {
@@ -403,7 +418,7 @@ class FirCallCompletionResultsWriterTransformer(
     private fun computeTypeArgumentTypes(
         candidate: Candidate,
     ): List<ConeKotlinType> {
-        val declaration = candidate.symbol.phasedFir as? FirCallableMemberDeclaration<*> ?: return emptyList()
+        val declaration = candidate.symbol.fir as? FirCallableMemberDeclaration<*> ?: return emptyList()
 
         return declaration.typeParameters.map { ConeTypeParameterTypeImpl(it.symbol.toLookupTag(), false) }
             .map { candidate.substitutor.substituteOrSelf(it) }

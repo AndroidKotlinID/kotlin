@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -13,9 +13,11 @@ import org.jetbrains.kotlin.fir.declarations.synthetic.buildSyntheticProperty
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.java.JavaTypeParameterStack
 import org.jetbrains.kotlin.fir.java.declarations.*
-import org.jetbrains.kotlin.fir.resolve.calls.FirSyntheticPropertiesScope
+import org.jetbrains.kotlin.fir.resolve.FirJavaSyntheticNamesProvider
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
+import org.jetbrains.kotlin.fir.scopes.getContainingCallableNamesIfPresent
+import org.jetbrains.kotlin.fir.scopes.getContainingClassifierNamesIfPresent
 import org.jetbrains.kotlin.fir.scopes.impl.AbstractFirUseSiteMemberScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -43,6 +45,14 @@ class JavaClassUseSiteMemberScope(
         superTypesScope.processFunctionsByName(name) {
             it.getOverridden(overrideCandidates)
         }
+    }
+
+    override fun getCallableNames(): Set<Name> {
+        return declaredMemberScope.getContainingCallableNamesIfPresent() + superTypesScope.getCallableNames()
+    }
+
+    override fun getClassifierNames(): Set<Name> {
+        return declaredMemberScope.getContainingClassifierNamesIfPresent() + superTypesScope.getClassifierNames()
     }
 
     private fun generateAccessorSymbol(
@@ -147,7 +157,7 @@ class JavaClassUseSiteMemberScope(
         if (name.isSpecial) {
             return processAccessorFunctionsAndPropertiesByName(name, emptyList(), processor)
         }
-        val getterNames = FirSyntheticPropertiesScope.possibleGetterNamesByPropertyName(name)
+        val getterNames = FirJavaSyntheticNamesProvider.possibleGetterNamesByPropertyName(name)
         val setterName = Name.identifier(SETTER_PREFIX + name.identifier.capitalize())
         return processAccessorFunctionsAndPropertiesByName(name, getterNames, processor)
     }

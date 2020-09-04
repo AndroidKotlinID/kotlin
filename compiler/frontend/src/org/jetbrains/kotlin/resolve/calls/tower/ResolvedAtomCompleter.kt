@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.resolve.TemporaryBindingTrace
 import org.jetbrains.kotlin.resolve.calls.ArgumentTypeResolver
 import org.jetbrains.kotlin.resolve.calls.NewCommonSuperTypeCalculator
 import org.jetbrains.kotlin.resolve.calls.checkers.CallCheckerContext
+import org.jetbrains.kotlin.resolve.calls.commonSuperType
 import org.jetbrains.kotlin.resolve.calls.components.CallableReferenceAdaptation
 import org.jetbrains.kotlin.resolve.calls.components.SuspendConversionStrategy
 import org.jetbrains.kotlin.resolve.calls.components.isVararg
@@ -202,6 +203,7 @@ class ResolvedAtomCompleter(
         }
 
     private fun completeLambda(lambda: ResolvedLambdaAtom) {
+        @Suppress("NAME_SHADOWING")
         val lambda = lambda.unwrap()
         val resultArgumentsInfo = lambda.resultArgumentsInfo!!
         val returnType = if (lambda.isCoercedToUnit) {
@@ -331,7 +333,7 @@ class ResolvedAtomCompleter(
         resolvedAtom: ResolvedCallableReferenceAtom
     ) {
         val callableCandidate = resolvedAtom.candidate
-        if (callableCandidate == null) {
+        if (callableCandidate == null || resolvedAtom.completed) {
             // todo report meanfull diagnostic here
             return
         }
@@ -419,6 +421,7 @@ class ResolvedAtomCompleter(
         )
 
         kotlinToResolvedCallTransformer.runCallCheckers(resolvedCall, topLevelCallCheckerContext)
+        resolvedAtom.completed = true
     }
 
     private fun ReceiverValue.updateReceiverValue(substitutor: TypeSubstitutor): ReceiverValue {

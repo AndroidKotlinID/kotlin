@@ -96,6 +96,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/classes/delegatedImplementation.kt");
         }
 
+        @TestMetadata("delegatedImplementationOfJavaInterface.kt")
+        public void testDelegatedImplementationOfJavaInterface() throws Exception {
+            runTest("compiler/testData/ir/irText/classes/delegatedImplementationOfJavaInterface.kt");
+        }
+
         @TestMetadata("delegatedImplementationWithExplicitOverride.kt")
         public void testDelegatedImplementationWithExplicitOverride() throws Exception {
             runTest("compiler/testData/ir/irText/classes/delegatedImplementationWithExplicitOverride.kt");
@@ -1707,9 +1712,24 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/firProblems"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("DeepCopyIrTree.kt")
+        public void testDeepCopyIrTree() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/DeepCopyIrTree.kt");
+        }
+
         @TestMetadata("deprecated.kt")
         public void testDeprecated() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/deprecated.kt");
+        }
+
+        @TestMetadata("FirBuilder.kt")
+        public void testFirBuilder() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/FirBuilder.kt");
+        }
+
+        @TestMetadata("putIfAbsent.kt")
+        public void testPutIfAbsent() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/putIfAbsent.kt");
         }
     }
 
@@ -2018,6 +2038,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
         @TestMetadata("localVariableOfIntersectionType_NI.kt")
         public void testLocalVariableOfIntersectionType_NI() throws Exception {
             runTest("compiler/testData/ir/irText/types/localVariableOfIntersectionType_NI.kt");
+        }
+
+        @TestMetadata("rawTypeInSignature.kt")
+        public void testRawTypeInSignature() throws Exception {
+            runTest("compiler/testData/ir/irText/types/rawTypeInSignature.kt");
         }
 
         @TestMetadata("receiverOfIntersectionType.kt")

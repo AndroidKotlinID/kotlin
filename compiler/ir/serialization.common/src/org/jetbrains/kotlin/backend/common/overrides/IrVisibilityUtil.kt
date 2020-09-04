@@ -1,21 +1,22 @@
+/*
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
+ */
+
 package org.jetbrains.kotlin.backend.common.overrides
 
-import org.jetbrains.kotlin.backend.common.lower.parents
-import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.ir.declarations.IrDeclaration
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithVisibility
 import org.jetbrains.kotlin.ir.declarations.IrOverridableMember
-import org.jetbrains.kotlin.ir.util.module
-import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 
 // The contents of this file is from VisibilityUtil.kt adapted to IR.
 // TODO: The code would better be commonized for descriptors, ir and fir.
 
 fun isVisibleForOverride(
-    overriding: IrOverridableMember,
+    @Suppress("UNUSED_PARAMETER") overriding: IrOverridableMember,
     fromSuper: IrOverridableMember
 ): Boolean {
-    return !Visibilities.isPrivate((fromSuper as IrDeclarationWithVisibility).visibility)
+    return !DescriptorVisibilities.isPrivate((fromSuper as IrDeclarationWithVisibility).visibility)
 }
 
 fun findMemberWithMaxVisibility(members: Collection<IrOverridableMember>): IrOverridableMember {
@@ -28,7 +29,7 @@ fun findMemberWithMaxVisibility(members: Collection<IrOverridableMember>): IrOve
             continue
         }
 
-        val result = Visibilities.compare(member.visibility, candidate.visibility)
+        val result = DescriptorVisibilities.compare(member.visibility, candidate.visibility)
         if (result != null && result < 0) {
             member = candidate
         }

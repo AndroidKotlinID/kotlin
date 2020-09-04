@@ -18,8 +18,8 @@ package org.jetbrains.kotlin.backend.common.overrides
 
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
@@ -100,6 +100,7 @@ class IrOverridingUtil(
     fun buildFakeOverridesForClass(clazz: IrClass) {
         val superTypes = allPublicApiSuperTypesOrAny(clazz)
 
+        @Suppress("UNCHECKED_CAST")
         val fromCurrent = clazz.declarations.filter { it is IrOverridableMember && it.symbol.isPublicApi } as List<IrOverridableMember>
 
         val allFromSuper = superTypes.flatMap { superType ->
@@ -190,12 +191,9 @@ class IrOverridingUtil(
         }
     }
 
-    private fun filterVisibleFakeOverrides(
-        current: IrClass,
-        toFilter: Collection<IrOverridableMember>
-    ): Collection<IrOverridableMember> {
+    private fun filterVisibleFakeOverrides(toFilter: Collection<IrOverridableMember>): Collection<IrOverridableMember> {
         return toFilter.filter { member: IrOverridableMember ->
-            !Visibilities.isPrivate(member.visibility)
+            !DescriptorVisibilities.isPrivate(member.visibility)
         }
     }
 
@@ -280,12 +278,12 @@ class IrOverridingUtil(
         return result
     }
 
-    private fun IrSimpleFunction.updateAccessorModalityAndVisibility(newModality: Modality, newVisibility: Visibility): IrSimpleFunction? {
+    private fun IrSimpleFunction.updateAccessorModalityAndVisibility(newModality: Modality, newVisibility: DescriptorVisibility): IrSimpleFunction? {
         require(this is IrFakeOverrideFunction) {
             "Unexpected fake override accessor kind: $this"
         }
         // For descriptors it gets INVISIBLE_FAKE.
-        if (this.visibility == Visibilities.PRIVATE) return null
+        if (this.visibility == DescriptorVisibilities.PRIVATE) return null
 
         this.visibility = newVisibility
         this.modality = newModality
@@ -296,7 +294,7 @@ class IrOverridingUtil(
         overridables: Collection<IrOverridableMember>,
         current: IrClass
     ) {
-        val effectiveOverridden = filterVisibleFakeOverrides(current, overridables)
+        val effectiveOverridden = filterVisibleFakeOverrides(overridables)
 
         // The descriptor based algorithm goes further building invisible fakes here,
         // but we don't use invisible fakes in IR
@@ -337,7 +335,7 @@ class IrOverridingUtil(
         b: IrOverridableMember
     ): Boolean {
         val result =
-            Visibilities.compare(a.visibility, b.visibility)
+            DescriptorVisibilities.compare(a.visibility, b.visibility)
         return result == null || result >= 0
     }
 

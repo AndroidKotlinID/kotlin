@@ -45,13 +45,13 @@ import org.jetbrains.kotlin.idea.codeInsight.generate.AbstractCodeInsightActionT
 import org.jetbrains.kotlin.idea.codeInsight.generate.AbstractGenerateHashCodeAndEqualsActionTest
 import org.jetbrains.kotlin.idea.codeInsight.generate.AbstractGenerateTestSupportMethodActionTest
 import org.jetbrains.kotlin.idea.codeInsight.generate.AbstractGenerateToStringActionTest
-import org.jetbrains.kotlin.idea.codeInsight.hints.AbstractKotlinLambdasHintsProvider
 import org.jetbrains.kotlin.idea.codeInsight.hints.AbstractKotlinReferenceTypeHintsProviderTest
 import org.jetbrains.kotlin.idea.codeInsight.moveUpDown.AbstractMoveLeftRightTest
 import org.jetbrains.kotlin.idea.codeInsight.moveUpDown.AbstractMoveStatementTest
 import org.jetbrains.kotlin.idea.codeInsight.postfix.AbstractPostfixTemplateProviderTest
 import org.jetbrains.kotlin.idea.codeInsight.surroundWith.AbstractSurroundWithTest
 import org.jetbrains.kotlin.idea.codeInsight.unwrap.AbstractUnwrapRemoveTest
+import org.jetbrains.kotlin.idea.completion.AbstractHighLevelJvmBasicCompletionTest
 import org.jetbrains.kotlin.idea.completion.test.*
 import org.jetbrains.kotlin.idea.completion.test.handlers.AbstractBasicCompletionHandlerTest
 import org.jetbrains.kotlin.idea.completion.test.handlers.AbstractCompletionCharFilterTest
@@ -88,10 +88,13 @@ import org.jetbrains.kotlin.idea.filters.AbstractKotlinExceptionFilterTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirLazyResolveTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleResolveTest
 import org.jetbrains.kotlin.idea.fir.AbstractKtDeclarationAndFirDeclarationEqualityChecker
+import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleLazyResolveTest
 import org.jetbrains.kotlin.idea.folding.AbstractKotlinFoldingTest
 import org.jetbrains.kotlin.idea.frontend.api.fir.AbstractResolveCallTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractStdlibSymbolsBuildingTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolPointerTest
+import org.jetbrains.kotlin.idea.frontend.api.scopes.AbstractMemberScopeByFqNameTest
+import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolFromLibraryPointerRestoreTest
+import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolsByFqNameBuildingTest
+import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolFromSourcePointerRestoreTest
 import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolsByPsiBuildingTest
 import org.jetbrains.kotlin.idea.hierarchy.AbstractHierarchyTest
 import org.jetbrains.kotlin.idea.hierarchy.AbstractHierarchyWithLibTest
@@ -191,6 +194,31 @@ fun main(args: Array<String>) {
     testGroupSuite(args) {
         testGroup("idea/jvm-debugger/jvm-debugger-test/test", "idea/jvm-debugger/jvm-debugger-test/testData") {
             testClass<AbstractKotlinSteppingTest> {
+                model(
+                    "stepping/stepIntoAndSmartStepInto",
+                    pattern = KT_WITHOUT_DOTS_IN_NAME,
+                    testMethod = "doStepIntoTest",
+                    testClassName = "StepInto"
+                )
+                model(
+                    "stepping/stepIntoAndSmartStepInto",
+                    pattern = KT_WITHOUT_DOTS_IN_NAME,
+                    testMethod = "doSmartStepIntoTest",
+                    testClassName = "SmartStepInto"
+                )
+                model(
+                    "stepping/stepInto",
+                    pattern = KT_WITHOUT_DOTS_IN_NAME,
+                    testMethod = "doStepIntoTest",
+                    testClassName = "StepIntoOnly"
+                )
+                model("stepping/stepOut", pattern = KT_WITHOUT_DOTS_IN_NAME, testMethod = "doStepOutTest")
+                model("stepping/stepOver", pattern = KT_WITHOUT_DOTS_IN_NAME, testMethod = "doStepOverTest")
+                model("stepping/filters", pattern = KT_WITHOUT_DOTS_IN_NAME, testMethod = "doStepIntoTest")
+                model("stepping/custom", pattern = KT_WITHOUT_DOTS_IN_NAME, testMethod = "doCustomTest")
+            }
+
+            testClass<AbstractIrKotlinSteppingTest> {
                 model(
                     "stepping/stepIntoAndSmartStepInto",
                     pattern = KT_WITHOUT_DOTS_IN_NAME,
@@ -961,30 +989,47 @@ fun main(args: Array<String>) {
                 model("symbolsByPsi")
             }
 
-            testClass<AbstractStdlibSymbolsBuildingTest> {
-                model("stdLibSymbols", extension = "txt")
+            testClass<AbstractSymbolsByFqNameBuildingTest> {
+                model("symbolsByFqName", extension = "txt")
             }
 
-            testClass<AbstractSymbolPointerTest> {
+            testClass<AbstractMemberScopeByFqNameTest> {
+                model("memberScopeByFqName", extension = "txt")
+            }
+
+            testClass<AbstractSymbolFromSourcePointerRestoreTest> {
                 model("symbolPointer", extension = "kt")
             }
+
+            testClass<AbstractSymbolFromLibraryPointerRestoreTest> {
+                model("resoreSymbolFromLibrary", extension = "txt")
+            }
         }
 
-    testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/testData") {
-        testClass<AbstractFirMultiModuleResolveTest> {
-            model("fir/multiModule", recursive = false, extension = null)
+        testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/testData") {
+            testClass<AbstractFirMultiModuleResolveTest> {
+                model("fir/multiModule", recursive = false, extension = null)
+            }
+
+            testClass<AbstractFirLazyResolveTest> {
+                model("fir/lazyResolve", extension = "test", singleClass = true, filenameStartsLowerCase = true)
+            }
         }
 
-        testClass<AbstractFirLazyResolveTest> {
-            model("fir/lazyResolve", extension = "test", singleClass = true, filenameStartsLowerCase = true)
-        }
-    }
-
-    testGroup("idea/idea-fir/tests", "idea/testData") {
-        testClass<AbstractFirHighlightingTest> {
-            model("highlighter")
+        testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/idea-frontend-fir/idea-fir-low-level-api/testdata") {
+            testClass<AbstractFirMultiModuleLazyResolveTest> {
+                model("multiModuleLazyResolve", recursive = false, extension = null)
+            }
         }
 
+        testGroup("idea/idea-fir/tests", "idea") {
+            testClass<AbstractFirHighlightingTest> {
+                model("testData/highlighter")
+                model("idea-fir/testData/highlighterFir", pattern = KT_WITHOUT_DOTS_IN_NAME)
+            }
+        }
+
+        testGroup("idea/idea-fir/tests", "idea/testData") {
             testClass<AbstractFirReferenceResolveTest> {
                 model("resolve/references", pattern = KT_WITHOUT_DOTS_IN_NAME)
             }
@@ -995,9 +1040,16 @@ fun main(args: Array<String>) {
                 model("checker/recovery")
                 model("checker/rendering")
                 model("checker/infos")
-            model("checker/diagnosticsMessage")
+                model("checker/diagnosticsMessage")
+            }
         }
-    }
+
+        testGroup("idea/idea-fir/tests", "idea/idea-completion/testData") {
+            testClass<AbstractHighLevelJvmBasicCompletionTest> {
+                model("basic/common")
+                model("basic/java")
+            }
+        }
 
         testGroup("idea/scripting-support/test", "idea/scripting-support/testData") {
             testClass<AbstractScratchRunActionTest> {
@@ -1175,6 +1227,10 @@ fun main(args: Array<String>) {
 
             testClass<AbstractMultiFileJvmBasicCompletionTest> {
                 model("basic/multifile", extension = null, recursive = false)
+            }
+
+            testClass<AbstractMultiFileJvmBasicCompletionTest>("MultiFilePrimitiveJvmBasicCompletionTestGenerated") {
+                model("basic/multifilePrimitive", extension = null, recursive = false)
             }
 
             testClass<AbstractMultiFileSmartCompletionTest> {

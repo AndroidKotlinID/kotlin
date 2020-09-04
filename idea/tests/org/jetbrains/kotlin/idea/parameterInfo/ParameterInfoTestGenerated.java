@@ -196,6 +196,16 @@ public class ParameterInfoTestGenerated extends AbstractParameterInfoTest {
             runTest("idea/testData/parameterInfo/functionCall/LocalFunctionBug.kt");
         }
 
+        @TestMetadata("MixedNamedArguments.kt")
+        public void testMixedNamedArguments() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/MixedNamedArguments.kt");
+        }
+
+        @TestMetadata("MixedNamedArguments2.kt")
+        public void testMixedNamedArguments2() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/MixedNamedArguments2.kt");
+        }
+
         @TestMetadata("NamedAndDefaultParameter.kt")
         public void testNamedAndDefaultParameter() throws Exception {
             runTest("idea/testData/parameterInfo/functionCall/NamedAndDefaultParameter.kt");
@@ -209,6 +219,11 @@ public class ParameterInfoTestGenerated extends AbstractParameterInfoTest {
         @TestMetadata("NamedParameter2.kt")
         public void testNamedParameter2() throws Exception {
             runTest("idea/testData/parameterInfo/functionCall/NamedParameter2.kt");
+        }
+
+        @TestMetadata("NamedParameter3.kt")
+        public void testNamedParameter3() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/NamedParameter3.kt");
         }
 
         @TestMetadata("NoAnnotations.kt")
@@ -334,6 +349,16 @@ public class ParameterInfoTestGenerated extends AbstractParameterInfoTest {
         @TestMetadata("TooManyArgs.kt")
         public void testTooManyArgs() throws Exception {
             runTest("idea/testData/parameterInfo/functionCall/TooManyArgs.kt");
+        }
+
+        @TestMetadata("TooManyArgs2.kt")
+        public void testTooManyArgs2() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/TooManyArgs2.kt");
+        }
+
+        @TestMetadata("TrailingComma.kt")
+        public void testTrailingComma() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/TrailingComma.kt");
         }
 
         @TestMetadata("TwoFunctions.kt")

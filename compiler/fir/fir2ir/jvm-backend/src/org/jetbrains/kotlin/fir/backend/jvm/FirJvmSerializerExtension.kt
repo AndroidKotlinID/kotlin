@@ -13,8 +13,8 @@ import org.jetbrains.kotlin.config.JvmDefaultMode
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
-import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.backend.FirMetadataSource
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.fir.serialization.nonSourceAnnotations
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.load.java.JvmAbi
+import org.jetbrains.kotlin.load.java.DescriptorsJvmAbiUtil
 import org.jetbrains.kotlin.load.kotlin.NON_EXISTENT_CLASS_NAME
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
@@ -60,19 +60,19 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
     override fun shouldUseTypeTable(): Boolean = useTypeTable
     override fun shouldSerializeFunction(function: FirFunction<*>): Boolean {
         return classBuilderMode != ClassBuilderMode.ABI ||
-                function !is FirSimpleFunction || function.visibility != Visibilities.PRIVATE
+                function !is FirSimpleFunction || function.visibility != Visibilities.Private
     }
 
     override fun shouldSerializeProperty(property: FirProperty): Boolean {
-        return classBuilderMode != ClassBuilderMode.ABI || property.visibility != Visibilities.PRIVATE
+        return classBuilderMode != ClassBuilderMode.ABI || property.visibility != Visibilities.Private
     }
 
     override fun shouldSerializeTypeAlias(typeAlias: FirTypeAlias): Boolean {
-        return classBuilderMode != ClassBuilderMode.ABI || typeAlias.visibility != Visibilities.PRIVATE
+        return classBuilderMode != ClassBuilderMode.ABI || typeAlias.visibility != Visibilities.Private
     }
 
     override fun shouldSerializeNestedClass(nestedClass: FirRegularClass): Boolean {
-        return classBuilderMode != ClassBuilderMode.ABI || nestedClass.visibility != Visibilities.PRIVATE
+        return classBuilderMode != ClassBuilderMode.ABI || nestedClass.visibility != Visibilities.Private
     }
 
     @OptIn(ObsoleteDescriptorBasedAPI::class)
@@ -152,6 +152,7 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
         writeLocalProperties(proto, partAsmType, JvmProtoBuf.packageLocalVariable)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun <MessageType : GeneratedMessageLite.ExtendableMessage<MessageType>, BuilderType : GeneratedMessageLite.ExtendableBuilder<MessageType, BuilderType>> writeLocalProperties(
         proto: BuilderType,
         classAsmType: Type,
@@ -290,7 +291,7 @@ class FirJvmSerializerExtension @JvmOverloads constructor(
     }
 
     private fun PropertyDescriptor.isJvmFieldPropertyInInterfaceCompanion(): Boolean {
-        if (!JvmAbi.hasJvmFieldAnnotation(this)) return false
+        if (!DescriptorsJvmAbiUtil.hasJvmFieldAnnotation(this)) return false
 
         val container = containingDeclaration
         if (!DescriptorUtils.isCompanionObject(container)) return false

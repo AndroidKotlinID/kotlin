@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.fir
 
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
@@ -12,18 +14,10 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-class FirEffectiveVisibilityResolverImpl(private val session: FirSession) : FirEffectiveVisibilityResolver {
-    val cache = mutableMapOf<FirSourceElement, FirEffectiveVisibility>()
+open class FirEffectiveVisibilityResolverImpl(private val session: FirSession) : FirEffectiveVisibilityResolver() {
+    private val cache = mutableMapOf<FirSourceElement, FirEffectiveVisibility>()
 
-    private fun FirElement.remember(effectiveVisibility: FirEffectiveVisibility): FirEffectiveVisibility {
-        val source = source
-        if (source != null) {
-            cache[source] = effectiveVisibility
-        }
-        return effectiveVisibility
-    }
-
-    override fun resolveFor(
+    final override fun resolveFor(
         declaration: FirMemberDeclaration,
         containingDeclarations: List<FirDeclaration>?,
         scopeSession: ScopeSession
@@ -47,9 +41,35 @@ class FirEffectiveVisibilityResolverImpl(private val session: FirSession) : FirE
             }
         }
 
-        var selfEffectiveVisibility = visibility.firEffectiveVisibility(session, parentSymbol)
+        var selfEffectiveVisibility = computeEffectiveVisibility(visibility, parentSymbol)
         selfEffectiveVisibility = parentEffectiveVisibility.lowerBound(selfEffectiveVisibility)
         return declaration.remember(selfEffectiveVisibility)
+    }
+
+    protected open fun computeEffectiveVisibility(visibility: Visibility, containerSymbol: FirClassLikeSymbol<*>?): FirEffectiveVisibility {
+        return visibility.normalize().forVisibility(containerSymbol)
+    }
+
+    protected fun Visibility.forVisibility(
+        containerSymbol: FirClassLikeSymbol<*>?
+    ): FirEffectiveVisibility =
+        when (this) {
+            Visibilities.Private, Visibilities.PrivateToThis, Visibilities.InvisibleFake -> FirEffectiveVisibilityImpl.Private
+            Visibilities.Protected -> FirEffectiveVisibilityImpl.Protected(containerSymbol, session)
+            Visibilities.Internal -> FirEffectiveVisibilityImpl.Internal
+            Visibilities.Public -> FirEffectiveVisibilityImpl.Public
+            Visibilities.Local -> FirEffectiveVisibilityImpl.Local
+            Visibilities.Unknown -> FirEffectiveVisibilityImpl.Private
+            // NB: visibility must be already normalized here, so e.g. no JavaVisibilities are possible at this point
+            else -> error("Visibility $name is not allowed in forVisibility")
+        }
+
+    private fun FirElement.remember(effectiveVisibility: FirEffectiveVisibility): FirEffectiveVisibility {
+        val source = source
+        if (source != null) {
+            cache[source] = effectiveVisibility
+        }
+        return effectiveVisibility
     }
 
     private fun FirMemberDeclaration.getParentInfo(
@@ -81,7 +101,9 @@ class FirEffectiveVisibilityResolverImpl(private val session: FirSession) : FirE
 
         if (!succeededToGetSymbol) {
             if (parentClassId?.isLocal == false) {
+                // ?: is needed to get enum from enum entry
                 parentSymbol = session.firSymbolProvider.getClassLikeSymbolByFqName(parentClassId)
+                    ?: parentClassId.outerClassId?.let { session.firSymbolProvider.getClassLikeSymbolByFqName(it) }
                 parentSymbol?.fir.safeAs<FirMemberDeclaration>()?.let {
                     parentEffectiveVisibility = resolveFor(it, null, scopeSession)
                 }
@@ -113,10 +135,7 @@ class FirEffectiveVisibilityResolverImpl(private val session: FirSession) : FirE
             val declaration = containingDeclarations[index]
             val declarationClassId = declaration.getClassId()
 
-            // because classId's we take from firs are
-            // not the same instances we find in containingDeclarations
-            // TODO: fix
-            if (this.asSingleFqName() == declarationClassId?.asSingleFqName()) {
+            if (this.relativeClassName == declarationClassId?.relativeClassName) {
                 return when (declaration) {
                     is FirRegularClass -> {
                         declaration.symbol to resolveFor(declaration, containingDeclarations.subList(0, index), scopeSession)

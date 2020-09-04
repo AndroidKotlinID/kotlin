@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.fir.returnExpressions
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirErrorFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirErrorPropertySymbol
-import org.jetbrains.kotlin.resolve.calls.components.PostponedArgumentsAnalyzer
+import org.jetbrains.kotlin.resolve.calls.components.PostponedArgumentsAnalyzerContext
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 
@@ -65,12 +65,13 @@ class CandidateFactory private constructor(
 
     fun createErrorCandidate(diagnostic: ConeDiagnostic): Candidate {
         val symbol: AbstractFirBasedSymbol<*> = when (callInfo.callKind) {
-            CallKind.VariableAccess -> createErrorPropertySymbol(diagnostic)
-            CallKind.Function,
-            CallKind.DelegatingConstructorCall,
-            CallKind.CallableReference -> createErrorFunctionSymbol(diagnostic)
-            CallKind.SyntheticSelect -> throw IllegalStateException()
-            CallKind.SyntheticIdForCallableReferencesResolution -> throw IllegalStateException()
+            is CallKind.VariableAccess -> createErrorPropertySymbol(diagnostic)
+            is CallKind.Function,
+            is CallKind.DelegatingConstructorCall,
+            is CallKind.CallableReference -> createErrorFunctionSymbol(diagnostic)
+            is CallKind.SyntheticSelect -> throw IllegalStateException()
+            is CallKind.SyntheticIdForCallableReferencesResolution -> throw IllegalStateException()
+            is CallKind.CustomForIde -> throw IllegalStateException()
         }
         return Candidate(
             symbol,
@@ -109,7 +110,7 @@ class CandidateFactory private constructor(
     }
 }
 
-fun PostponedArgumentsAnalyzer.Context.addSubsystemFromExpression(statement: FirStatement) {
+fun PostponedArgumentsAnalyzerContext.addSubsystemFromExpression(statement: FirStatement) {
     when (statement) {
         is FirFunctionCall,
         is FirQualifiedAccessExpression,

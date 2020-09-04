@@ -23,10 +23,10 @@ import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.psi.KtTypeArgumentList
 
 object FirTypeArgumentsNotAllowedExpressionChecker : FirQualifiedAccessChecker() {
-    override fun check(functionCall: FirQualifiedAccessExpression, context: CheckerContext, reporter: DiagnosticReporter) {
+    override fun check(expression: FirQualifiedAccessExpression, context: CheckerContext, reporter: DiagnosticReporter) {
         // analyze type parameters near
         // package names
-        val explicitReceiver = functionCall.explicitReceiver
+        val explicitReceiver = expression.explicitReceiver
 
         if (explicitReceiver is FirResolvedQualifier && explicitReceiver.symbol == null) {
             if (explicitReceiver.source?.hasAnyArguments() == true) {
@@ -50,7 +50,8 @@ object FirTypeArgumentsNotAllowedExpressionChecker : FirQualifiedAccessChecker()
     }
 
     private fun PsiElement.hasAnyArguments(): Boolean {
-        return this.children.size > 1 && this.children[1] is KtTypeArgumentList
+        val children = this.children // this is a method call and it collects children
+        return children.size > 1 && children[1] is KtTypeArgumentList
     }
 
     private fun LighterASTNode.hasAnyArguments(tree: FlyweightCapableTreeStructure<LighterASTNode>): Boolean {

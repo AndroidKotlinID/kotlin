@@ -3,6 +3,7 @@ where advanced options include:
   -Xdisable-fake-override-validator
                              Disable IR fake override validator
   -Xenable-js-scripting      Enable experimental support of .kts files using K/JS (with -Xir only)
+  -Xerror-tolerance-policy   Set up error tolerance policy (NONE, SEMANTIC, SYNTAX, ALL)
   -Xfriend-modules=<path>    Paths to friend modules
   -Xfriend-modules-disabled  Disable internal declaration export
   -Xgenerate-dts             Generate TypeScript declarations .d.ts file alongside JS file. Available in IR backend only.
@@ -70,6 +71,7 @@ where advanced options include:
   -Xskip-prerelease-check    Allow to load pre-release classes
   -Xuse-experimental=<fq.name> Enable, but don't propagate usages of experimental API for marker annotation with the given fully qualified name
   -Xuse-fir                  Compile using Front-end IR. Warning: this feature is far from being production-ready
+  -Xuse-fir-extended-checkers Use extended analysis mode based on Front-end IR. Warning: this feature is far from being production-ready
   -Xuse-mixed-named-arguments Enable Support named arguments in their own position even if the result appears as mixed
   -Xverbose-phases           Be verbose while performing these backend phases
 

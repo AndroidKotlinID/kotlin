@@ -13,8 +13,7 @@ import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.resolve.calls.components.CreateFreshVariablesSubstitutor.createToFreshVariableSubstitutorAndAddInitialConstraints
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.components.FreshVariableNewTypeSubstitutor
-import org.jetbrains.kotlin.resolve.calls.inference.model.ArgumentConstraintPosition
-import org.jetbrains.kotlin.resolve.calls.inference.model.LowerPriorityToPreserveCompatibility
+import org.jetbrains.kotlin.resolve.calls.inference.model.ArgumentConstraintPositionImpl
 import org.jetbrains.kotlin.resolve.calls.model.*
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind.DISPATCH_RECEIVER
@@ -141,7 +140,7 @@ fun ConstraintSystemOperation.checkCallableReference(
     expectedType: UnwrappedType?,
     ownerDescriptor: DeclarationDescriptor
 ): Pair<FreshVariableNewTypeSubstitutor, KotlinCallDiagnostic?> {
-    val position = ArgumentConstraintPosition(argument)
+    val position = ArgumentConstraintPositionImpl(argument)
 
     val toFreshSubstitutor = createToFreshVariableSubstitutorAndAddInitialConstraints(candidateDescriptor, this)
 
@@ -154,7 +153,7 @@ fun ConstraintSystemOperation.checkCallableReference(
         addSubtypeConstraint(toFreshSubstitutor.safeSubstitute(reflectionCandidateType), expectedType, position)
     }
 
-    val invisibleMember = Visibilities.findInvisibleMember(
+    val invisibleMember = DescriptorVisibilities.findInvisibleMember(
         dispatchReceiver?.asReceiverValueForVisibilityChecks,
         candidateDescriptor, ownerDescriptor
     )
@@ -166,7 +165,7 @@ private fun ConstraintSystemOperation.addReceiverConstraint(
     toFreshSubstitutor: FreshVariableNewTypeSubstitutor,
     receiverArgument: CallableReceiver?,
     receiverParameter: ReceiverParameterDescriptor?,
-    position: ArgumentConstraintPosition
+    position: ArgumentConstraintPositionImpl
 ) {
     if (receiverArgument == null || receiverParameter == null) {
         assert(receiverArgument == null) { "Receiver argument should be null if parameter is: $receiverArgument" }
@@ -351,9 +350,10 @@ class CallableReferencesCandidateFactory(
                             // If we've already mapped an argument to this value parameter, it'll always be a type mismatch.
                             mappedArguments[valueParameter] = ResolvedCallArgument.SimpleArgument(fakeArgument)
                         }
-
                         VarargMappingState.MAPPED_WITH_PLAIN_ARGS -> {
                             mappedVarargElements.getOrPut(valueParameter) { ArrayList() }.add(fakeArgument)
+                        }
+                        VarargMappingState.UNMAPPED -> {
                         }
                     }
                 } else {
@@ -390,13 +390,13 @@ class CallableReferencesCandidateFactory(
                 CoercionStrategy.NO_COERCION
 
         val adaptedArguments =
-            if (expectedType != null && ReflectionTypes.isBaseTypeForNumberedReferenceTypes(expectedType))
+            if (ReflectionTypes.isBaseTypeForNumberedReferenceTypes(expectedType))
                 emptyMap()
             else
                 mappedArguments
 
         val suspendConversionStrategy =
-            if (!descriptor.isSuspend && expectedType?.isSuspendFunctionType == true) {
+            if (!descriptor.isSuspend && expectedType.isSuspendFunctionType) {
                 SuspendConversionStrategy.SUSPEND_CONVERSION
             } else {
                 SuspendConversionStrategy.NO_CONVERSION
@@ -495,7 +495,7 @@ class CallableReferencesCandidateFactory(
             is PropertyDescriptor -> {
                 val mutable = descriptor.isVar && run {
                     val setter = descriptor.setter
-                    setter == null || Visibilities.isVisible(
+                    setter == null || DescriptorVisibilities.isVisible(
                         dispatchReceiver?.asReceiverValueForVisibilityChecks, setter,
                         scopeTower.lexicalScope.ownerDescriptor
                     )

@@ -123,9 +123,9 @@ public interface Errors {
 
     //Elements with "INVISIBLE_REFERENCE" error are marked as unresolved, unlike elements with "INVISIBLE_MEMBER" error
     //"INVISIBLE_REFERENCE" is used for invisible classes references and references in import
-    DiagnosticFactory3<KtSimpleNameExpression, DeclarationDescriptor, Visibility, DeclarationDescriptor> INVISIBLE_REFERENCE =
+    DiagnosticFactory3<KtSimpleNameExpression, DeclarationDescriptor, DescriptorVisibility, DeclarationDescriptor> INVISIBLE_REFERENCE =
             DiagnosticFactory3.create(ERROR);
-    DiagnosticFactory3<PsiElement, DeclarationDescriptor, Visibility, DeclarationDescriptor> INVISIBLE_MEMBER = DiagnosticFactory3.create(ERROR, CALL_ELEMENT);
+    DiagnosticFactory3<PsiElement, DeclarationDescriptor, DescriptorVisibility, DeclarationDescriptor> INVISIBLE_MEMBER = DiagnosticFactory3.create(ERROR, CALL_ELEMENT);
     DiagnosticFactory1<KtElement, DeclarationDescriptor> DEPRECATED_ACCESS_BY_SHORT_NAME = DiagnosticFactory1.create(WARNING);
 
     DiagnosticFactory1<PsiElement, ConstructorDescriptor> PROTECTED_CONSTRUCTOR_NOT_IN_SUPER_CALL = DiagnosticFactory1.create(ERROR);
@@ -376,6 +376,7 @@ public interface Errors {
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_ABSTRACT_METHOD_WITH_TYPE_PARAMETERS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_ABSTRACT_METHOD_WITH_DEFAULT_VALUE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> FUN_INTERFACE_CONSTRUCTOR_REFERENCE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> FUN_INTERFACE_WITH_SUSPEND_FUNCTION = DiagnosticFactory0.create(ERROR);
 
     // Secondary constructors
 
@@ -495,9 +496,9 @@ public interface Errors {
     DiagnosticFactory2<KtNamedDeclaration, CallableMemberDescriptor, DeclarationDescriptor> OVERRIDING_FINAL_MEMBER =
             DiagnosticFactory2.create(ERROR, OVERRIDE_MODIFIER);
 
-    DiagnosticFactory3<KtModifierListOwner, Visibility, CallableMemberDescriptor, DeclarationDescriptor> CANNOT_WEAKEN_ACCESS_PRIVILEGE =
+    DiagnosticFactory3<KtModifierListOwner, DescriptorVisibility, CallableMemberDescriptor, DeclarationDescriptor> CANNOT_WEAKEN_ACCESS_PRIVILEGE =
             DiagnosticFactory3.create(ERROR, VISIBILITY_MODIFIER);
-    DiagnosticFactory3<KtModifierListOwner, Visibility, CallableMemberDescriptor, DeclarationDescriptor> CANNOT_CHANGE_ACCESS_PRIVILEGE =
+    DiagnosticFactory3<KtModifierListOwner, DescriptorVisibility, CallableMemberDescriptor, DeclarationDescriptor> CANNOT_CHANGE_ACCESS_PRIVILEGE =
             DiagnosticFactory3.create(ERROR, VISIBILITY_MODIFIER);
     DiagnosticFactory2<KtNamedDeclaration, CallableMemberDescriptor, DeclarationWithDiagnosticComponents> RETURN_TYPE_MISMATCH_ON_OVERRIDE =
             DiagnosticFactory2.create(ERROR, DECLARATION_RETURN_TYPE);
@@ -900,6 +901,8 @@ public interface Errors {
     DiagnosticFactory1<PsiElement, CallableDescriptor> DSL_SCOPE_VIOLATION = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<PsiElement, CallableDescriptor> DSL_SCOPE_VIOLATION_WARNING = DiagnosticFactory1.create(WARNING);
 
+    DiagnosticFactory0<PsiElement> NULLABLE_EXTENSION_OPERATOR_WITH_SAFE_CALL_RECEIVER = DiagnosticFactory0.create(WARNING);
+
     // Labels
 
     DiagnosticFactory0<KtSimpleNameExpression> LABEL_NAME_CLASH = DiagnosticFactory0.create(WARNING);
@@ -1026,7 +1029,7 @@ public interface Errors {
     DiagnosticFactory0<KtTypeParameterList> LOCAL_VARIABLE_WITH_TYPE_PARAMETERS_WARNING = DiagnosticFactory0.create(WARNING);
     DiagnosticFactory0<KtTypeParameterList> LOCAL_VARIABLE_WITH_TYPE_PARAMETERS = DiagnosticFactory0.create(ERROR);
 
-    DiagnosticFactory3<KtExpression, DeclarationDescriptor, Visibility, DeclarationDescriptor> INVISIBLE_SETTER = DiagnosticFactory3.create(ERROR);
+    DiagnosticFactory3<KtExpression, DeclarationDescriptor, DescriptorVisibility, DeclarationDescriptor> INVISIBLE_SETTER = DiagnosticFactory3.create(ERROR);
 
     DiagnosticFactory1<PsiElement, KtKeywordToken> VAL_OR_VAR_ON_LOOP_PARAMETER = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<PsiElement, KtKeywordToken> VAL_OR_VAR_ON_FUN_PARAMETER = DiagnosticFactory1.create(ERROR);
@@ -1177,6 +1180,7 @@ public interface Errors {
             initializeFactoryNamesAndDefaultErrorMessages(aClass, DiagnosticFactoryToRendererMap::new);
         }
 
+        @SuppressWarnings({"unchecked", "rawtypes"})
         public static void initializeFactoryNamesAndDefaultErrorMessages(
                 @NotNull Class<?> aClass,
                 @NotNull DefaultErrorMessages.Extension defaultErrorMessages
@@ -1190,7 +1194,6 @@ public interface Errors {
                             DiagnosticFactory<?> factory = (DiagnosticFactory<?>)value;
                             factory.setName(field.getName());
 
-                            //noinspection rawtypes, unchecked
                             factory.setDefaultRenderer((DiagnosticRenderer) diagnosticToRendererMap.get(factory));
                         }
                     }

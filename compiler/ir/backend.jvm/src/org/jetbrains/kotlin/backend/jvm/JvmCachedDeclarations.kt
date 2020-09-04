@@ -13,11 +13,10 @@ import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.backend.jvm.ir.copyCorrespondingPropertyFrom
 import org.jetbrains.kotlin.backend.jvm.ir.replaceThisByStaticReference
-import org.jetbrains.kotlin.builtins.CompanionObjectMapping.isMappedIntrinsicCompanionObject
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.builders.declarations.buildClass
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
@@ -26,7 +25,8 @@ import org.jetbrains.kotlin.ir.builders.setSourceRange
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.load.java.JavaVisibilities
+import org.jetbrains.kotlin.load.java.DescriptorsJvmAbiUtil.isMappedIntrinsicCompanionObject
+import org.jetbrains.kotlin.load.java.JavaDescriptorVisibilities
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
@@ -74,8 +74,8 @@ class JvmCachedDeclarations(
                 isFinal = true
                 isStatic = true
                 visibility = when {
-                    !useProperVisibilityForCompanion -> Visibilities.PUBLIC
-                    originalVisibility == Visibilities.PROTECTED -> JavaVisibilities.PROTECTED_STATIC_VISIBILITY
+                    !useProperVisibilityForCompanion -> DescriptorVisibilities.PUBLIC
+                    originalVisibility == DescriptorVisibilities.PROTECTED -> JavaDescriptorVisibilities.PROTECTED_STATIC_VISIBILITY
                     else -> originalVisibility
                 }
 
@@ -93,7 +93,7 @@ class JvmCachedDeclarations(
                     origin = JvmLoweredDeclarationOrigin.INTERFACE_COMPANION_PRIVATE_INSTANCE
                     isFinal = true
                     isStatic = true
-                    visibility = JavaVisibilities.PACKAGE_VISIBILITY
+                    visibility = JavaDescriptorVisibilities.PACKAGE_VISIBILITY
                 }.apply {
                     parent = singleton
                 }
@@ -151,7 +151,12 @@ class JvmCachedDeclarations(
                 // is supposed to allow using `I2.DefaultImpls.f` as if it was inherited from `I1.DefaultImpls`.
                 // The classes are not actually related and `I2.DefaultImpls.f` is not a fake override but a bridge.
                 origin = when {
-                    !forCompatibilityMode && !interfaceFun.isFakeOverride -> interfaceFun.origin
+                    !forCompatibilityMode && !interfaceFun.isFakeOverride ->
+                        when {
+                            interfaceFun.origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER -> interfaceFun.origin
+                            interfaceFun.origin.isSynthetic -> JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS_SYNTHETIC
+                            else -> JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS
+                        }
                     interfaceFun.resolveFakeOverride()!!.origin.isSynthetic ->
                         if (forCompatibilityMode) JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY_SYNTHETIC
                         else JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_TO_SYNTHETIC
@@ -165,7 +170,7 @@ class JvmCachedDeclarations(
                 // Interface functions are public or private, with one exception: clone in Cloneable, which is protected.
                 // However, Cloneable has no DefaultImpls, so this merely replicates the incorrect behavior of the old backend.
                 // We should rather not generate a bridge to clone when interface inherits from Cloneable at all.
-                visibility = if (interfaceFun.visibility == Visibilities.PRIVATE) Visibilities.PRIVATE else Visibilities.PUBLIC,
+                visibility = if (interfaceFun.visibility == DescriptorVisibilities.PRIVATE) DescriptorVisibilities.PRIVATE else DescriptorVisibilities.PUBLIC,
 
                 isFakeOverride = false,
                 typeParametersFromContext = parent.typeParameters
@@ -203,7 +208,7 @@ class JvmCachedDeclarations(
         defaultImplsRedirections.getOrPut(fakeOverride) {
             assert(fakeOverride.isFakeOverride)
             val irClass = fakeOverride.parentAsClass
-            context.irFactory.buildFun(fakeOverride.descriptor) {
+            context.irFactory.buildFun {
                 origin = JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE
                 name = fakeOverride.name
                 visibility = fakeOverride.visibility

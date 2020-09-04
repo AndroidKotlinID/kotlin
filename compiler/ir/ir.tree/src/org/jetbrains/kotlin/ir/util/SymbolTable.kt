@@ -206,7 +206,9 @@ class SymbolTable(
                 }
             } else {
                 if (d.isBound()) {
-                    ((d.owner as? IrSymbolDeclaration<*>)?.symbol ?: descriptorToSymbol[d]) as S?
+                    val result = (d.owner as? IrSymbolDeclaration<*>)?.symbol ?: descriptorToSymbol[d]
+                    @Suppress("UNCHECKED_CAST")
+                    result as S?
                 } else {
                     descriptorToSymbol[d]
                 }
@@ -575,13 +577,13 @@ class SymbolTable(
 
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     fun declareField(
-        startOffset: Int,
-        endOffset: Int,
-        origin: IrDeclarationOrigin,
-        descriptor: PropertyDescriptor,
-        type: IrType,
-        visibility: Visibility? = null,
-        fieldFactory: (IrFieldSymbol) -> IrField = {
+            startOffset: Int,
+            endOffset: Int,
+            origin: IrDeclarationOrigin,
+            descriptor: PropertyDescriptor,
+            type: IrType,
+            visibility: DescriptorVisibility? = null,
+            fieldFactory: (IrFieldSymbol) -> IrField = {
             irFactory.createField(
                 startOffset, endOffset, origin, it, nameProvider.nameForDeclaration(descriptor), type,
                 visibility ?: it.descriptor.visibility, !it.descriptor.isVar, it.descriptor.isEffectivelyExternal(),
@@ -650,13 +652,13 @@ class SymbolTable(
         isDelegated: Boolean = descriptor.isDelegated,
         propertyFactory: (IrPropertySymbol) -> IrProperty = { symbol ->
             irFactory.createProperty(
-                startOffset, endOffset, origin, symbol, isDelegated = isDelegated,
-                name = nameProvider.nameForDeclaration(descriptor),
+                startOffset, endOffset, origin, symbol, name = nameProvider.nameForDeclaration(descriptor),
                 visibility = descriptor.visibility,
                 modality = descriptor.modality,
                 isVar = descriptor.isVar,
                 isConst = descriptor.isConst,
                 isLateinit = descriptor.isLateInit,
+                isDelegated = isDelegated,
                 isExternal = descriptor.isEffectivelyExternal(),
                 isExpect = descriptor.isExpect
             ).apply {
