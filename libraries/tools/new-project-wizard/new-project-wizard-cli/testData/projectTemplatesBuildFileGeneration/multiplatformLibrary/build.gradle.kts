@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform") version "KOTLIN_VERSION"
 }
+
 group = "me.user"
 version = "1.0-SNAPSHOT"
 
@@ -10,13 +11,17 @@ repositories {
         url = uri("https://dl.bintray.com/kotlin/kotlin-dev")
     }
 }
+
 kotlin {
     jvm {
         compilations.all {
             kotlinOptions.jvmTarget = "1.8"
         }
+        testRuns["test"].executionTask.configure {
+            useJUnit()
+        }
     }
-    js {
+    js(LEGACY) {
         browser {
             testTask {
                 useKarma {

@@ -312,6 +312,8 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
             stackValue = suspendFunctionTypeWrapperIfNeeded(selector, stackValue);
 
+            stackValue = coerceAndBoxInlineClassIfNeeded(selector, stackValue);
+
             RuntimeAssertionInfo runtimeAssertionInfo = null;
             if (selector instanceof KtExpression) {
                 KtExpression expression = (KtExpression) selector;
@@ -355,6 +357,53 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                         Type.getMethodDescriptor(functionTypeForWrapper, functionTypeForWrapper)
                 );
                 coerce(functionTypeForWrapper, type, v);
+            }
+        };
+        return stackValue;
+    }
+
+    private StackValue coerceAndBoxInlineClassIfNeeded(KtElement selector, StackValue stackValue) {
+        ResolvedCall<? extends CallableDescriptor> resolvedCall = CallUtilKt.getResolvedCall(selector, bindingContext);
+        if (resolvedCall == null) return stackValue;
+        CallableDescriptor descriptor = resolvedCall.getResultingDescriptor();
+        if (!(descriptor instanceof FunctionDescriptor)) return stackValue;
+        FunctionDescriptor functionDescriptor = (FunctionDescriptor) descriptor;
+        if (!functionDescriptor.isSuspend()) return stackValue;
+
+        KotlinType unboxedInlineClass = CoroutineCodegenUtilKt
+                .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(functionDescriptor, typeMapper);
+
+        StackValue stackValueToWrap = stackValue;
+        KotlinType originalKotlinType;
+        if (unboxedInlineClass != null) {
+            originalKotlinType = unboxedInlineClass;
+        } else {
+            originalKotlinType = stackValueToWrap.kotlinType;
+        }
+        Type originalType;
+        if (unboxedInlineClass != null) {
+            originalType = typeMapper.mapType(unboxedInlineClass);
+        } else {
+            originalType = stackValueToWrap.type;
+        }
+
+        stackValue = new StackValue(originalType, originalKotlinType) {
+            @Override
+            public void putSelector(
+                    @NotNull Type type, @Nullable KotlinType kotlinType, @NotNull InstructionAdapter v
+            ) {
+                if (((originalKotlinType != null && InlineClassesUtilsKt.isInlineClassType(originalKotlinType)) ||
+                    (kotlinType != null && InlineClassesUtilsKt.isInlineClassType(kotlinType)))
+                ) {
+                    stackValueToWrap.put(v);
+                    // Suspend functions always return Ljava/lang/Object;, so, before inline-class boxing/unboxing we need to generate CHECKCAST
+                    StackValue.coerce(OBJECT_TYPE, originalType, v);
+                    // Box/unbox inline class
+                    StackValue.coerce(originalType, originalKotlinType, type, kotlinType, v);
+                } else {
+                    // No inline class -> usual coerce is enough
+                    stackValueToWrap.put(type, kotlinType, v);
+                }
             }
         };
         return stackValue;
@@ -1654,12 +1703,32 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             Type returnType;
             KotlinType returnKotlinType;
             if (isNonLocalReturn) {
-                returnType = nonLocalReturn.returnType.getType();
-                returnKotlinType = nonLocalReturn.returnType.getKotlinType();
+                // This is inline lambda. Find inline-site and check, whether it is suspend functions returning unboxed inline class
+                CodegenContext<?> inlineSiteContext = this.context.getFirstCrossInlineOrNonInlineContext();
+                KotlinType originalInlineClass = null;
+                if (inlineSiteContext instanceof MethodContext) {
+                     originalInlineClass = CoroutineCodegenUtilKt
+                            .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(
+                                    ((MethodContext) inlineSiteContext).getFunctionDescriptor(), typeMapper);
+                }
+                if (originalInlineClass != null) {
+                    returnType = typeMapper.mapType(originalInlineClass);
+                    returnKotlinType = originalInlineClass;
+                } else {
+                    returnType = nonLocalReturn.returnType.getType();
+                    returnKotlinType = nonLocalReturn.returnType.getKotlinType();
+                }
             }
             else {
-                returnType = this.returnType;
-                returnKotlinType = typeMapper.getReturnValueType(this.context.getFunctionDescriptor());
+                KotlinType originalInlineClass = CoroutineCodegenUtilKt
+                        .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(context.getFunctionDescriptor(), typeMapper);
+                if (originalInlineClass != null) {
+                    returnType = typeMapper.mapType(originalInlineClass);
+                    returnKotlinType = originalInlineClass;
+                } else {
+                    returnType = this.returnType;
+                    returnKotlinType = this.context.getFunctionDescriptor().getReturnType();
+                }
             }
             StackValue valueToReturn = returnedExpression != null ? gen(returnedExpression) : StackValue.none();
 
@@ -1714,7 +1783,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                     return new NonLocalReturnInfo(
                             new JvmKotlinType(
                                     typeMapper.mapReturnType(containingFunction),
-                                    typeMapper.getReturnValueType(containingFunction)
+                                    containingFunction.getReturnType()
                             ),
                             FIRST_FUN_LABEL
                     );
@@ -1746,16 +1815,24 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         boolean isVoidCoroutineLambda =
                 originalSuspendLambdaDescriptor != null && TypeSignatureMappingKt.hasVoidReturnType(originalSuspendLambdaDescriptor);
 
+        KotlinType originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass =
+                CoroutineCodegenUtilKt.originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(
+                        context.getFunctionDescriptor(), typeMapper);
+
         // If generating body for named block-bodied function or Unit-typed coroutine lambda, generate it as sequence of statements
         Type typeForExpression =
                 isBlockedNamedFunction || isVoidCoroutineLambda
                 ? Type.VOID_TYPE
-                : returnType;
+                : originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass != null
+                  ? typeMapper.mapType(originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass)
+                  : returnType;
 
         KotlinType kotlinTypeForExpression =
                 isBlockedNamedFunction || isVoidCoroutineLambda
                 ? null
-                : typeMapper.getReturnValueType(context.getFunctionDescriptor());
+                : originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass != null
+                  ? originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass
+                  : context.getFunctionDescriptor().getReturnType();
 
         gen(expr, typeForExpression, kotlinTypeForExpression);
 
@@ -2613,7 +2690,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         SuspensionPointKind suspensionPointKind =
                 CoroutineCodegenUtilKt.isSuspensionPoint(resolvedCall, this, state.getLanguageVersionSettings());
-        boolean maybeSuspensionPoint = suspensionPointKind != SuspensionPointKind.NEVER;
+        boolean maybeSuspensionPoint = suspensionPointKind != SuspensionPointKind.NEVER && !insideCallableReference();
         boolean isConstructor = resolvedCall.getResultingDescriptor() instanceof ConstructorDescriptor;
         if (!(callableMethod instanceof IntrinsicWithSpecialReceiver)) {
             putReceiverAndInlineMarkerIfNeeded(callableMethod, resolvedCall, receiver, maybeSuspensionPoint, isConstructor);
@@ -2657,9 +2734,21 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         callGenerator.genCall(callableMethod, resolvedCall, defaultMaskWasGenerated, this);
 
         if (maybeSuspensionPoint) {
+            // The order is important! Do not reorder!
+            // CoroutineTransformerMethodVisitor expects the marker exactly in this order.
             addReturnsUnitMarkerIfNecessary(v, resolvedCall);
             addSuspendMarker(v, false, suspensionPointKind == SuspensionPointKind.NOT_INLINE);
+            addUnboxInlineClassMarkersIfNeeded(v, resolvedCall.getResultingDescriptor(), typeMapper);
             addInlineMarker(v, false);
+        }
+
+        // If a suspend function returns unboxed inline class, we should check for COROUTINE_SUSPENDED and only then box the inline class.
+        if (insideCallableReference() && resolvedCall.getResultingDescriptor() instanceof FunctionDescriptor) {
+            KotlinType unboxedInlineClass = CoroutineCodegenUtilKt.originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(
+                    (FunctionDescriptor) resolvedCall.getResultingDescriptor(), typeMapper);
+            if (unboxedInlineClass != null) {
+                CoroutineCodegenUtilKt.generateCoroutineSuspendedCheck(v, state.getLanguageVersionSettings());
+            }
         }
 
         KotlinType returnType = resolvedCall.getResultingDescriptor().getReturnType();
@@ -2673,6 +2762,10 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             }
             v.athrow();
         }
+    }
+
+    private boolean insideCallableReference() {
+        return (parentCodegen instanceof ClosureCodegen) && ((ClosureCodegen) parentCodegen).isCallableReference();
     }
 
     private void putReceiverAndInlineMarkerIfNeeded(

@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.idea.completion
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.PsiJavaPatterns
-import com.intellij.psi.PsiElement
 import com.intellij.util.ProcessingContext
 import org.jetbrains.kotlin.idea.frontend.api.InvalidWayOfUsingAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
@@ -22,7 +21,7 @@ import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.isExtension
 import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
-import org.jetbrains.kotlin.psi.psiUtil.getQualifiedExpressionForSelector
+import org.jetbrains.kotlin.psi.psiUtil.getReceiverExpression
 
 class KotlinFirCompletionContributor : CompletionContributor() {
     init {
@@ -75,13 +74,13 @@ private object KotlinAvailableScopesCompletionProvider {
         val reference = (parameters.position.parent as? KtSimpleNameExpression)?.mainReference ?: return
         val nameExpression = reference.expression.takeIf { it !is KtLabelReferenceExpression } ?: return
 
-        val explicitReceiver = nameExpression.getQualifiedExpressionForSelector()?.receiverExpression
+        val explicitReceiver = nameExpression.getReceiverExpression()
 
         with(getAnalysisSessionFor(originalFile).createContextDependentCopy()) {
             val (implicitScopes, _) = originalFile.getScopeContextForPosition(nameExpression)
 
             fun KtCallableSymbol.hasSuitableExtensionReceiver(): Boolean =
-                checkExtensionIsSuitable(originalFile, parameters.originalPosition, nameExpression, explicitReceiver)
+                checkExtensionIsSuitable(originalFile, nameExpression, explicitReceiver)
 
             when {
                 nameExpression.parent is KtUserType -> collectTypesCompletion(result, implicitScopes)
@@ -129,9 +128,7 @@ private object KotlinAvailableScopesCompletionProvider {
 
         val extensionsWhichCanBeCalled = implicitScopes
             .getCallableSymbols()
-            .filter {
-                it.isExtension && it.hasSuitableExtensionReceiver()
-            }
+            .filter { it.isExtension && it.hasSuitableExtensionReceiver() }
 
         availableNonExtensions.forEach { result.addSymbolToCompletion(it) }
         extensionsWhichCanBeCalled.forEach { result.addSymbolToCompletion(it) }

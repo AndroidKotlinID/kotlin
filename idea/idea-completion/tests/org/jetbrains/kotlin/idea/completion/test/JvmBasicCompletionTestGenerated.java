@@ -1433,6 +1433,11 @@ public class JvmBasicCompletionTestGenerated extends AbstractJvmBasicCompletionT
                 runTest("idea/idea-completion/testData/basic/common/extensions/NoMemberExtensionsFromCompanionObject.kt");
             }
 
+            @TestMetadata("ParametrizedExpectedType.kt")
+            public void testParametrizedExpectedType() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/extensions/ParametrizedExpectedType.kt");
+            }
+
             @TestMetadata("StarTypeArg.kt")
             public void testStarTypeArg() throws Exception {
                 runTest("idea/idea-completion/testData/basic/common/extensions/StarTypeArg.kt");
@@ -2292,6 +2297,11 @@ public class JvmBasicCompletionTestGenerated extends AbstractJvmBasicCompletionT
                 runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/extensionPropertyAndFunctionImplicitReceiver.kt");
             }
 
+            @TestMetadata("extensionRecompletion.kt")
+            public void testExtensionRecompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/extensionRecompletion.kt");
+            }
+
             @TestMetadata("genericExtensionPropertyAndFunctionExplicitReceiver.kt")
             public void testGenericExtensionPropertyAndFunctionExplicitReceiver() throws Exception {
                 runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/genericExtensionPropertyAndFunctionExplicitReceiver.kt");
@@ -2350,6 +2360,41 @@ public class JvmBasicCompletionTestGenerated extends AbstractJvmBasicCompletionT
             @TestMetadata("topLevelClasses.kt")
             public void testTopLevelClasses() throws Exception {
                 runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelClasses.kt");
+            }
+
+            @TestMetadata("topLevelPropertyGetterBodyCompletion.kt")
+            public void testTopLevelPropertyGetterBodyCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertyGetterBodyCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertyGetterExpressionCompletion.kt")
+            public void testTopLevelPropertyGetterExpressionCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertyGetterExpressionCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertyGetterTypeCompletion.kt")
+            public void testTopLevelPropertyGetterTypeCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertyGetterTypeCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertyInitializerCompletion.kt")
+            public void testTopLevelPropertyInitializerCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertyInitializerCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertySetterBodyCompletion.kt")
+            public void testTopLevelPropertySetterBodyCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertySetterBodyCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertySetterExpressionCompletion.kt")
+            public void testTopLevelPropertySetterExpressionCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertySetterExpressionCompletion.kt");
+            }
+
+            @TestMetadata("topLevelPropertyTypeCompletion.kt")
+            public void testTopLevelPropertyTypeCompletion() throws Exception {
+                runTest("idea/idea-completion/testData/basic/common/primitiveCompletion/topLevelPropertyTypeCompletion.kt");
             }
 
             @TestMetadata("topLevelVariablesAndFunctions.kt")

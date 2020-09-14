@@ -130,7 +130,7 @@ fun FirReference.toSymbol(
                 is FirClassSymbol<*> -> classifierStorage.getIrClassSymbol(boundSymbol).owner.thisReceiver?.symbol
                 is FirFunctionSymbol -> declarationStorage.getIrFunctionSymbol(boundSymbol).owner.extensionReceiverParameter?.symbol
                 is FirPropertySymbol -> {
-                    val property = declarationStorage.getIrPropertyOrFieldSymbol(boundSymbol).owner as? IrProperty
+                    val property = declarationStorage.getIrPropertySymbol(boundSymbol).owner as? IrProperty
                     property?.let { conversionScope.parentAccessorOfPropertyFromStack(it) }?.symbol
                 }
                 else -> null
@@ -149,12 +149,10 @@ private fun FirCallableSymbol<*>.toSymbol(declarationStorage: Fir2IrDeclarationS
             } else {
                 syntheticProperty.setter!!.delegate.symbol.toSymbol(declarationStorage, preferGetter)
             }
-        } ?: if (fir.isLocal) declarationStorage.getIrValueSymbol(this) else declarationStorage.getIrPropertyOrFieldSymbol(this)
+        } ?: declarationStorage.getIrPropertySymbol(this)
     }
-    is FirPropertySymbol -> {
-        if (fir.isLocal) declarationStorage.getIrValueSymbol(this) else declarationStorage.getIrPropertyOrFieldSymbol(this)
-    }
-    is FirFieldSymbol -> declarationStorage.getIrPropertyOrFieldSymbol(this)
+    is FirPropertySymbol -> declarationStorage.getIrPropertySymbol(this)
+    is FirFieldSymbol -> declarationStorage.getIrFieldSymbol(this)
     is FirBackingFieldSymbol -> declarationStorage.getIrBackingFieldSymbol(this)
     is FirDelegateFieldSymbol<*> -> declarationStorage.getIrBackingFieldSymbol(this)
     is FirVariableSymbol<*> -> declarationStorage.getIrValueSymbol(this)
@@ -323,7 +321,7 @@ internal fun FirProperty.generateOverriddenAccessorSymbols(
         if (it.fir.visibility == Visibilities.Private) {
             return@processDirectlyOverriddenProperties ProcessorAction.NEXT
         }
-        val overriddenProperty = declarationStorage.getIrPropertyOrFieldSymbol(it.unwrapSubstitutionOverrides()) as IrPropertySymbol
+        val overriddenProperty = declarationStorage.getIrPropertySymbol(it.unwrapSubstitutionOverrides()) as IrPropertySymbol
         val overriddenAccessor = if (isGetter) overriddenProperty.owner.getter?.symbol else overriddenProperty.owner.setter?.symbol
         if (overriddenAccessor != null) {
             overriddenSet += overriddenAccessor
@@ -479,14 +477,21 @@ fun Fir2IrComponents.createSafeCallConstruction(
     }
 }
 
-fun Fir2IrComponents.createTemporaryVariableForSafeCallConstruction(
+fun Fir2IrComponents.createTemporaryVariable(
     receiverExpression: IrExpression,
-    conversionScope: Fir2IrConversionScope
+    conversionScope: Fir2IrConversionScope,
+    nameHint: String? = null
 ): Pair<IrVariable, IrValueSymbol> {
-    val receiverVariable = declarationStorage.declareTemporaryVariable(receiverExpression, "safe_receiver").apply {
+    val receiverVariable = declarationStorage.declareTemporaryVariable(receiverExpression, nameHint).apply {
         parent = conversionScope.parentFromStack()
     }
     val variableSymbol = receiverVariable.symbol
 
     return Pair(receiverVariable, variableSymbol)
 }
+
+fun Fir2IrComponents.createTemporaryVariableForSafeCallConstruction(
+    receiverExpression: IrExpression,
+    conversionScope: Fir2IrConversionScope
+): Pair<IrVariable, IrValueSymbol> =
+    createTemporaryVariable(receiverExpression, conversionScope, "safe_receiver")

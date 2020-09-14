@@ -226,6 +226,11 @@ public class ParameterInfoTestGenerated extends AbstractParameterInfoTest {
             runTest("idea/testData/parameterInfo/functionCall/NamedParameter3.kt");
         }
 
+        @TestMetadata("NamedParameter4.kt")
+        public void testNamedParameter4() throws Exception {
+            runTest("idea/testData/parameterInfo/functionCall/NamedParameter4.kt");
+        }
+
         @TestMetadata("NoAnnotations.kt")
         public void testNoAnnotations() throws Exception {
             runTest("idea/testData/parameterInfo/functionCall/NoAnnotations.kt");
@@ -437,6 +442,11 @@ public class ParameterInfoTestGenerated extends AbstractParameterInfoTest {
         @TestMetadata("Overloads.kt")
         public void testOverloads() throws Exception {
             runTest("idea/testData/parameterInfo/typeArguments/Overloads.kt");
+        }
+
+        @TestMetadata("ParameterizedClassConstructor.kt")
+        public void testParameterizedClassConstructor() throws Exception {
+            runTest("idea/testData/parameterInfo/typeArguments/ParameterizedClassConstructor.kt");
         }
 
         @TestMetadata("Reified.kt")

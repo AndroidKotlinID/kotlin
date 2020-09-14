@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.renderWithType
 import org.jetbrains.kotlin.fir.resolve.inference.TypeParameterBasedTypeVariable
+import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.model.ConeDeclaredUpperBoundConstraintPosition
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
@@ -21,7 +22,7 @@ import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.SimpleConstraintSystemConstraintPosition
 
 internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
-    override suspend fun check(candidate: Candidate, sink: CheckerSink, callInfo: CallInfo) {
+    override suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext) {
         val declaration = candidate.symbol.fir
         if (declaration !is FirTypeParameterRefsOwner || declaration.typeParameters.isEmpty()) {
             candidate.substitutor = ConeSubstitutor.Empty
@@ -36,7 +37,7 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
 
         // bad function -- error on declaration side
         if (csBuilder.hasContradiction) {
-            sink.yieldApplicability(CandidateApplicability.INAPPLICABLE) //TODO: auto report it
+            sink.yieldDiagnostic(InapplicableCandidate) //TODO: auto report it
             return
         }
 
@@ -66,14 +67,14 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
                     getTypePreservingFlexibilityWrtTypeVariable(
                         typeArgument.typeRef.coneType,
                         typeParameter,
-                        candidate.bodyResolveComponents.inferenceComponents.ctx
+                        context.session.inferenceComponents.ctx
                     ),
                     SimpleConstraintSystemConstraintPosition // TODO
                 )
                 is FirStarProjection -> csBuilder.addEqualityConstraint(
                     freshVariable.defaultType,
                     typeParameter.symbol.fir.bounds.firstOrNull()?.coneType
-                        ?: sink.components.session.builtinTypes.nullableAnyType.type,
+                        ?: context.session.builtinTypes.nullableAnyType.type,
                     SimpleConstraintSystemConstraintPosition
                 )
                 else -> assert(typeArgument == FirTypePlaceholderProjection) {

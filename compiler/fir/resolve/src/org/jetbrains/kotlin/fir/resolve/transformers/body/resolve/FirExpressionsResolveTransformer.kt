@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.visitors.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.resolve.calls.tower.CandidateApplicability
 
 open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) : FirPartialBodyResolveTransformer(transformer) {
     private inline val builtinTypes: BuiltinTypes get() = session.builtinTypes
@@ -455,7 +456,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
     private inline fun <T> resolveCandidateForAssignmentOperatorCall(block: () -> T): T {
         return dataFlowAnalyzer.withIgnoreFunctionCalls {
             callResolver.withNoArgumentsTransform {
-                inferenceComponents.withInferenceSession(InferenceSessionForAssignmentOperatorCall) {
+                context.withInferenceSession(InferenceSessionForAssignmentOperatorCall) {
                     block()
                 }
             }
@@ -545,7 +546,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         checkNotNullCall.argumentList.transformArguments(transformer, ResolutionMode.ContextDependent)
 
         var callCompleted = false
-        val result = components.syntheticCallGenerator.generateCalleeForCheckNotNullCall(checkNotNullCall)?.let {
+        val result = components.syntheticCallGenerator.generateCalleeForCheckNotNullCall(checkNotNullCall, resolutionContext)?.let {
             val completionResult = callCompleter.completeCall(it, data.expectedType)
             callCompleted = completionResult.callCompleted
             completionResult.result
@@ -628,7 +629,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         if (data !is ResolutionMode.ContextDependent) {
             val resolvedReference =
                 components.syntheticCallGenerator.resolveCallableReferenceWithSyntheticOuterCall(
-                    callableReferenceAccess, data.expectedType,
+                    callableReferenceAccess, data.expectedType, resolutionContext,
                 ) ?: callableReferenceAccess
 
             return resolvedReference.compose()

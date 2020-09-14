@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.resolve.BodyResolveComponents
 import org.jetbrains.kotlin.fir.resolve.calls.Candidate
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
+import org.jetbrains.kotlin.fir.resolve.calls.ResolutionContext
 import org.jetbrains.kotlin.fir.resolve.inference.model.ConeFixVariableConstraintPosition
 import org.jetbrains.kotlin.fir.returnExpressions
 import org.jetbrains.kotlin.fir.types.*
@@ -29,13 +30,15 @@ import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
-    val variableFixationFinder = VariableFixationFinder(components.inferenceComponents.trivialConstraintTypeInferenceOracle)
+    val inferenceComponents = components.session.inferenceComponents
+    val variableFixationFinder = VariableFixationFinder(inferenceComponents.trivialConstraintTypeInferenceOracle)
 
     fun complete(
         c: ConstraintSystemCompletionContext,
         completionMode: ConstraintSystemCompletionMode,
         topLevelAtoms: List<FirStatement>,
         candidateReturnType: ConeKotlinType,
+        context: ResolutionContext,
         collectVariablesFromContext: Boolean = false,
         analyze: (PostponedResolvedAtom) -> Unit
     ) {
@@ -52,7 +55,7 @@ class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
 
             if (
                 completionMode == ConstraintSystemCompletionMode.FULL &&
-                resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(c, variableForFixation, postponedAtoms, analyze)
+                resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(c, variableForFixation, postponedAtoms, context, analyze)
             ) {
                 continue
             }
@@ -81,7 +84,7 @@ class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
         c: ConstraintSystemCompletionContext,
         variableForFixation: VariableFixationFinder.VariableForFixation,
         postponedAtoms: List<PostponedResolvedAtom>,
-        /*diagnosticsHolder: KotlinDiagnosticsHolder,*/
+        context: ResolutionContext,
         analyze: (PostponedResolvedAtom) -> Unit
     ): Boolean {
         val variable = variableForFixation.variable as ConeTypeVariableTypeConstructor
@@ -111,7 +114,7 @@ class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
                     isSuitable = { isBuiltinFunctionalType(components.session) },
                     typeVariableCreator = { ConeTypeVariableForLambdaReturnType(postponedAtom.atom, "_R") },
                     newAtomCreator = { returnTypeVariable, expectedType ->
-                        postponedAtom.transformToResolvedLambda(csBuilder, expectedType, returnTypeVariable)
+                        postponedAtom.transformToResolvedLambda(csBuilder, context, expectedType, returnTypeVariable)
                     }
                 )
             }
@@ -131,7 +134,7 @@ class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
         typeVariableCreator: () -> V,
         newAtomCreator: (V, ConeKotlinType) -> PostponedResolvedAtom
     ): PostponedResolvedAtom {
-        val functionalType = (components.inferenceComponents.resultTypeResolver.findResultType(
+        val functionalType = (inferenceComponents.resultTypeResolver.findResultType(
             c,
             c.notFixedTypeVariables.getValue(variable.typeConstructor),
             TypeVariableDirectionCalculator.ResolveDirection.TO_SUPERTYPE
@@ -206,7 +209,7 @@ class ConstraintSystemCompleter(private val components: BodyResolveComponents) {
         postponedResolveKtPrimitives: List<PostponedResolvedAtom>
     ) {
         val direction = TypeVariableDirectionCalculator(c, postponedResolveKtPrimitives, topLevelType).getDirection(variableWithConstraints)
-        val resultType = components.inferenceComponents.resultTypeResolver.findResultType(c, variableWithConstraints, direction)
+        val resultType = inferenceComponents.resultTypeResolver.findResultType(c, variableWithConstraints, direction)
         val variable = variableWithConstraints.typeVariable
         c.fixVariable(variable, resultType, ConeFixVariableConstraintPosition(variable)) // TODO: obtain atom for diagnostics
     }

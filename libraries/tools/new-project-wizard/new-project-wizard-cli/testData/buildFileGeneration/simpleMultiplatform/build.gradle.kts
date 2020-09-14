@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform") version "KOTLIN_VERSION"
 }
+
 group = "testGroupId"
 version = "1.0-SNAPSHOT"
 
@@ -10,13 +11,17 @@ repositories {
         url = uri("https://dl.bintray.com/kotlin/kotlin-dev")
     }
 }
+
 kotlin {
     jvm {
         compilations.all {
             kotlinOptions.jvmTarget = "9"
         }
+        testRuns["test"].executionTask.configure {
+            useJUnit()
+        }
     }
-    js("a") {
+    js("a", LEGACY) {
         browser {
             binaries.executable()
             webpackTask {

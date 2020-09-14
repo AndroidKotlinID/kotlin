@@ -46,7 +46,7 @@ class SimpleJsClientTemplate : JsClientTemplate() {
             if (useKotlinxHtml.reference.settingValue()) {
                 +ArtifactBasedLibraryDependencyIR(
                     MavenArtifact(Repositories.KOTLINX, "org.jetbrains.kotlinx", "kotlinx-html"),
-                    Versions.KOTLINX.KOTLINX_HTML(KotlinPlugin.version.propertyValue.version),
+                    Versions.KOTLINX.KOTLINX_HTML,
                     DependencyType.MAIN
                 )
             }
@@ -63,6 +63,9 @@ class SimpleJsClientTemplate : JsClientTemplate() {
                 if (useKotlinxHtml.reference.settingValue()) {
                     +(FileTemplateDescriptor("$id/client.kt.vm") asSrcOf SourcesetType.main)
                     +(FileTemplateDescriptor("$id/TestClient.kt.vm", "TestClient.kt".asPath()) asSrcOf SourcesetType.test)
+                } else {
+                    +(FileTemplateDescriptor("$id/simple.kt.vm") asSrcOf SourcesetType.main)
+                    +(FileTemplateDescriptor("$id/SimpleTest.kt.vm", "TestClient.kt".asPath()) asSrcOf SourcesetType.test)
                 }
             }
         }

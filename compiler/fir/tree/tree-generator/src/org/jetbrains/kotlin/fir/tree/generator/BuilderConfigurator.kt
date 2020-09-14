@@ -172,6 +172,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             parents += typeParametersOwnerBuilder
             defaultNull("getter", "setter", "containerSource", "delegateFieldSymbol")
             default("resolvePhase", "FirResolvePhase.RAW_FIR")
+            withCopy()
         }
 
         builder(typeOperatorCall) {
@@ -205,6 +206,7 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             defaultNull("body")
             default("contractDescription", "FirEmptyContractDescription")
             useTypes(emptyContractDescriptionType)
+            withCopy()
         }
 
         builder(whenExpression) {

@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.fir.resolve.calls.InaccessibleImplicitReceiverValue
 import org.jetbrains.kotlin.fir.resolve.dfa.FirControlFlowGraphReferenceImpl
 import org.jetbrains.kotlin.fir.resolve.inference.FirDelegatedPropertyInferenceSession
 import org.jetbrains.kotlin.fir.resolve.inference.extractLambdaInfoFromFunctionalType
+import org.jetbrains.kotlin.fir.resolve.inference.isSuspendFunctionType
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
@@ -214,11 +215,11 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         val inferenceSession = FirDelegatedPropertyInferenceSession(
             property,
             delegateExpression,
-            components,
-            callCompleter.createPostponedArgumentsAnalyzer()
+            resolutionContext,
+            callCompleter.createPostponedArgumentsAnalyzer(resolutionContext)
         )
 
-        components.inferenceComponents.withInferenceSession(inferenceSession) {
+        context.withInferenceSession(inferenceSession) {
             property.transformAccessors()
             val completedCalls = inferenceSession.completeCandidates()
             val finalSubstitutor = inferenceSession.createFinalSubstitutor()
@@ -768,7 +769,11 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                         inferenceComponents.ctx.commonSuperTypeOrNull(returnTypes) ?: session.builtinTypes.unitType.type
                     )
                 )
-                af.replaceTypeRef(af.constructFunctionalTypeRef())
+                af.replaceTypeRef(
+                    af.constructFunctionalTypeRef(
+                        isSuspend = expectedTypeRef.coneTypeSafe<ConeKotlinType>()?.isSuspendFunctionType(session) == true
+                    )
+                )
                 af.addReturn().compose()
             }
             is ResolutionMode.WithStatus -> {

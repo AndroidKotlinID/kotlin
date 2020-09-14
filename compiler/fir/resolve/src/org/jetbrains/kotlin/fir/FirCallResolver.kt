@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.fir.resolve.calls.tower.FirTowerResolver
 import org.jetbrains.kotlin.fir.resolve.calls.tower.TowerResolveManager
 import org.jetbrains.kotlin.fir.resolve.diagnostics.*
 import org.jetbrains.kotlin.fir.resolve.inference.ResolvedCallableReferenceAtom
+import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreNameReference
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreReceiver
@@ -36,6 +37,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.results.TypeSpecificityComparator
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
+import org.jetbrains.kotlin.resolve.calls.tower.CandidateApplicability
+import org.jetbrains.kotlin.resolve.calls.tower.isSuccess
 import org.jetbrains.kotlin.types.Variance
 
 class FirCallResolver(
@@ -53,9 +56,8 @@ class FirCallResolver(
         components, resolutionStageRunner,
     )
 
-    private val conflictResolver =
-        inferenceComponents.session.callConflictResolverFactory
-            .create(TypeSpecificityComparator.NONE, inferenceComponents)
+    private val conflictResolver: ConeCallConflictResolver =
+        session.callConflictResolverFactory.create(TypeSpecificityComparator.NONE, session.inferenceComponents)
 
     @PrivateForInline
     var needTransformArguments: Boolean = true
@@ -144,11 +146,9 @@ class FirCallResolver(
             transformer.components.containingDeclarations,
         )
         towerResolver.reset()
-        val result = towerResolver.runResolver(
-            info,
-        )
+        val result = towerResolver.runResolver(info, transformer.resolutionContext)
         val bestCandidates = result.bestCandidates()
-        val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {
+        val reducedCandidates = if (!result.currentApplicability.isSuccess) {
             bestCandidates.toSet()
         } else {
             val onSuperReference = (explicitReceiver as? FirQualifiedAccessExpression)?.calleeReference is FirSuperReference
@@ -156,7 +156,7 @@ class FirCallResolver(
                 bestCandidates, discriminateGenerics = true, discriminateAbstracts = onSuperReference
             )
         }
-        if ((reducedCandidates.isEmpty() || result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) &&
+        if ((reducedCandidates.isEmpty() || !result.currentApplicability.isSuccess) &&
             explicitReceiver?.typeRef?.coneTypeSafe<ConeIntegerLiteralType>() != null
         ) {
             val approximatedQualifiedAccess = qualifiedAccess.transformExplicitReceiver(integerLiteralTypeApproximator, null)
@@ -191,8 +191,7 @@ class FirCallResolver(
         )
 
         if (qualifiedAccess.explicitReceiver == null) {
-            if (result.applicability < CandidateApplicability.SYNTHETIC_RESOLVED
-            ) {
+            if (!result.applicability.isSuccess) {
                 // We should run QualifierResolver if no successful candidates are available
                 // Otherwise expression (even ambiguous) beat qualifier
                 qualifiedResolver.tryResolveAsQualifier(qualifiedAccess.source)?.let { resolvedQualifier ->
@@ -255,11 +254,12 @@ class FirCallResolver(
         val localCollector = CandidateCollector(this, resolutionStageRunner)
         val result = towerResolver.runResolver(
             info,
+            transformer.resolutionContext,
             collector = localCollector,
             manager = TowerResolveManager(localCollector),
         )
         val bestCandidates = result.bestCandidates()
-        val noSuccessfulCandidates = result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED
+        val noSuccessfulCandidates = !result.currentApplicability.isSuccess
         val reducedCandidates = if (noSuccessfulCandidates) {
             bestCandidates.toSet()
         } else {
@@ -316,7 +316,8 @@ class FirCallResolver(
 
         val result = towerResolver.runResolverForDelegatingConstructor(
             callInfo,
-            constructedType
+            constructedType,
+            transformer.resolutionContext
         )
 
         return callResolver.selectDelegatingConstructorCall(delegatedConstructorCall, name, result, callInfo)
@@ -395,11 +396,11 @@ class FirCallResolver(
             }
         }
         if (constructorSymbol == null) return null
-        val candidate = CandidateFactory(components, callInfo).createCandidate(
+        val candidate = CandidateFactory(transformer.resolutionContext, callInfo).createCandidate(
             constructorSymbol!!,
             ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
         )
-        val applicability = resolutionStageRunner.processCandidate(candidate)
+        val applicability = resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext)
         return ResolutionResult(callInfo, applicability, listOf(candidate))
     }
 
@@ -418,7 +419,7 @@ class FirCallResolver(
         call: FirDelegatedConstructorCall, name: Name, result: CandidateCollector, callInfo: CallInfo
     ): FirDelegatedConstructorCall {
         val bestCandidates = result.bestCandidates()
-        val reducedCandidates = if (result.currentApplicability < CandidateApplicability.SYNTHETIC_RESOLVED) {
+        val reducedCandidates = if (!result.currentApplicability.isSuccess) {
             bestCandidates.toSet()
         } else {
             conflictResolver.chooseMaximallySpecificCandidates(bestCandidates, discriminateGenerics = true)
@@ -497,7 +498,7 @@ class FirCallResolver(
                 name
             )
 
-            applicability < CandidateApplicability.SYNTHETIC_RESOLVED -> {
+            !applicability.isSuccess -> {
                 val candidate = candidates.single()
                 val diagnostic = when (applicability) {
                     CandidateApplicability.HIDDEN -> ConeHiddenCandidateError(candidate.symbol)
@@ -540,8 +541,8 @@ class FirCallResolver(
         source: FirSourceElement?,
         name: Name
     ): FirErrorReferenceWithCandidate {
-        val candidate = CandidateFactory(components, callInfo).createErrorCandidate(diagnostic)
-        resolutionStageRunner.processCandidate(candidate, stopOnFirstError = false)
+        val candidate = CandidateFactory(transformer.resolutionContext, callInfo).createErrorCandidate(diagnostic)
+        resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
         return FirErrorReferenceWithCandidate(source, name, candidate, diagnostic)
     }
 
@@ -551,7 +552,7 @@ class FirCallResolver(
         diagnostic: ConeDiagnostic
     ): FirErrorReferenceWithCandidate {
         if (!candidate.fullyAnalyzed) {
-            resolutionStageRunner.processCandidate(candidate, stopOnFirstError = false)
+            resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
         }
         return FirErrorReferenceWithCandidate(source, candidate.callInfo.name, candidate, diagnostic)
     }
