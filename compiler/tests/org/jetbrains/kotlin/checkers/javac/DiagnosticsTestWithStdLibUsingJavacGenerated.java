@@ -2156,6 +2156,11 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
                 runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/kt41308.kt");
             }
 
+            @TestMetadata("kt41396.kt")
+            public void testKt41396() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/kt41396.kt");
+            }
+
             @TestMetadata("nestedLambdaInferenceWithListMap.kt")
             public void testNestedLambdaInferenceWithListMap() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/inference/nestedLambdaInferenceWithListMap.kt");
@@ -3348,6 +3353,11 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
                 @TestMetadata("kt38799.kt")
                 public void testKt38799() throws Exception {
                     runTest("compiler/testData/diagnostics/testsWithStdLib/inference/completion/postponedArgumentsAnalysis/kt38799.kt");
+                }
+
+                @TestMetadata("manyArguments.kt")
+                public void testManyArguments() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/inference/completion/postponedArgumentsAnalysis/manyArguments.kt");
                 }
 
                 @TestMetadata("moreSpecificOutputType.kt")

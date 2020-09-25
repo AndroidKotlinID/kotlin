@@ -3808,6 +3808,11 @@ public class JvmIrAgainstOldBoxInlineTestGenerated extends AbstractJvmIrAgainstO
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt", "kotlin.coroutines");
         }
 
+        @TestMetadata("debugMetadataCrossinline.kt")
+        public void testDebugMetadataCrossinline() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/suspend/debugMetadataCrossinline.kt");
+        }
+
         @TestMetadata("delegatedProperties.kt")
         public void testDelegatedProperties_1_3() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/delegatedProperties.kt", "kotlin.coroutines");
@@ -3953,6 +3958,16 @@ public class JvmIrAgainstOldBoxInlineTestGenerated extends AbstractJvmIrAgainstO
 
             public void testAllFilesPresentInCallableReference() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/suspend/callableReference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_MULTI_MODULE_IR_AGAINST_OLD, true);
+            }
+
+            @TestMetadata("isAsReified.kt")
+            public void testIsAsReified() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/callableReference/isAsReified.kt");
+            }
+
+            @TestMetadata("isAsReified2.kt")
+            public void testIsAsReified2() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/callableReference/isAsReified2.kt");
             }
 
             @TestMetadata("nonTailCall.kt")

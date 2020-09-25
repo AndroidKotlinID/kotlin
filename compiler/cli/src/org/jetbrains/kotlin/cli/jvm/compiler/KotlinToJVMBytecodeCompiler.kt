@@ -16,9 +16,9 @@
 
 package org.jetbrains.kotlin.cli.jvm.compiler
 
-import com.intellij.openapi.extensions.Extensions
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.*
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.PsiJavaModule
 import com.intellij.psi.search.DelegatingGlobalSearchScope
@@ -57,7 +57,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.FirAnalyzerFacade
 import org.jetbrains.kotlin.fir.analysis.diagnostics.*
 import org.jetbrains.kotlin.fir.backend.jvm.FirJvmBackendClassResolver
-import org.jetbrains.kotlin.fir.backend.jvm.FirJvmClassCodegen
+import org.jetbrains.kotlin.fir.backend.jvm.FirMetadataSerializer
 import org.jetbrains.kotlin.fir.checkers.registerExtendedCommonCheckers
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.session.FirSessionFactory
@@ -399,8 +399,8 @@ object KotlinToJVMBytecodeCompiler {
             generationState.beforeCompile()
             codegenFactory.generateModuleInFrontendIRMode(
                 generationState, moduleFragment, symbolTable, sourceManager
-            ) { irClass, context, parentFunction ->
-                FirJvmClassCodegen(irClass, context, parentFunction, session)
+            ) { context, irClass, _, serializationBindings, parent ->
+                FirMetadataSerializer(session, context, irClass, serializationBindings, parent)
             }
             CodegenFactory.doCheckCancelled(generationState)
             generationState.factory.done()
@@ -429,23 +429,24 @@ object KotlinToJVMBytecodeCompiler {
 
     private fun FirDiagnostic<*>.toRegularDiagnostic(): Diagnostic {
         val psiSource = element as FirPsiSourceElement<*>
-        @Suppress("TYPE_MISMATCH")
+        @Suppress("UNCHECKED_CAST")
         when (this) {
             is FirSimpleDiagnostic ->
                 return SimpleDiagnostic(
-                    psiSource.psi, factory.psiDiagnosticFactory, severity
+                    psiSource.psi, factory.psiDiagnosticFactory as DiagnosticFactory0<PsiElement>, severity
                 )
             is FirDiagnosticWithParameters1<*, *> ->
                 return DiagnosticWithParameters1(
-                    psiSource.psi, this.a, factory.psiDiagnosticFactory, severity
+                    psiSource.psi, this.a, factory.psiDiagnosticFactory as DiagnosticFactory1<PsiElement, Any>, severity
                 )
             is FirDiagnosticWithParameters2<*, *, *> ->
                 return DiagnosticWithParameters2(
-                    psiSource.psi, this.a, this.b, factory.psiDiagnosticFactory, severity
+                    psiSource.psi, this.a, this.b, factory.psiDiagnosticFactory as DiagnosticFactory2<PsiElement, Any, Any>, severity
                 )
             is FirDiagnosticWithParameters3<*, *, *, *> ->
                 return DiagnosticWithParameters3(
-                    psiSource.psi, this.a, this.b, this.c, factory.psiDiagnosticFactory, severity
+                    psiSource.psi, this.a, this.b, this.c,
+                    factory.psiDiagnosticFactory as DiagnosticFactory3<PsiElement, Any, Any, Any>, severity
                 )
         }
     }

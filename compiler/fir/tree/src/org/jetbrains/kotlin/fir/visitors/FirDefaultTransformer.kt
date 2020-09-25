@@ -24,10 +24,6 @@ abstract class FirDefaultTransformer<D> : FirTransformer<D>() {
         return transformResolvedTypeRef(errorTypeRef, data)
     }
 
-    override fun transformResolvedFunctionTypeRef(resolvedFunctionTypeRef: FirResolvedFunctionTypeRef, data: D): CompositeTransformResult<FirTypeRef> {
-        return transformResolvedTypeRef(resolvedFunctionTypeRef, data)
-    }
-
     override fun transformTypeRefWithNullability(typeRefWithNullability: FirTypeRefWithNullability, data: D): CompositeTransformResult<FirTypeRef> {
         return transformTypeRef(typeRefWithNullability, data)
     }
@@ -101,6 +97,10 @@ abstract class FirDefaultTransformer<D> : FirTransformer<D>() {
         data: D
     ): CompositeTransformResult<FirStatement> {
         return transformResolvedQualifier(errorResolvedQualifier, data)
+    }
+
+    override fun transformImplicitInvokeCall(implicitInvokeCall: FirImplicitInvokeCall, data: D): CompositeTransformResult<FirStatement> {
+        return transformFunctionCall(implicitInvokeCall, data)
     }
 }
 

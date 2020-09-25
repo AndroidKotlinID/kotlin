@@ -177,7 +177,7 @@ extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
-extra["versions.completion-ranking-kotlin"] = "0.1.2"
+extra["versions.completion-ranking-kotlin"] = "0.1.3"
 extra["versions.r8"] = "2.0.88"
 val immutablesVersion = "0.3.1"
 extra["versions.kotlinx-collections-immutable"] = immutablesVersion
@@ -271,6 +271,7 @@ extra["compilerModules"] = arrayOf(
     ":core:deserialization.common.jvm",
     ":core:compiler.common",
     ":core:compiler.common.jvm",
+    ":compiler:backend.common.jvm",
     ":core:descriptors",
     ":core:descriptors.jvm",
     ":core:descriptors.runtime",
@@ -339,7 +340,8 @@ val gradlePluginProjects = listOf(
     ":kotlin-allopen",
     ":kotlin-annotation-processing-gradle",
     ":kotlin-noarg",
-    ":kotlin-sam-with-receiver"
+    ":kotlin-sam-with-receiver",
+    ":kotlin-parcelize-compiler"
 )
 
 apply {
@@ -710,9 +712,12 @@ tasks {
         dependsOn("scriptingTest")
         dependsOn(":kotlin-build-common:test")
         dependsOn(":compiler:incremental-compilation-impl:test")
+        dependsOn(":compiler:incremental-compilation-impl:testJvmICWithJdk11")
         dependsOn(":core:descriptors.runtime:test")
 
         dependsOn("jvmCompilerIntegrationTest")
+
+        dependsOn(":plugins:parcelize:parcelize-compiler:test")
     }
 
     register("toolsTest") {
@@ -785,7 +790,8 @@ tasks {
         dependsOn(
             ":plugins:android-extensions-ide:test",
             ":idea:idea-android:test",
-            ":kotlin-annotation-processing:test"
+            ":kotlin-annotation-processing:test",
+            ":plugins:parcelize:parcelize-ide:test"
         )
     }
 
@@ -880,6 +886,7 @@ tasks {
                 ":prepare:ide-plugin-dependencies:noarg-compiler-plugin-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:sam-with-receiver-compiler-plugin-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:compiler-components-for-jps:publish",
+                ":prepare:ide-plugin-dependencies:parcelize-compiler-plugin-for-ide:publish",
                 ":kotlin-script-runtime:publish",
                 ":kotlin-script-util:publish",
                 ":kotlin-scripting-common:publish",
@@ -961,7 +968,7 @@ val zipPlugin by task<Zip> {
     setExecutablePermissions()
 
     doLast {
-        logger.lifecycle("Plugin artifacts packed to $archiveFile")
+        logger.lifecycle("Plugin artifacts packed to ${archiveFile.get()}")
     }
 }
 

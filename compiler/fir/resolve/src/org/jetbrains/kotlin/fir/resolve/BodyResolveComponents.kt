@@ -18,8 +18,6 @@ import org.jetbrains.kotlin.fir.resolve.dfa.FirDataFlowAnalyzer
 import org.jetbrains.kotlin.fir.resolve.inference.FirCallCompleter
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.transformers.FirSyntheticCallGenerator
-import org.jetbrains.kotlin.fir.resolve.transformers.IntegerLiteralTypeApproximationTransformer
-import org.jetbrains.kotlin.fir.resolve.transformers.IntegerOperatorsTypeUpdater
 import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculator
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirLocalScope
@@ -34,29 +32,27 @@ interface SessionHolder {
     val scopeSession: ScopeSession
 }
 
-interface BodyResolveComponents : SessionHolder {
-    val returnTypeCalculator: ReturnTypeCalculator
-    val implicitReceiverStack: ImplicitReceiverStack
-    val containingDeclarations: List<FirDeclaration>
-    val fileImportsScope: List<FirScope>
-    val towerDataElements: List<FirTowerDataElement>
-    val towerDataContext: FirTowerDataContext
-    val localScopes: FirLocalScopes
-    val towerDataContextForAnonymousFunctions: TowerDataContextForAnonymousFunctions
-    val noExpectedType: FirTypeRef
-    val symbolProvider: FirSymbolProvider
-    val file: FirFile
-    val container: FirDeclaration
-    val resolutionStageRunner: ResolutionStageRunner
-    val samResolver: FirSamResolver
-    val callResolver: FirCallResolver
-    val callCompleter: FirCallCompleter
-    val doubleColonExpressionResolver: FirDoubleColonExpressionResolver
-    val syntheticCallGenerator: FirSyntheticCallGenerator
-    val dataFlowAnalyzer: FirDataFlowAnalyzer<*>
-    val integerLiteralTypeApproximator: IntegerLiteralTypeApproximationTransformer
-    val integerOperatorsTypeUpdater: IntegerOperatorsTypeUpdater
-    val outerClassManager: FirOuterClassManager
+abstract class BodyResolveComponents : SessionHolder {
+    abstract val returnTypeCalculator: ReturnTypeCalculator
+    abstract val implicitReceiverStack: ImplicitReceiverStack
+    abstract val containingDeclarations: List<FirDeclaration>
+    abstract val fileImportsScope: List<FirScope>
+    abstract val towerDataElements: List<FirTowerDataElement>
+    abstract val towerDataContext: FirTowerDataContext
+    abstract val localScopes: FirLocalScopes
+    abstract val towerDataContextForAnonymousFunctions: TowerDataContextForAnonymousFunctions
+    abstract val noExpectedType: FirTypeRef
+    abstract val symbolProvider: FirSymbolProvider
+    abstract val file: FirFile
+    abstract val container: FirDeclaration
+    abstract val resolutionStageRunner: ResolutionStageRunner
+    abstract val samResolver: FirSamResolver
+    abstract val callResolver: FirCallResolver
+    abstract val callCompleter: FirCallCompleter
+    abstract val doubleColonExpressionResolver: FirDoubleColonExpressionResolver
+    abstract val syntheticCallGenerator: FirSyntheticCallGenerator
+    abstract val dataFlowAnalyzer: FirDataFlowAnalyzer<*>
+    abstract val outerClassManager: FirOuterClassManager
 }
 
 typealias FirLocalScopes = PersistentList<FirLocalScope>

@@ -7,8 +7,10 @@ package org.jetbrains.kotlin.idea.frontend.api.fir.utils
 
 import com.intellij.psi.util.parentsOfType
 import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.idea.fir.low.level.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.fir.low.level.api.LowLevelFirApiFacade
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacade
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacadeForCompletion
+import org.jetbrains.kotlin.idea.fir.low.level.api.util.originalDeclaration
 import org.jetbrains.kotlin.idea.util.getElementTextInContext
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getNonStrictParentOfType
@@ -20,7 +22,7 @@ internal sealed class EnclosingDeclarationContext {
             if (fakeFunction != null) {
                 val originalFunction = originalFile.findDeclarationOfTypeAt<KtNamedFunction>(fakeFunction.textOffset)
                     ?: error("Cannot find original function matching to ${fakeFunction.getElementTextInContext()} in $originalFile")
-
+                fakeFunction.originalDeclaration = originalFunction
                 return FunctionContext(fakeFunction, originalFunction)
             }
 
@@ -28,6 +30,7 @@ internal sealed class EnclosingDeclarationContext {
             if (fakeProperty != null) {
                 val originalProperty = originalFile.findDeclarationOfTypeAt<KtProperty>(fakeProperty.textOffset)
                     ?: error("Cannot find original property matching to ${fakeProperty.getElementTextInContext()} in $originalFile")
+                fakeProperty.originalDeclaration = originalProperty
 
                 return PropertyContext(fakeProperty, originalProperty)
             }
@@ -55,14 +58,14 @@ internal val EnclosingDeclarationContext.fakeEnclosingDeclaration: KtCallableDec
 
 internal fun EnclosingDeclarationContext.buildCompletionContext(originalFirFile: FirFile, firResolveState: FirModuleResolveState) =
     when (this) {
-        is FunctionContext -> LowLevelFirApiFacade.buildCompletionContextForFunction(
+        is FunctionContext -> LowLevelFirApiFacadeForCompletion.buildCompletionContextForFunction(
             originalFirFile,
             fakeEnclosingFunction,
             originalEnclosingFunction,
             state = firResolveState
         )
 
-        is PropertyContext -> LowLevelFirApiFacade.buildCompletionContextForProperty(
+        is PropertyContext -> LowLevelFirApiFacadeForCompletion.buildCompletionContextForProperty(
             originalFirFile,
             fakeEnclosingProperty,
             originalEnclosingProperty,

@@ -20,8 +20,8 @@ import org.jetbrains.kotlin.backend.jvm.ir.eraseTypeParameters
 import org.jetbrains.kotlin.backend.jvm.ir.isJvmAbstract
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.codegen.AsmUtil
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.addFunction
@@ -261,11 +261,17 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
                                 methodInfo = specialBridge.methodInfo?.copy(argumentsToCheck = 0), // For potential argument boxing
                                 isFinal = false,
                             )
-                            // The part after ?: is needed for methods with default implementations in collection interfaces:
+                            // The part after '?:' is needed for methods with default implementations in collection interfaces:
                             // MutableMap.remove() and getOrDefault().
                             val superTarget = overriddenFromClass.takeIf { !it.isFakeOverride } ?: specialBridge.overridden
-                            irClass.declarations.remove(irFunction)
-                            irClass.addSpecialBridge(superBridge, superTarget)
+                            if (superBridge.signature == superTarget.jvmMethod) {
+                                // If the resulting bridge to a super member matches the signature of the bridge callee,
+                                // bridge is not needed.
+                                irFunction
+                            } else {
+                                irClass.declarations.remove(irFunction)
+                                irClass.addSpecialBridge(superBridge, superTarget)
+                            }
                         }
                         else -> irFunction
                     }
@@ -379,6 +385,8 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
 
     private fun IrClass.addBridge(bridge: Bridge, target: IrSimpleFunction): IrSimpleFunction =
         addFunction {
+            startOffset = this@addBridge.startOffset
+            endOffset = this@addBridge.startOffset
             modality = Modality.OPEN
             origin = IrDeclarationOrigin.BRIDGE
             // Internal functions can be overridden by non-internal functions, which changes their names since the names of internal
@@ -390,7 +398,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
             isSuspend = bridge.overridden.isSuspend
         }.apply {
             copyParametersWithErasure(this@addBridge, bridge.overridden)
-            body = context.createIrBuilder(symbol).run { irExprBody(delegatingCall(this@apply, target)) }
+            body = context.createIrBuilder(symbol, startOffset, endOffset).run { irExprBody(delegatingCall(this@apply, target)) }
 
             // The generated bridge method overrides all of the symbols which were overridden by its overrides.
             // This is technically wrong, but it's necessary to generate a method which maps to the same signature.
@@ -405,6 +413,8 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
 
     private fun IrClass.addSpecialBridge(specialBridge: SpecialBridge, target: IrSimpleFunction): IrSimpleFunction =
         addFunction {
+            startOffset = this@addSpecialBridge.startOffset
+            endOffset = this@addSpecialBridge.startOffset
             modality = if (specialBridge.isFinal) Modality.FINAL else Modality.OPEN
             origin = if (specialBridge.isSynthetic) IrDeclarationOrigin.BRIDGE else IrDeclarationOrigin.BRIDGE_SPECIAL
             name = Name.identifier(specialBridge.signature.name)
@@ -417,7 +427,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
                 specialBridge.substitutedParameterTypes
             )
 
-            body = context.createIrBuilder(symbol).irBlockBody {
+            body = context.createIrBuilder(symbol, startOffset, endOffset).irBlockBody {
                 specialBridge.methodInfo?.let { info ->
                     valueParameters.take(info.argumentsToCheck).forEach {
                         +parameterTypeCheck(it, target.valueParameters[it.index].type, info.defaultValueGenerator(this@apply))

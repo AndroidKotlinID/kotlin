@@ -10,7 +10,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.getSymbolByLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
@@ -19,7 +18,7 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirClassifierSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
-import org.jetbrains.kotlin.idea.fir.low.level.api.FirModuleResolveState
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
 import org.jetbrains.kotlin.idea.frontend.api.*
 import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.*
 import org.jetbrains.kotlin.idea.frontend.api.fir.types.*
@@ -47,11 +46,11 @@ internal class KtSymbolByFirBuilder private constructor(
         ConeTypeCheckerContext(
             isErrorTypeEqualsToAnything = true,
             isStubTypeEqualsToAnything = true,
-            resolveState.firIdeLibrariesSession
+            resolveState.rootModuleSession
         )
     }
 
-    private val firProvider get() = resolveState.firIdeSourcesSession.firSymbolProvider
+    private val firProvider get() = resolveState.rootModuleSession.firSymbolProvider
 
     constructor(
         resolveState: FirModuleResolveState,
@@ -202,7 +201,8 @@ internal class KtSymbolByFirBuilder private constructor(
             is ConeClassErrorType -> KtFirErrorType(coneType, typeCheckerContext, token)
             is ConeFlexibleType -> KtFirFlexibleType(coneType, typeCheckerContext, token, this)
             is ConeIntersectionType -> KtFirIntersectionType(coneType, typeCheckerContext, token, this)
-            else -> TODO()
+            is ConeDefinitelyNotNullType -> buildKtType(coneType.original)
+            else -> TODO(coneType::class.toString())
         }
     }
 }

@@ -55,6 +55,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 import org.jetbrains.kotlin.descriptors.DescriptorVisibility
+import org.jetbrains.kotlin.fir.resolve.inference.isSuspendFunctionType
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 class Fir2IrDeclarationStorage(
@@ -408,7 +409,7 @@ class Fir2IrDeclarationStorage(
             ?: if (isLambda) Name.special("<anonymous>") else Name.special("<no name provided>")
         val visibility = simpleFunction?.visibility ?: Visibilities.Local
         val isSuspend =
-            if (isLambda) ((function as FirAnonymousFunction).typeRef as? FirResolvedTypeRef)?.isSuspend == true
+            if (isLambda) ((function as FirAnonymousFunction).typeRef as? FirResolvedTypeRef)?.type?.isSuspendFunctionType(session) == true
             else simpleFunction?.isSuspend == true
         val signature = if (isLocal) null else signatureComposer.composeSignature(function)
         val created = function.convertWithOffsets { startOffset, endOffset ->
@@ -672,7 +673,7 @@ class Fir2IrDeclarationStorage(
                     isFakeOverride = origin == IrDeclarationOrigin.FAKE_OVERRIDE,
                     containerSource = property.containerSource,
                 ).apply {
-                    metadata = FirMetadataSource.Variable(property)
+                    metadata = FirMetadataSource.Property(property)
                     convertAnnotationsFromLibrary(property)
                     enterScope(this)
                     if (irParent != null) {
@@ -791,7 +792,6 @@ class Fir2IrDeclarationStorage(
                     isExternal = false,
                     isStatic = field.isStatic
                 ).apply {
-                    metadata = FirMetadataSource.Variable(field)
                     descriptor.bind(this)
                     fieldCache[field] = this
                 }
@@ -895,6 +895,7 @@ class Fir2IrDeclarationStorage(
             }
         }.apply {
             parent = irParent
+            metadata = FirMetadataSource.Property(property)
             enterScope(this)
             delegate = declareIrVariable(
                 startOffset, endOffset, IrDeclarationOrigin.PROPERTY_DELEGATE,

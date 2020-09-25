@@ -15,10 +15,10 @@ import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.transformers.FirSyntheticCallGenerator
 import org.jetbrains.kotlin.fir.resolve.transformers.FirWhenExhaustivenessTransformer
+import org.jetbrains.kotlin.fir.resolve.withExpectedType
 import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
 import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
-import org.jetbrains.kotlin.fir.types.coneTypeSafe
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.fir.visitors.transformSingle
@@ -45,9 +45,8 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
         // Do-while has a specific scope structure (its block and condition effectively share the scope)
         return withNewLocalScope {
             doWhileLoop.also(dataFlowAnalyzer::enterDoWhileLoop)
-                .apply {
-                    transformer.expressionsTransformer.transformBlockInCurrentScope(block, context)
-                    dataFlowAnalyzer
+                .also {
+                    transformer.expressionsTransformer.transformBlockInCurrentScope(it.block, context)
                 }
                 .also(dataFlowAnalyzer::enterDoWhileLoopCondition).transformCondition(transformer, context)
                 .also(dataFlowAnalyzer::exitDoWhileLoop)
@@ -116,8 +115,10 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
 
     override fun transformWhenBranch(whenBranch: FirWhenBranch, data: ResolutionMode): CompositeTransformResult<FirWhenBranch> {
         return whenBranch.also { dataFlowAnalyzer.enterWhenBranchCondition(whenBranch) }
-            .transformCondition(transformer, data).also { dataFlowAnalyzer.exitWhenBranchCondition(it) }
-            .transformResult(transformer, data).also { dataFlowAnalyzer.exitWhenBranchResult(it) }
+            .transformCondition(transformer, withExpectedType(session.builtinTypes.booleanType))
+            .also { dataFlowAnalyzer.exitWhenBranchCondition(it) }
+            .transformResult(transformer, data)
+            .also { dataFlowAnalyzer.exitWhenBranchResult(it) }
             .compose()
     }
 
@@ -140,7 +141,7 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
             return tryExpression.compose()
         }
 
-        tryExpression.annotations.forEach { it.accept(this, data) }
+        tryExpression.transformAnnotations(transformer, ResolutionMode.ContextIndependent)
         dataFlowAnalyzer.enterTryExpression(tryExpression)
         tryExpression.transformTryBlock(transformer, ResolutionMode.ContextDependent)
         dataFlowAnalyzer.exitTryMainBlock(tryExpression)
@@ -192,10 +193,7 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
         } else {
             ResolutionMode.ContextIndependent
         }
-        var result = transformer.transformExpression(jump, mode).single
-        if (result is FirReturnExpression) {
-            result = result.transformResult(integerLiteralTypeApproximator, expectedTypeRef!!.coneTypeSafe())
-        }
+        val result = transformer.transformExpression(jump, mode).single
         dataFlowAnalyzer.exitJump(jump)
         return result.compose()
     }
@@ -211,7 +209,10 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
 
     // ------------------------------- Elvis -------------------------------
 
-    override fun transformElvisExpression(elvisExpression: FirElvisExpression, data: ResolutionMode): CompositeTransformResult<FirStatement> {
+    override fun transformElvisExpression(
+        elvisExpression: FirElvisExpression,
+        data: ResolutionMode
+    ): CompositeTransformResult<FirStatement> {
         if (elvisExpression.calleeReference is FirResolvedNamedReference) return elvisExpression.compose()
         elvisExpression.transformAnnotations(transformer, data)
         elvisExpression.transformLhs(transformer, ResolutionMode.ContextDependent)

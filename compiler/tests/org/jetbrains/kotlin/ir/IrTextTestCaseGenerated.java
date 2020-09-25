@@ -1716,6 +1716,16 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/firProblems"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("candidateSymbol.kt")
+        public void testCandidateSymbol() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/candidateSymbol.kt");
+        }
+
+        @TestMetadata("ClashResolutionDescriptor.kt")
+        public void testClashResolutionDescriptor() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/ClashResolutionDescriptor.kt");
+        }
+
         @TestMetadata("DeepCopyIrTree.kt")
         public void testDeepCopyIrTree() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/DeepCopyIrTree.kt");
@@ -1734,6 +1744,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("putIfAbsent.kt")
         public void testPutIfAbsent() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/putIfAbsent.kt");
+        }
+
+        @TestMetadata("V8ArrayToList.kt")
+        public void testV8ArrayToList() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/V8ArrayToList.kt");
         }
     }
 

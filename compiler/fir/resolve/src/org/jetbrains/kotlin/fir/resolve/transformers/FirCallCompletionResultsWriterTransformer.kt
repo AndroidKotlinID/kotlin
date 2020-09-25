@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers
 
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
@@ -17,6 +18,9 @@ import org.jetbrains.kotlin.fir.resolve.calls.FirErrorReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.calls.varargElementType
 import org.jetbrains.kotlin.fir.resolve.constructFunctionalTypeRef
+import org.jetbrains.kotlin.fir.resolve.createFunctionalType
+import org.jetbrains.kotlin.fir.resolve.firProvider
+import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
 import org.jetbrains.kotlin.fir.resolve.inference.isSuspendFunctionType
 import org.jetbrains.kotlin.fir.resolve.inference.returnType
@@ -25,8 +29,8 @@ import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirArrayOfCallTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.remapArgumentsWithVararg
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.resultType
+import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.writeResultType
 import org.jetbrains.kotlin.fir.scopes.impl.FirIntegerOperatorCall
-import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
@@ -44,8 +48,6 @@ class FirCallCompletionResultsWriterTransformer(
     private val finalSubstitutor: ConeSubstitutor,
     private val typeCalculator: ReturnTypeCalculator,
     private val typeApproximator: AbstractTypeApproximator,
-    private val integerOperatorsTypeUpdater: IntegerOperatorsTypeUpdater,
-    private val integerApproximator: IntegerLiteralTypeApproximationTransformer,
     private val mode: Mode = Mode.Normal
 ) : FirAbstractTreeTransformer<ExpectedArgumentType?>(phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE) {
 
@@ -101,14 +103,8 @@ class FirCallCompletionResultsWriterTransformer(
             }
         }
 
-        val updatedQualifiedAccess = if (qualifiedAccessExpression is FirFunctionCall) {
-            qualifiedAccessExpression.transformSingle(integerOperatorsTypeUpdater, null)
-        } else {
-            qualifiedAccessExpression
-        }
-
         @Suppress("UNCHECKED_CAST")
-        val result = updatedQualifiedAccess
+        val result = qualifiedAccessExpression
             .transformCalleeReference(
                 StoreCalleeReference,
                 calleeReference.toResolvedReference(),
@@ -133,7 +129,6 @@ class FirCallCompletionResultsWriterTransformer(
                 qualifiedAccessExpression.compose()
             }
         val result = prepareQualifiedTransform(qualifiedAccessExpression, calleeReference)
-            .transformExplicitReceiver(integerApproximator, null)
         val typeRef = result.typeRef as FirResolvedTypeRef
         val subCandidate = calleeReference.candidate
 
@@ -150,13 +145,6 @@ class FirCallCompletionResultsWriterTransformer(
         return result.compose()
     }
 
-    override fun transformCheckedSafeCallSubject(
-        checkedSafeCallSubject: FirCheckedSafeCallSubject,
-        data: ExpectedArgumentType?
-    ): CompositeTransformResult<FirStatement> {
-        return checkedSafeCallSubject.transform(integerApproximator, data?.getExpectedType(checkedSafeCallSubject))
-    }
-
     override fun transformFunctionCall(functionCall: FirFunctionCall, data: ExpectedArgumentType?): CompositeTransformResult<FirStatement> {
         val calleeReference = functionCall.calleeReference as? FirNamedReferenceWithCandidate
             ?: return functionCall.compose()
@@ -170,7 +158,7 @@ class FirCallCompletionResultsWriterTransformer(
                 resultType =
                     typeRef.resolvedTypeFromPrototype(typeRef.coneTypeUnsafe<ConeIntegerLiteralType>().getApproximatedType(expectedType))
                 result.argumentList.transformArguments(this, expectedType?.toExpectedType())
-                result.transformSingle(integerApproximator, expectedType)
+                result
             }
             else -> {
                 resultType = typeRef.substituteTypeRef(subCandidate)
@@ -182,7 +170,7 @@ class FirCallCompletionResultsWriterTransformer(
                         result.replaceArgumentList(buildResolvedArgumentList(it))
                     }
                 }
-                result.transformExplicitReceiver(integerApproximator, null)
+                result
             }
         }
 
@@ -256,11 +244,10 @@ class FirCallCompletionResultsWriterTransformer(
         candidate: Candidate,
     ): FirResolvedTypeRef {
         val initialType = candidate.substitutor.substituteOrSelf(type)
-        val finalType = finalSubstitutor.substituteOrNull(initialType)?.let { substitutedType ->
-            typeApproximator.approximateToSuperType(
-                substitutedType, TypeApproximatorConfiguration.FinalApproximationAfterResolutionAndInference,
-            ) as ConeKotlinType? ?: substitutedType
-        }
+        val substitutedType = finalSubstitutor.substituteOrNull(initialType)
+        val finalType = typeApproximator.approximateToSuperType(
+            type = substitutedType ?: initialType, TypeApproximatorConfiguration.FinalApproximationAfterResolutionAndInference,
+        ) as ConeKotlinType? ?: substitutedType
 
         return withReplacedConeType(finalType)
     }
@@ -322,7 +309,7 @@ class FirCallCompletionResultsWriterTransformer(
         return variableAssignment.transformCalleeReference(
             StoreCalleeReference,
             calleeReference.toResolvedReference(),
-        ).transformExplicitReceiver(integerApproximator, null).apply {
+        ).apply {
             replaceTypeArguments(typeArguments)
         }.compose()
     }
@@ -422,14 +409,39 @@ class FirCallCompletionResultsWriterTransformer(
 
         return declaration.typeParameters.map { ConeTypeParameterTypeImpl(it.symbol.toLookupTag(), false) }
             .map { candidate.substitutor.substituteOrSelf(it) }
-            .map { finalSubstitutor.substituteOrSelf(it) }
+            .map {
+                finalSubstitutor.substituteOrSelf(it).let { substitutedType ->
+                    typeApproximator.approximateToSuperType(
+                        substitutedType, TypeApproximatorConfiguration.FinalApproximationAfterResolutionAndInference,
+                    ) as ConeKotlinType? ?: substitutedType
+                }
+            }
     }
 
     override fun transformAnonymousFunction(
         anonymousFunction: FirAnonymousFunction,
         data: ExpectedArgumentType?,
     ): CompositeTransformResult<FirStatement> {
-        val expectedType = data?.getExpectedType(anonymousFunction)?.takeIf { it.isBuiltinFunctionalType(session) }
+        val expectedType = data?.getExpectedType(anonymousFunction)?.let { expectedArgumentType ->
+            // From the argument mapping, the expected type of this anonymous function would be:
+            when {
+                // a built-in functional type, no-brainer
+                expectedArgumentType.isBuiltinFunctionalType(session) -> expectedArgumentType
+                // fun interface (a.k.a. SAM), then unwrap it and build a functional type from that interface function
+                expectedArgumentType is ConeClassLikeType -> {
+                    val sam =
+                        (session.firProvider.getFirClassifierByFqName(expectedArgumentType.lookupTag.classId) as? FirClass)
+                            ?.takeIf { it.classKind == ClassKind.INTERFACE }
+                            ?.declarations?.singleOrNull() as? FirSimpleFunction
+                    sam?.let {
+                        createFunctionalType(
+                            sam.valueParameters.map { it.returnTypeRef.coneType }, null, sam.returnTypeRef.coneType, sam.isSuspend
+                        )
+                    }
+                }
+                else -> null
+            }
+        }
 
         var needUpdateLambdaType = false
 
@@ -477,7 +489,11 @@ class FirCallCompletionResultsWriterTransformer(
             }
             block.replaceTypeRef(resultType)
         }
-        return transformElement(block, data)
+        transformElement(block, data)
+        if (block.resultType is FirErrorTypeRef) {
+            block.writeResultType(session)
+        }
+        return block.compose()
     }
 
     // Transformations for synthetic calls generated by FirSyntheticCallGenerator
@@ -533,8 +549,18 @@ class FirCallCompletionResultsWriterTransformer(
         data: ExpectedArgumentType?,
     ): CompositeTransformResult<FirStatement> {
         if (data == ExpectedArgumentType.NoApproximation) return constExpression.compose()
-        val expectedType = data?.getExpectedType(constExpression)
-        return constExpression.transform(integerApproximator, expectedType)
+        return constExpression.approximateIfIsIntegerConst(data?.getExpectedType(constExpression)).compose()
+    }
+
+    override fun transformArrayOfCall(arrayOfCall: FirArrayOfCall, data: ExpectedArgumentType?): CompositeTransformResult<FirStatement> {
+        if (arrayOfCall.typeRef !is FirImplicitTypeRef) return arrayOfCall.compose()
+        val expectedArrayType = data?.getExpectedType(arrayOfCall)
+        val expectedArrayElementType = expectedArrayType?.arrayElementType()
+        arrayOfCall.transformChildren(this, expectedArrayElementType?.toExpectedType())
+        val arrayElementType = session.inferenceComponents.ctx.commonSuperTypeOrNull(arrayOfCall.arguments.map { it.typeRef.coneType })
+            ?: session.builtinTypes.nullableAnyType.type
+        arrayOfCall.resultType = arrayOfCall.typeRef.resolvedTypeFromPrototype(arrayElementType.createArrayType())
+        return arrayOfCall.compose()
     }
 
     private fun FirNamedReferenceWithCandidate.toResolvedReference() = if (this is FirErrorReferenceWithCandidate) {

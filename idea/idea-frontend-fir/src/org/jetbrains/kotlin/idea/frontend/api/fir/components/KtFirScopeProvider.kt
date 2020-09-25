@@ -6,17 +6,15 @@
 package org.jetbrains.kotlin.idea.frontend.api.fir.components
 
 import com.intellij.openapi.project.Project
-import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.scope
 import org.jetbrains.kotlin.fir.scopes.FirContainingNamesAwareScope
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.*
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
-import org.jetbrains.kotlin.idea.fir.getOrBuildFirOfType
-import org.jetbrains.kotlin.idea.fir.low.level.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.fir.low.level.api.LowLevelFirApiFacade
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacade
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacadeForCompletion
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
 import org.jetbrains.kotlin.idea.frontend.api.ValidityTokenOwner
@@ -59,7 +57,8 @@ internal class KtFirScopeProvider(
             check(classSymbol is KtFirClassOrObjectSymbol)
             val firScope =
                 classSymbol.firRef.withFir(FirResolvePhase.SUPER_TYPES) { fir ->
-                    fir.unsubstitutedScope(fir.session, ScopeSession())
+                    val firSession = fir.session
+                    fir.unsubstitutedScope(firSession, firResolveState.firTransformerProvider.getScopeSession(firSession))
                 }.also(firScopeStorage::register)
             KtFirMemberScope(classSymbol, firScope, token, builder)
         }
@@ -79,7 +78,7 @@ internal class KtFirScopeProvider(
             val firPackageScope =
                 FirPackageMemberScope(
                     packageSymbol.fqName,
-                    firResolveState.firIdeSourcesSession/*TODO use correct session here*/
+                    firResolveState.rootModuleSession/*TODO use correct session here*/
                 ).also(firScopeStorage::register)
             KtFirPackageScope(firPackageScope, project, builder, token)
         }
@@ -91,8 +90,9 @@ internal class KtFirScopeProvider(
 
     override fun getTypeScope(type: KtType): KtScope? {
         check(type is KtFirType) { "KtFirScopeProvider can only work with KtFirType, but ${type::class} was provided" }
-
-        val firTypeScope = type.coneType.scope(firResolveState.firIdeSourcesSession, ScopeSession()) ?: return null
+        val firSession = firResolveState.rootModuleSession
+        val firTypeScope = type.coneType.scope(firSession, firResolveState.firTransformerProvider.getScopeSession(firSession))
+            ?: return null
         return convertToKtScope(firTypeScope)
     }
 
@@ -127,8 +127,8 @@ internal class KtFirScopeProvider(
     private fun buildCompletionContextForEnclosingDeclaration(
         originalFile: KtFile,
         positionInFakeFile: KtElement
-    ): LowLevelFirApiFacade.FirCompletionContext {
-        val originalFirFile = originalFile.getOrBuildFirOfType<FirFile>(firResolveState)
+    ): LowLevelFirApiFacadeForCompletion.FirCompletionContext {
+        val originalFirFile = LowLevelFirApiFacade.getFirFile(originalFile, firResolveState)
         val declarationContext = EnclosingDeclarationContext.detect(originalFile, positionInFakeFile)
 
         return declarationContext.buildCompletionContext(originalFirFile, firResolveState)

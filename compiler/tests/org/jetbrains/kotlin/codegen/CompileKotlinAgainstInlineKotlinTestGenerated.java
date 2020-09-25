@@ -3818,6 +3818,11 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/crossinlineSuspendLambdaInsideCrossinlineSuspendLambda.kt", "kotlin.coroutines");
         }
 
+        @TestMetadata("debugMetadataCrossinline.kt")
+        public void testDebugMetadataCrossinline() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/suspend/debugMetadataCrossinline.kt");
+        }
+
         @TestMetadata("delegatedProperties.kt")
         public void testDelegatedProperties_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/codegen/boxInline/suspend/delegatedProperties.kt", "kotlin.coroutines.experimental");
@@ -4063,6 +4068,16 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
 
             public void testAllFilesPresentInCallableReference() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/suspend/callableReference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+            }
+
+            @TestMetadata("isAsReified.kt")
+            public void testIsAsReified() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/callableReference/isAsReified.kt");
+            }
+
+            @TestMetadata("isAsReified2.kt")
+            public void testIsAsReified2() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/callableReference/isAsReified2.kt");
             }
 
             @TestMetadata("nonTailCall.kt")

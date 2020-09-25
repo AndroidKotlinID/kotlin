@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.util.lockWithPCECheck
 @ThreadSafe
 internal class FirFileBuilder(
     private val scopeProvider: FirScopeProvider,
-    private val firPhaseRunner: FirPhaseRunner
+    val firPhaseRunner: FirPhaseRunner
 ) {
     /**
      * Builds a [FirFile] by given [ktFile] and records it's parenting info if it not present in [cache]
@@ -45,7 +45,7 @@ internal class FirFileBuilder(
         val firFile = buildRawFirFileWithCaching(ktFile, cache)
         if (toPhase > FirResolvePhase.RAW_FIR) {
             cache.firFileLockProvider.withLock(firFile) {
-                //add lock for implit type resolve phase & super type
+                if (firFile.resolvePhase >= toPhase) return@withLock
                 runResolveWithoutLock(firFile, fromPhase = firFile.resolvePhase, toPhase = toPhase, checkPCE = checkPCE)
             }
         }
@@ -72,12 +72,11 @@ internal class FirFileBuilder(
         assert(fromPhase <= toPhase) {
             "Trying to resolve file ${firFile.name} from $fromPhase to $toPhase"
         }
-        val scopeSession = ScopeSession()
         var currentPhase = fromPhase
         while (currentPhase < toPhase) {
             if (checkPCE) checkCanceled()
             currentPhase = currentPhase.next
-            firPhaseRunner.runPhase(firFile, currentPhase, scopeSession)
+            firPhaseRunner.runPhase(firFile, currentPhase)
         }
     }
 

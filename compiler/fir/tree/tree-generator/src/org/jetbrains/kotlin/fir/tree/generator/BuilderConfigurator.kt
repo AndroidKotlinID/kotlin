@@ -65,6 +65,12 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             fields from constructor without listOf("isPrimary", "attributes")
         }
 
+        val abstractFunctionCallBuilder by builder {
+            parents += qualifiedAccessBuilder
+            parents += callBuilder
+            fields from functionCall
+        }
+
         for (constructorType in listOf("FirPrimaryConstructor", "FirConstructorImpl")) {
             builder(constructor, constructorType) {
                 parents += abstractConstructorBuilder
@@ -148,9 +154,8 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             useTypes(emptyArgumentListType)
         }
 
-        builder(functionCall) {
-            parents += qualifiedAccessBuilder
-            parents += callBuilder
+        val configurationForFunctionCallBuilder: LeafBuilderConfigurationContext.() -> Unit = {
+            parents += abstractFunctionCallBuilder
             defaultNoReceivers()
             openBuilder()
             default("argumentList") {
@@ -158,6 +163,9 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             }
             useTypes(emptyArgumentListType)
         }
+
+        builder(functionCall, init = configurationForFunctionCallBuilder)
+        builder(implicitInvokeCall, init = configurationForFunctionCallBuilder)
 
         builder(qualifiedAccessExpression) {
             parents += qualifiedAccessBuilder
@@ -216,7 +224,6 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         }
 
         builder(resolvedTypeRef) {
-            defaultFalse("isSuspend")
             defaultNull("delegatedTypeRef")
             withCopy()
         }
@@ -226,10 +233,6 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
         }
 
         builder(functionTypeRef) {
-            withCopy()
-        }
-
-        builder(resolvedFunctionTypeRef) {
             withCopy()
         }
 
@@ -330,7 +333,8 @@ object BuilderConfigurator : AbstractBuilderConfigurator<FirTreeBuilder>(FirTree
             expression to "FirExpressionStub",
             varargArgumentsExpression,
             checkedSafeCallSubject,
-            safeCallExpression
+            safeCallExpression,
+            arrayOfCall
         )
         elementsWithDefaultTypeRef.forEach {
             val (element, name) = when (it) {

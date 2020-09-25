@@ -1,4 +1,3 @@
-
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.pill.PillExtension
@@ -113,9 +112,9 @@ runtimeJar(rewriteDefaultJarDepsToShadedCompiler()).configure {
 tasks {
     withType<KotlinCompile> {
         kotlinOptions.jdkHome = rootProject.extra["JDK_18"] as String
-        kotlinOptions.languageVersion = "1.2"
-        kotlinOptions.apiVersion = "1.2"
-        kotlinOptions.freeCompilerArgs += listOf("-Xskip-metadata-version-check")
+        kotlinOptions.languageVersion = "1.3"
+        kotlinOptions.apiVersion = "1.3"
+        kotlinOptions.freeCompilerArgs += listOf("-Xskip-prerelease-check")
     }
 
     named<ProcessResources>("processResources") {
@@ -189,6 +188,11 @@ pluginBundle {
         name = "kotlinAndroidExtensionsPlugin",
         id = "org.jetbrains.kotlin.android.extensions",
         display = "Kotlin Android Extensions plugin"
+    )
+    create(
+        name = "kotlinParcelizePlugin",
+        id = "org.jetbrains.kotlin.plugin.parcelize",
+        display = "Kotlin Parcelize plugin"
     )
     create(
         name = "kotlinKaptPlugin",

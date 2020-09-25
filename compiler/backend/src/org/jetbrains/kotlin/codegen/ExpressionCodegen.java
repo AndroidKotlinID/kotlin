@@ -52,8 +52,8 @@ import org.jetbrains.kotlin.descriptors.impl.TypeAliasConstructorDescriptor;
 import org.jetbrains.kotlin.diagnostics.Errors;
 import org.jetbrains.kotlin.lexer.KtTokens;
 import org.jetbrains.kotlin.load.java.DescriptorsJvmAbiUtil;
+import org.jetbrains.kotlin.load.kotlin.DescriptorBasedTypeSignatureMappingKt;
 import org.jetbrains.kotlin.load.kotlin.MethodSignatureMappingKt;
-import org.jetbrains.kotlin.load.kotlin.TypeSignatureMappingKt;
 import org.jetbrains.kotlin.name.Name;
 import org.jetbrains.kotlin.psi.*;
 import org.jetbrains.kotlin.psi.psiUtil.PsiUtilsKt;
@@ -97,8 +97,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlin.builtins.KotlinBuiltIns.isInt;
+import static org.jetbrains.kotlin.codegen.AsmUtil.boxType;
 import static org.jetbrains.kotlin.codegen.AsmUtil.*;
 import static org.jetbrains.kotlin.codegen.CodegenUtilKt.*;
+import static org.jetbrains.kotlin.codegen.DescriptorAsmUtil.boxType;
+import static org.jetbrains.kotlin.codegen.DescriptorAsmUtil.*;
 import static org.jetbrains.kotlin.codegen.JvmCodegenUtil.*;
 import static org.jetbrains.kotlin.codegen.binding.CodegenBinding.*;
 import static org.jetbrains.kotlin.codegen.inline.InlineCodegenUtilsKt.*;
@@ -1525,7 +1528,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             assert !functionIndex.isEmpty();
 
             String localVariableName = AsmUtil.LOCAL_FUNCTION_VARIABLE_PREFIX
-                    + VariableAsmNameManglingUtils.mangleNameIfNeeded(functionDescriptor.getName().asString())
+                    + CommonVariableAsmNameManglingUtils.mangleNameIfNeeded(functionDescriptor.getName().asString())
                     + "$" + functionIndex;
 
             v.visitLocalVariable(localVariableName, type.getDescriptor(), null, scopeStart, blockEnd, index);
@@ -1813,7 +1816,8 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         FunctionDescriptor originalSuspendLambdaDescriptor = getOriginalSuspendLambdaDescriptorFromContext(context);
         boolean isVoidCoroutineLambda =
-                originalSuspendLambdaDescriptor != null && TypeSignatureMappingKt.hasVoidReturnType(originalSuspendLambdaDescriptor);
+                originalSuspendLambdaDescriptor != null && DescriptorBasedTypeSignatureMappingKt
+                        .hasVoidReturnType(originalSuspendLambdaDescriptor);
 
         KotlinType originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass =
                 CoroutineCodegenUtilKt.originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(
@@ -2271,7 +2275,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             fieldAccessorKind = AccessorKind.NORMAL;
         }
         boolean isStaticBackingField = DescriptorUtils.isStaticDeclaration(propertyDescriptor) ||
-                                       AsmUtil.isInstancePropertyWithStaticBackingField(propertyDescriptor);
+                                       DescriptorAsmUtil.isInstancePropertyWithStaticBackingField(propertyDescriptor);
         boolean isSuper = superCallTarget != null;
         boolean isExtensionProperty = propertyDescriptor.getExtensionReceiverParameter() != null;
 
@@ -2284,7 +2288,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         CodegenContext<?> backingFieldContext = getBackingFieldContext(fieldAccessorKind, containingDeclaration);
         boolean isPrivateProperty =
                 fieldAccessorKind != AccessorKind.NORMAL &&
-                (AsmUtil.getVisibilityForBackingField(propertyDescriptor, isDelegatedProperty) & ACC_PRIVATE) != 0;
+                (DescriptorAsmUtil.getVisibilityForBackingField(propertyDescriptor, isDelegatedProperty) & ACC_PRIVATE) != 0;
         DeclarationDescriptor ownerDescriptor;
         boolean skipPropertyAccessors;
 
@@ -3030,7 +3034,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             return null;
         }
 
-        int accessFlag = AsmUtil.getVisibilityAccessFlag(companionObjectDescriptor);
+        int accessFlag = DescriptorAsmUtil.getVisibilityAccessFlag(companionObjectDescriptor);
 
         CodegenContext context = contextBeforeInline.getFirstCrossInlineOrNonInlineContext();
         boolean isInlineMethodContext = context.isInlineMethodContext();
@@ -4000,7 +4004,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         Type rightType = right754Type.isNullable ? AsmUtil.boxType(right754Type.type) : right754Type.type;
         gen(right, rightType);
 
-        AsmUtil.genIEEE754EqualForNullableTypesCall(v, leftType, rightType);
+        DescriptorAsmUtil.genIEEE754EqualForNullableTypesCall(v, leftType, rightType);
 
         if (opToken == KtTokens.EXCLEQ) {
             genInvertBoolean(v);

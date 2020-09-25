@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.load.kotlin.VirtualFileFinderFactory
 
 @OptIn(PrivateSessionConstructor::class, SessionConfiguration::class)
 object FirSessionFactory {
-    class FirSessionConfigurator(private val session: FirModuleBasedSession) {
+    class FirSessionConfigurator(private val session: FirSession) {
         private val registeredExtensions = mutableListOf<BunchOfRegisteredExtensions>(BunchOfRegisteredExtensions.empty())
 
         fun registerExtensions(extensions: BunchOfRegisteredExtensions) {
@@ -67,7 +67,7 @@ object FirSessionFactory {
         return FirJavaModuleBasedSession(moduleInfo, sessionProvider).apply {
             registerCommonComponents()
             registerResolveComponents()
-            registerJavaSpecificComponents()
+            registerJavaSpecificResolveComponents()
 
             val kotlinScopeProvider = KotlinScopeProvider(::wrapScopeWithJvmMapped)
 

@@ -41,12 +41,14 @@ abstract class KtAnalysisSession(override val token: ValidityToken) : ValidityTo
     protected abstract val symbolProvider: KtSymbolProvider
     protected abstract val callResolver: KtCallResolver
     protected abstract val completionCandidateChecker: KtCompletionCandidateChecker
-
+    protected abstract val symbolDeclarationOverridesProvider: KtSymbolDeclarationOverridesProvider
 
     /// TODO: get rid of
     @Deprecated("Used only in completion now, temporary")
     abstract fun createContextDependentCopy(): KtAnalysisSession
 
+    fun KtCallableSymbol.getOverriddenSymbols(containingDeclaration: KtClassOrObjectSymbol): List<KtCallableSymbol> =
+        symbolDeclarationOverridesProvider.getOverriddenSymbols(this, containingDeclaration)
 
     fun KtExpression.getSmartCasts(): Collection<KtType> = smartCastProvider.getSmartCastedToTypes(this)
 
@@ -57,6 +59,8 @@ abstract class KtAnalysisSession(override val token: ValidityToken) : ValidityTo
     fun KtDeclaration.getReturnKtType(): KtType = typeProvider.getReturnTypeForKtDeclaration(this)
 
     fun KtElement.getDiagnostics(): Collection<Diagnostic> = diagnosticProvider.getDiagnosticsForElement(this)
+
+    fun KtFile.collectDiagnosticsForFile(): Collection<Diagnostic> = diagnosticProvider.collectDiagnosticsForFile(this)
 
     fun KtSymbolWithKind.getContainingSymbol(): KtSymbolWithKind? = containingDeclarationProvider.getContainingDeclaration(this)
 

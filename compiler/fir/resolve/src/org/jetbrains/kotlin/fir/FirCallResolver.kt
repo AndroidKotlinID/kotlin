@@ -44,7 +44,8 @@ import org.jetbrains.kotlin.types.Variance
 class FirCallResolver(
     private val components: BodyResolveComponents,
     private val qualifiedResolver: FirQualifiedNameResolver,
-) : BodyResolveComponents by components {
+) {
+    private val session = components.session
 
     private lateinit var transformer: FirExpressionsResolveTransformer
 
@@ -53,7 +54,7 @@ class FirCallResolver(
     }
 
     private val towerResolver = FirTowerResolver(
-        components, resolutionStageRunner,
+        components, components.resolutionStageRunner,
     )
 
     private val conflictResolver: ConeCallConflictResolver =
@@ -69,7 +70,7 @@ class FirCallResolver(
         val functionCall = if (needTransformArguments) {
             functionCall.transformExplicitReceiver()
                 .also {
-                    dataFlowAnalyzer.enterQualifiedAccessExpression()
+                    components.dataFlowAnalyzer.enterQualifiedAccessExpression()
                     functionCall.argumentList.transformArguments(transformer, ResolutionMode.ContextDependent)
                 }
         } else {
@@ -102,7 +103,7 @@ class FirCallResolver(
         } else {
             resultExpression
         }
-        val typeRef = typeFromCallee(resultFunctionCall)
+        val typeRef = components.typeFromCallee(resultFunctionCall)
         if (typeRef.type is ConeKotlinErrorType) {
             resultFunctionCall.resultType = typeRef
         }
@@ -140,9 +141,10 @@ class FirCallResolver(
             isPotentialQualifierPart = qualifiedAccess !is FirFunctionCall &&
                     qualifiedAccess.explicitReceiver is FirResolvedQualifier &&
                     qualifiedResolver.isPotentialQualifierPartPosition(),
+            isImplicitInvoke = qualifiedAccess is FirImplicitInvokeCall,
             typeArguments,
             session,
-            file,
+            components.file,
             transformer.components.containingDeclarations,
         )
         towerResolver.reset()
@@ -155,14 +157,6 @@ class FirCallResolver(
             conflictResolver.chooseMaximallySpecificCandidates(
                 bestCandidates, discriminateGenerics = true, discriminateAbstracts = onSuperReference
             )
-        }
-        if ((reducedCandidates.isEmpty() || !result.currentApplicability.isSuccess) &&
-            explicitReceiver?.typeRef?.coneTypeSafe<ConeIntegerLiteralType>() != null
-        ) {
-            val approximatedQualifiedAccess = qualifiedAccess.transformExplicitReceiver(integerLiteralTypeApproximator, null)
-            if (approximatedQualifiedAccess.explicitReceiver?.typeRef?.coneTypeSafe<ConeIntegerLiteralType>() == null) {
-                return collectCandidates(approximatedQualifiedAccess, name)
-            }
         }
 
         return ResolutionResult(info, result.currentApplicability, reducedCandidates)
@@ -216,7 +210,7 @@ class FirCallResolver(
 
         when {
             referencedSymbol is FirClassLikeSymbol<*> -> {
-                return buildResolvedQualifierForClass(referencedSymbol, nameReference.source, qualifiedAccess.typeArguments, diagnostic)
+                return components.buildResolvedQualifierForClass(referencedSymbol, nameReference.source, qualifiedAccess.typeArguments, diagnostic)
             }
             referencedSymbol is FirTypeParameterSymbol && referencedSymbol.fir.isReified -> {
                 return buildResolvedReifiedParameterReference {
@@ -251,7 +245,7 @@ class FirCallResolver(
             expectedType, constraintSystemBuilder,
         )
         // No reset here!
-        val localCollector = CandidateCollector(this, resolutionStageRunner)
+        val localCollector = CandidateCollector(components, components.resolutionStageRunner)
         val result = towerResolver.runResolver(
             info,
             transformer.resolutionContext,
@@ -307,10 +301,11 @@ class FirCallResolver(
             explicitReceiver = null,
             delegatedConstructorCall.argumentList,
             isPotentialQualifierPart = false,
+            isImplicitInvoke = false,
             typeArguments = typeArguments,
             session,
-            file,
-            containingDeclarations,
+            components.file,
+            components.containingDeclarations,
         )
         towerResolver.reset()
 
@@ -320,7 +315,7 @@ class FirCallResolver(
             transformer.resolutionContext
         )
 
-        return callResolver.selectDelegatingConstructorCall(delegatedConstructorCall, name, result, callInfo)
+        return components.callResolver.selectDelegatingConstructorCall(delegatedConstructorCall, name, result, callInfo)
     }
 
     private fun ConeTypeProjection.toFirTypeProjection(): FirTypeProjection = when (this) {
@@ -354,10 +349,11 @@ class FirCallResolver(
             explicitReceiver = null,
             annotationCall.argumentList,
             isPotentialQualifierPart = false,
+            isImplicitInvoke = false,
             typeArguments = emptyList(),
             session,
-            file,
-            containingDeclarations
+            components.file,
+            components.containingDeclarations
         )
 
         val annotationClassSymbol = annotationCall.getCorrespondingClassSymbolOrNull(session)
@@ -390,7 +386,7 @@ class FirCallResolver(
         callInfo: CallInfo
     ): ResolutionResult? {
         var constructorSymbol: FirConstructorSymbol? = null
-        annotationClassSymbol.fir.unsubstitutedScope(session, scopeSession).processDeclaredConstructors {
+        annotationClassSymbol.fir.unsubstitutedScope(session, components.scopeSession).processDeclaredConstructors {
             if (it.fir.isPrimary && constructorSymbol == null) {
                 constructorSymbol = it
             }
@@ -400,7 +396,7 @@ class FirCallResolver(
             constructorSymbol!!,
             ExplicitReceiverKind.NO_EXPLICIT_RECEIVER
         )
-        val applicability = resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext)
+        val applicability = components.resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext)
         return ResolutionResult(callInfo, applicability, listOf(candidate))
     }
 
@@ -456,9 +452,10 @@ class FirCallResolver(
             callableReferenceAccess.explicitReceiver,
             FirEmptyArgumentList,
             isPotentialQualifierPart = false,
+            isImplicitInvoke = false,
             emptyList(),
             session,
-            file,
+            components.file,
             transformer.components.containingDeclarations,
             candidateForCommonInvokeReceiver = null,
             // Additional things for callable reference resolve
@@ -542,7 +539,7 @@ class FirCallResolver(
         name: Name
     ): FirErrorReferenceWithCandidate {
         val candidate = CandidateFactory(transformer.resolutionContext, callInfo).createErrorCandidate(diagnostic)
-        resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
+        components.resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
         return FirErrorReferenceWithCandidate(source, name, candidate, diagnostic)
     }
 
@@ -552,7 +549,7 @@ class FirCallResolver(
         diagnostic: ConeDiagnostic
     ): FirErrorReferenceWithCandidate {
         if (!candidate.fullyAnalyzed) {
-            resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
+            components.resolutionStageRunner.processCandidate(candidate, transformer.resolutionContext, stopOnFirstError = false)
         }
         return FirErrorReferenceWithCandidate(source, candidate.callInfo.name, candidate, diagnostic)
     }

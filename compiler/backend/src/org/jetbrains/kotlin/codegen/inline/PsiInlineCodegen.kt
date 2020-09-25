@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.codegen.inline
 
 import org.jetbrains.kotlin.builtins.isSuspendFunctionTypeOrSubtype
 import org.jetbrains.kotlin.codegen.*
-import org.jetbrains.kotlin.codegen.AsmUtil.getMethodAsmFlags
+import org.jetbrains.kotlin.codegen.DescriptorAsmUtil.getMethodAsmFlags
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
@@ -64,7 +64,7 @@ class PsiInlineCodegen(
         }
         try {
             val registerLineNumber = registerLineNumberAfterwards(resolvedCall)
-            performInline(resolvedCall?.typeArguments?.keys?.toList(), callDefault, callDefault, codegen.typeSystem, registerLineNumber, false)
+            performInline(resolvedCall?.typeArguments?.keys?.toList(), callDefault, callDefault, codegen.typeSystem, registerLineNumber)
         } finally {
             state.globalInlineContext.exitFromInlining()
         }

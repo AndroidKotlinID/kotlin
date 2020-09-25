@@ -67,6 +67,7 @@ fun deserializeClassToSymbol(
         isInner = Flags.IS_INNER.get(flags)
         isData = Flags.IS_DATA.get(classProto.flags)
         isInline = Flags.IS_INLINE_CLASS.get(classProto.flags)
+        isExternal = Flags.IS_EXTERNAL_CLASS.get(classProto.flags)
     }
     val isSealed = modality == Modality.SEALED
     val annotationDeserializer = defaultAnnotationDeserializer ?: FirBuiltinAnnotationDeserializer(session)
@@ -110,7 +111,7 @@ fun deserializeClassToSymbol(
 
         val superTypesDeserialized = classProto.supertypes(context.typeTable).map { supertypeProto ->
             typeDeserializer.simpleType(supertypeProto, ConeAttributes.Empty)
-        }// TODO: + c.components.additionalClassPartsProvider.getSupertypes(this@DeserializedClassDescriptor)
+        }
 
         superTypesDeserialized.mapNotNullTo(superTypeRefs) {
             if (it == null) return@mapNotNullTo null
@@ -192,6 +193,8 @@ fun deserializeClassToSymbol(
         }
         (it.annotations as MutableList<FirAnnotationCall>) +=
             context.annotationDeserializer.loadClassAnnotations(classProto, context.nameResolver)
+
+        it.versionRequirementsTable = context.versionRequirementTable
     }
 }
 

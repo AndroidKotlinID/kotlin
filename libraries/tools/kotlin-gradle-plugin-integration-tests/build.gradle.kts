@@ -34,6 +34,7 @@ dependencies {
     testCompile(kotlinStdlib("jdk8"))
     testCompile(project(":kotlin-reflect"))
     testCompile(project(":kotlin-android-extensions"))
+    testCompile(project(":kotlin-parcelize-compiler"))
     testCompile(commonDep("org.jetbrains.intellij.deps", "trove4j"))
 
     testCompile(gradleApi())
@@ -49,7 +50,10 @@ dependencies {
 // Aapt2 from Android Gradle Plugin 3.2 and below does not handle long paths on Windows.
 val shortenTempRootName = System.getProperty("os.name")!!.contains("Windows")
 
-val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild
+val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild ||
+        try {
+            project.properties["gradle.integration.tests.split.tasks"]?.toString()?.toBoolean() ?: false
+        } catch (_: Exception) { false }
 
 fun Test.includeMppAndAndroid(include: Boolean) {
     if (isTeamcityBuild) {
@@ -80,7 +84,7 @@ projectTest("testAdvanceGradleVersion", shortenTempRootName = shortenTempRootNam
 
 if (isTeamcityBuild) {
     projectTest("testMppAndAndroid", shortenTempRootName = shortenTempRootName) {
-        includeMppAndAndroid(false)
+        includeMppAndAndroid(true)
     }
 
     projectTest("testAdvanceGradleVersionMppAndAndroid", shortenTempRootName = shortenTempRootName) {

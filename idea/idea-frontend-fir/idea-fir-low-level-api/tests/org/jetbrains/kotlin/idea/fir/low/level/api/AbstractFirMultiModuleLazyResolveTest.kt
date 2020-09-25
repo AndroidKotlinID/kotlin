@@ -5,15 +5,14 @@
 
 package org.jetbrains.kotlin.idea.fir.low.level.api
 
-import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiManager
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacade
 import org.jetbrains.kotlin.idea.stubs.AbstractMultiModuleTest
 import org.jetbrains.kotlin.idea.util.sourceRoots
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
 import java.nio.file.Paths
@@ -44,14 +43,14 @@ abstract class AbstractFirMultiModuleLazyResolveTest : AbstractMultiModuleTest()
         val fails = testStructure.fails
 
         try {
-            val fir = LowLevelFirApiFacade.getOrBuildFirFor(ktFileToAnalyse, resolveState, FirResolvePhase.BODY_RESOLVE)
+            val fir = LowLevelFirApiFacade.getOrBuildFirFor(ktFileToAnalyse, resolveState)
             KotlinTestUtils.assertEqualsToFile(File("$path/expected.txt"), fir.render())
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             if (!fails) throw e
             return
         }
         if (fails) {
-            throw AssertionError("Looks like test is passing, please remove // FAILS form the file")
+            throw AssertionError("Looks like test is passing, please remove `\"fails\": true` from structure.json")
         }
     }
 }

@@ -10686,6 +10686,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/notApproximateWhenCopyDescriptors.kt");
                 }
 
+                @TestMetadata("nullableCaptruredTypeAgainstNullableVariable.kt")
+                public void testNullableCaptruredTypeAgainstNullableVariable() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/nullableCaptruredTypeAgainstNullableVariable.kt");
+                }
+
+                @TestMetadata("nullableCaptruredTypeAgainstNullableVariableWithDisabledComplatibilityFlag.kt")
+                public void testNullableCaptruredTypeAgainstNullableVariableWithDisabledComplatibilityFlag() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/nullableCaptruredTypeAgainstNullableVariableWithDisabledComplatibilityFlag.kt");
+                }
+
                 @TestMetadata("overApproximationForInCaptured.kt")
                 public void testOverApproximationForInCaptured() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/capturedTypes/overApproximationForInCaptured.kt");
@@ -11965,6 +11975,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("kt41386.kt")
                 public void testKt41386() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/regressions/kt41386.kt");
+                }
+
+                @TestMetadata("kt41394.kt")
+                public void testKt41394() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/regressions/kt41394.kt");
                 }
 
                 @TestMetadata("kt4420.kt")

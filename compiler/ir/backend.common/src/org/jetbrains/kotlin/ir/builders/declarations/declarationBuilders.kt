@@ -227,7 +227,7 @@ internal fun IrFactory.buildValueParameter(builder: IrValueParameterBuilder, par
         return createValueParameter(
             startOffset, endOffset, origin,
             IrValueParameterSymbolImpl(wrappedDescriptor),
-            name, index, type, varargElementType, isCrossInline, isNoinline
+            name, index, type, varargElementType, isCrossInline, isNoinline, isHidden
         ).also {
             wrappedDescriptor.bind(it)
             it.parent = parent
@@ -291,7 +291,7 @@ internal fun IrFactory.buildTypeParameter(builder: IrTypeParameterBuilder, paren
             name, index, isReified, variance
         ).also {
             wrappedDescriptor.bind(it)
-            it.superTypes.addAll(superTypes)
+            it.superTypes = superTypes
             it.parent = parent
         }
     }

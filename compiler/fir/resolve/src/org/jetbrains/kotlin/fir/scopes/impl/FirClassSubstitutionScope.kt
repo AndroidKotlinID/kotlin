@@ -188,7 +188,7 @@ class FirClassSubstitutionScope(
         val member = original.fir
         if (skipPrivateMembers && member.visibility == Visibilities.Private) return original
 
-        val (newTypeParameters, newReceiverType, newReturnType) = createSubstitutedData(member)
+        val (newTypeParameters, newReceiverType, newReturnType, _) = createSubstitutedData(member)
         if (newReceiverType == null &&
             newReturnType == null && newTypeParameters === member.typeParameters
         ) {
@@ -423,7 +423,9 @@ class FirClassSubstitutionScope(
                 isLocal = false
                 status = baseProperty.status.withExpect(isExpect)
                 resolvePhase = baseProperty.resolvePhase
-                typeParameters += configureAnnotationsTypeParametersAndSignature(baseProperty, newTypeParameters, newReceiverType, newReturnType)
+                typeParameters += configureAnnotationsTypeParametersAndSignature(
+                    baseProperty, newTypeParameters, newReceiverType, newReturnType
+                )
             }
             return symbol
         }
@@ -608,35 +610,5 @@ class FirClassSubstitutionScope(
 
     override fun getClassifierNames(): Set<Name> {
         return useSiteMemberScope.getClassifierNames()
-    }
-}
-
-// Unlike other cases, return types may be implicit, i.e. unresolved
-// But in that cases newType should also be `null`
-fun FirTypeRef.withReplacedReturnType(newType: ConeKotlinType?): FirTypeRef {
-    require(this is FirResolvedTypeRef || newType == null)
-    if (newType == null) return this
-
-    return buildResolvedTypeRef {
-        source = this@withReplacedReturnType.source
-        type = newType
-        annotations += this@withReplacedReturnType.annotations
-    }
-}
-
-fun FirTypeRef.withReplacedConeType(
-    newType: ConeKotlinType?,
-    firFakeSourceElementKind: FirFakeSourceElementKind? = null
-): FirResolvedTypeRef {
-    require(this is FirResolvedTypeRef)
-    if (newType == null) return this
-
-    return buildResolvedTypeRef {
-        source = if (firFakeSourceElementKind != null)
-            this@withReplacedConeType.source?.fakeElement(firFakeSourceElementKind)
-        else
-            this@withReplacedConeType.source
-        type = newType
-        annotations += this@withReplacedConeType.annotations
     }
 }
