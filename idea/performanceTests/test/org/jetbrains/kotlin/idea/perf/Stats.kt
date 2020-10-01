@@ -191,7 +191,7 @@ class Stats(
                         if (k == TEST_KEY) continue
                         (v as? Number)?.let {
                             childrenMetrics.add(Metric(k, v))
-                            TeamCity.metadata(n, k, it)
+                            //TeamCity.metadata(n, k, it)
                         }
                     }
                 }

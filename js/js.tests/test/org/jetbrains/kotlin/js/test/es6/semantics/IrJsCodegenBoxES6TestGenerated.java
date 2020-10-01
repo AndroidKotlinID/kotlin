@@ -1612,6 +1612,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
                     runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/suspendConversion/bound.kt");
                 }
 
+                @TestMetadata("boundExtension.kt")
+                public void testBoundExtension() throws Exception {
+                    runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/suspendConversion/boundExtension.kt");
+                }
+
                 @TestMetadata("crossInline.kt")
                 public void testCrossInline() throws Exception {
                     runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/suspendConversion/crossInline.kt");
@@ -4062,6 +4067,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
     public static class Collections extends AbstractIrJsCodegenBoxES6Test {
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR_ES6, testDataFilePath);
+        }
+
+        @TestMetadata("addCollectionStubWithCovariantOverride.kt")
+        public void testAddCollectionStubWithCovariantOverride() throws Exception {
+            runTest("compiler/testData/codegen/box/collections/addCollectionStubWithCovariantOverride.kt");
         }
 
         public void testAllFilesPresentInCollections() throws Exception {

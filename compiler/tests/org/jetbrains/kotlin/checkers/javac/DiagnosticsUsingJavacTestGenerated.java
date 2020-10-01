@@ -7614,6 +7614,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/enum/SecondaryConstructorCall.kt");
             }
 
+            @TestMetadata("secondaryConstructorWithoutDelegatingToPrimaryOne.kt")
+            public void testSecondaryConstructorWithoutDelegatingToPrimaryOne() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/enum/secondaryConstructorWithoutDelegatingToPrimaryOne.kt");
+            }
+
+            @TestMetadata("secondaryConstructorWithoutDelegatingToPrimaryOneWithEnabledFeature.kt")
+            public void testSecondaryConstructorWithoutDelegatingToPrimaryOneWithEnabledFeature() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/enum/secondaryConstructorWithoutDelegatingToPrimaryOneWithEnabledFeature.kt");
+            }
+
             @TestMetadata("starImportNestedClassAndEntries.kt")
             public void testStarImportNestedClassAndEntries() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/enum/starImportNestedClassAndEntries.kt");
@@ -12421,6 +12431,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("recursion.kt")
             public void testRecursion() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inline/recursion.kt");
+            }
+
+            @TestMetadata("returnedAnonymousObjects.kt")
+            public void testReturnedAnonymousObjects() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inline/returnedAnonymousObjects.kt");
             }
 
             @TestMetadata("returns.kt")
@@ -19184,6 +19199,16 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/resolve/typeParameterInDefaultValueInLocalFunction.kt");
             }
 
+            @TestMetadata("underscoreInCatchBlock.kt")
+            public void testUnderscoreInCatchBlock() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/resolve/underscoreInCatchBlock.kt");
+            }
+
+            @TestMetadata("underscoreInCatchBlockWithEnabledFeature.kt")
+            public void testUnderscoreInCatchBlockWithEnabledFeature() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/resolve/underscoreInCatchBlockWithEnabledFeature.kt");
+            }
+
             @TestMetadata("wrongNumberOfTypeArguments.kt")
             public void testWrongNumberOfTypeArguments() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/resolve/wrongNumberOfTypeArguments.kt");
@@ -24222,6 +24247,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingInReturnPosition.kt");
             }
 
+            @TestMetadata("implicitNothingOfJavaCallAgainstNotNothingExpectedType.kt")
+            public void testImplicitNothingOfJavaCallAgainstNotNothingExpectedType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingOfJavaCallAgainstNotNothingExpectedType.kt");
+            }
+
             @TestMetadata("implicitNothingOnDelegates.kt")
             public void testImplicitNothingOnDelegates() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingOnDelegates.kt");
@@ -25174,6 +25204,21 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
 
             public void testAllFilesPresentInVisibility() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/visibility"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+            }
+
+            @TestMetadata("invisibleSetterOfJavaClass.kt")
+            public void testInvisibleSetterOfJavaClass() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/visibility/invisibleSetterOfJavaClass.kt");
+            }
+
+            @TestMetadata("invisibleSetterOfJavaClassWithDisabledFeature.kt")
+            public void testInvisibleSetterOfJavaClassWithDisabledFeature() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/visibility/invisibleSetterOfJavaClassWithDisabledFeature.kt");
+            }
+
+            @TestMetadata("lackOfInvisibleSetterOfJavaClassInSamePackage.kt")
+            public void testLackOfInvisibleSetterOfJavaClassInSamePackage() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/visibility/lackOfInvisibleSetterOfJavaClassInSamePackage.kt");
             }
         }
 

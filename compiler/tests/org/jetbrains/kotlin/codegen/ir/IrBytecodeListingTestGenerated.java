@@ -234,6 +234,31 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
             runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegation.kt");
         }
 
+        @TestMetadata("collectionByDelegation2.kt")
+        public void testCollectionByDelegation2() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegation2.kt");
+        }
+
+        @TestMetadata("collectionByDelegation2WithFullJdk.kt")
+        public void testCollectionByDelegation2WithFullJdk() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegation2WithFullJdk.kt");
+        }
+
+        @TestMetadata("collectionByDelegation3.kt")
+        public void testCollectionByDelegation3() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegation3.kt");
+        }
+
+        @TestMetadata("collectionByDelegation3WithFullJdk.kt")
+        public void testCollectionByDelegation3WithFullJdk() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegation3WithFullJdk.kt");
+        }
+
+        @TestMetadata("collectionByDelegationWithFullJdk.kt")
+        public void testCollectionByDelegationWithFullJdk() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionByDelegationWithFullJdk.kt");
+        }
+
         @TestMetadata("collectionsWithFullJdk.kt")
         public void testCollectionsWithFullJdk() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/collectionsWithFullJdk.kt");
@@ -257,6 +282,11 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         @TestMetadata("extendingAbstractCollection.kt")
         public void testExtendingAbstractCollection() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/extendingAbstractCollection.kt");
+        }
+
+        @TestMetadata("mapOfPrimitivesFullJdk.kt")
+        public void testMapOfPrimitivesFullJdk() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/mapOfPrimitivesFullJdk.kt");
         }
 
         @TestMetadata("noStubsForCollection.kt")
@@ -297,6 +327,26 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         @TestMetadata("observableMutableMap.kt")
         public void testObservableMutableMap() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/observableMutableMap.kt");
+        }
+
+        @TestMetadata("stubForAbstractFun.kt")
+        public void testStubForAbstractFun() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/stubForAbstractFun.kt");
+        }
+
+        @TestMetadata("stubForAbstractFunInAbstractClass.kt")
+        public void testStubForAbstractFunInAbstractClass() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/stubForAbstractFunInAbstractClass.kt");
+        }
+
+        @TestMetadata("stubForAbstractFunInAbstractClassWithCovariantOverride.kt")
+        public void testStubForAbstractFunInAbstractClassWithCovariantOverride() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/stubForAbstractFunInAbstractClassWithCovariantOverride.kt");
+        }
+
+        @TestMetadata("stubForAbstractFunWithCovariantOverride.kt")
+        public void testStubForAbstractFunWithCovariantOverride() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/stubForAbstractFunWithCovariantOverride.kt");
         }
 
         @TestMetadata("stubsFromSuperclass.kt")

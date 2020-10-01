@@ -1897,9 +1897,19 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/joinToStringWithReferenceFake.kt");
             }
 
+            @TestMetadata("joinToStringWithSuspendFunctionCall.kt")
+            public void testJoinToStringWithSuspendFunctionCall() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/joinToStringWithSuspendFunctionCall.kt");
+            }
+
             @TestMetadata("joinToWithComment.kt")
             public void testJoinToWithComment() throws Exception {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/joinToWithComment.kt");
+            }
+
+            @TestMetadata("joinToWithSuspendFunctionCall.kt")
+            public void testJoinToWithSuspendFunctionCall() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/joinToWithSuspendFunctionCall.kt");
             }
 
             @TestMetadata("listOfNotNull.kt")
@@ -1915,6 +1925,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("mapNotNull.kt")
             public void testMapNotNull() throws Exception {
                 runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/mapNotNull.kt");
+            }
+
+            @TestMetadata("mapNotNullWithSuspendFunctionCall.kt")
+            public void testMapNotNullWithSuspendFunctionCall() throws Exception {
+                runTest("idea/testData/inspectionsLocal/collections/simplifiableCallChain/mapNotNullWithSuspendFunctionCall.kt");
             }
 
             @TestMetadata("mapWithReturn.kt")
@@ -3270,6 +3285,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             @TestMetadata("operatorCannotBeApplied.kt")
             public void testOperatorCannotBeApplied() throws Exception {
                 runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/operatorCannotBeApplied.kt");
+            }
+
+            @TestMetadata("platformTypeEquals.kt")
+            public void testPlatformTypeEquals() throws Exception {
+                runTest("idea/testData/inspectionsLocal/conventionNameCalls/replaceCallWithBinaryOperator/platformTypeEquals.kt");
             }
 
             @TestMetadata("plusFromJava.kt")
@@ -4794,6 +4814,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/Comments2.kt");
         }
 
+        @TestMetadata("ComplexExpression.kt")
+        public void testComplexExpression() throws Exception {
+            runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/ComplexExpression.kt");
+        }
+
         @TestMetadata("Continue.kt")
         public void testContinue() throws Exception {
             runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/Continue.kt");
@@ -4907,6 +4932,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("Var.kt")
         public void testVar() throws Exception {
             runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/Var.kt");
+        }
+
+        @TestMetadata("VarUsedAsNotNullable.kt")
+        public void testVarUsedAsNotNullable() throws Exception {
+            runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/VarUsedAsNotNullable.kt");
+        }
+
+        @TestMetadata("VarUsedAsNotNullable2.kt")
+        public void testVarUsedAsNotNullable2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/VarUsedAsNotNullable2.kt");
+        }
+
+        @TestMetadata("VarUsedAsNullable.kt")
+        public void testVarUsedAsNullable() throws Exception {
+            runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/VarUsedAsNullable.kt");
+        }
+
+        @TestMetadata("VarUsedAsNullable2.kt")
+        public void testVarUsedAsNullable2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/foldInitializerAndIfToElvis/VarUsedAsNullable2.kt");
         }
     }
 
@@ -5380,6 +5425,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("destructuringDeclaration.kt")
         public void testDestructuringDeclaration() throws Exception {
             runTest("idea/testData/inspectionsLocal/javaMapForEach/destructuringDeclaration.kt");
+        }
+
+        @TestMetadata("implicitReceiver.kt")
+        public void testImplicitReceiver() throws Exception {
+            runTest("idea/testData/inspectionsLocal/javaMapForEach/implicitReceiver.kt");
         }
 
         @TestMetadata("java.kt")
@@ -9500,6 +9550,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/identifierContainingSpaces.kt");
         }
 
+        @TestMetadata("inStringTemplate.kt")
+        public void testInStringTemplate() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/inStringTemplate.kt");
+        }
+
+        @TestMetadata("inStringTemplate2.kt")
+        public void testInStringTemplate2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/inStringTemplate2.kt");
+        }
+
+        @TestMetadata("inStringTemplate3.kt")
+        public void testInStringTemplate3() throws Exception {
+            runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/inStringTemplate3.kt");
+        }
+
         @TestMetadata("keyword.kt")
         public void testKeyword() throws Exception {
             runTest("idea/testData/inspectionsLocal/removeRedundantBackticks/keyword.kt");
@@ -11260,6 +11325,11 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
                 runTest("idea/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString/charToString.kt");
             }
 
+            @TestMetadata("charToStringWithInt.kt")
+            public void testCharToStringWithInt() throws Exception {
+                runTest("idea/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString/charToStringWithInt.kt");
+            }
+
             @TestMetadata("doubleToString.kt")
             public void testDoubleToString() throws Exception {
                 runTest("idea/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString/doubleToString.kt");
@@ -11526,6 +11596,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         @TestMetadata("beforeElvis.kt")
         public void testBeforeElvis() throws Exception {
             runTest("idea/testData/inspectionsLocal/replacePutWithAssignment/beforeElvis.kt");
+        }
+
+        @TestMetadata("hasSet.kt")
+        public void testHasSet() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replacePutWithAssignment/hasSet.kt");
+        }
+
+        @TestMetadata("hasSet2.kt")
+        public void testHasSet2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/replacePutWithAssignment/hasSet2.kt");
         }
 
         @TestMetadata("nonMap.kt")

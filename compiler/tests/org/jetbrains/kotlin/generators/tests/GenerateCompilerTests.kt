@@ -534,6 +534,18 @@ fun main(args: Array<String>) {
             testClass<AbstractFirBlackBoxCodegenTest> {
                 model("codegen/box", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
             }
+
+            testClass<AbstractFirBlackBoxInlineCodegenTest> {
+                model("codegen/boxInline", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
+            }
+
+            testClass<AbstractFirBlackBoxAgainstJavaCodegenTest> {
+                model("codegen/boxAgainstJava", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
+            }
+
+            testClass<AbstractFirBytecodeTextTest> {
+                model("codegen/bytecodeText", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
+            }
         }
 
         testGroup(
