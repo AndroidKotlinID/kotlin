@@ -679,6 +679,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/constructorsWithDefaultParameterValues.kt");
         }
 
+        @TestMetadata("inlineClassImplementingCollection.kt")
+        public void testInlineClassImplementingCollection() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineClassImplementingCollection.kt");
+        }
+
         @TestMetadata("inlineClassMembersVisibility.kt")
         public void testInlineClassMembersVisibility() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineClassMembersVisibility.kt");
@@ -946,6 +951,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         @TestMetadata("contains.kt")
         public void testContains() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/specialBridges/contains.kt");
+        }
+
+        @TestMetadata("kt41123.kt")
+        public void testKt41123() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/specialBridges/kt41123.kt");
         }
 
         @TestMetadata("noDefaultImplsOnEmptySubInterface.kt")

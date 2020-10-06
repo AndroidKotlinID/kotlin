@@ -140,6 +140,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/argumentOrder/extensionInClass.kt");
         }
 
+        @TestMetadata("kt17691WithEnabledFeature.kt")
+        public void testKt17691WithEnabledFeature() throws Exception {
+            runTest("compiler/testData/codegen/box/argumentOrder/kt17691WithEnabledFeature.kt");
+        }
+
         @TestMetadata("kt9277.kt")
         public void testKt9277() throws Exception {
             runTest("compiler/testData/codegen/box/argumentOrder/kt9277.kt");
@@ -4083,6 +4088,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/collections/inSetWithSmartCast.kt");
         }
 
+        @TestMetadata("kt41123.kt")
+        public void testKt41123() throws Exception {
+            runTest("compiler/testData/codegen/box/collections/kt41123.kt");
+        }
+
         @TestMetadata("removeClash.kt")
         public void testRemoveClash() throws Exception {
             runTest("compiler/testData/codegen/box/collections/removeClash.kt");
@@ -5393,9 +5403,19 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/coroutines/builderInferenceAndGenericArrayAcessCall.kt");
         }
 
+        @TestMetadata("captureInfixFun.kt")
+        public void testCaptureInfixFun() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/captureInfixFun.kt");
+        }
+
         @TestMetadata("captureMutableLocalVariableInsideCoroutineBlock.kt")
         public void testCaptureMutableLocalVariableInsideCoroutineBlock() throws Exception {
             runTest("compiler/testData/codegen/box/coroutines/captureMutableLocalVariableInsideCoroutineBlock.kt");
+        }
+
+        @TestMetadata("captureUnaryOperator.kt")
+        public void testCaptureUnaryOperator() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/captureUnaryOperator.kt");
         }
 
         @TestMetadata("capturedVarInSuspendLambda.kt")
@@ -11131,6 +11151,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/increment"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR_ES6, true);
         }
 
+        @TestMetadata("argumentWithSideEffects.kt")
+        public void testArgumentWithSideEffects() throws Exception {
+            runTest("compiler/testData/codegen/box/increment/argumentWithSideEffects.kt");
+        }
+
         @TestMetadata("arrayElement.kt")
         public void testArrayElement() throws Exception {
             runTest("compiler/testData/codegen/box/increment/arrayElement.kt");
@@ -11149,6 +11174,16 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("classNaryGetSet.kt")
         public void testClassNaryGetSet() throws Exception {
             runTest("compiler/testData/codegen/box/increment/classNaryGetSet.kt");
+        }
+
+        @TestMetadata("classVarargGetSet.kt")
+        public void testClassVarargGetSet() throws Exception {
+            runTest("compiler/testData/codegen/box/increment/classVarargGetSet.kt");
+        }
+
+        @TestMetadata("classVarargGetSetEvaluationOrder.kt")
+        public void testClassVarargGetSetEvaluationOrder() throws Exception {
+            runTest("compiler/testData/codegen/box/increment/classVarargGetSetEvaluationOrder.kt");
         }
 
         @TestMetadata("classWithGetSet.kt")
@@ -13020,6 +13055,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/innerNested/innerSimple.kt");
         }
 
+        @TestMetadata("innerWithDefaultArgument.kt")
+        public void testInnerWithDefaultArgument() throws Exception {
+            runTest("compiler/testData/codegen/box/innerNested/innerWithDefaultArgument.kt");
+        }
+
         @TestMetadata("kt3132.kt")
         public void testKt3132() throws Exception {
             runTest("compiler/testData/codegen/box/innerNested/kt3132.kt");
@@ -14375,6 +14415,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("varargs.kt")
         public void testVarargs() throws Exception {
             runTest("compiler/testData/codegen/box/mixedNamedPosition/varargs.kt");
+        }
+
+        @TestMetadata("varargsEvaluationOrder.kt")
+        public void testVarargsEvaluationOrder() throws Exception {
+            runTest("compiler/testData/codegen/box/mixedNamedPosition/varargsEvaluationOrder.kt");
         }
     }
 
@@ -25660,6 +25705,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("doNotCopyImmediatelyCreatedArrays.kt")
         public void testDoNotCopyImmediatelyCreatedArrays() throws Exception {
             runTest("compiler/testData/codegen/box/vararg/doNotCopyImmediatelyCreatedArrays.kt");
+        }
+
+        @TestMetadata("evaluationOrder.kt")
+        public void testEvaluationOrder() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/evaluationOrder.kt");
         }
 
         @TestMetadata("kt1978.kt")

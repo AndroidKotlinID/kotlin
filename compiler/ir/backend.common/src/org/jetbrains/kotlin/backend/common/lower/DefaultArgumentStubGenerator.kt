@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.util.OperatorNameConventions
 
 // TODO: fix expect/actual default parameters
 
@@ -99,19 +100,22 @@ open class DefaultArgumentStubGenerator(
 
                 generateSuperCallHandlerCheckIfNeeded(irFunction, newIrFunction)
 
+                val intAnd = this@DefaultArgumentStubGenerator.context.ir.symbols.getBinaryOperator(
+                    OperatorNameConventions.AND, context.irBuiltIns.intType, context.irBuiltIns.intType
+                )
                 var sourceParameterIndex = -1
                 for (valueParameter in irFunction.valueParameters) {
                     if (!valueParameter.isMovedReceiver()) {
                         ++sourceParameterIndex
                     }
                     val parameter = newIrFunction.valueParameters[valueParameter.index]
-                    val remapped = if (valueParameter.defaultValue != null) {
+                    val remapped = valueParameter.defaultValue?.let { defaultValue ->
                         val mask = irGet(newIrFunction.valueParameters[irFunction.valueParameters.size + valueParameter.index / 32])
                         val bit = irInt(1 shl (sourceParameterIndex % 32))
                         val defaultFlag =
-                            irCallOp(this@DefaultArgumentStubGenerator.context.ir.symbols.intAnd, context.irBuiltIns.intType, mask, bit)
+                            irCallOp(intAnd, context.irBuiltIns.intType, mask, bit)
 
-                        val expression = valueParameter.defaultValue!!.expression
+                        val expression = defaultValue.expression
                             .prepareToBeUsedIn(newIrFunction)
                             .transform(object : IrElementTransformerVoid() {
                                 override fun visitGetValue(expression: IrGetValue): IrExpression {
@@ -122,9 +126,8 @@ open class DefaultArgumentStubGenerator(
                             }, null)
 
                         selectArgumentOrDefault(defaultFlag, parameter, expression)
-                    } else {
-                        parameter
-                    }
+                    } ?: parameter
+
                     params.add(remapped)
                     variables[valueParameter] = remapped
                 }

@@ -1716,6 +1716,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/ir/irText/firProblems"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("AnnotationInAnnotation.kt")
+        public void testAnnotationInAnnotation() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/AnnotationInAnnotation.kt");
+        }
+
         @TestMetadata("candidateSymbol.kt")
         public void testCandidateSymbol() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/candidateSymbol.kt");
@@ -1739,6 +1744,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("FirBuilder.kt")
         public void testFirBuilder() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/FirBuilder.kt");
+        }
+
+        @TestMetadata("InnerClassInAnonymous.kt")
+        public void testInnerClassInAnonymous() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/InnerClassInAnonymous.kt");
         }
 
         @TestMetadata("putIfAbsent.kt")

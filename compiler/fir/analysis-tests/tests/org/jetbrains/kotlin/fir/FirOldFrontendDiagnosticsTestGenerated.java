@@ -3369,6 +3369,16 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
             runTest("compiler/testData/diagnostics/tests/checkArguments/booleanExpressions.kt");
         }
 
+        @TestMetadata("kt17691.kt")
+        public void testKt17691() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/checkArguments/kt17691.kt");
+        }
+
+        @TestMetadata("kt17691WithEnabledFeature.kt")
+        public void testKt17691WithEnabledFeature() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/checkArguments/kt17691WithEnabledFeature.kt");
+        }
+
         @TestMetadata("kt1897_diagnostic_part.kt")
         public void testKt1897_diagnostic_part() throws Exception {
             runTest("compiler/testData/diagnostics/tests/checkArguments/kt1897_diagnostic_part.kt");
@@ -3827,6 +3837,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
         @TestMetadata("assignedInFinally.kt")
         public void testAssignedInFinally() throws Exception {
             runTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/assignedInFinally.kt");
+        }
+
+        @TestMetadata("assignedInIfElse.kt")
+        public void testAssignedInIfElse() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/assignedInIfElse.kt");
         }
 
         @TestMetadata("assignmentInLocalsInConstructor.kt")
@@ -11073,6 +11088,11 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirOldFronte
                 @TestMetadata("callableReferences.kt")
                 public void testCallableReferences() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/completion/postponedArgumentsAnalysis/callableReferences.kt");
+                }
+
+                @TestMetadata("fixingVariableDuringAddingConstraintForFirstPosponedArgument.kt")
+                public void testFixingVariableDuringAddingConstraintForFirstPosponedArgument() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/postponedArgumentsAnalysis/fixingVariableDuringAddingConstraintForFirstPosponedArgument.kt");
                 }
 
                 @TestMetadata("lackOfDeepIncorporation.kt")

@@ -8890,6 +8890,16 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
         public void testIfElse() throws Exception {
             runTest("idea/testData/inspectionsLocal/redundantSemicolon/ifElse.kt");
         }
+
+        @TestMetadata("startOfLine.kt")
+        public void testStartOfLine() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/startOfLine.kt");
+        }
+
+        @TestMetadata("startOfLine2.kt")
+        public void testStartOfLine2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/redundantSemicolon/startOfLine2.kt");
+        }
     }
 
     @TestMetadata("idea/testData/inspectionsLocal/redundantSetter")
@@ -14238,6 +14248,26 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
 
         public void testAllFilesPresentInUnusedReceiverParameter() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/inspectionsLocal/unusedReceiverParameter"), Pattern.compile("^([\\w\\-_]+)\\.(kt|kts)$"), null, true);
+        }
+
+        @TestMetadata("anonymousFunction.kt")
+        public void testAnonymousFunction() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/anonymousFunction.kt");
+        }
+
+        @TestMetadata("anonymousFunctionCall.kt")
+        public void testAnonymousFunctionCall() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/anonymousFunctionCall.kt");
+        }
+
+        @TestMetadata("anonymousFunctionCallWithReceiver.kt")
+        public void testAnonymousFunctionCallWithReceiver() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/anonymousFunctionCallWithReceiver.kt");
+        }
+
+        @TestMetadata("anonymousFunctionCallWithReceiver2.kt")
+        public void testAnonymousFunctionCallWithReceiver2() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedReceiverParameter/anonymousFunctionCallWithReceiver2.kt");
         }
 
         @TestMetadata("companion.kt")
