@@ -4506,6 +4506,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/stringOperations/concatDynamicConstants.kt");
         }
 
+        @TestMetadata("concatDynamicDataClass.kt")
+        public void testConcatDynamicDataClass() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/stringOperations/concatDynamicDataClass.kt");
+        }
+
         @TestMetadata("concatDynamicIndy.kt")
         public void testConcatDynamicIndy() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/stringOperations/concatDynamicIndy.kt");
@@ -4514,6 +4519,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         @TestMetadata("concatDynamicIndy201.kt")
         public void testConcatDynamicIndy201() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/stringOperations/concatDynamicIndy201.kt");
+        }
+
+        @TestMetadata("concatDynamicIndyDataClass.kt")
+        public void testConcatDynamicIndyDataClass() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/stringOperations/concatDynamicIndyDataClass.kt");
         }
 
         @TestMetadata("concatNotDynamic.kt")
@@ -4549,6 +4559,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         @TestMetadata("kt19037.kt")
         public void testKt19037() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/stringOperations/kt19037.kt");
+        }
+
+        @TestMetadata("kt42457_old.kt")
+        public void testKt42457_old() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/stringOperations/kt42457_old.kt");
         }
 
         @TestMetadata("multipleNestedConcat.kt")

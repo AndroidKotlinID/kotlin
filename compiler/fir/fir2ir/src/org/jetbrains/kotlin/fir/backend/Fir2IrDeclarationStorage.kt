@@ -256,7 +256,7 @@ class Fir2IrDeclarationStorage(
                     startOffset, endOffset, IrDeclarationOrigin.DEFINED, symbol,
                     Name.special("<set-?>"), 0, type,
                     varargElementType = null,
-                    isCrossinline = false, isNoinline = false
+                    isCrossinline = false, isNoinline = false, isAssignable = false
                 ).apply {
                     this.parent = parent
                     descriptor.bind(this)

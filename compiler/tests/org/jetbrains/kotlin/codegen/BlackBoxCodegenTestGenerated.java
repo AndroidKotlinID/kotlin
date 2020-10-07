@@ -2996,6 +2996,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/callableReference/property/inEnum.kt");
             }
 
+            @TestMetadata("inReceiverOfAnother.kt")
+            public void testInReceiverOfAnother() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/property/inReceiverOfAnother.kt");
+            }
+
             @TestMetadata("invokePropertyReference.kt")
             public void testInvokePropertyReference() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/property/invokePropertyReference.kt");
@@ -31972,6 +31977,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("kt3652.kt")
         public void testKt3652() throws Exception {
             runTest("compiler/testData/codegen/box/strings/kt3652.kt");
+        }
+
+        @TestMetadata("kt42457_old.kt")
+        public void testKt42457_old() throws Exception {
+            runTest("compiler/testData/codegen/box/strings/kt42457_old.kt");
         }
 
         @TestMetadata("kt5389_stringBuilderGet.kt")
