@@ -30,37 +30,46 @@ enum class ReportLevel(val description: String) {
     val isIgnore: Boolean get() = this == ReportLevel.IGNORE
 }
 
-data class Jsr305State(
-        val global: ReportLevel,
-        val migration: ReportLevel?,
-        val user: Map<String, ReportLevel>,
-        val enableCompatqualCheckerFrameworkAnnotations: Boolean = COMPATQUAL_CHECKER_FRAMEWORK_ANNOTATIONS_SUPPORT_DEFAULT_VALUE
+class JavaTypeEnhancementState(
+    val globalJsr305Level: ReportLevel,
+    val migrationLevelForJsr305: ReportLevel?,
+    val userDefinedLevelForSpecificJsr305Annotation: Map<String, ReportLevel>,
+    val enableCompatqualCheckerFrameworkAnnotations: Boolean = COMPATQUAL_CHECKER_FRAMEWORK_ANNOTATIONS_SUPPORT_DEFAULT_VALUE,
+    val jspecifyReportLevel: ReportLevel = DEFAULT_REPORT_LEVEL_FOR_JSPECIFY
 ) {
     val description: Array<String> by lazy {
         val result = mutableListOf<String>()
-        result.add(global.description)
+        result.add(globalJsr305Level.description)
 
-        migration?.let { result.add("under-migration:${it.description}") }
+        migrationLevelForJsr305?.let { result.add("under-migration:${it.description}") }
 
-        user.forEach {
+        userDefinedLevelForSpecificJsr305Annotation.forEach {
             result.add("@${it.key}:${it.value.description}")
         }
 
         result.toTypedArray()
     }
 
-    val disabled: Boolean get() = this === DISABLED
+    val disabledJsr305: Boolean =
+        globalJsr305Level == ReportLevel.IGNORE &&
+                migrationLevelForJsr305 == ReportLevel.IGNORE &&
+                userDefinedLevelForSpecificJsr305Annotation.isEmpty()
+
+    val disabledDefaultAnnotations = disabledJsr305 || jspecifyReportLevel == ReportLevel.IGNORE
 
     companion object {
         const val COMPATQUAL_CHECKER_FRAMEWORK_ANNOTATIONS_SUPPORT_DEFAULT_VALUE = true
 
         @JvmField
-        val DEFAULT: Jsr305State = Jsr305State(ReportLevel.WARN, null, emptyMap())
+        val DEFAULT_REPORT_LEVEL_FOR_JSPECIFY = ReportLevel.WARN
 
         @JvmField
-        val DISABLED: Jsr305State = Jsr305State(ReportLevel.IGNORE, ReportLevel.IGNORE, emptyMap())
+        val DEFAULT: JavaTypeEnhancementState = JavaTypeEnhancementState(ReportLevel.WARN, null, emptyMap())
 
         @JvmField
-        val STRICT: Jsr305State = Jsr305State(ReportLevel.STRICT, ReportLevel.STRICT, emptyMap())
+        val DISABLED_JSR_305: JavaTypeEnhancementState = JavaTypeEnhancementState(ReportLevel.IGNORE, ReportLevel.IGNORE, emptyMap())
+
+        @JvmField
+        val STRICT: JavaTypeEnhancementState = JavaTypeEnhancementState(ReportLevel.STRICT, ReportLevel.STRICT, emptyMap())
     }
 }

@@ -159,6 +159,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
         val superQualifierSymbol: IrClassSymbol? = null,
         val isFinal: Boolean = true,
         val isSynthetic: Boolean = false,
+        val isOverriding: Boolean = true,
     )
 
     private val potentialBridgeTargets = mutableListOf<IrSimpleFunction>()
@@ -252,7 +253,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
                     bridgeTarget = when {
                         irFunction.isJvmAbstract(context.state.jvmDefaultMode) -> {
                             irClass.declarations.remove(irFunction)
-                            irClass.addAbstractMethodStub(irFunction, specialBridge.methodInfo?.needsArgumentBoxing == true)
+                            irClass.addAbstractMethodStub(irFunction)
                         }
                         irFunction.modality != Modality.FINAL -> {
                             val overriddenFromClass = irFunction.overriddenFromClass()!!
@@ -366,7 +367,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
             .map { it.copy(isFinal = false, isSynthetic = true, methodInfo = null) }
     }
 
-    private fun IrClass.addAbstractMethodStub(irFunction: IrSimpleFunction, needsArgumentBoxing: Boolean) =
+    private fun IrClass.addAbstractMethodStub(irFunction: IrSimpleFunction) =
         addFunction {
             updateFrom(irFunction)
             modality = Modality.ABSTRACT
@@ -381,8 +382,9 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
             copyCorrespondingPropertyFrom(irFunction)
             dispatchReceiverParameter = thisReceiver?.copyTo(this, type = defaultType)
             valueParameters = irFunction.valueParameters.map { param ->
-                param.copyTo(this, type = if (needsArgumentBoxing) param.type.makeNullable() else param.type)
+                param.copyTo(this, type = param.type)
             }
+            overriddenSymbols = irFunction.overriddenSymbols.toList()
         }
 
     private fun IrClass.addBridge(bridge: Bridge, target: IrSimpleFunction): IrSimpleFunction =
@@ -422,12 +424,7 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
             name = Name.identifier(specialBridge.signature.name)
             returnType = specialBridge.substitutedReturnType ?: specialBridge.overridden.returnType.eraseTypeParameters()
         }.apply {
-            copyParametersWithErasure(
-                this@addSpecialBridge,
-                specialBridge.overridden,
-                specialBridge.methodInfo?.needsArgumentBoxing == true,
-                specialBridge.substitutedParameterTypes
-            )
+            copyParametersWithErasure(this@addSpecialBridge, specialBridge.overridden, specialBridge.substitutedParameterTypes)
 
             body = context.createIrBuilder(symbol, startOffset, endOffset).irBlockBody {
                 specialBridge.methodInfo?.let { info ->
@@ -437,7 +434,10 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
                 }
                 +irReturn(delegatingCall(this@apply, target, specialBridge.superQualifierSymbol))
             }
-            overriddenSymbols = listOf(specialBridge.overridden.symbol)
+
+            if (specialBridge.isOverriding) {
+                overriddenSymbols = listOf(specialBridge.overridden.symbol)
+            }
         }
 
     private fun IrSimpleFunction.rewriteSpecialMethodBody(
@@ -507,32 +507,28 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
     private fun IrSimpleFunction.copyParametersWithErasure(
         irClass: IrClass,
         from: IrSimpleFunction,
-        forceArgumentBoxing: Boolean = false,
         substitutedParameterTypes: List<IrType>? = null
     ) {
         // This is a workaround for a bug affecting fake overrides. Sometimes we encounter fake overrides
         // with dispatch receivers pointing at a superclass instead of the current class.
         dispatchReceiverParameter = irClass.thisReceiver?.copyTo(this, type = irClass.defaultType)
-        extensionReceiverParameter = from.extensionReceiverParameter?.copyWithTypeErasure(this, forceArgumentBoxing)
+        extensionReceiverParameter = from.extensionReceiverParameter?.copyWithTypeErasure(this)
         valueParameters = if (substitutedParameterTypes != null) {
             from.valueParameters.zip(substitutedParameterTypes).map { (param, type) ->
-                param.copyWithTypeErasure(this, forceArgumentBoxing, type)
+                param.copyWithTypeErasure(this, type)
             }
         } else {
-            from.valueParameters.map { it.copyWithTypeErasure(this, forceArgumentBoxing) }
+            from.valueParameters.map { it.copyWithTypeErasure(this) }
         }
     }
 
-    private fun IrValueParameter.copyWithTypeErasure(
-        target: IrSimpleFunction,
-        forceArgumentBoxing: Boolean = false,
-        substitutedType: IrType? = null
-    ): IrValueParameter = copyTo(
-        target, IrDeclarationOrigin.BRIDGE,
-        type = (substitutedType ?: type.eraseTypeParameters()).let { if (forceArgumentBoxing) it.makeNullable() else it },
-        // Currently there are no special bridge methods with vararg parameters, so we don't track substituted vararg element types.
-        varargElementType = varargElementType?.eraseTypeParameters()
-    )
+    private fun IrValueParameter.copyWithTypeErasure(target: IrSimpleFunction, substitutedType: IrType? = null): IrValueParameter =
+        copyTo(
+            target, IrDeclarationOrigin.BRIDGE,
+            type = (substitutedType ?: type.eraseTypeParameters()),
+            // Currently there are no special bridge methods with vararg parameters, so we don't track substituted vararg element types.
+            varargElementType = varargElementType?.eraseTypeParameters()
+        )
 
     private fun IrBuilderWithScope.delegatingCall(
         bridge: IrSimpleFunction,
@@ -570,7 +566,10 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
             if (correspondingProperty != null) {
                 if (correspondingProperty.owner.name !in specialBridgeMethods.specialPropertyNames) return null
             } else {
-                if (function.name !in specialBridgeMethods.specialMethodNames) return null
+                // 'removeAt' function can be mangled by inline class rules
+                if (function.name !in specialBridgeMethods.specialMethodNames && !function.name.asString().startsWith("removeAt-")) {
+                    return null
+                }
             }
 
             val specialMethodInfo = specialBridgeMethods.getSpecialMethodInfo(function)
@@ -581,7 +580,10 @@ internal class BridgeLowering(val context: JvmBackendContext) : FileLoweringPass
 
             val specialBuiltInInfo = specialBridgeMethods.getBuiltInWithDifferentJvmName(function)
             if (specialBuiltInInfo != null)
-                return SpecialBridge(function, computeJvmMethod(function), specialBuiltInInfo.needsGenericSignature)
+                return SpecialBridge(
+                    function, computeJvmMethod(function), specialBuiltInInfo.needsGenericSignature,
+                    isOverriding = specialBuiltInInfo.isOverriding
+                )
 
             for (overridden in function.overriddenSymbols) {
                 val specialBridge = computeSpecialBridge(overridden.owner) ?: continue

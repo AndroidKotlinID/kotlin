@@ -18,11 +18,65 @@ package org.jetbrains.kotlin.cli.common.arguments
 
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.utils.Jsr305State
+import org.jetbrains.kotlin.utils.JavaTypeEnhancementState
 import org.jetbrains.kotlin.utils.ReportLevel
 
-class Jsr305Parser(private val collector: MessageCollector) {
-    fun parse(value: Array<String>?, supportCompatqualCheckerFrameworkAnnotations: String?): Jsr305State {
+class JavaTypeEnhancementStateParser(private val collector: MessageCollector) {
+    fun parse(
+        jsr305Args: Array<String>?,
+        supportCompatqualCheckerFrameworkAnnotations: String?,
+        jspecifyState: String?
+    ): JavaTypeEnhancementState {
+        val jsr305State = parseJsr305State(jsr305Args)
+
+        val enableCompatqualCheckerFrameworkAnnotations = when (supportCompatqualCheckerFrameworkAnnotations) {
+            "enable" -> true
+            "disable" -> false
+            null -> null
+            else -> {
+                collector.report(
+                    CompilerMessageSeverity.ERROR,
+                    "Unrecognized -Xsupport-compatqual-checker-framework-annotations option: $supportCompatqualCheckerFrameworkAnnotations. Possible values are 'enable'/'disable'"
+                )
+                null
+            }
+        }
+
+        val jspecifyReportLevel = parseJspecifyReportLevel(jspecifyState)
+
+        val state = JavaTypeEnhancementState(
+            jsr305State.global ?: ReportLevel.WARN, jsr305State.migration, jsr305State.usedDefined,
+            enableCompatqualCheckerFrameworkAnnotations =
+            enableCompatqualCheckerFrameworkAnnotations
+                ?: JavaTypeEnhancementState.COMPATQUAL_CHECKER_FRAMEWORK_ANNOTATIONS_SUPPORT_DEFAULT_VALUE,
+            jspecifyReportLevel = jspecifyReportLevel
+        )
+        return if (state == JavaTypeEnhancementState.DISABLED_JSR_305) JavaTypeEnhancementState.DISABLED_JSR_305 else state
+    }
+
+
+    private fun parseJspecifyReportLevel(jspecifyState: String?): ReportLevel {
+        if (jspecifyState == null) return JavaTypeEnhancementState.DEFAULT_REPORT_LEVEL_FOR_JSPECIFY
+        val reportLevel = ReportLevel.findByDescription(jspecifyState)
+
+        if (reportLevel == null) {
+            collector.report(
+                CompilerMessageSeverity.ERROR,
+                "Unrecognized -Xjspecify-annotations option: $jspecifyState. Possible values are 'disable'/'warn'/'strict'"
+            )
+            return JavaTypeEnhancementState.DEFAULT_REPORT_LEVEL_FOR_JSPECIFY
+        }
+
+        return reportLevel
+    }
+
+    private data class Jsr305State(
+        val global: ReportLevel?,
+        val migration: ReportLevel?,
+        val usedDefined: Map<String, ReportLevel>
+    )
+
+    private fun parseJsr305State(args: Array<String>?): Jsr305State {
         var global: ReportLevel? = null
         var migration: ReportLevel? = null
         val userDefined = mutableMapOf<String, ReportLevel>()
@@ -32,7 +86,7 @@ class Jsr305Parser(private val collector: MessageCollector) {
             return ReportLevel.findByDescription(rawState) ?: reportUnrecognizedJsr305(item).let { null }
         }
 
-        value?.forEach { item ->
+        args?.forEach { item ->
             when {
                 item.startsWith("@") -> {
                     val (name, state) = parseJsr305UserDefined(item) ?: return@forEach
@@ -55,8 +109,8 @@ class Jsr305Parser(private val collector: MessageCollector) {
                 }
                 item == "enable" -> {
                     collector.report(
-                            CompilerMessageSeverity.STRONG_WARNING,
-                            "Option 'enable' for -Xjsr305 flag is deprecated. Please use 'strict' instead"
+                        CompilerMessageSeverity.STRONG_WARNING,
+                        "Option 'enable' for -Xjsr305 flag is deprecated. Please use 'strict' instead"
                     )
                     if (global != null) return@forEach
 
@@ -72,27 +126,7 @@ class Jsr305Parser(private val collector: MessageCollector) {
                 }
             }
         }
-
-        val enableCompatqualCheckerFrameworkAnnotations = when (supportCompatqualCheckerFrameworkAnnotations) {
-            "enable" -> true
-            "disable" -> false
-            null -> null
-            else -> {
-                collector.report(
-                    CompilerMessageSeverity.ERROR,
-                    "Unrecognized -Xsupport-compatqual-checker-framework-annotations option: $supportCompatqualCheckerFrameworkAnnotations. Possible values are 'enable'/'disable'"
-                )
-                null
-            }
-        }
-
-        val state = Jsr305State(
-            global ?: ReportLevel.WARN, migration, userDefined,
-            enableCompatqualCheckerFrameworkAnnotations =
-            enableCompatqualCheckerFrameworkAnnotations
-                    ?: Jsr305State.COMPATQUAL_CHECKER_FRAMEWORK_ANNOTATIONS_SUPPORT_DEFAULT_VALUE
-        )
-        return if (state == Jsr305State.DISABLED) Jsr305State.DISABLED else state
+        return Jsr305State(global, migration, userDefined)
     }
 
     private fun reportUnrecognizedJsr305(item: String) {

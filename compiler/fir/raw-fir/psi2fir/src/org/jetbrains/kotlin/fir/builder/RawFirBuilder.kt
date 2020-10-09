@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.builder
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.tree.IElementType
+import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
@@ -200,6 +201,9 @@ class RawFirBuilder(
 
         private fun KtExpression.toFirStatement(errorReason: String): FirStatement =
             convertSafe() ?: buildErrorExpression(this.toFirSourceElement(), ConeSimpleDiagnostic(errorReason, DiagnosticKind.Syntax))
+
+        private inline fun KtExpression.toFirStatement(errorReasonLazy: () -> String): FirStatement =
+            convertSafe() ?: buildErrorExpression(this.toFirSourceElement(), ConeSimpleDiagnostic(errorReasonLazy(), DiagnosticKind.Syntax))
 
         private fun KtExpression.toFirStatement(): FirStatement =
             convert()
@@ -555,7 +559,7 @@ class RawFirBuilder(
                             }
                         )
                         container.declarations.add(delegateField)
-                        delegateNumber ++
+                        delegateNumber++
                     }
                 }
             }
@@ -813,7 +817,7 @@ class RawFirBuilder(
                         )
 
                         val primaryConstructor = classOrObject.primaryConstructor
-                        val firPrimaryConstructor = declarations.firstOrNull {it is FirConstructor} as? FirConstructor
+                        val firPrimaryConstructor = declarations.firstOrNull { it is FirConstructor } as? FirConstructor
                         if (primaryConstructor != null && firPrimaryConstructor != null) {
                             primaryConstructor.valueParameters.zip(
                                 firPrimaryConstructor.valueParameters
@@ -1003,7 +1007,7 @@ class RawFirBuilder(
         }
 
         private fun KtDeclarationWithBody.obtainContractDescription(): FirContractDescription? {
-            return when(val description = contractDescription) {
+            return when (val description = contractDescription) {
                 null -> null
                 else -> buildRawContractDescription {
                     source = description.toFirSourceElement()
@@ -1383,6 +1387,10 @@ class RawFirBuilder(
             }
         }
 
+        // TODO introduce placeholder projection type
+        private fun KtTypeProjection.isPlaceholderProjection() =
+            projectionKind == KtProjectionKind.NONE && (typeReference?.typeElement as? KtUserType)?.referencedName == "_"
+
         override fun visitTypeProjection(typeProjection: KtTypeProjection, data: Unit): FirElement {
             val projectionKind = typeProjection.projectionKind
             val projectionSource = typeProjection.toFirSourceElement()
@@ -1391,7 +1399,7 @@ class RawFirBuilder(
                     source = projectionSource
                 }
             }
-            if (projectionKind == KtProjectionKind.NONE && !stubMode && typeProjection.text == "_") {
+            if (typeProjection.isPlaceholderProjection()) {
                 return FirTypePlaceholderProjection
             }
             val typeReference = typeProjection.typeReference
@@ -1419,7 +1427,7 @@ class RawFirBuilder(
             return FirBlockBuilder().apply {
                 source = expression.toFirSourceElement()
                 for (statement in expression.statements) {
-                    val firStatement = statement.toFirStatement("Statement expected: ${statement.text}")
+                    val firStatement = statement.toFirStatement { "Statement expected: ${statement.text}" }
                     if (firStatement !is FirBlock || firStatement.annotations.isNotEmpty()) {
                         statements += firStatement
                     } else {
@@ -1441,9 +1449,21 @@ class RawFirBuilder(
             generateConstantExpressionByLiteral(expression)
 
         override fun visitStringTemplateExpression(expression: KtStringTemplateExpression, data: Unit): FirElement {
-            return expression.entries.toInterpolatingCall(expression) {
-                (this as KtStringTemplateEntryWithExpression).expression.toFirExpression(it)
-            }
+            return expression.entries.toInterpolatingCall(
+                expression,
+                getElementType = { element ->
+                    when (element) {
+                        is KtLiteralStringTemplateEntry -> KtNodeTypes.LITERAL_STRING_TEMPLATE_ENTRY
+                        is KtEscapeStringTemplateEntry -> KtNodeTypes.ESCAPE_STRING_TEMPLATE_ENTRY
+                        is KtSimpleNameStringTemplateEntry -> KtNodeTypes.SHORT_STRING_TEMPLATE_ENTRY
+                        is KtBlockStringTemplateEntry -> KtNodeTypes.LONG_STRING_TEMPLATE_ENTRY
+                        else -> error("invalid node type $element")
+                    }
+                },
+                convertTemplateEntry = {
+                    (this as KtStringTemplateEntryWithExpression).expression.toFirExpression(it)
+                },
+            )
         }
 
         override fun visitReturnExpression(expression: KtReturnExpression, data: Unit): FirElement {
