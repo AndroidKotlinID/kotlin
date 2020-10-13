@@ -1431,6 +1431,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/effectivelyInlineOnly.kt");
         }
 
+        @TestMetadata("mergeLvt.kt")
+        public void testMergeLvt() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/coroutines/mergeLvt.kt");
+        }
+
         @TestMetadata("nonLocalReturn.kt")
         public void testNonLocalReturn() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/nonLocalReturn.kt");
@@ -2107,6 +2112,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forIntInDownTo.kt");
         }
 
+        @TestMetadata("iincGeneration.kt")
+        public void testIincGeneration() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/forLoop/iincGeneration.kt");
+        }
+
         @TestMetadata("intrinsicArrayConstructorsUseCounterLoop.kt")
         public void testIntrinsicArrayConstructorsUseCounterLoop() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/intrinsicArrayConstructorsUseCounterLoop.kt");
@@ -2574,21 +2584,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             public void testForInUntilLongMinValue() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilLongMinValue.kt");
             }
-
-            @TestMetadata("forInUntilWithMixedTypeBoundsBoundCheckNeededForIntRangeIR.kt")
-            public void testForInUntilWithMixedTypeBoundsBoundCheckNeededForIntRangeIR() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilWithMixedTypeBoundsBoundCheckNeededForIntRangeIR.kt");
-            }
-
-            @TestMetadata("forInUntilWithMixedTypeBoundsNoBoundCheckNeededForIntRangeIR.kt")
-            public void testForInUntilWithMixedTypeBoundsNoBoundCheckNeededForIntRangeIR() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilWithMixedTypeBoundsNoBoundCheckNeededForIntRangeIR.kt");
-            }
-
-            @TestMetadata("forInUntilWithMixedTypeBoundsNoBoundCheckNeededForLongRangeIR.kt")
-            public void testForInUntilWithMixedTypeBoundsNoBoundCheckNeededForLongRangeIR() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/forInUntil/forInUntilWithMixedTypeBoundsNoBoundCheckNeededForLongRangeIR.kt");
-            }
         }
 
         @TestMetadata("compiler/testData/codegen/bytecodeText/forLoop/stepped")
@@ -2601,11 +2596,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
 
             public void testAllFilesPresentInStepped() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/forLoop/stepped"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
-            }
-
-            @TestMetadata("emptyUntilProgressionToMinValue.kt")
-            public void testEmptyUntilProgressionToMinValue() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/stepped/emptyUntilProgressionToMinValue.kt");
             }
 
             @TestMetadata("illegalStepConst.kt")
@@ -2677,11 +2667,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             public void testStepThenStepOne() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/stepped/stepThenStepOne.kt");
             }
-
-            @TestMetadata("untilProgressionToNonConst.kt")
-            public void testUntilProgressionToNonConst() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/stepped/untilProgressionToNonConst.kt");
-            }
         }
 
         @TestMetadata("compiler/testData/codegen/bytecodeText/forLoop/unsigned")
@@ -2694,11 +2679,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
 
             public void testAllFilesPresentInUnsigned() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/forLoop/unsigned"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
-            }
-
-            @TestMetadata("emptyUntilProgressionToMinValue.kt")
-            public void testEmptyUntilProgressionToMinValue() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/unsigned/emptyUntilProgressionToMinValue.kt");
             }
 
             @TestMetadata("forInDownToUIntMinValue.kt")
@@ -2774,11 +2754,6 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             @TestMetadata("stepThenDifferentStep.kt")
             public void testStepThenDifferentStep() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/forLoop/unsigned/stepThenDifferentStep.kt");
-            }
-
-            @TestMetadata("untilProgressionToNonConst.kt")
-            public void testUntilProgressionToNonConst() throws Exception {
-                runTest("compiler/testData/codegen/bytecodeText/forLoop/unsigned/untilProgressionToNonConst.kt");
             }
         }
     }

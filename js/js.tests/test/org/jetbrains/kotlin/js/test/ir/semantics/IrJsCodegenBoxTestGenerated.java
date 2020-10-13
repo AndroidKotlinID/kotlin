@@ -4239,6 +4239,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/contracts/exception.kt");
         }
 
+        @TestMetadata("fieldInConstructorParens.kt")
+        public void testFieldInConstructorParens() throws Exception {
+            runTest("compiler/testData/codegen/box/contracts/fieldInConstructorParens.kt");
+        }
+
         @TestMetadata("fieldReadInConstructor.kt")
         public void testFieldReadInConstructor() throws Exception {
             runTest("compiler/testData/codegen/box/contracts/fieldReadInConstructor.kt");
@@ -5636,6 +5641,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("kt42028.kt")
         public void testKt42028() throws Exception {
             runTest("compiler/testData/codegen/box/coroutines/kt42028.kt");
+        }
+
+        @TestMetadata("kt42554.kt")
+        public void testKt42554() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/kt42554.kt");
         }
 
         @TestMetadata("lastExpressionIsLoop.kt")
@@ -11422,6 +11432,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("referenceToCatchParameterFromLambdaExpression.kt")
         public void testReferenceToCatchParameterFromLambdaExpression() throws Exception {
             runTest("compiler/testData/codegen/box/inference/referenceToCatchParameterFromLambdaExpression.kt");
+        }
+
+        @TestMetadata("suspendExtensionRecevierFromConstraint.kt")
+        public void testSuspendExtensionRecevierFromConstraint() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/suspendExtensionRecevierFromConstraint.kt");
         }
 
         @TestMetadata("unsafeVarianceCodegen.kt")
@@ -18806,6 +18821,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             @TestMetadata("forIntInIntUntilSmartcastInt.kt")
             public void testForIntInIntUntilSmartcastInt() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/forInUntil/forIntInIntUntilSmartcastInt.kt");
+            }
+
+            @TestMetadata("kt42533.kt")
+            public void testKt42533() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/forInUntil/kt42533.kt");
             }
         }
 

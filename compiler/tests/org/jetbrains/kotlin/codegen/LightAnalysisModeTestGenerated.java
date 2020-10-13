@@ -1772,6 +1772,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         public void testSubstituteStubTypeIntolambdaParameterDescriptor() throws Exception {
             runTest("compiler/testData/codegen/box/builderInference/substituteStubTypeIntolambdaParameterDescriptor.kt");
         }
+
+        @TestMetadata("substituteTypeVariableIntolambdaParameterDescriptor.kt")
+        public void testSubstituteTypeVariableIntolambdaParameterDescriptor() throws Exception {
+            runTest("compiler/testData/codegen/box/builderInference/substituteTypeVariableIntolambdaParameterDescriptor.kt");
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/builtinStubMethods")
@@ -5354,6 +5359,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/contracts/exception.kt");
         }
 
+        @TestMetadata("fieldInConstructorParens.kt")
+        public void testFieldInConstructorParens() throws Exception {
+            runTest("compiler/testData/codegen/box/contracts/fieldInConstructorParens.kt");
+        }
+
         @TestMetadata("fieldReadInConstructor.kt")
         public void testFieldReadInConstructor() throws Exception {
             runTest("compiler/testData/codegen/box/contracts/fieldReadInConstructor.kt");
@@ -7036,6 +7046,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt42028.kt")
         public void testKt42028() throws Exception {
             runTest("compiler/testData/codegen/box/coroutines/kt42028.kt");
+        }
+
+        @TestMetadata("kt42554.kt")
+        public void testKt42554() throws Exception {
+            runTest("compiler/testData/codegen/box/coroutines/kt42554.kt");
         }
 
         @TestMetadata("lastExpressionIsLoop.kt")
@@ -11629,6 +11644,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             public void testLocalVarNoExplicitType() throws Exception {
                 runTest("compiler/testData/codegen/box/delegatedProperty/local/localVarNoExplicitType.kt");
             }
+
+            @TestMetadata("useReflectionForLocalVarInLambda.kt")
+            public void testUseReflectionForLocalVarInLambda() throws Exception {
+                runTest("compiler/testData/codegen/box/delegatedProperty/local/useReflectionForLocalVarInLambda.kt");
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/delegatedProperty/optimizedDelegatedProperties")
@@ -14707,6 +14727,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("subtypingOfIntersectionIltInsideFlexible.kt")
         public void testSubtypingOfIntersectionIltInsideFlexible() throws Exception {
             runTest("compiler/testData/codegen/box/inference/subtypingOfIntersectionIltInsideFlexible.kt");
+        }
+
+        @TestMetadata("suspendExtensionRecevierFromConstraint.kt")
+        public void testSuspendExtensionRecevierFromConstraint() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/suspendExtensionRecevierFromConstraint.kt");
         }
 
         @TestMetadata("unsafeVarianceCodegen.kt")
@@ -19851,6 +19876,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/multifileClasses/multifileClassWithPrivate.kt");
         }
 
+        @TestMetadata("namesInMetadataAreSorted.kt")
+        public void testNamesInMetadataAreSorted() throws Exception {
+            runTest("compiler/testData/codegen/box/multifileClasses/namesInMetadataAreSorted.kt");
+        }
+
         @TestMetadata("privateConstVal.kt")
         public void testPrivateConstVal() throws Exception {
             runTest("compiler/testData/codegen/box/multifileClasses/privateConstVal.kt");
@@ -19921,6 +19951,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("internalFunction.kt")
             public void testInternalFunction() throws Exception {
                 runTest("compiler/testData/codegen/box/multifileClasses/optimized/internalFunction.kt");
+            }
+
+            @TestMetadata("namesInMetadataAreSorted.kt")
+            public void testNamesInMetadataAreSorted() throws Exception {
+                runTest("compiler/testData/codegen/box/multifileClasses/optimized/namesInMetadataAreSorted.kt");
             }
 
             @TestMetadata("overlappingFuns.kt")
@@ -24155,6 +24190,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
         public static class ForInUntil extends AbstractLightAnalysisModeTest {
+            @TestMetadata("kt42533.kt")
+            public void ignoreKt42533() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/forInUntil/kt42533.kt");
+            }
+
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
             }
@@ -26403,6 +26443,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             public void testReflectOnLambdaInSuspendLambda() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/lambdaClasses/reflectOnLambdaInSuspendLambda.kt");
             }
+
+            @TestMetadata("reflectOnSuspendLambdaInField.kt")
+            public void testReflectOnSuspendLambdaInField() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/lambdaClasses/reflectOnSuspendLambdaInField.kt");
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/reflection/mapping")
@@ -27370,6 +27415,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
             public static class LocalDelegated extends AbstractLightAnalysisModeTest {
+                @TestMetadata("inLambdaInInline.kt")
+                public void ignoreInLambdaInInline() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/properties/localDelegated/inLambdaInInline.kt");
+                }
+
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
                 }
@@ -27381,6 +27431,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 @TestMetadata("defaultImpls.kt")
                 public void testDefaultImpls() throws Exception {
                     runTest("compiler/testData/codegen/box/reflection/properties/localDelegated/defaultImpls.kt");
+                }
+
+                @TestMetadata("inLambda.kt")
+                public void testInLambda() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/properties/localDelegated/inLambda.kt");
                 }
 
                 @TestMetadata("inlineFun.kt")

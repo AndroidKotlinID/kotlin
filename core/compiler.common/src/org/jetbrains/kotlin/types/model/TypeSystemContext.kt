@@ -193,6 +193,20 @@ interface TypeSystemInferenceExtensionContext : TypeSystemContext, TypeSystemBui
     fun TypeVariableTypeConstructorMarker.isContainedInInvariantOrContravariantPositions(): Boolean
 
     fun KotlinTypeMarker.isSignedOrUnsignedNumberType(): Boolean
+
+    fun KotlinTypeMarker.isFunctionOrKFunctionWithAnySuspendability(): Boolean
+
+    fun KotlinTypeMarker.isSuspendFunctionTypeOrSubtype(): Boolean
+
+    fun KotlinTypeMarker.isExtensionFunctionType(): Boolean
+
+    fun KotlinTypeMarker.extractArgumentsForFunctionalTypeOrSubtype(): List<KotlinTypeMarker>
+
+    fun KotlinTypeMarker.getFunctionalTypeFromSupertypes(): KotlinTypeMarker
+
+    fun getFunctionTypeConstructor(parametersNumber: Int, isSuspend: Boolean): TypeConstructorMarker
+
+    fun getKFunctionTypeConstructor(parametersNumber: Int, isSuspend: Boolean): TypeConstructorMarker
 }
 
 
@@ -323,6 +337,18 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
             is SimpleTypeMarker -> argumentsCount()
             is ArgumentList -> size
             else -> error("unknown type argument list type: $this, ${this::class}")
+        }
+    }
+
+    operator fun TypeArgumentListMarker.iterator() = object : Iterator<TypeArgumentMarker> {
+        private var argumentIndex: Int = 0
+
+        override fun hasNext(): Boolean = argumentIndex < size()
+
+        override fun next(): TypeArgumentMarker {
+            val argument = get(argumentIndex)
+            argumentIndex += 1
+            return argument
         }
     }
 

@@ -679,6 +679,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/constructorsWithDefaultParameterValues.kt");
         }
 
+        @TestMetadata("inlineCharSequence.kt")
+        public void testInlineCharSequence() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineCharSequence.kt");
+        }
+
         @TestMetadata("inlineClassMembersVisibility.kt")
         public void testInlineClassMembersVisibility() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineClassMembersVisibility.kt");
@@ -1129,6 +1134,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/specialBridges"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("charSequence.kt")
+        public void testCharSequence() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/specialBridges/charSequence.kt");
+        }
+
         @TestMetadata("contains.kt")
         public void testContains() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/specialBridges/contains.kt");
@@ -1152,6 +1162,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         @TestMetadata("noSpecialBridgeIfPresentInSuperClass.kt")
         public void testNoSpecialBridgeIfPresentInSuperClass() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/specialBridges/noSpecialBridgeIfPresentInSuperClass.kt");
+        }
+
+        @TestMetadata("number.kt")
+        public void testNumber() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/specialBridges/number.kt");
         }
 
         @TestMetadata("redundantStubForSize.kt")
@@ -1179,6 +1194,21 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
             @TestMetadata("genericClass.kt")
             public void testGenericClass() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeListing/specialBridges/signatures/genericClass.kt");
+            }
+
+            @TestMetadata("implementsJavaMap.kt")
+            public void testImplementsJavaMap() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeListing/specialBridges/signatures/implementsJavaMap.kt");
+            }
+
+            @TestMetadata("implementsMap.kt")
+            public void testImplementsMap() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeListing/specialBridges/signatures/implementsMap.kt");
+            }
+
+            @TestMetadata("implementsSortedMap.kt")
+            public void testImplementsSortedMap() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeListing/specialBridges/signatures/implementsSortedMap.kt");
             }
 
             @TestMetadata("nonGenericClass.kt")

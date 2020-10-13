@@ -1421,6 +1421,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/effectivelyInlineOnly.kt");
         }
 
+        @TestMetadata("mergeLvt.kt")
+        public void testMergeLvt() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/coroutines/mergeLvt.kt");
+        }
+
         @TestMetadata("nonLocalReturn.kt")
         public void testNonLocalReturn() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/coroutines/nonLocalReturn.kt");
@@ -2150,6 +2155,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
         @TestMetadata("forIntInDownTo.kt")
         public void testForIntInDownTo() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/forLoop/forIntInDownTo.kt");
+        }
+
+        @TestMetadata("iincGeneration.kt")
+        public void testIincGeneration() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/forLoop/iincGeneration.kt");
         }
 
         @TestMetadata("intrinsicArrayConstructorsUseCounterLoop.kt")
