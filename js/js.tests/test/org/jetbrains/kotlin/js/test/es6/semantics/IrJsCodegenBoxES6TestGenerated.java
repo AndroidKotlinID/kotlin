@@ -6016,6 +6016,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/returnWithFinally.kt", "kotlin.coroutines");
             }
 
+            @TestMetadata("suspendInStringTemplate.kt")
+            public void testSuspendInStringTemplate_1_3() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/suspendInStringTemplate.kt", "kotlin.coroutines");
+            }
+
             @TestMetadata("switchLikeWhen.kt")
             public void testSwitchLikeWhen_1_3() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/controlFlow/switchLikeWhen.kt", "kotlin.coroutines");
@@ -12050,6 +12055,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("referToUnderlyingPropertyOfInlineClass.kt")
         public void testReferToUnderlyingPropertyOfInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/referToUnderlyingPropertyOfInlineClass.kt");
+        }
+
+        @TestMetadata("removeInInlineCollectionOfInlineClassAsInt.kt")
+        public void testRemoveInInlineCollectionOfInlineClassAsInt() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/removeInInlineCollectionOfInlineClassAsInt.kt");
         }
 
         @TestMetadata("resultInlining.kt")
@@ -22336,6 +22346,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             @TestMetadata("genericClass.kt")
             public void testGenericClass() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/classLiterals/genericClass.kt");
+            }
+
+            @TestMetadata("lambdaClass.kt")
+            public void testLambdaClass() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/classLiterals/lambdaClass.kt");
             }
 
             @TestMetadata("simpleClassLiteral.kt")

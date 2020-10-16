@@ -55,12 +55,12 @@ internal fun MethodNode.acceptWithStateMachine(
         val irFile = irFunction.file
         if (irFunction.startOffset >= 0) {
             // if it suspend function like `suspend fun foo(...)`
-            irFile.fileEntry.getLineNumber(irFunction.startOffset)
+            irFile.fileEntry.getLineNumber(irFunction.startOffset) + 1
         } else {
             val klass = classCodegen.irClass
             if (klass.startOffset >= 0) {
                 // if it suspend lambda transformed into class `runSuspend { .... }`
-                irFile.fileEntry.getLineNumber(klass.startOffset)
+                irFile.fileEntry.getLineNumber(klass.startOffset) + 1
             } else 0
         }
     } else element?.let { CodegenUtil.getLineNumberForElement(it, false) } ?: 0
@@ -100,7 +100,7 @@ internal fun IrFunction.suspendForInlineToOriginal(): IrSimpleFunction? {
     } as IrSimpleFunction?
 }
 
-internal fun IrFunction.alwaysNeedsContinuation(): Boolean =
+internal fun IrFunction.isSuspendCapturingCrossinline(): Boolean =
     this is IrSimpleFunction && hasContinuation() && parentAsClass.declarations.any {
         it is IrSimpleFunction && it.attributeOwnerId == attributeOwnerId &&
                 it.origin == JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE
@@ -157,10 +157,10 @@ internal fun IrFunction.shouldContainSuspendMarkers(): Boolean = !isInvokeSuspen
         !isBridgeToSuspendImplMethod() &&
         !isStaticInlineClassReplacementDelegatingCall()
 
-internal fun IrFunction.hasContinuation(): Boolean = isSuspend && shouldContainSuspendMarkers() &&
-        // This is inline-only function
+internal fun IrFunction.hasContinuation(): Boolean = isInvokeSuspendOfLambda() ||
+        isSuspend && shouldContainSuspendMarkers() &&
+        // These are templates for the inliner; the continuation is borrowed from the caller method.
         !isEffectivelyInlineOnly() &&
-        // These are templates for the inliner; the continuation will be generated after it runs.
         origin != IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA &&
         origin != JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE &&
         origin != JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE

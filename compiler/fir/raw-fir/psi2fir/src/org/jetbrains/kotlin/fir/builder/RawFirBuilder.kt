@@ -25,8 +25,8 @@ import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.*
+import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub
 import org.jetbrains.kotlin.fir.expressions.impl.FirSingleExpressionBlock
-import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.builder.*
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
@@ -50,8 +50,10 @@ import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.runIf
 
 class RawFirBuilder(
-    session: FirSession, val baseScopeProvider: FirScopeProvider, val stubMode: Boolean
+    session: FirSession, val baseScopeProvider: FirScopeProvider, val mode: RawFirBuilderMode = RawFirBuilderMode.NORMAL
 ) : BaseFirBuilder<PsiElement>(session) {
+
+    private val stubMode get() = mode == RawFirBuilderMode.STUBS
 
     fun buildFirFile(file: KtFile): FirFile {
         return file.accept(Visitor(), Unit) as FirFile
@@ -62,16 +64,22 @@ class RawFirBuilder(
     }
 
     fun buildFunctionWithBody(function: KtNamedFunction): FirFunction<*> {
-        assert(!stubMode) { "Building FIR function with body isn't supported in stub mode" }
-        setupContextForPosition(function)
-        return function.accept(Visitor(), Unit) as FirFunction<*>
+        return buildDeclaration(function) as FirFunction<*>
+    }
+
+    fun buildSecondaryConstructor(secondaryConstructor: KtSecondaryConstructor): FirConstructor {
+        return buildDeclaration(secondaryConstructor) as FirConstructor
     }
 
     fun buildPropertyWithBody(property: KtProperty): FirProperty {
         require(!property.isLocal) { "Should not be used to build local properties (variables)" }
-        assert(!stubMode) { "Building FIR function with body isn't supported in stub mode" }
-        setupContextForPosition(property)
-        return property.accept(Visitor(), Unit) as FirProperty
+        return buildDeclaration(property) as FirProperty
+    }
+
+    private fun buildDeclaration(declaration: KtDeclaration): FirDeclaration {
+        assert(mode ==  RawFirBuilderMode.NORMAL) { "Building FIR declarations isn't supported in stub or lazy mode mode" }
+        setupContextForPosition(declaration)
+        return declaration.accept(Visitor(), Unit) as FirDeclaration
     }
 
     private fun setupContextForPosition(position: KtElement) {
@@ -253,6 +261,13 @@ class RawFirBuilder(
             when {
                 !hasBody() ->
                     null to null
+                mode == RawFirBuilderMode.LAZY_BODIES -> {
+                    val block = buildLazyBlock {
+                        source = bodyExpression?.toFirSourceElement()
+                            ?: error("hasBody() == true but body is null")
+                    }
+                    block to null
+                }
                 hasBlockBody() -> if (!stubMode) {
                     val block = bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
                     if (hasContractEffectList()) {
@@ -746,14 +761,17 @@ class RawFirBuilder(
                             owner = ktEnumEntry,
                             typeParameters
                         )
-                        for (declaration in ktEnumEntry.declarations) {
-                            declarations += declaration.toFirDeclaration(
-                                correctedEnumSelfTypeRef,
-                                delegatedSelfType = delegatedEntrySelfType,
-                                ktEnumEntry,
-                                ownerClassBuilder = this,
-                                ownerTypeParameters = emptyList()
-                            )
+                        // Use ANONYMOUS_OBJECT_NAME for the owner class id for enum entry declarations (see KT-42351)
+                        withChildClassName(ANONYMOUS_OBJECT_NAME, isLocal = true) {
+                            for (declaration in ktEnumEntry.declarations) {
+                                declarations += declaration.toFirDeclaration(
+                                    correctedEnumSelfTypeRef,
+                                    delegatedSelfType = delegatedEntrySelfType,
+                                    ktEnumEntry,
+                                    ownerClassBuilder = this,
+                                    ownerTypeParameters = emptyList()
+                                )
+                            }
                         }
                     }
                 }
@@ -1144,6 +1162,8 @@ class RawFirBuilder(
                 extractAnnotationsTo(this)
                 typeParameters += constructorTypeParametersFromConstructedClass(ownerTypeParameters)
                 extractValueParametersTo(this)
+
+
                 val (body, _) = buildFirBody()
                 this.body = body
                 this@RawFirBuilder.context.firFunctionTargets.removeLast()
@@ -1180,9 +1200,15 @@ class RawFirBuilder(
             val propertyType = typeReference.toFirOrImplicitType()
             val propertyName = nameAsSafeName
             val isVar = isVar
-            val propertyInitializer = if (hasInitializer()) {
-                { initializer }.toFirExpression("Should have initializer")
-            } else null
+            val propertyInitializer = when {
+                !hasInitializer() -> null
+                mode == RawFirBuilderMode.LAZY_BODIES -> buildLazyExpression {
+                    source = initializer?.toFirSourceElement()
+                }
+                mode == RawFirBuilderMode.STUBS -> buildExpressionStub()
+                else -> initializer.toFirExpression("Should have initializer")
+
+            }
             val delegateExpression by lazy { delegate?.expression }
             val propertySource = toFirSourceElement()
 
@@ -1223,7 +1249,14 @@ class RawFirBuilder(
                             FirWrappedDelegateExpressionBuilder().apply {
                                 source =
                                     if (stubMode) null else delegateExpression?.toFirSourceElement(FirFakeSourceElementKind.WrappedDelegate)
-                                expression = { delegateExpression }.toFirExpression("Should have delegate")
+                                expression = when (mode) {
+                                    RawFirBuilderMode.NORMAL -> delegateExpression.toFirExpression("Should have delegate")
+                                    RawFirBuilderMode.STUBS -> buildExpressionStub()
+                                    RawFirBuilderMode.LAZY_BODIES -> buildLazyExpression {
+                                        source = delegateExpression!!.toFirSourceElement()
+                                    }
+                                }
+
                             }
                         } else null
 
@@ -2058,5 +2091,31 @@ class RawFirBuilder(
         calleeReference = buildSimpleNamedReference {
             name = Name.identifier("ExtensionFunctionType")
         }
+    }
+}
+
+enum class RawFirBuilderMode {
+    /**
+     * Build every expression and every body
+     */
+    NORMAL,
+
+    /**
+     * Build [org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub] for expressions
+     */
+    STUBS,
+
+    /**
+     * Build [org.jetbrains.kotlin.fir.expressions.impl.FirLazyBlock] for function bodies, constructors & getters/setters
+     * Build [org.jetbrains.kotlin.fir.expressions.impl.FirLazyExpression] for property initializers
+     */
+    LAZY_BODIES;
+
+    companion object {
+        fun lazyBodies(lazyBodies: Boolean): RawFirBuilderMode =
+            if (lazyBodies) LAZY_BODIES else NORMAL
+
+        fun stubs(stubs: Boolean): RawFirBuilderMode =
+            if (stubs) STUBS else NORMAL
     }
 }

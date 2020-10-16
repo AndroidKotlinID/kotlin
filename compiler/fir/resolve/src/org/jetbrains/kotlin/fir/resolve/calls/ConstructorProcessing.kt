@@ -15,8 +15,9 @@ import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.resolve.transformers.ensureResolved
+import org.jetbrains.kotlin.fir.scopes.FakeOverrideTypeCalculator
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.impl.FirClassSubstitutionScope
+import org.jetbrains.kotlin.fir.scopes.impl.FirFakeOverrideGenerator
 import org.jetbrains.kotlin.fir.scopes.scopeForClass
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
@@ -122,7 +123,7 @@ private fun FirTypeAliasSymbol.findSAMConstructorForTypeAlias(
         type,
         session
     ) { newReturnType, newParameterTypes, newTypeParameters ->
-        FirClassSubstitutionScope.createFakeOverrideFunction(
+        FirFakeOverrideGenerator.createFakeOverrideFunction(
             session, this, namedSymbol, null,
             newReturnType, newParameterTypes, newTypeParameters
         ).fir
@@ -145,7 +146,7 @@ private fun processConstructors(
                 is FirTypeAliasSymbol -> {
                     matchedSymbol.ensureResolved(FirResolvePhase.TYPES, session)
                     val type = matchedSymbol.fir.expandedTypeRef.coneTypeUnsafe<ConeClassLikeType>().fullyExpandedType(session)
-                    val basicScope = type.scope(session, bodyResolveComponents.scopeSession)
+                    val basicScope = type.scope(session, bodyResolveComponents.scopeSession, FakeOverrideTypeCalculator.DoNothing)
 
                     if (basicScope != null && type.typeArguments.isNotEmpty()) {
                         prepareSubstitutingScopeForTypeAliasConstructors(
@@ -233,7 +234,7 @@ private fun prepareSubstitutingScopeForTypeAliasConstructors(
         buildConstructor {
             source = this@factory.source
             this.session = session
-            origin = FirDeclarationOrigin.FakeOverride
+            origin = FirDeclarationOrigin.SubstitutionOverride
             returnTypeRef = this@factory.returnTypeRef.withReplacedConeType(newReturnType)
             receiverTypeRef = this@factory.receiverTypeRef
             status = this@factory.status
@@ -248,7 +249,7 @@ private fun prepareSubstitutingScopeForTypeAliasConstructors(
                             source = valueParameter.source
                             this.session = session
                             resolvePhase = valueParameter.resolvePhase
-                            origin = FirDeclarationOrigin.FakeOverride
+                            origin = FirDeclarationOrigin.SubstitutionOverride
                             returnTypeRef = valueParameter.returnTypeRef.withReplacedConeType(newParameterType)
                             name = valueParameter.name
                             symbol = FirVariableSymbol(valueParameter.symbol.callableId)
