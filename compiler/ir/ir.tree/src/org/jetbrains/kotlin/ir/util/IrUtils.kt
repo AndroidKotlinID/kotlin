@@ -16,7 +16,10 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.*
-import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.isAny
+import org.jetbrains.kotlin.ir.types.isSubtypeOf
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.utils.DFS
@@ -27,6 +30,7 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
  * Binds the arguments explicitly represented in the IR to the parameters of the accessed function.
  * The arguments are to be evaluated in the same order as they appear in the resulting list.
  */
+@Suppress("unused") // used in kotlin-native
 @ObsoleteDescriptorBasedAPI
 fun IrMemberAccessExpression<*>.getArguments(): List<Pair<ParameterDescriptor, IrExpression>> {
     val res = mutableListOf<Pair<ParameterDescriptor, IrExpression>>()
@@ -172,9 +176,8 @@ fun IrExpression.coerceToUnitIfNeeded(valueType: IrType, irBuiltIns: IrBuiltIns)
         )
 }
 
-@ObsoleteDescriptorBasedAPI
-fun IrMemberAccessExpression<*>.usesDefaultArguments(): Boolean =
-    (symbol.descriptor as CallableDescriptor).valueParameters.any { this.getValueArgument(it) == null }
+fun IrFunctionAccessExpression.usesDefaultArguments(): Boolean =
+    symbol.owner.valueParameters.any { this.getValueArgument(it.index) == null }
 
 val IrClass.functions: Sequence<IrSimpleFunction>
     get() = declarations.asSequence().filterIsInstance<IrSimpleFunction>()
@@ -512,10 +515,12 @@ val IrFunction.allTypeParameters: List<IrTypeParameter>
     else
         typeParameters
 
-fun IrMemberAccessExpression<*>.getTypeSubstitutionMap(irFunction: IrFunction): Map<IrTypeParameterSymbol, IrType> =
-    irFunction.allTypeParameters.withIndex().associate {
+fun IrMemberAccessExpression<*>.getTypeSubstitutionMap(irFunction: IrFunction): Map<IrTypeParameterSymbol, IrType> {
+    val typeParameters = irFunction.allTypeParameters
+    return if (typeParameters.isEmpty()) emptyMap() else typeParameters.withIndex().associate {
         it.value.symbol to getTypeArgument(it.index)!!
     }
+}
 
 val IrFunctionReference.typeSubstitutionMap: Map<IrTypeParameterSymbol, IrType>
     get() = getTypeSubstitutionMap(symbol.owner)
@@ -528,12 +533,6 @@ val IrDeclaration.isFileClass: Boolean
 
 val IrValueDeclaration.isImmutable: Boolean
     get() = this is IrValueParameter || this is IrVariable && !isVar
-
-fun IrExpression.isSafeToUseWithoutCopying() =
-    this is IrGetObjectValue ||
-            this is IrGetEnumValue ||
-            this is IrConst<*> ||
-            this is IrGetValue && symbol.isBound && symbol.owner.isImmutable
 
 val IrStatementOrigin?.isLambda: Boolean
     get() = this == IrStatementOrigin.LAMBDA || this == IrStatementOrigin.ANONYMOUS_FUNCTION

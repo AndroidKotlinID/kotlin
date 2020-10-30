@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptorWithSource
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
@@ -56,8 +57,8 @@ class IrFrameMap : FrameMapBase<IrSymbol>() {
         return super.leave(key)
     }
 
-    fun typeOf(symbol: IrSymbol): Type =
-        typeMap[symbol] ?: error("No mapping for symbol: ${symbol.owner.render()}")
+    fun typeOf(symbol: IrSymbol): Type = typeMap[symbol]
+        ?: error("No mapping for symbol: ${symbol.owner.render()}")
 }
 
 internal val IrFunction.isStatic
@@ -89,7 +90,6 @@ fun JvmBackendContext.getSourceMapper(declaration: IrClass): SourceMapper {
     val fileEntry = sourceManager.getFileEntry(declaration.fileParent)
     // NOTE: apparently inliner requires the source range to cover the
     //       whole file the class is declared in rather than the class only.
-    // TODO: revise
     val endLineNumber = when (fileEntry) {
         is MultifileFacadeFileEntry -> 0
         else -> fileEntry?.getSourceRangeInfo(0, fileEntry.maxOffset)?.endLineNumber ?: 0
@@ -411,9 +411,11 @@ val IrFunction.functionDeprecationFlags: Int
         return originFlags or propertyFlags or callableDeprecationFlags
     }
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 val IrDeclaration.psiElement: PsiElement?
     get() = (descriptor as? DeclarationDescriptorWithSource)?.psiElement
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 val IrMemberAccessExpression<*>.psiElement: PsiElement?
     get() = (symbol.descriptor.original as? DeclarationDescriptorWithSource)?.psiElement
 

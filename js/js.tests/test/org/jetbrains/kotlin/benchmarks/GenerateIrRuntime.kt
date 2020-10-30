@@ -161,7 +161,7 @@ class GenerateIrRuntime {
         val files = fullRuntimeSourceSet
         val analysisResult = doFrontEnd(files)
 
-        runBenchWithWarmup("Pipeline withput FrontEnd", 40, 10, MeasureUnits.MICROSECONDS, pre = System::gc) {
+        runBenchWithWarmup("Pipeline without FrontEnd", 40, 10, MeasureUnits.MICROSECONDS, pre = System::gc) {
             val rawModuleFragment = doPsi2Ir(files, analysisResult)
 
             val modulePath = doSerializeModule(rawModuleFragment, analysisResult.bindingContext, files)
@@ -202,7 +202,7 @@ class GenerateIrRuntime {
     }
 
     @Test
-    fun runIrDeserializationMonolitic() {
+    fun runIrDeserializationMonolithic() {
         val files = fullRuntimeSourceSet
         val analysisResult = doFrontEnd(files)
         val rawModuleFragment = doPsi2Ir(files, analysisResult)
@@ -241,7 +241,7 @@ class GenerateIrRuntime {
     }
 
     @Test
-    fun runMonoliticDiskWriting() {
+    fun runMonolithicDiskWriting() {
         val libraryVersion = "JSIR"
         val compilerVersion = KotlinCompilerVersion.getVersion()
         val abiVersion = KotlinAbiVersion.CURRENT
@@ -257,13 +257,13 @@ class GenerateIrRuntime {
         val fileCount = rawModuleFragment.files.size
         val serializedIr = doSerializeIrModule(rawModuleFragment)
 
-        runBenchWithWarmup("Monolitic Disk Writing of $fileCount files", 10, 30, MeasureUnits.MILLISECONDS, pre = writer::invalidate) {
+        runBenchWithWarmup("Monolithic Disk Writing of $fileCount files", 10, 30, MeasureUnits.MILLISECONDS, pre = writer::invalidate) {
             doWriteIrModuleToStorage(serializedIr, writer)
         }
     }
 
     @Test
-    fun runPerfileDiskWriting() {
+    fun runPerFileDiskWriting() {
         val libraryVersion = "JSIR"
         val compilerVersion = KotlinCompilerVersion.getVersion()
         val abiVersion = KotlinAbiVersion.CURRENT
@@ -285,7 +285,7 @@ class GenerateIrRuntime {
     }
 
     @Test
-    fun runIncrementalKlibGeneratation() {
+    fun runIncrementalKlibGeneration() {
 
         val klibDirectory = workingDir.resolve("output/klib")
 
@@ -423,7 +423,7 @@ class GenerateIrRuntime {
         val rawModuleFragment = doPsi2Ir(files, analysisResult)
         val modulePath = doSerializeModule(rawModuleFragment, analysisResult.bindingContext, files)
 
-        runBenchWithWarmup("Deserializtion and Backend", 40, 10, MeasureUnits.MICROSECONDS, pre = System::gc) {
+        runBenchWithWarmup("Deserialization and Backend", 40, 10, MeasureUnits.MICROSECONDS, pre = System::gc) {
             val (module, symbolTable, irBuiltIns, linker) = doDeserializeModule(modulePath)
             doBackEnd(module, symbolTable, irBuiltIns, linker)
         }
@@ -475,6 +475,7 @@ class GenerateIrRuntime {
         val tmpKlibDir = createTempDir().also { it.deleteOnExit() }
         serializeModuleIntoKlib(
             moduleName,
+            project,
             configuration,
             bindingContext,
             files,

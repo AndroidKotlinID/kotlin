@@ -57,7 +57,6 @@ fun getPublicSignature(packageFqName: FqName, name: String) =
 private fun IrType.isClassType(signature: IdSignature.PublicSignature, hasQuestionMark: Boolean? = null): Boolean {
     if (this !is IrSimpleType) return false
     if (hasQuestionMark != null && this.hasQuestionMark != hasQuestionMark) return false
-    if (!classifier.isPublicApi || !classifier.signature.isPublic) return false
     return signature == classifier.signature
 }
 
@@ -99,8 +98,8 @@ fun IrType.isCollection(): Boolean = isNotNullClassType(IdSignatureValues.collec
 fun IrType.isNothing(): Boolean = isNotNullClassType(IdSignatureValues.nothing)
 
 fun IrType.isPrimitiveType(hasQuestionMark: Boolean = false): Boolean =
-        (this is IrSimpleType && hasQuestionMark == this.hasQuestionMark) &&
-                classOrNull?.takeIf(IrClassSymbol::isPublicApi)?.signature in idSignatureToPrimitiveType
+    (this is IrSimpleType && hasQuestionMark == this.hasQuestionMark) &&
+            classOrNull?.signature in idSignatureToPrimitiveType
 
 fun IrType.isNullablePrimitiveType(): Boolean = isPrimitiveType(true)
 

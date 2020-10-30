@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.fir.backend.generators
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.builder.buildProperty
+import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
 import org.jetbrains.kotlin.fir.psi
@@ -19,12 +19,15 @@ import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.calls.getExpectedTypeForSAMConversion
 import org.jetbrains.kotlin.fir.resolve.calls.isFunctional
+import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.builders.declarations.UNDEFINED_PARAMETER_INDEX
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
@@ -94,9 +97,7 @@ class CallAndReferenceGenerator(
                             // Since it's used as a field reference, we need a bogus property as a placeholder.
                             val firSymbol =
                                 (callableReferenceAccess.calleeReference as FirResolvedNamedReference).resolvedSymbol as FirFieldSymbol
-                            declarationStorage.getOrCreateIrProperty(
-                                firSymbol.fir.toProperty(), referencedField.parent
-                            ).symbol
+                            declarationStorage.getOrCreateIrPropertyByPureField(firSymbol.fir, referencedField.parent).symbol
                         }
                     IrPropertyReferenceImpl(
                         startOffset, endOffset, type,
@@ -147,21 +148,6 @@ class CallAndReferenceGenerator(
         }.applyTypeArguments(callableReferenceAccess).applyReceivers(callableReferenceAccess, explicitReceiverExpression)
     }
 
-    private fun FirField.toProperty(): FirProperty =
-        buildProperty {
-            source = this@toProperty.source
-            session = this@toProperty.session
-            origin = this@toProperty.origin
-            returnTypeRef = this@toProperty.returnTypeRef
-            name = this@toProperty.name
-            isVar = this@toProperty.isVar
-            getter = this@toProperty.getter
-            setter = this@toProperty.setter
-            symbol = FirPropertySymbol(this@toProperty.symbol.callableId)
-            isLocal = false
-            status = this@toProperty.status
-        }
-
     private fun FirQualifiedAccess.tryConvertToSamConstructorCall(type: IrType): IrTypeOperatorCall? {
         val calleeReference = calleeReference as? FirResolvedNamedReference ?: return null
         val fir = calleeReference.resolvedSymbol.fir
@@ -186,7 +172,7 @@ class CallAndReferenceGenerator(
         val superTypeRef = dispatchReceiverReference.superTypeRef
         val coneSuperType = superTypeRef.coneTypeSafe<ConeClassLikeType>()
         if (coneSuperType != null) {
-            val firClassSymbol = coneSuperType.lookupTag.toSymbol(session) as? FirClassSymbol<*>
+            val firClassSymbol = coneSuperType.fullyExpandedType(session).lookupTag.toSymbol(session) as? FirClassSymbol<*>
             if (firClassSymbol != null) {
                 return classifierStorage.getIrClassSymbol(firClassSymbol)
             }
@@ -418,9 +404,9 @@ class CallAndReferenceGenerator(
                     return null
                 }
                 val resolvedReference = callableReferenceAccess.calleeReference as FirResolvedNamedReference
-                val callableId = (resolvedReference.resolvedSymbol as FirCallableSymbol<*>).callableId
+                val firCallableSymbol = resolvedReference.resolvedSymbol as FirCallableSymbol<*>
                 // Make sure the reference indeed refers to a member of that companion
-                if (callableId.classId != classSymbol.classId) {
+                if (firCallableSymbol.dispatchReceiverClassOrNull() != classSymbol.toLookupTag()) {
                     return null
                 }
             }
@@ -464,13 +450,7 @@ class CallAndReferenceGenerator(
                         }
                         for ((index, argument) in call.arguments.withIndex()) {
                             val valueParameter = valueParameters?.get(index)
-                            val argumentExpression =
-                                with(adapterGenerator) {
-                                    visitor.convertToIrExpression(argument)
-                                        .applySamConversionIfNeeded(argument, valueParameter)
-                                        .applySuspendConversionIfNeeded(argument, valueParameter)
-                                        .applyAssigningArrayElementsToVarargInNamedForm(argument, valueParameter)
-                                }
+                            val argumentExpression = convertArgument(argument, valueParameter)
                             putValueArgument(index, argumentExpression)
                         }
                     }
@@ -508,13 +488,7 @@ class CallAndReferenceGenerator(
             return IrBlockImpl(startOffset, endOffset, type, IrStatementOrigin.ARGUMENTS_REORDERING_FOR_CALL).apply {
                 for ((argument, parameter) in argumentMapping) {
                     val parameterIndex = valueParameters.indexOf(parameter)
-                    val irArgument =
-                        with(adapterGenerator) {
-                            visitor.convertToIrExpression(argument)
-                                .applySamConversionIfNeeded(argument, parameter)
-                                .applySuspendConversionIfNeeded(argument, parameter)
-                                .applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
-                        }
+                    val irArgument = convertArgument(argument, parameter)
                     if (irArgument.hasNoSideEffects()) {
                         putValueArgument(parameterIndex, irArgument)
                     } else {
@@ -529,13 +503,7 @@ class CallAndReferenceGenerator(
             }
         } else {
             for ((argument, parameter) in argumentMapping) {
-                val argumentExpression =
-                    with(adapterGenerator) {
-                        visitor.convertToIrExpression(argument, annotationMode)
-                            .applySamConversionIfNeeded(argument, parameter)
-                            .applySuspendConversionIfNeeded(argument, parameter)
-                            .applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
-                    }
+                val argumentExpression = convertArgument(argument, parameter, annotationMode)
                 putValueArgument(valueParameters.indexOf(parameter), argumentExpression)
             }
             if (annotationMode) {
@@ -543,7 +511,13 @@ class CallAndReferenceGenerator(
                     if (parameter.isVararg && !argumentMapping.containsValue(parameter)) {
                         val elementType = parameter.returnTypeRef.toIrType()
                         putValueArgument(
-                            index, IrVarargImpl(-1, -1, elementType, elementType.toArrayOrPrimitiveArrayType(irBuiltIns))
+                            index,
+                            IrVarargImpl(
+                                UNDEFINED_OFFSET,
+                                UNDEFINED_OFFSET,
+                                elementType,
+                                elementType.toArrayOrPrimitiveArrayType(irBuiltIns)
+                            )
                         )
                     }
                 }
@@ -556,7 +530,7 @@ class CallAndReferenceGenerator(
         parametersInActualOrder: Collection<FirValueParameter>,
         valueParameters: List<FirValueParameter>
     ): Boolean {
-        var lastValueParameterIndex = -1
+        var lastValueParameterIndex = UNDEFINED_PARAMETER_INDEX
         for (parameter in parametersInActualOrder) {
             val index = valueParameters.indexOf(parameter)
             if (index < lastValueParameterIndex) {
@@ -565,6 +539,25 @@ class CallAndReferenceGenerator(
             lastValueParameterIndex = index
         }
         return false
+    }
+
+    private fun convertArgument(
+        argument: FirExpression,
+        parameter: FirValueParameter?,
+        annotationMode: Boolean = false
+    ): IrExpression {
+        var irArgument = visitor.convertToIrExpression(argument, annotationMode)
+        if (parameter != null) {
+            with(visitor.implicitCastInserter) {
+                irArgument = irArgument.cast(argument, argument.typeRef, parameter.returnTypeRef)
+            }
+        }
+        with(adapterGenerator) {
+            irArgument = irArgument.applySuspendConversionIfNeeded(argument, parameter)
+        }
+        return irArgument
+            .applySamConversionIfNeeded(argument, parameter)
+            .applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
     }
 
     private fun IrExpression.applySamConversionIfNeeded(

@@ -8,7 +8,8 @@ package org.jetbrains.kotlin.backend.common.serialization
 import org.jetbrains.kotlin.backend.common.LoggingContext
 import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.common.lower.InnerClassesSupport
-import org.jetbrains.kotlin.backend.common.overrides.PlatformFakeOverrideClassFilter
+import org.jetbrains.kotlin.backend.common.overrides.FakeOverrideBuilder
+import org.jetbrains.kotlin.backend.common.overrides.FakeOverrideClassFilter
 import org.jetbrains.kotlin.backend.common.peek
 import org.jetbrains.kotlin.backend.common.pop
 import org.jetbrains.kotlin.backend.common.push
@@ -60,15 +61,15 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.IrDynamicOperator
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrDynamicType as ProtoDynamicType
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrEnumConstructorCall as ProtoEnumConstructorCall
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrEnumEntry as ProtoEnumEntry
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorCallExpression as ProtoErrorCallExpression
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorDeclaration as ProtoErrorDeclaration
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorExpression as ProtoErrorExpression
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorType as ProtoErrorType
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrExpression as ProtoExpression
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrField as ProtoField
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrFunction as ProtoFunction
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrFunctionBase as ProtoFunctionBase
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrFunctionExpression as ProtoFunctionExpression
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorExpression as ProtoErrorExpression
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorCallExpression as ProtoErrorCallExpression
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrErrorDeclaration as ProtoErrorDeclaration
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrFunctionReference as ProtoFunctionReference
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrGetClass as ProtoGetClass
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrGetEnumValue as ProtoGetEnumValue
@@ -114,7 +115,7 @@ abstract class IrFileDeserializer(
     val symbolTable: SymbolTable,
     protected var deserializeBodies: Boolean,
     private val deserializeFakeOverrides: Boolean,
-    private val fakeOverrideQueue: MutableList<IrClass>,
+    private val fakeOverrideBuilder: FakeOverrideBuilder,
     private val allowErrorNodes: Boolean
 ) {
     protected val irFactory: IrFactory get() = symbolTable.irFactory
@@ -134,7 +135,7 @@ abstract class IrFileDeserializer(
     private val delegatedSymbolMap = mutableMapOf<IrSymbol, IrSymbol>()
 
     abstract val deserializeInlineFunctions: Boolean
-    abstract val platformFakeOverrideClassFilter: PlatformFakeOverrideClassFilter
+    abstract val platformFakeOverrideClassFilter: FakeOverrideClassFilter
 
     fun deserializeFqName(fqn: List<Int>): String =
         fqn.joinToString(".", transform = ::deserializeString)
@@ -1088,11 +1089,7 @@ abstract class IrFileDeserializer(
 
                 (descriptor as? WrappedClassDescriptor)?.bind(this)
 
-                if (!deserializeFakeOverrides) {
-                    if (symbol.isPublicApi) {
-                        fakeOverrideQueue.add(this)
-                    }
-                }
+                fakeOverrideBuilder.enqueueClass(this, signature)
             }
         }
 
@@ -1470,7 +1467,7 @@ abstract class IrFileDeserializer(
     // or reconstruct them after IR linker completes.
     private fun isSkippableFakeOverride(proto: ProtoDeclaration, parent: IrClass): Boolean {
         if (deserializeFakeOverrides) return false
-        if (!platformFakeOverrideClassFilter.constructFakeOverrides(parent)) return false
+        if (!platformFakeOverrideClassFilter.needToConstructFakeOverrides(parent)) return false
 
         val symbol = when (proto.declaratorCase!!) {
             IR_FUNCTION -> deserializeIrSymbol(proto.irFunction.base.base.symbol)

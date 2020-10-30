@@ -73,17 +73,21 @@ private fun IrFunction.capturesCrossinline(): Boolean {
 }
 
 internal abstract class SuspendLoweringUtils(protected val context: JvmBackendContext) {
-    protected fun IrClass.addFunctionOverride(function: IrSimpleFunction): IrSimpleFunction =
-        addFunction(function.name.asString(), function.returnType).apply {
+    protected fun IrClass.addFunctionOverride(
+        function: IrSimpleFunction, startOffset: Int = UNDEFINED_OFFSET, endOffset: Int = UNDEFINED_OFFSET
+    ): IrSimpleFunction =
+        addFunction(function.name.asString(), function.returnType, startOffset = startOffset, endOffset = endOffset).apply {
             overriddenSymbols = listOf(function.symbol)
             valueParameters = function.valueParameters.map { it.copyTo(this) }
         }
 
     protected fun IrClass.addFunctionOverride(
         function: IrSimpleFunction,
+        startOffset: Int = UNDEFINED_OFFSET,
+        endOffset: Int = UNDEFINED_OFFSET,
         makeBody: IrBlockBodyBuilder.(IrFunction) -> Unit
     ): IrSimpleFunction =
-        addFunctionOverride(function).apply {
+        addFunctionOverride(function, startOffset, endOffset).apply {
             body = context.createIrBuilder(symbol).irBlockBody { makeBody(this@apply) }
         }
 
@@ -105,12 +109,9 @@ private class SuspendLambdaLowering(context: JvmBackendContext) : SuspendLowerin
     override fun lower(irFile: IrFile) {
         val inlineReferences = IrInlineReferenceLocator.scan(context, irFile)
         irFile.transformChildrenVoid(object : IrElementTransformerVoidWithContext() {
-            private fun IrFunctionReference.shouldBeTreatedAsSuspendLambda() =
-                isSuspend && (origin == IrStatementOrigin.LAMBDA || origin == IrStatementOrigin.SUSPEND_CONVERSION)
-
             override fun visitBlock(expression: IrBlock): IrExpression {
                 val reference = expression.statements.lastOrNull() as? IrFunctionReference ?: return super.visitBlock(expression)
-                if (reference.shouldBeTreatedAsSuspendLambda() && reference !in inlineReferences) {
+                if (reference.isSuspend && reference.origin.isLambda && reference !in inlineReferences) {
                     assert(expression.statements.size == 2 && expression.statements[0] is IrFunction)
                     expression.transformChildrenVoid(this)
                     val parent = currentDeclarationParent ?: error("No current declaration parent at ${reference.dump()}")
@@ -123,7 +124,7 @@ private class SuspendLambdaLowering(context: JvmBackendContext) : SuspendLowerin
 
     private fun generateAnonymousObjectForLambda(reference: IrFunctionReference, parent: IrDeclarationParent) =
         context.createIrBuilder(reference.symbol).irBlock(reference.startOffset, reference.endOffset) {
-            assert(reference.getArguments().isEmpty()) { "lambda with bound arguments: ${reference.render()}" }
+            assert(reference.getArgumentsWithIr().isEmpty()) { "lambda with bound arguments: ${reference.render()}" }
             val continuation = generateContinuationClassForLambda(reference, parent)
             +continuation
             +irCall(continuation.constructors.single().symbol).apply {
@@ -196,7 +197,7 @@ private class SuspendLambdaLowering(context: JvmBackendContext) : SuspendLowerin
             it.owner.name.asString() == INVOKE_SUSPEND_METHOD_NAME && it.owner.valueParameters.size == 1 &&
                     it.owner.valueParameters[0].type.isKotlinResult()
         }.owner
-        return addFunctionOverride(superMethod).apply {
+        return addFunctionOverride(superMethod, irFunction.startOffset, irFunction.endOffset).apply {
             body = irFunction.moveBodyTo(this, mapOf())?.transform(object : IrElementTransformerVoid() {
                 override fun visitGetValue(expression: IrGetValue): IrExpression {
                     val parameter = (expression.symbol.owner as? IrValueParameter)?.takeIf { it.parent == irFunction }

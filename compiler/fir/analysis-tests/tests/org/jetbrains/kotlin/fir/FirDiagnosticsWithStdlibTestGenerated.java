@@ -1199,6 +1199,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/DeepCopyIrTree.kt");
         }
 
+        @TestMetadata("EnumMapGet.kt")
+        public void testEnumMapGet() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/EnumMapGet.kt");
+        }
+
         @TestMetadata("invokePriority.kt")
         public void testInvokePriority() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/invokePriority.kt");
@@ -1227,6 +1232,24 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         @TestMetadata("weakHashMap.kt")
         public void testWeakHashMap() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/weakHashMap.kt");
+        }
+    }
+
+    @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/reinitializations")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Reinitializations extends AbstractFirDiagnosticsWithStdlibTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInReinitializations() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolveWithStdlib/reinitializations"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("constructorVarWrite.kt")
+        public void testConstructorVarWrite() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/reinitializations/constructorVarWrite.kt");
         }
     }
 

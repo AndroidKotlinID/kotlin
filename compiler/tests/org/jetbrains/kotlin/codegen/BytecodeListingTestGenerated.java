@@ -25,6 +25,16 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
     }
 
+    @TestMetadata("accessorForProtectedPropertyWithPrivateSetter.kt")
+    public void testAccessorForProtectedPropertyWithPrivateSetter() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/accessorForProtectedPropertyWithPrivateSetter.kt");
+    }
+
+    @TestMetadata("accessorForProtectedPropertyWithPrivateSetterInObjectLiteral.kt")
+    public void testAccessorForProtectedPropertyWithPrivateSetterInObjectLiteral() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/accessorForProtectedPropertyWithPrivateSetterInObjectLiteral.kt");
+    }
+
     public void testAllFilesPresentInBytecodeListing() throws Exception {
         KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing"), Pattern.compile("^(.+)\\.kt$"), null, true);
     }
@@ -32,6 +42,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
     @TestMetadata("callableNameIntrinsic.kt")
     public void testCallableNameIntrinsic() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/callableNameIntrinsic.kt");
+    }
+
+    @TestMetadata("cloneable.kt")
+    public void testCloneable() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/cloneable.kt");
     }
 
     @TestMetadata("companionObjectVisibility_after.kt")
@@ -47,6 +62,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
     @TestMetadata("defaultImpls.kt")
     public void testDefaultImpls() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/defaultImpls.kt");
+    }
+
+    @TestMetadata("delegationToJavaInterfaceWithWildcardType.kt")
+    public void testDelegationToJavaInterfaceWithWildcardType() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/delegationToJavaInterfaceWithWildcardType.kt");
     }
 
     @TestMetadata("emptyMultifileFacade.kt")
@@ -67,6 +87,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
     @TestMetadata("immutableCollection.kt")
     public void testImmutableCollection() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/immutableCollection.kt");
+    }
+
+    @TestMetadata("javaDeprecated.kt")
+    public void testJavaDeprecated() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/javaDeprecated.kt");
     }
 
     @TestMetadata("jvmOverloadsAndParametersAnnotations.kt")
@@ -119,6 +144,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         runTest("compiler/testData/codegen/bytecodeListing/noToArrayInJava.kt");
     }
 
+    @TestMetadata("privateCompanionFields.kt")
+    public void testPrivateCompanionFields() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/privateCompanionFields.kt");
+    }
+
     @TestMetadata("privateDefaultImpls.kt")
     public void testPrivateDefaultImpls() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/privateDefaultImpls.kt");
@@ -154,6 +184,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
 
         public void testAllFilesPresentInAnnotations() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/annotations"), Pattern.compile("^(.+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("annotationsOnDelegatedMembers.kt")
+        public void testAnnotationsOnDelegatedMembers() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/annotations/annotationsOnDelegatedMembers.kt");
         }
 
         @TestMetadata("defaultTargets.kt")

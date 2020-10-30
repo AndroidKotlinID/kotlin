@@ -11,11 +11,14 @@ import org.jetbrains.kotlin.backend.common.serialization.mangle.MangleMode
 import org.jetbrains.kotlin.backend.common.serialization.mangle.collectForMangler
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.containingClass
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
@@ -73,7 +76,7 @@ open class FirJvmMangleComputer(
 
     private fun FirDeclaration.visitParent() {
         val (parentPackageFqName, parentClassId) = when (this) {
-            is FirCallableDeclaration<*> -> this.symbol.callableId.let { it.packageName to it.classId }
+            is FirCallableMemberDeclaration<*> -> this.containingClass()?.classId?.let { it.packageFqName to it } ?: return
             is FirClassLikeDeclaration<*> -> this.symbol.classId.let { it.packageFqName to it.outerClassId }
             else -> return
         }
@@ -199,6 +202,10 @@ open class FirJvmMangleComputer(
         when (type) {
             is ConeLookupTagBasedType -> {
                 when (val symbol = type.lookupTag.toSymbol(session)) {
+                    is FirTypeAliasSymbol -> {
+                        mangleType(tBuilder, type.fullyExpandedType(session))
+                        return
+                    }
                     is FirClassSymbol -> symbol.fir.accept(copy(MangleMode.FQNAME), false)
                     is FirTypeParameterSymbol -> tBuilder.mangleTypeParameterReference(symbol.fir)
                 }

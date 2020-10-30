@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.scopes.impl.delegatedWrapperData
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.PossiblyFirFakeOverrideSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
@@ -49,7 +50,9 @@ internal class DelegatedMemberGenerator(
                 declarationStorage.getIrFunctionSymbol(unwrapped.symbol).owner as? IrSimpleFunction
                     ?: return@processAllFunctions
 
-            if (isJavaDefault(unwrapped)) return@processAllFunctions
+            if (isJavaDefault(unwrapped)) {
+                return@processAllFunctions
+            }
 
             val irSubFunction = generateDelegatedFunction(
                 subClass, firSubClass, irField, member, functionSymbol.fir
@@ -78,7 +81,7 @@ internal class DelegatedMemberGenerator(
         }
     }
 
-    private inline fun <reified S, reified D : FirCallableDeclaration<D>> S.unwrapDelegateTarget(
+    private inline fun <reified S, reified D : FirCallableMemberDeclaration<D>> S.unwrapDelegateTarget(
         subClassLookupTag: ConeClassLikeLookupTag,
         noinline directOverridden: S.() -> List<S>,
         firField: FirField,
@@ -97,7 +100,8 @@ internal class DelegatedMemberGenerator(
         val wrappedSymbol = wrapped.symbol as? S ?: return null
 
         return when {
-            wrappedSymbol.isFakeOverride && wrappedSymbol.callableId.classId == firSubClass.classId ->
+            wrappedSymbol.isFakeOverride &&
+                    (wrappedSymbol.fir.dispatchReceiverType as? ConeClassLikeType)?.lookupTag == firSubClass.symbol.toLookupTag() ->
                 wrapped.symbol.overriddenSymbol!!.fir
             else -> wrapped
         }

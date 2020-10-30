@@ -12110,6 +12110,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                     runTest("compiler/testData/diagnostics/tests/inference/reportingImprovements/inferTypeFromUnresolvedArgument.kt");
                 }
 
+                @TestMetadata("kt42620.kt")
+                public void testKt42620() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/reportingImprovements/kt42620.kt");
+                }
+
                 @TestMetadata("NoAmbiguityForDifferentFunctionTypes.kt")
                 public void testNoAmbiguityForDifferentFunctionTypes() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/reportingImprovements/NoAmbiguityForDifferentFunctionTypes.kt");
@@ -12381,6 +12386,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
             @TestMetadata("kt19679.kt")
             public void testKt19679() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inline/kt19679.kt");
+            }
+
+            @TestMetadata("kt21177.kt")
+            public void testKt21177() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inline/kt21177.kt");
             }
 
             @TestMetadata("kt4869.kt")

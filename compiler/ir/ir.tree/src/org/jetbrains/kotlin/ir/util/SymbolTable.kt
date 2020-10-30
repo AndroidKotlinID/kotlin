@@ -37,6 +37,8 @@ import org.jetbrains.kotlin.serialization.deserialization.descriptors.Descriptor
 interface ReferenceSymbolTable {
     fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol
 
+    fun referenceScript(descriptor: ScriptDescriptor): IrScriptSymbol
+
     fun referenceConstructor(descriptor: ClassConstructorDescriptor): IrConstructorSymbol
 
     fun referenceEnumEntry(descriptor: ClassDescriptor): IrEnumEntrySymbol
@@ -216,9 +218,9 @@ class SymbolTable(
         }
 
         override fun set(d: D, s: S) {
-            if (s.isPublicApi) {
-                idSigToSymbol[s.signature] = s
-            } else {
+            s.signature?.let {
+                idSigToSymbol[it] = s
+            } ?: run {
                 descriptorToSymbol[d] = s
             }
         }
@@ -264,10 +266,10 @@ class SymbolTable(
             fun getLocal(d: D) = descriptorToSymbol[d]
 
             operator fun set(d: D, s: S) {
-                if (s.isPublicApi) {
+                s.signature?.let {
                     require(d is TypeParameterDescriptor)
-                    idSigToSymbol[s.signature] = s
-                } else {
+                    idSigToSymbol[it] = s
+                } ?: run {
                     descriptorToSymbol[d] = s
                 }
             }
@@ -397,7 +399,19 @@ class SymbolTable(
         )
     }
 
-    fun referenceScript(descriptor: ScriptDescriptor): IrScriptSymbol {
+    fun declareScript(
+        sig: IdSignature,
+        symbolFactory: () -> IrScriptSymbol,
+        classFactory: (IrScriptSymbol) -> IrScript
+    ): IrScript {
+        return scriptSymbolTable.declare(
+            sig,
+            symbolFactory,
+            classFactory
+        )
+    }
+
+    override fun referenceScript(descriptor: ScriptDescriptor): IrScriptSymbol {
         return scriptSymbolTable.referenced(descriptor) { IrScriptSymbolImpl(descriptor) }
     }
 
@@ -1112,8 +1126,8 @@ fun SymbolTable.noUnboundLeft(message: String) {
     val unbound = this.allUnbound
     assert(unbound.isEmpty()) {
         "$message\n" +
-                unbound.map {
-                    "$it ${if (it.isPublicApi) it.signature.toString() else "NON-PUBLIC API $it"}"
-                }.joinToString("\n")
+                unbound.joinToString("\n") {
+                    "$it ${it.signature?.toString() ?: "NON-PUBLIC API $it"}"
+                }
     }
 }

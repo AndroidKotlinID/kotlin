@@ -99,6 +99,7 @@ import org.jetbrains.kotlin.resolve.jvm.extensions.PackageFragmentProviderExtens
 import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleResolver
 import org.jetbrains.kotlin.resolve.lazy.declarations.CliDeclarationProviderFactoryService
 import org.jetbrains.kotlin.resolve.lazy.declarations.DeclarationProviderFactoryService
+import org.jetbrains.kotlin.serialization.DescriptorSerializerPlugin
 import org.jetbrains.kotlin.utils.PathUtil
 import java.io.File
 import java.util.zip.ZipFile
@@ -473,10 +474,13 @@ class KotlinCoreEnvironment private constructor(
                 if (System.getProperty(KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY).toBooleanLenient() != true) {
                     // JPS may run many instances of the compiler in parallel (there's an option for compiling independent modules in parallel in IntelliJ)
                     // All projects share the same ApplicationEnvironment, and when the last project is disposed, the ApplicationEnvironment is disposed as well
-                    Disposer.register(parentDisposable, Disposable {
-                        synchronized(APPLICATION_LOCK) {
-                            if (--ourProjectCount <= 0) {
-                                disposeApplicationEnvironment()
+                    @Suppress("ObjectLiteralToLambda") // Disposer tree depends on identity of disposables.
+                    Disposer.register(parentDisposable, object : Disposable {
+                        override fun dispose() {
+                            synchronized(APPLICATION_LOCK) {
+                                if (--ourProjectCount <= 0) {
+                                    disposeApplicationEnvironment()
+                                }
                             }
                         }
                     })
@@ -555,6 +559,7 @@ class KotlinCoreEnvironment private constructor(
             ShellExtension.registerExtensionPoint(project)
             TypeResolutionInterceptor.registerExtensionPoint(project)
             CandidateInterceptor.registerExtensionPoint(project)
+            DescriptorSerializerPlugin.registerExtensionPoint(project)
         }
 
         internal fun registerExtensionsFromPlugins(project: MockProject, configuration: CompilerConfiguration) {

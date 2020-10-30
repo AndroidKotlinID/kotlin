@@ -109,7 +109,8 @@ interface IrBuilderExtension {
     }
 
     fun IrBuilderWithScope.irBinOp(name: Name, lhs: IrExpression, rhs: IrExpression): IrExpression {
-        val symbol = compilerContext.symbols.getBinaryOperator(name, lhs.type, rhs.type)
+        val classFqName = (lhs.type as IrSimpleType).classOrNull!!.owner.fqNameWhenAvailable!!
+        val symbol = compilerContext.referenceFunctions(classFqName.child(name)).single()
         return irInvoke(lhs, symbol, rhs)
     }
 
@@ -210,7 +211,7 @@ interface IrBuilderExtension {
     fun IrBuilderWithScope.generateAnySuperConstructorCall(toBuilder: IrBlockBodyBuilder) {
         val anyConstructor = compilerContext.irBuiltIns.anyClass.owner.declarations.single { it is IrConstructor } as IrConstructor
         with(toBuilder) {
-            +IrDelegatingConstructorCallImpl(
+            +IrDelegatingConstructorCallImpl.fromSymbolDescriptor(
                 startOffset, endOffset,
                 compilerContext.irBuiltIns.unitType,
                 anyConstructor.symbol

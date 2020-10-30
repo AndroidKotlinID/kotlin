@@ -8,10 +8,11 @@ package org.jetbrains.kotlin.fir.backend
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.builtins.StandardNames.BUILT_INS_PACKAGE_FQ_NAMES
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.fir.FirAnnotationContainer
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator
 import org.jetbrains.kotlin.fir.backend.generators.DelegatedMemberGenerator
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.builder.buildProperty
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
 import org.jetbrains.kotlin.fir.descriptors.FirBuiltInsPackageFragment
@@ -24,7 +25,6 @@ import org.jetbrains.kotlin.fir.lazy.Fir2IrLazyClass
 import org.jetbrains.kotlin.fir.lazy.Fir2IrLazyConstructor
 import org.jetbrains.kotlin.fir.lazy.Fir2IrLazyProperty
 import org.jetbrains.kotlin.fir.lazy.Fir2IrLazySimpleFunction
-import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.inference.isSuspendFunctionType
@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.builders.declarations.UNDEFINED_PARAMETER_INDEX
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyClass
@@ -77,6 +78,10 @@ class Fir2IrDeclarationStorage(
     private val initializerCache = mutableMapOf<FirAnonymousInitializer, IrAnonymousInitializer>()
 
     private val propertyCache = mutableMapOf<FirProperty, IrProperty>()
+
+    // For pure fields (from Java) only
+    private val fieldToPropertyCache = mutableMapOf<FirField, IrProperty>()
+
     private val delegatedReverseCache = mutableMapOf<IrDeclaration, FirDeclaration>()
 
     private val fieldCache = mutableMapOf<FirField, IrField>()
@@ -231,7 +236,7 @@ class Fir2IrDeclarationStorage(
     internal fun findIrParent(callableDeclaration: FirCallableDeclaration<*>): IrDeclarationParent? {
         val firBasedSymbol = callableDeclaration.symbol
         val callableId = firBasedSymbol.callableId
-        return findIrParent(callableId.packageName, callableId.classId, firBasedSymbol)
+        return findIrParent(callableId.packageName, callableDeclaration.containingClass()?.classId, firBasedSymbol)
     }
 
     private fun IrDeclaration.setAndModifyParent(irParent: IrDeclarationParent?) {
@@ -669,6 +674,33 @@ class Fir2IrDeclarationStorage(
         return createIrProperty(property, irParent, isLocal = isLocal)
     }
 
+    fun getOrCreateIrPropertyByPureField(
+        field: FirField,
+        irParent: IrDeclarationParent
+    ): IrProperty {
+        fieldToPropertyCache[field]?.let { return it }
+        return createIrProperty(field.toStubProperty(), irParent).apply {
+            fieldToPropertyCache[field] = this
+        }
+    }
+
+    private fun FirField.toStubProperty(): FirProperty {
+        val field = this
+        return buildProperty {
+            source = field.source
+            session = field.session
+            origin = field.origin
+            returnTypeRef = field.returnTypeRef
+            name = field.name
+            isVar = field.isVar
+            getter = field.getter
+            setter = field.setter
+            symbol = FirPropertySymbol(field.symbol.callableId)
+            isLocal = false
+            status = field.status
+        }
+    }
+
     fun createIrProperty(
         property: FirProperty,
         irParent: IrDeclarationParent?,
@@ -813,7 +845,7 @@ class Fir2IrDeclarationStorage(
 
     internal fun createIrParameter(
         valueParameter: FirValueParameter,
-        index: Int = -1,
+        index: Int = UNDEFINED_PARAMETER_INDEX,
         useStubForDefaultValueStub: Boolean = true,
         typeContext: ConversionTypeContext = ConversionTypeContext.DEFAULT
     ): IrValueParameter {
@@ -945,7 +977,8 @@ class Fir2IrDeclarationStorage(
         val firConstructor = firConstructorSymbol.fir
         getCachedIrConstructor(firConstructor)?.let { return it.symbol }
         val signature = signatureComposer.composeSignature(firConstructor)
-        val irParent = findIrParent(firConstructor) as IrClass
+        val irParent = findIrParent(firConstructor) as? IrClass
+            ?: error("sadsad")
         val parentOrigin = irParent.origin
         if (signature != null) {
             symbolTable.referenceConstructorIfAny(signature)?.let { irConstructorSymbol ->
@@ -1068,7 +1101,7 @@ class Fir2IrDeclarationStorage(
                     symbolTable.declareProperty(signature, { symbol }) {
                         val isFakeOverride =
                             firPropertySymbol.isFakeOverride &&
-                                    firPropertySymbol.callableId != firPropertySymbol.overriddenSymbol?.callableId
+                                    firPropertySymbol.dispatchReceiverClassOrNull() != firPropertySymbol.overriddenSymbol?.dispatchReceiverClassOrNull()
                         Fir2IrLazyProperty(
                             components, startOffset, endOffset, declarationOrigin, fir, irParent.fir, symbol, isFakeOverride
                         ).apply {
@@ -1122,7 +1155,7 @@ class Fir2IrDeclarationStorage(
             is FirEnumEntry -> {
                 classifierStorage.getCachedIrEnumEntry(firDeclaration)?.let { return it.symbol }
                 val containingFile = firProvider.getFirCallableContainerFile(firVariableSymbol)
-                val irParentClass = firVariableSymbol.callableId.classId?.let { findIrClass(it) }
+                val irParentClass = firDeclaration.containingClass()?.classId?.let { findIrClass(it) }
                 classifierStorage.createIrEnumEntry(
                     firDeclaration,
                     irParent = irParentClass,

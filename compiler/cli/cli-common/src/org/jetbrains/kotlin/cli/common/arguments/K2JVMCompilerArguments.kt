@@ -71,7 +71,7 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(
         value = "-jvm-target",
         valueDescription = "<version>",
-        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13 or 14), default is 1.6"
+        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13, 14 or 15), default is 1.6"
     )
     var jvmTarget: String? by NullableStringFreezableVar(JvmTarget.DEFAULT.description)
 
@@ -107,6 +107,12 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
                 "The author is responsible for verifying that the resulting binaries do indeed have the correct ABI"
     )
     var isIrWithStableAbi: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xir-do-not-clear-binding-context",
+        description = "When using the IR backend, do not clear BindingContext between psi2ir and lowerings"
+    )
+    var doNotClearBindingContext: Boolean by FreezableVar(false)
 
     @Argument(value = "-Xmodule-path", valueDescription = "<path>", description = "Paths where to find Java 9+ modules")
     var javaModulePath: String? by NullableStringFreezableVar(null)

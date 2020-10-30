@@ -30,8 +30,9 @@ import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.builders.declarations.UNDEFINED_PARAMETER_INDEX
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.descriptors.WrappedReceiverParameterDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
@@ -46,17 +47,15 @@ import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffsetSkippingComments
-import org.jetbrains.kotlin.types.AbstractTypeChecker
-import org.jetbrains.kotlin.types.AbstractTypeCheckerContext
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
 internal fun <T : IrElement> FirElement.convertWithOffsets(
     f: (startOffset: Int, endOffset: Int) -> T
 ): T {
-    if (psi is PsiCompiledElement) return f(-1, -1)
-    val startOffset = psi?.startOffsetSkippingComments ?: -1
-    val endOffset = psi?.endOffset ?: -1
+    if (psi is PsiCompiledElement) return f(UNDEFINED_OFFSET, UNDEFINED_OFFSET)
+    val startOffset = psi?.startOffsetSkippingComments ?: UNDEFINED_OFFSET
+    val endOffset = psi?.endOffset ?: UNDEFINED_OFFSET
     return f(startOffset, endOffset)
 }
 
@@ -220,7 +219,9 @@ internal tailrec fun FirCallableSymbol<*>.deepestOverriddenSymbol(): FirCallable
 
 internal tailrec fun FirCallableSymbol<*>.deepestMatchingOverriddenSymbol(root: FirCallableSymbol<*> = this): FirCallableSymbol<*> {
     if (isIntersectionOverride) return this
-    val overriddenSymbol = overriddenSymbol?.takeIf { it.callableId == root.callableId } ?: return this
+    val overriddenSymbol = overriddenSymbol?.takeIf {
+        it.containingClass() == root.containingClass()
+    } ?: return this
     return overriddenSymbol.deepestMatchingOverriddenSymbol(this)
 }
 
@@ -237,6 +238,7 @@ internal fun FirSimpleFunction.generateOverriddenFunctionSymbols(
         if ((it.fir as FirSimpleFunction).visibility == Visibilities.Private) {
             return@processDirectlyOverriddenFunctions ProcessorAction.NEXT
         }
+
         val overridden = declarationStorage.getIrFunctionSymbol(it.unwrapSubstitutionOverrides())
         overriddenSet += overridden as IrSimpleFunctionSymbol
         ProcessorAction.NEXT
@@ -316,7 +318,7 @@ internal fun IrDeclarationParent.declareThisReceiverParameter(
     ) { symbol ->
         symbolTable.irFactory.createValueParameter(
             startOffset, endOffset, thisOrigin, symbol,
-            Name.special("<this>"), -1, thisType,
+            Name.special("<this>"), UNDEFINED_PARAMETER_INDEX, thisType,
             varargElementType = null, isCrossinline = false, isNoinline = false, isAssignable = false
         ).apply {
             this.parent = this@declareThisReceiverParameter

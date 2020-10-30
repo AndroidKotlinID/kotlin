@@ -54,7 +54,7 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
     // because they are also their own continuation classes.
     // TODO: Currently, origin of callable references explicitly written in source code is null. Do we need to create one?
     private fun IrFunctionReference.isSuspendFunctionReference(): Boolean = isSuspend &&
-            (origin == null || origin == IrStatementOrigin.ADAPTED_FUNCTION_REFERENCE)
+            (origin == null || origin == IrStatementOrigin.ADAPTED_FUNCTION_REFERENCE || origin == IrStatementOrigin.SUSPEND_CONVERSION)
 
     override fun lower(irFile: IrFile) {
         ignoredFunctionReferences.addAll(IrInlineReferenceLocator.scan(context, irFile))
@@ -476,7 +476,8 @@ internal class FunctionReferenceLowering(private val context: JvmBackendContext)
                     //don't pass receivers otherwise LocalDeclarationLowering will create additional captured parameters
                     IrFunctionReferenceImpl(
                         UNDEFINED_OFFSET, UNDEFINED_OFFSET, irFunctionReference.type, target,
-                        irFunctionReference.typeArgumentsCount, irFunctionReference.reflectionTarget, null
+                        irFunctionReference.typeArgumentsCount, target.owner.valueParameters.size,
+                        irFunctionReference.reflectionTarget, null
                     ).apply {
                         copyTypeArgumentsFrom(irFunctionReference)
                     }

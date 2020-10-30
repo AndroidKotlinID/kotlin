@@ -32,6 +32,12 @@ public class IrLocalVariableTestGenerated extends AbstractIrLocalVariableTest {
     }
 
     @Test
+    @TestMetadata("catchClause.kt")
+    public void testCatchClause() throws Exception {
+        runTest("compiler/testData/debug/localVariables/catchClause.kt");
+    }
+
+    @Test
     @TestMetadata("copyFunction.kt")
     public void testCopyFunction() throws Exception {
         runTest("compiler/testData/debug/localVariables/copyFunction.kt");
@@ -50,14 +56,58 @@ public class IrLocalVariableTestGenerated extends AbstractIrLocalVariableTest {
     }
 
     @Test
+    @TestMetadata("inlineProperty.kt")
+    public void testInlineProperty() throws Exception {
+        runTest("compiler/testData/debug/localVariables/inlineProperty.kt");
+    }
+
+    @Test
+    @TestMetadata("jvmOverloads.kt")
+    public void testJvmOverloads() throws Exception {
+        runTest("compiler/testData/debug/localVariables/jvmOverloads.kt");
+    }
+
+    @Test
     @TestMetadata("localFun.kt")
     public void testLocalFun() throws Exception {
         runTest("compiler/testData/debug/localVariables/localFun.kt");
     }
 
     @Test
+    @TestMetadata("receiverParameter.kt")
+    public void testReceiverParameter() throws Exception {
+        runTest("compiler/testData/debug/localVariables/receiverParameter.kt");
+    }
+
+    @Test
     @TestMetadata("underscoreNames.kt")
     public void testUnderscoreNames() throws Exception {
         runTest("compiler/testData/debug/localVariables/underscoreNames.kt");
+    }
+
+    @TestMetadata("compiler/testData/debug/localVariables/suspend")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(BlockJUnit4ClassRunner.class)
+    public static class Suspend extends AbstractIrLocalVariableTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM_IR, testDataFilePath);
+        }
+
+        @Test
+        public void testAllFilesPresentInSuspend() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/debug/localVariables/suspend"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+        }
+
+        @Test
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("compiler/testData/debug/localVariables/suspend/simple.kt");
+        }
+
+        @Test
+        @TestMetadata("underscoreNames.kt")
+        public void testUnderscoreNames() throws Exception {
+            runTest("compiler/testData/debug/localVariables/suspend/underscoreNames.kt");
+        }
     }
 }

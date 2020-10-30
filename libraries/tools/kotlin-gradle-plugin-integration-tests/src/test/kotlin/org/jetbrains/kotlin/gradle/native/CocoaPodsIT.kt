@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.gradle.util.modify
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -63,6 +64,7 @@ class CocoaPodsIT : BaseGradleIT() {
 
     private val defaultPodRepo = "https://github.com/AFNetworking/AFNetworking"
     private val defaultPodName = "AFNetworking"
+    private val defaultLibraryPodName = "YandexMapKit"
     private val downloadUrlPodName = "podspecWithFilesExample"
     private val downloadUrlRepoName = "https://github.com/alozhkin/podspecWithFilesExample/raw/master"
     private val defaultTarget = "IOS"
@@ -728,6 +730,15 @@ class CocoaPodsIT : BaseGradleIT() {
         }
     }
 
+    @Test
+    fun testUseLibrariesMode() {
+        with(project) {
+            gradleBuildScript().appendToCocoapodsBlock("useLibraries()")
+            gradleBuildScript().addPod(defaultLibraryPodName)
+            testImport()
+        }
+    }
+
     // paths
 
     private fun CompiledProject.url() = externalSources().resolve("url")
@@ -867,7 +878,6 @@ class CocoaPodsIT : BaseGradleIT() {
         vararg args: String
     ) {
         // check that test executable
-        assumeTrue(HostManager.hostIsMac)
         build(taskName, *args) {
             //base checks
             assertSuccessful()
@@ -1082,7 +1092,6 @@ class CocoaPodsIT : BaseGradleIT() {
         subprojectsToFrameworkNamesMap: Map<String, String?>,
         subprojectsToPodspecContentMap: Map<String, String?>
     ) {
-        assumeTrue(HostManager.hostIsMac)
         val gradleProject = transformProjectWithPluginsDsl(projectName, gradleVersion)
 
         for ((subproject, frameworkName) in subprojectsToFrameworkNamesMap) {
@@ -1154,7 +1163,6 @@ class CocoaPodsIT : BaseGradleIT() {
         iosAppLocation: String?,
         subprojectsToFrameworkNamesMap: Map<String, String?>
     ) {
-        assumeTrue(HostManager.hostIsMac)
         val gradleProject = transformProjectWithPluginsDsl(projectName, gradleVersion)
 
         with(gradleProject) {
@@ -1304,4 +1312,11 @@ class CocoaPodsIT : BaseGradleIT() {
                 end
             """.trimIndent()
 
+    companion object {
+        @BeforeClass
+        @JvmStatic
+        fun assumeItsMac() {
+            assumeTrue(HostManager.hostIsMac)
+        }
+    }
 }

@@ -1708,17 +1708,23 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
                 // This is inline lambda. Find inline-site and check, whether it is suspend functions returning unboxed inline class
                 CodegenContext<?> inlineSiteContext = this.context.getFirstCrossInlineOrNonInlineContext();
                 KotlinType originalInlineClass = null;
+                boolean invokeSuspendOfLambda = false;
+                FunctionDescriptor inlineSiteDescriptor = null;
                 if (inlineSiteContext instanceof MethodContext) {
-                     originalInlineClass = CoroutineCodegenUtilKt
-                            .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(
-                                    ((MethodContext) inlineSiteContext).getFunctionDescriptor(), typeMapper);
+                    inlineSiteDescriptor = ((MethodContext) inlineSiteContext).getFunctionDescriptor();
+                    originalInlineClass = CoroutineCodegenUtilKt
+                            .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(inlineSiteDescriptor, typeMapper);
+                    invokeSuspendOfLambda = CoroutineCodegenUtilKt.isInvokeSuspendOfLambda(inlineSiteDescriptor);
                 }
                 if (originalInlineClass != null) {
                     returnType = typeMapper.mapType(originalInlineClass);
                     returnKotlinType = originalInlineClass;
-                } else {
+                } else if (!invokeSuspendOfLambda) {
                     returnType = nonLocalReturn.returnType.getType();
                     returnKotlinType = nonLocalReturn.returnType.getKotlinType();
+                } else {
+                    returnType = OBJECT_TYPE;
+                    returnKotlinType = inlineSiteDescriptor.getReturnType();
                 }
             }
             else {
@@ -1989,6 +1995,21 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         StackValue localOrCaptured = findLocalOrCapturedValue(descriptor);
         if (localOrCaptured != null) {
+            if (descriptor instanceof ValueParameterDescriptor) {
+                KotlinType inlineClassType = ((ValueParameterDescriptor) descriptor).getType();
+                if (InlineClassesCodegenUtilKt.isInlineClassWithUnderlyingTypeAnyOrAnyN(inlineClassType) &&
+                    InlineClassesCodegenUtilKt.isGenericParameter((CallableDescriptor) descriptor) &&
+                    // TODO: HACK around bridgeGenerationCrossinline
+                    !(context instanceof InlineLambdaContext) &&
+                    // Do not unbox parameters of suspend lambda, they are unboxed in `invoke` method
+                    !CoroutineCodegenUtilKt.isInvokeSuspendOfLambda(context.getFunctionDescriptor())
+                ) {
+                    KotlinType underlyingType = InlineClassesUtilsKt.underlyingRepresentation(
+                            (ClassDescriptor) inlineClassType.getConstructor().getDeclarationDescriptor()).getType();
+                    return StackValue.underlyingValueOfInlineClass(
+                            typeMapper.mapType(underlyingType), underlyingType, localOrCaptured);
+                }
+            }
             return localOrCaptured;
         }
         throw new UnsupportedOperationException("don't know how to generate reference " + descriptor);

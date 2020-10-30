@@ -200,9 +200,7 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         replacement.body = context.createIrBuilder(replacement.symbol, replacement.startOffset, replacement.endOffset).irBlockBody(
             replacement
         ) {
-            val thisVar = irTemporaryVarDeclaration(
-                replacement.returnType, nameHint = "\$this", isMutable = false
-            )
+            val thisVar = irTemporary(irType = replacement.returnType, nameHint = "\$this")
             valueMap[constructor.constructedClass.thisReceiver!!.symbol] = thisVar
 
             constructor.body?.statements?.forEach { statement ->
@@ -279,15 +277,16 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         if (expression.origin == InlineClassAbi.UNMANGLED_FUNCTION_REFERENCE)
             return super.visitFunctionReference(expression)
 
-        val function = context.inlineClassReplacements.getReplacementFunction(expression.symbol.owner)
+        val function = expression.symbol.owner
+        val replacement = context.inlineClassReplacements.getReplacementFunction(function)
             ?: return super.visitFunctionReference(expression)
 
         return IrFunctionReferenceImpl(
             expression.startOffset, expression.endOffset, expression.type,
-            function.symbol, function.typeParameters.size,
-            function.valueParameters.size, expression.reflectionTarget, expression.origin
+            replacement.symbol, replacement.typeParameters.size,
+            replacement.valueParameters.size, expression.reflectionTarget, expression.origin
         ).apply {
-            buildReplacement(expression.symbol.owner, expression, function)
+            buildReplacement(function, expression, replacement)
         }.copyAttributes(expression)
     }
 
@@ -295,14 +294,18 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         val function = expression.symbol.owner
         val replacement = context.inlineClassReplacements.getReplacementFunction(function)
             ?: return super.visitFunctionAccess(expression)
-        return context.createIrBuilder(currentScope!!.scope.scopeOwnerSymbol, expression.startOffset, expression.endOffset)
-            .irCall(replacement, expression.origin, expression.safeAs<IrCall>()?.superQualifierSymbol).apply {
-                buildReplacement(function, expression, replacement)
-            }
+
+        return IrCallImpl(
+            expression.startOffset, expression.endOffset, function.returnType.substitute(expression.typeSubstitutionMap),
+            replacement.symbol, replacement.typeParameters.size, replacement.valueParameters.size,
+            expression.origin, (expression as? IrCall)?.superQualifierSymbol
+        ).apply {
+            buildReplacement(function, expression, replacement)
+        }
     }
 
     private fun coerceInlineClasses(argument: IrExpression, from: IrType, to: IrType) =
-        IrCallImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, to, context.ir.symbols.unsafeCoerceIntrinsic).apply {
+        IrCallImpl.fromSymbolOwner(UNDEFINED_OFFSET, UNDEFINED_OFFSET, to, context.ir.symbols.unsafeCoerceIntrinsic).apply {
             putTypeArgument(0, from)
             putTypeArgument(1, to)
             putValueArgument(0, argument)
@@ -376,9 +379,13 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         when {
             // Getting the underlying field of an inline class merely changes the IR type,
             // since the underlying representations are the same.
-            expression.symbol.owner.isInlineClassFieldGetter -> {
-                val arg = expression.dispatchReceiver!!.transform(this, null)
-                coerceInlineClasses(arg, expression.symbol.owner.dispatchReceiverParameter!!.type, expression.type)
+            expression.symbol.owner.isInlineClassFieldGetter -> when (val ctor = findInitBlockOrConstructorImpl()) {
+                InitBlockOrConstructorImpl.InitBlock -> super.visitCall(expression)
+                is InitBlockOrConstructorImpl.ConstructorImpl -> getConstructorImplArgumentValue(ctor, expression.type)
+                else -> {
+                    val arg = expression.dispatchReceiver!!.transform(this, null)
+                    coerceInlineClasses(arg, expression.symbol.owner.dispatchReceiverParameter!!.type, expression.type)
+                }
             }
             // Specialize calls to equals when the left argument is a value of inline class type.
             expression.isSpecializedInlineClassEqEq -> {
@@ -390,6 +397,25 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
             else ->
                 super.visitCall(expression)
         }
+
+    private fun getConstructorImplArgumentValue(ctor: InitBlockOrConstructorImpl.ConstructorImpl, expectedType: IrType): IrExpression {
+        val arg: IrValueParameter = ctor.irElement.valueParameters.single()
+        return coerceInlineClasses(IrGetValueImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, arg.symbol), arg.type, expectedType)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun findInitBlockOrConstructorImpl(): InitBlockOrConstructorImpl? {
+        for (scope in allScopes.reversed()) {
+            val irElement = scope.irElement
+            when {
+                irElement is IrAnonymousInitializer -> return InitBlockOrConstructorImpl.InitBlock
+                irElement is IrClass && irElement.isInline -> return InitBlockOrConstructorImpl.InitBlock
+                irElement is IrFunction && irElement.origin == JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_CONSTRUCTOR ->
+                    return InitBlockOrConstructorImpl.ConstructorImpl(irElement)
+            }
+        }
+        return null
+    }
 
     private val IrCall.isSpecializedInlineClassEqEq: Boolean
         get() {
@@ -453,6 +479,13 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
                 it.type, it.symbol, expression.origin
             )
         }
+        val owner = expression.symbol.owner
+        if (owner is IrValueParameter && (owner.parent as? IrClass)?.isInline == true && owner.origin == IrDeclarationOrigin.INSTANCE_RECEIVER) {
+            val ctor = findInitBlockOrConstructorImpl()
+            if (ctor is InitBlockOrConstructorImpl.ConstructorImpl) {
+                return getConstructorImplArgumentValue(ctor, expression.type)
+            }
+        }
         return super.visitGetValue(expression)
     }
 
@@ -493,13 +526,24 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
         // Add a static bridge method to the primary constructor.
         // This is a placeholder for null-checks and default arguments.
         val function = context.inlineClassReplacements.getReplacementFunction(irConstructor)!!
+
+        val initBlocks = irClass.declarations.filterIsInstance<IrAnonymousInitializer>()
+
         function.valueParameters.forEach { it.transformChildrenVoid() }
         with(context.createIrBuilder(function.symbol)) {
-            val argument = function.valueParameters[0]
-            function.body = irExprBody(
-                coerceInlineClasses(irGet(argument), argument.type, function.returnType)
-            )
+            val argument: IrValueParameter = function.valueParameters[0]
+            function.body = irBlockBody {
+                for (initBlock in initBlocks) {
+                    for (stmt in initBlock.body.statements) {
+                        +stmt
+                    }
+                }
+                +irReturn(coerceInlineClasses(irGet(argument), argument.type, function.returnType))
+            }
         }
+        function.accept(this, null)
+        irClass.declarations.removeAll(initBlocks)
+
         irClass.declarations += function
     }
 
@@ -545,4 +589,9 @@ private class JvmInlineClassLowering(private val context: JvmBackendContext) : F
 
         irClass.declarations += function
     }
+}
+
+private sealed class InitBlockOrConstructorImpl {
+    object InitBlock : InitBlockOrConstructorImpl()
+    class ConstructorImpl(val irElement: IrFunction) : InitBlockOrConstructorImpl()
 }

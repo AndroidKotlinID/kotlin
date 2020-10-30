@@ -69,14 +69,17 @@ private class AddContinuationLowering(context: JvmBackendContext) : SuspendLower
                 // The only references not yet transformed into objects are inline lambdas; the continuation
                 // for those will be taken from the inline functions they are passed to, not the enclosing scope.
                 return transformed.retargetToSuspendView(context, null) {
-                    IrFunctionReferenceImpl(startOffset, endOffset, type, it, typeArgumentsCount, reflectionTarget, origin)
+                    IrFunctionReferenceImpl.fromSymbolOwner(startOffset, endOffset, type, it, typeArgumentsCount, reflectionTarget, origin)
                 }
             }
 
             override fun visitCall(expression: IrCall): IrExpression {
                 val transformed = super.visitCall(expression) as IrCall
                 return transformed.retargetToSuspendView(context, functionStack.peek() ?: return transformed) {
-                    IrCallImpl(startOffset, endOffset, type, it, origin, superQualifierSymbol)
+                    IrCallImpl.fromSymbolOwner(
+                            startOffset, endOffset, type, it,
+                            origin = origin, superQualifierSymbol = superQualifierSymbol
+                    )
                 }
             }
         })
@@ -155,7 +158,7 @@ private class AddContinuationLowering(context: JvmBackendContext) : SuspendLower
         val backendContext = context
         val invokeSuspend = context.ir.symbols.continuationImplClass.owner.functions
             .single { it.name == Name.identifier(INVOKE_SUSPEND_METHOD_NAME) }
-        addFunctionOverride(invokeSuspend) { function ->
+        addFunctionOverride(invokeSuspend, irFunction.startOffset, irFunction.endOffset) { function ->
             +irSetField(irGet(function.dispatchReceiverParameter!!), resultField, irGet(function.valueParameters[0]))
             // There can be three kinds of suspend function call:
             // 1) direct call from another suspend function/lambda

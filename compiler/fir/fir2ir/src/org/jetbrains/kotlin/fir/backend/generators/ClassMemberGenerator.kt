@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
+import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
@@ -124,7 +125,7 @@ internal class ClassMemberGenerator(
                         irFunction.body = IrSyntheticBodyImpl(startOffset, endOffset, kind)
                     }
                     irFunction.parent is IrClass && irFunction.parentAsClass.isData -> {
-                        val classId = firFunction?.symbol?.callableId?.classId
+                        val classId = firFunction?.symbol?.dispatchReceiverClassOrNull()?.classId
                         when {
                             DataClassMembersGenerator.isComponentN(irFunction) ->
                                 firFunction?.body?.let { irFunction.body = visitor.convertToIrBlockBody(it) }
@@ -186,7 +187,18 @@ internal class ClassMemberGenerator(
             declarationStorage.enterScope(this@initializeBackingField)
             // NB: initializer can be already converted
             if (initializer == null && initializerExpression != null) {
-                initializer = irFactory.createExpressionBody(visitor.convertToIrExpression(initializerExpression))
+                initializer = irFactory.createExpressionBody(
+                    run {
+                        val irExpression = visitor.convertToIrExpression(initializerExpression)
+                        if (property.delegate == null) {
+                            with(visitor.implicitCastInserter) {
+                                irExpression.cast(initializerExpression, initializerExpression.typeRef, property.returnTypeRef)
+                            }
+                        } else {
+                            irExpression
+                        }
+                    }
+                )
             }
             declarationStorage.leaveScope(this@initializeBackingField)
         }
