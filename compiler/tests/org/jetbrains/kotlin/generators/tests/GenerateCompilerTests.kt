@@ -242,7 +242,7 @@ fun main(args: Array<String>) {
 
 
             testClass<AbstractBytecodeListingTest> {
-                model("codegen/bytecodeListing")
+                model("codegen/bytecodeListing", targetBackend = TargetBackend.JVM)
             }
 
             testClass<AbstractTopLevelMembersInvocationTest> {
@@ -539,10 +539,6 @@ fun main(args: Array<String>) {
         ) {
             testClass<AbstractFirBlackBoxCodegenTest> {
                 model("codegen/box", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
-            }
-
-            testClass<AbstractFirScriptCodegenTest> {
-                model("codegen/script", extension = "kts", targetBackend = TargetBackend.JVM_IR, excludeDirs = listOf("oldLanguageVersions"))
             }
 
             testClass<AbstractFirBlackBoxInlineCodegenTest> {

@@ -14967,6 +14967,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/inlineClasses/conformToComparableAndCallInterfaceMethod.kt");
         }
 
+        @TestMetadata("constructorImplVisibility.kt")
+        public void testConstructorImplVisibility() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/constructorImplVisibility.kt");
+        }
+
         @TestMetadata("correctBoxingForBranchExpressions.kt")
         public void testCorrectBoxingForBranchExpressions() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/correctBoxingForBranchExpressions.kt");
@@ -17514,6 +17519,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/paramAssertionMessage.kt");
             }
 
+            @TestMetadata("privateOperatorParameterAssertions.kt")
+            public void testPrivateOperatorParameterAssertions() throws Exception {
+                runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/privateOperatorParameterAssertions.kt");
+            }
+
             @TestMetadata("staticCallErrorMessage.kt")
             public void testStaticCallErrorMessage() throws Exception {
                 runTest("compiler/testData/codegen/box/javaInterop/notNullAssertions/staticCallErrorMessage.kt");
@@ -19137,6 +19147,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("kt21246a.kt")
         public void testKt21246a() throws Exception {
             runTest("compiler/testData/codegen/box/jvmStatic/kt21246a.kt");
+        }
+
+        @TestMetadata("kt35716.kt")
+        public void testKt35716() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmStatic/kt35716.kt");
         }
 
         @TestMetadata("kt9897_static.kt")
@@ -28285,6 +28300,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 public void testProperties() throws Exception {
                     runTest("compiler/testData/codegen/box/reflection/call/inlineClasses/properties.kt");
                 }
+
+                @TestMetadata("suspendFunction.kt")
+                public void testSuspendFunction() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/call/inlineClasses/suspendFunction.kt");
+                }
             }
         }
 
@@ -29183,11 +29203,6 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 runTest("compiler/testData/codegen/box/reflection/mapping/functions.kt");
             }
 
-            @TestMetadata("inlineClassPrimaryVal.kt")
-            public void testInlineClassPrimaryVal() throws Exception {
-                runTest("compiler/testData/codegen/box/reflection/mapping/inlineClassPrimaryVal.kt");
-            }
-
             @TestMetadata("inlineReifiedFun.kt")
             public void testInlineReifiedFun() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/mapping/inlineReifiedFun.kt");
@@ -29273,6 +29288,29 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 @TestMetadata("javaMethod.kt")
                 public void testJavaMethod() throws Exception {
                     runTest("compiler/testData/codegen/box/reflection/mapping/fakeOverrides/javaMethod.kt");
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/reflection/mapping/inlineClasses")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class InlineClasses extends AbstractBlackBoxCodegenTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInInlineClasses() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/reflection/mapping/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("inlineClassPrimaryVal.kt")
+                public void testInlineClassPrimaryVal() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/mapping/inlineClasses/inlineClassPrimaryVal.kt");
+                }
+
+                @TestMetadata("suspendFunctionWithInlineClassInSignature.kt")
+                public void testSuspendFunctionWithInlineClassInSignature() throws Exception {
+                    runTest("compiler/testData/codegen/box/reflection/mapping/inlineClasses/suspendFunctionWithInlineClassInSignature.kt");
                 }
             }
 

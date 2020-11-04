@@ -162,23 +162,24 @@
         //"comment": "it uses Kibana specific %timefilter% for time frame selection",
         "body": {
           "size": 1000,
+
           "query": {
             "bool": {
               "must": [
+                {
+                  "bool": {
+                    "must_not": [
+                       {"exists": {"field": "warmUp"}},
+                       {"exists": {"field": "synthetic"}}
+                     ]
+                   }
+                },
                 {"term": {"benchmark.keyword": "highlight"}},
                 {"range": {"buildTimestamp": {"%timefilter%": true}}}
               ]
             }
           },
-          "_source": [
-            "buildId",
-            "benchmark",
-            "buildTimestamp",
-            "metrics.hasError",
-            "metrics.metricName",
-            "metrics.metricValue",
-            "metrics.metricError"
-          ],
+          "_source": ["buildId", "benchmark", "name", "buildTimestamp", "hasError", "metricValue", "metricError"],
           "sort": [{"buildTimestamp": {"order": "asc"}}]
         }
       },
@@ -187,23 +188,46 @@
       "comment": "so it has to be array of {\"buildId\": \"...\", \"metricName\": \"...\", \"metricValue\": ..., \"metricError\": ...}",
       "transform": [
         {"type": "collect","sort": {"field": "_source.buildTimestamp"}},
-        {"type": "flatten", "fields": ["_source.metrics"], "as": ["metrics"]},
         {
-          "type": "project",
-          "fields": [
-            "_source.buildId",
-            "_source.buildTimestamp",
-            "metrics.hasError",
-            "metrics.metricName",
-            "metrics.metricValue",
-            "metrics.metricError"
-          ],
-          "as": ["buildId", "buildTimestamp", "hasError", "metricName", "metricValue", "metricError"]
+          "comment": "make alias: _source.buildId -> buildId",
+          "type": "formula",
+          "as": "buildId",
+          "expr": "datum._source.buildId"
+        },
+        {
+          "comment": "make alias: _source.benchmark -> metricName",
+          "type": "formula",
+          "as": "metricName",
+          "expr": "datum._source.benchmark"
+        },
+        {
+          "comment": "make alias: _source.metricValue -> metricValue",
+          "type": "formula",
+          "as": "metricValue",
+          "expr": "datum._source.metricValue"
+        },
+        {
+          "comment": "make alias: _source.name -> metricName",
+          "type": "formula",
+          "as": "metricName",
+          "expr": "datum._source.name"
+        },
+        {
+          "comment": "define metricError",
+          "type": "formula",
+          "as": "metricError",
+          "expr": "1"
+        },
+        {
+          "comment": "make alias: _source.hasError -> hasError",
+          "type": "formula",
+          "as": "hasError",
+          "expr": "datum._source.metrics ? datum._source.hasError : false"
         },
         {
           "type": "formula",
           "as": "timestamp",
-          "expr": "timeFormat(toDate(datum.buildTimestamp), '%Y-%m-%d %H:%M')"
+          "expr": "timeFormat(toDate(datum._source.buildTimestamp), '%Y-%m-%d %H:%M')"
         },
         {
           "comment": "create `url` value that points to TC build",

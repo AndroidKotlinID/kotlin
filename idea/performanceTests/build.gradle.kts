@@ -147,5 +147,14 @@ projectTest(taskName = "wholeProjectsPerformanceTest") {
     }
 }
 
+task("aggregateResults", JavaExec::class) {
+    dependsOn(":idea:performanceTests:performanceTest")
+
+    main = "org.jetbrains.kotlin.idea.perf.util.AggregateResultsKt"
+    classpath = sourceSets["test"].runtimeClasspath
+    workingDir = rootDir
+    args(listOf(File(rootDir, "build")))
+}
+
 
 testsJar()

@@ -218,7 +218,9 @@ class ExpressionCodegen(
             mv.visitLineNumber(1, startLabel)
         }
         val info = BlockInfo()
-        val body = irFunction.body!!
+        val body = irFunction.body
+            ?: error("Function has no body: ${irFunction.render()}")
+
         generateNonNullAssertions()
         generateFakeContinuationConstructorIfNeeded()
         val result = body.accept(this, info)
@@ -303,7 +305,12 @@ class ExpressionCodegen(
             return
 
         irFunction.extensionReceiverParameter?.let { generateNonNullAssertion(it) }
-        irFunction.valueParameters.forEach(::generateNonNullAssertion)
+
+        // Private operator functions don't have null checks on value parameters,
+        // see `DescriptorAsmUtil.genNotNullAssertionsForParameters`.
+        if (!DescriptorVisibilities.isPrivate(irFunction.visibility) || irFunction !is IrSimpleFunction || !irFunction.isOperator) {
+            irFunction.valueParameters.forEach(::generateNonNullAssertion)
+        }
     }
 
     private fun generateNonNullAssertion(param: IrValueParameter) {
