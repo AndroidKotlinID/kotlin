@@ -48,6 +48,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         runTest("compiler/fir/analysis-tests/testData/resolve/companion.kt");
     }
 
+    @TestMetadata("companionAccessInEnum.kt")
+    public void testCompanionAccessInEnum() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/companionAccessInEnum.kt");
+    }
+
     @TestMetadata("companionObjectCall.kt")
     public void testCompanionObjectCall() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/companionObjectCall.kt");
@@ -176,6 +181,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
     @TestMetadata("fib.kt")
     public void testFib() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/fib.kt");
+    }
+
+    @TestMetadata("flexibleCapturedType.kt")
+    public void testFlexibleCapturedType() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/flexibleCapturedType.kt");
     }
 
     @TestMetadata("ft.kt")
@@ -346,6 +356,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
     @TestMetadata("qualifierWithCompanion.kt")
     public void testQualifierWithCompanion() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/qualifierWithCompanion.kt");
+    }
+
+    @TestMetadata("rawTypeSam.kt")
+    public void testRawTypeSam() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/rawTypeSam.kt");
     }
 
     @TestMetadata("recursiveCallOnWhenWithSealedClass.kt")
@@ -1916,6 +1931,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         @TestMetadata("inner.kt")
         public void testInner() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/nested/inner.kt");
+        }
+
+        @TestMetadata("innerTypeFromSuperClassInBody.kt")
+        public void testInnerTypeFromSuperClassInBody() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/nested/innerTypeFromSuperClassInBody.kt");
         }
 
         @TestMetadata("innerTypes.kt")

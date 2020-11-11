@@ -6,11 +6,9 @@
 package org.jetbrains.kotlin.fir.backend.generators
 
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.FirSymbolOwner
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
@@ -20,11 +18,9 @@ import org.jetbrains.kotlin.fir.scopes.impl.FirFakeOverrideGenerator
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
-import org.jetbrains.kotlin.fir.symbols.PossiblyFirFakeOverrideSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
-import org.jetbrains.kotlin.fir.symbols.impl.unwrapSubstitutionOverrides
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -87,7 +83,7 @@ class FakeOverrideGenerator(
                     declarationStorage::getCachedIrFunction,
                     declarationStorage::createIrFunction,
                     createFakeOverrideSymbol = { firFunction, callableSymbol ->
-                        FirFakeOverrideGenerator.createFakeOverrideFunction(
+                        FirFakeOverrideGenerator.createSubstitutionOverrideFunction(
                             session, firFunction, callableSymbol,
                             newDispatchReceiverType = klass.defaultType(),
                             derivedClassId = klass.symbol.classId,
@@ -111,7 +107,7 @@ class FakeOverrideGenerator(
                     declarationStorage::getCachedIrProperty,
                     declarationStorage::createIrProperty,
                     createFakeOverrideSymbol = { firProperty, callableSymbol ->
-                        FirFakeOverrideGenerator.createFakeOverrideProperty(
+                        FirFakeOverrideGenerator.createSubstitutionOverrideProperty(
                             session, firProperty, callableSymbol,
                             newDispatchReceiverType = klass.defaultType(),
                             derivedClassId = klass.symbol.classId,
@@ -133,7 +129,7 @@ class FakeOverrideGenerator(
         return result
     }
 
-    private inline fun <reified D : FirCallableMemberDeclaration<D>, reified S, reified I : IrDeclaration> createFakeOverriddenIfNeeded(
+    private inline fun <reified D : FirCallableMemberDeclaration<D>, reified S : FirCallableSymbol<D>, reified I : IrDeclaration> createFakeOverriddenIfNeeded(
         klass: FirClass<*>,
         irClass: IrClass,
         isLocal: Boolean,
@@ -147,7 +143,7 @@ class FakeOverrideGenerator(
         realDeclarationSymbols: Set<AbstractFirBasedSymbol<*>>,
         computeDirectOverridden: FirTypeScope.(S) -> List<S>,
         scope: FirTypeScope,
-    ) where S : FirCallableSymbol<D>, S : PossiblyFirFakeOverrideSymbol<D, S> {
+    ) {
         if (originalSymbol !is S || originalSymbol in realDeclarationSymbols) return
         val classLookupTag = klass.symbol.toLookupTag()
         val originalDeclaration = originalSymbol.fir
@@ -155,11 +151,9 @@ class FakeOverrideGenerator(
         if (originalDeclaration.visibility == Visibilities.Private) return
 
         val origin = IrDeclarationOrigin.FAKE_OVERRIDE
-        val baseSymbol = originalSymbol.deepestOverriddenSymbol() as S
+        val baseSymbol = originalSymbol.unwrapSubstitutionAndIntersectionOverrides() as S
 
-        if ((originalSymbol.isFakeOverride || originalSymbol.isIntersectionOverride) &&
-            originalSymbol.dispatchReceiverClassOrNull() == classLookupTag
-        ) {
+        if (originalSymbol.fir.origin.fromSupertypes && originalSymbol.dispatchReceiverClassOrNull() == classLookupTag) {
             // Substitution case
             // NB: see comment above about substituted function' parent
             val irDeclaration = cachedIrDeclaration(originalDeclaration)?.takeIf { it.parent == irClass }
@@ -194,18 +188,18 @@ class FakeOverrideGenerator(
         }
     }
 
-    private inline fun <S : FirCallableSymbol<*>> computeBaseSymbols(
+    private inline fun <reified S : FirCallableSymbol<*>> computeBaseSymbols(
         symbol: S,
         basedSymbol: S,
         directOverridden: FirTypeScope.(S) -> List<S>,
         scope: FirTypeScope,
         containingClass: ConeClassLikeLookupTag,
     ): List<S> {
-        if (!symbol.isIntersectionOverride) return listOf(basedSymbol)
+        if (symbol.fir.origin != FirDeclarationOrigin.IntersectionOverride) return listOf(basedSymbol)
         return scope.directOverridden(symbol).map {
             @Suppress("UNCHECKED_CAST")
-            if (it is PossiblyFirFakeOverrideSymbol<*, *> && it.isFakeOverride && it.dispatchReceiverClassOrNull() == containingClass)
-                it.overriddenSymbol!! as S
+            if (it.fir.isSubstitutionOverride && it.dispatchReceiverClassOrNull() == containingClass)
+                it.originalForSubstitutionOverride!!
             else
                 it
         }
@@ -235,7 +229,7 @@ class FakeOverrideGenerator(
 
     private fun IrProperty.discardAccessorsAccordingToBaseVisibility(baseSymbols: List<FirPropertySymbol>) {
         for (baseSymbol in baseSymbols) {
-            val unwrapped = baseSymbol.unwrapSubstitutionOverrides()
+            val unwrapped = baseSymbol.unwrapFakeOverrides()
             // Do not create fake overrides for accessors if not allowed to do so, e.g., private lateinit var.
             if (unwrapped.fir.getter?.allowsToHaveFakeOverride != true) {
                 getter = null

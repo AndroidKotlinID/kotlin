@@ -14,16 +14,18 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.builtins.StandardNames.FqNames
 import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
-import org.jetbrains.kotlin.codegen.*
+import org.jetbrains.kotlin.codegen.AsmUtil
+import org.jetbrains.kotlin.codegen.FrameMapBase
+import org.jetbrains.kotlin.codegen.OwnerKind
+import org.jetbrains.kotlin.codegen.SourceInfo
 import org.jetbrains.kotlin.codegen.inline.SourceMapper
 import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptorWithSource
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
@@ -168,21 +170,16 @@ fun IrDeclarationWithVisibility.getVisibilityAccessFlag(kind: OwnerKind? = null)
 }
 
 private fun IrDeclarationWithVisibility.specialCaseVisibility(kind: OwnerKind?): Int? {
-//    if (JvmCodegenUtil.isNonIntrinsicPrivateCompanionObjectInInterface(memberDescriptor)) {
-//        return ACC_PUBLIC
-//    }
     if (this is IrClass && DescriptorVisibilities.isPrivate(visibility) && isCompanion && hasInterfaceParent()) {
         // TODO: non-intrinsic
         return Opcodes.ACC_PUBLIC
     }
 
-//    if (memberDescriptor is FunctionDescriptor && isInlineClassWrapperConstructor(memberDescriptor, kind))
     if (this is IrConstructor && parentAsClass.isInline && kind === OwnerKind.IMPLEMENTATION) {
         return Opcodes.ACC_PRIVATE
     }
 
-//    if (memberDescriptor.isEffectivelyInlineOnly()) {
-    if (this is IrFunction && isReifiable()) {
+    if (this is IrFunction && (isReifiable() || isBridge())) {
         return Opcodes.ACC_PUBLIC
     }
 
@@ -190,58 +187,20 @@ private fun IrDeclarationWithVisibility.specialCaseVisibility(kind: OwnerKind?):
         return Opcodes.ACC_PRIVATE
     }
 
-//    if (memberVisibility === Visibilities.LOCAL && memberDescriptor is CallableMemberDescriptor) {
     if (visibility === DescriptorVisibilities.LOCAL && this is IrFunction) {
         return Opcodes.ACC_PUBLIC
     }
 
-//    if (isEnumEntry(memberDescriptor)) {
     if (this is IrClass && this.kind === ClassKind.ENUM_ENTRY) {
         return AsmUtil.NO_FLAG_PACKAGE_PRIVATE
     }
 
-//    These ones should be public anyway after ToArrayLowering.
-//    if (memberDescriptor.isToArrayFromCollection()) {
-//        return ACC_PUBLIC
-//    }
-
-//    if (memberDescriptor is ConstructorDescriptor && isAnonymousObject(memberDescriptor.containingDeclaration)) {
-//        return getVisibilityAccessFlagForAnonymous(memberDescriptor.containingDeclaration as ClassDescriptor)
-//    }
-//    if (this is IrConstructor && parentAsClass.isAnonymousObject) {
-//        return parentAsClass.getVisibilityAccessFlagForAnonymous()
-//    }
-
-//    TODO: when is this applicable?
-//    if (memberDescriptor is SyntheticJavaPropertyDescriptor) {
-//        return getVisibilityAccessFlag((memberDescriptor as SyntheticJavaPropertyDescriptor).getMethod)
-//    }
-
-
-//    if (memberDescriptor is PropertyAccessorDescriptor) {
-//        val property = memberDescriptor.correspondingProperty
-//        if (property is SyntheticJavaPropertyDescriptor) {
-//            val method = (if (memberDescriptor === property.getGetter())
-//                (property as SyntheticJavaPropertyDescriptor).getMethod
-//            else
-//                (property as SyntheticJavaPropertyDescriptor).setMethod)
-//                ?: error("No get/set method in SyntheticJavaPropertyDescriptor: $property")
-//            return getVisibilityAccessFlag(method)
-//        }
-//    }
     if (this is IrField && correspondingPropertySymbol?.owner?.isExternal == true) {
         val method = correspondingPropertySymbol?.owner?.getter ?: correspondingPropertySymbol?.owner?.setter
         ?: error("No get/set method in SyntheticJavaPropertyDescriptor: ${ir2string(correspondingPropertySymbol?.owner)}")
         return method.getVisibilityAccessFlag()
     }
 
-//    if (memberDescriptor is CallableDescriptor && memberVisibility === Visibilities.PROTECTED) {
-//        for (overridden in DescriptorUtils.getAllOverriddenDescriptors(memberDescriptor as CallableDescriptor)) {
-//            if (isJvmInterface(overridden.containingDeclaration)) {
-//                return ACC_PUBLIC
-//            }
-//        }
-//    }
     if (this is IrSimpleFunction && visibility === DescriptorVisibilities.PROTECTED &&
         allOverridden().any { it.parentAsClass.isJvmInterface }
     ) {
@@ -256,14 +215,6 @@ private fun IrDeclarationWithVisibility.specialCaseVisibility(kind: OwnerKind?):
         return AsmUtil.NO_FLAG_PACKAGE_PRIVATE
     }
 
-//  Should be taken care of in IR
-//    if (memberDescriptor is AccessorForCompanionObjectInstanceFieldDescriptor) {
-//        return NO_FLAG_PACKAGE_PRIVATE
-//    }
-
-//    return if (memberDescriptor is ConstructorDescriptor && isEnumEntry(containingDeclaration)) {
-//        NO_FLAG_PACKAGE_PRIVATE
-//    } else null
     if (this is IrConstructor && parentAsClass.kind === ClassKind.ENUM_ENTRY) {
         return AsmUtil.NO_FLAG_PACKAGE_PRIVATE
     }
@@ -302,6 +253,8 @@ fun IrFunction.isInlineOnly() =
     isInline && hasAnnotation(INLINE_ONLY_ANNOTATION_FQ_NAME)
 
 fun IrFunction.isReifiable() = typeParameters.any { it.isReified }
+
+internal fun IrFunction.isBridge() = origin == IrDeclarationOrigin.BRIDGE || origin == IrDeclarationOrigin.BRIDGE_SPECIAL
 
 // Borrowed with modifications from ImplementationBodyCodegen.java
 
@@ -387,16 +340,11 @@ fun IrClass.isOptionalAnnotationClass(): Boolean =
     isAnnotationClass &&
             hasAnnotation(ExpectedActualDeclarationChecker.OPTIONAL_EXPECTATION_FQ_NAME)
 
-val IrDeclaration.callableDeprecationFlags: Int
-    get() {
-        val annotation = annotations.findAnnotation(FqNames.deprecated)
-            ?: return if ((this as? IrDeclaration)?.origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY)
-                Opcodes.ACC_DEPRECATED
-            else 0
-        val isHidden = (annotation.getValueArgument(2) as? IrGetEnumValue)?.symbol?.owner
-            ?.name?.asString() == DeprecationLevel.HIDDEN.name
-        return Opcodes.ACC_DEPRECATED or if (isHidden) Opcodes.ACC_SYNTHETIC else 0
-    }
+val IrDeclaration.isAnnotatedWithDeprecated: Boolean
+    get() = annotations.hasAnnotation(FqNames.deprecated)
+
+val IrDeclaration.isDeprecatedCallable: Boolean
+    get() = isAnnotatedWithDeprecated || origin == JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY
 
 // We can't check for JvmLoweredDeclarationOrigin.SYNTHETIC_METHOD_FOR_PROPERTY_ANNOTATIONS because for interface methods
 // moved to DefaultImpls, origin is changed to DEFAULT_IMPLS
@@ -404,12 +352,9 @@ val IrDeclaration.callableDeprecationFlags: Int
 val IrFunction.isSyntheticMethodForProperty: Boolean
     get() = name.asString().endsWith(JvmAbi.ANNOTATED_PROPERTY_METHOD_NAME_SUFFIX)
 
-val IrFunction.functionDeprecationFlags: Int
-    get() {
-        val originFlags = if (isSyntheticMethodForProperty) Opcodes.ACC_DEPRECATED else 0
-        val propertyFlags = (this as? IrSimpleFunction)?.correspondingPropertySymbol?.owner?.callableDeprecationFlags ?: 0
-        return originFlags or propertyFlags or callableDeprecationFlags
-    }
+val IrFunction.isDeprecatedFunction: Boolean
+    get() = isSyntheticMethodForProperty || isDeprecatedCallable ||
+            (this as? IrSimpleFunction)?.correspondingPropertySymbol?.owner?.isDeprecatedCallable == true
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 val IrDeclaration.psiElement: PsiElement?

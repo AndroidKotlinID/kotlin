@@ -55,7 +55,8 @@ class CallAndReferenceGenerator(
         callableReferenceAccess: FirCallableReferenceAccess,
         explicitReceiverExpression: IrExpression?
     ): IrExpression {
-        val symbol = callableReferenceAccess.calleeReference.toSymbol(session, classifierStorage, declarationStorage, conversionScope)
+        val symbol =
+            callableReferenceAccess.calleeReference.toSymbolForCall(session, classifierStorage, declarationStorage, conversionScope)
         val type = callableReferenceAccess.typeRef.toIrType()
         fun propertyOrigin(): IrStatementOrigin? =
             when (callableReferenceAccess.source?.psi?.parent) {
@@ -84,8 +85,8 @@ class CallAndReferenceGenerator(
                     IrLocalDelegatedPropertyReferenceImpl(
                         startOffset, endOffset, type, symbol,
                         symbol.owner.delegate.symbol,
-                        symbol.owner.getter.symbol as IrSimpleFunctionSymbol,
-                        symbol.owner.setter?.symbol as IrSimpleFunctionSymbol?,
+                        symbol.owner.getter.symbol,
+                        symbol.owner.setter?.symbol,
                         IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE
                     )
                 }
@@ -197,7 +198,7 @@ class CallAndReferenceGenerator(
             val samConstructorCall = qualifiedAccess.tryConvertToSamConstructorCall(type)
             if (samConstructorCall != null) return samConstructorCall
 
-            val symbol = qualifiedAccess.calleeReference.toSymbol(
+            val symbol = qualifiedAccess.calleeReference.toSymbolForCall(
                 session,
                 classifierStorage,
                 declarationStorage,
@@ -223,7 +224,7 @@ class CallAndReferenceGenerator(
                     }
                     is IrLocalDelegatedPropertySymbol -> {
                         IrCallImpl(
-                            startOffset, endOffset, type, symbol.owner.getter.symbol as IrSimpleFunctionSymbol,
+                            startOffset, endOffset, type, symbol.owner.getter.symbol,
                             typeArgumentsCount = symbol.owner.getter.typeParameters.size,
                             valueArgumentsCount = 0,
                             origin = IrStatementOrigin.GET_LOCAL_PROPERTY,
@@ -277,7 +278,7 @@ class CallAndReferenceGenerator(
     fun convertToIrSetCall(variableAssignment: FirVariableAssignment, explicitReceiverExpression: IrExpression?): IrExpression {
         val type = irBuiltIns.unitType
         val calleeReference = variableAssignment.calleeReference
-        val symbol = calleeReference.toSymbol(session, classifierStorage, declarationStorage, conversionScope, preferGetter = false)
+        val symbol = calleeReference.toSymbolForCall(session, classifierStorage, declarationStorage, conversionScope, preferGetter = false)
         val origin = IrStatementOrigin.EQ
         return variableAssignment.convertWithOffsets { startOffset, endOffset ->
             val assignedValue = visitor.convertToIrExpression(variableAssignment.rValue)
@@ -289,7 +290,7 @@ class CallAndReferenceGenerator(
                     val setter = symbol.owner.setter
                     when {
                         setter != null -> IrCallImpl(
-                            startOffset, endOffset, type, setter.symbol as IrSimpleFunctionSymbol,
+                            startOffset, endOffset, type, setter.symbol,
                             typeArgumentsCount = setter.typeParameters.size,
                             valueArgumentsCount = 1,
                             origin = origin,

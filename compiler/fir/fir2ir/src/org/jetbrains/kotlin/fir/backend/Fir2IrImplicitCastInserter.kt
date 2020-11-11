@@ -6,22 +6,33 @@
 package org.jetbrains.kotlin.fir.backend
 
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.baseForIntersectionOverride
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
+import org.jetbrains.kotlin.fir.declarations.FirTypeAlias
 import org.jetbrains.kotlin.fir.expressions.*
-import org.jetbrains.kotlin.fir.expressions.impl.*
-import org.jetbrains.kotlin.fir.references.*
+import org.jetbrains.kotlin.fir.expressions.impl.FirStubStatement
+import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
+import org.jetbrains.kotlin.fir.references.FirReference
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.scope
 import org.jetbrains.kotlin.fir.scopes.FakeOverrideTypeCalculator
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.removeAnnotations
+import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.coerceToUnitIfNeeded
+import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.name.Name
 
 class Fir2IrImplicitCastInserter(
@@ -198,8 +209,7 @@ class Fir2IrImplicitCastInserter(
             expectedType.isUnit -> {
                 coerceToUnitIfNeeded(type, irBuiltIns)
             }
-            // TODO: Not exactly matched with psi2ir yet...
-            valueType.hasEnhancedNullability() -> {
+            valueType.hasEnhancedNullability() && !expectedType.acceptsNullValues() -> {
                 insertImplicitNotNullCastIfNeeded(expression)
             }
             // TODO: coerceIntToAnotherIntegerType
@@ -208,18 +218,24 @@ class Fir2IrImplicitCastInserter(
         }
     }
 
+    private fun FirTypeRef.acceptsNullValues(): Boolean =
+        isMarkedNullable == true || hasEnhancedNullability()
+
     private fun IrExpression.insertImplicitNotNullCastIfNeeded(expression: FirExpression): IrExpression {
         // [TypeOperatorLowering] will retrieve the source (from start offset to end offset) as an assertion message.
         // Avoid type casting if we can't determine the source for some reasons, e.g., implicit `this` receiver.
         if (expression.source == null) {
             return this
         }
+        val castType = type.removeAnnotations {
+            it.symbol.owner.parentAsClass.classId == CompilerConeAttributes.EnhancedNullability.ANNOTATION_CLASS_ID
+        }
         return IrTypeOperatorCallImpl(
             this.startOffset,
             this.endOffset,
-            this.type,
+            castType,
             IrTypeOperator.IMPLICIT_NOTNULL,
-            this.type,
+            castType,
             this
         )
     }
@@ -273,7 +289,7 @@ class Fir2IrImplicitCastInserter(
         if (castTypeRef is FirResolvedTypeRef && originalTypeRef is FirResolvedTypeRef) {
             val castType = castTypeRef.type
             if (castType is ConeIntersectionType) {
-                val unwrappedSymbol = (referencedSymbol as? FirCallableSymbol)?.overriddenSymbol ?: referencedSymbol
+                val unwrappedSymbol = (referencedSymbol as? FirCallableSymbol)?.baseForIntersectionOverride ?: referencedSymbol
                 castType.intersectedTypes.forEach {
                     if (it.doesContainReferencedSymbolInScope(unwrappedSymbol, calleeReference.name)) {
                         return implicitCastOrExpression(value, it)

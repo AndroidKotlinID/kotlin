@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.resolve.transformers.contracts.runContractResolveForLocalClass
 import org.jetbrains.kotlin.fir.scopes.FakeOverrideTypeCalculator
-import org.jetbrains.kotlin.fir.symbols.PossiblyFirFakeOverrideSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirAccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
@@ -211,15 +210,14 @@ private class ReturnTypeCalculatorWithJump(
             return tryCalculateReturnType(declaration.getter.delegate)
         }
 
-        if (declaration.origin == FirDeclarationOrigin.IntersectionOverride) {
-            val result = tryCalculateReturnType(declaration.symbol.overriddenSymbol!!.fir)
+        if (declaration.isIntersectionOverride) {
+            val result = tryCalculateReturnType(declaration.symbol.baseForIntersectionOverride!!.fir)
             declaration.replaceReturnTypeRef(result)
             return result
         }
 
-        runIf(declaration.origin == FirDeclarationOrigin.SubstitutionOverride) {
-            val possiblyFirFakeOverrideSymbol = declaration.symbol as PossiblyFirFakeOverrideSymbol<*, *>
-            val overriddenDeclaration = possiblyFirFakeOverrideSymbol.overriddenSymbol?.fir as FirTypedDeclaration? ?: return@runIf
+        runIf(declaration.isSubstitutionOverride) {
+            val overriddenDeclaration = declaration.originalForSubstitutionOverride ?: return@runIf
             tryCalculateReturnType(overriddenDeclaration)
             return FakeOverrideTypeCalculator.Forced.computeReturnType(declaration)
         }

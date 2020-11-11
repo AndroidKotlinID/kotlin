@@ -89,8 +89,12 @@ class Fir2IrTypeConverter(
                 val typeAnnotations: MutableList<IrConstructorCall> =
                     if (!isExtensionFunctionType) mutableListOf()
                     else mutableListOf(builtIns.extensionFunctionTypeAnnotationConstructorCall())
-                // TODO: Need to convert @EnhancedNullability ?
                 typeAnnotations += with(annotationGenerator) { annotations.toIrAnnotations() }
+                if (hasEnhancedNullability) {
+                    builtIns.enhancedNullabilityAnnotationConstructorCall()?.let {
+                        typeAnnotations += it
+                    }
+                }
                 IrSimpleTypeImpl(
                     irSymbol, !typeContext.definitelyNotNull && this.isMarkedNullable,
                     fullyExpandedType(session).typeArguments.map { it.toIrTypeArgument(typeContext) },
