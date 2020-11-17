@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.java.scopes
 
+import com.intellij.lang.jvm.types.JvmPrimitiveTypeKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
@@ -21,6 +22,8 @@ import org.jetbrains.kotlin.fir.scopes.impl.AbstractFirUseSiteMemberScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.isUnit
+import org.jetbrains.kotlin.fir.types.jvm.FirJavaTypeRef
+import org.jetbrains.kotlin.load.java.structure.impl.JavaPrimitiveTypeImpl
 import org.jetbrains.kotlin.name.Name
 
 class JavaClassUseSiteMemberScope(
@@ -58,7 +61,7 @@ class JavaClassUseSiteMemberScope(
         getterSymbol: FirNamedFunctionSymbol,
         setterSymbol: FirNamedFunctionSymbol?,
         syntheticPropertyName: Name,
-    ): FirAccessorSymbol? {
+    ): FirAccessorSymbol {
         return buildSyntheticProperty {
             session = this@JavaClassUseSiteMemberScope.session
             name = syntheticPropertyName
@@ -101,18 +104,21 @@ class JavaClassUseSiteMemberScope(
                     declaredMemberScope.processFunctionsByName(setterName) { functionSymbol ->
                         if (setterSymbol == null && functionSymbol is FirNamedFunctionSymbol) {
                             val function = functionSymbol.fir
-                            if (!function.isStatic && function.returnTypeRef.isUnit && function.valueParameters.size == 1) {
-                                setterSymbol = functionSymbol
+                            if (!function.isStatic && function.valueParameters.size == 1) {
+                                val returnTypeRef = function.returnTypeRef
+                                if (returnTypeRef.isUnit) {
+                                    setterSymbol = functionSymbol
+                                } else if (returnTypeRef is FirJavaTypeRef) {
+                                    val primitiveType = returnTypeRef.type as? JavaPrimitiveTypeImpl
+                                    if (primitiveType?.psi?.kind == JvmPrimitiveTypeKind.VOID) {
+                                        setterSymbol = functionSymbol
+                                    }
+                                }
                             }
                         }
                     }
-                    val accessorSymbol = generateAccessorSymbol(
-                        getterSymbol!!, setterSymbol, propertyName
-                    )
-                    if (accessorSymbol != null) {
-                        // NB: accessor should not be processed directly unless we find matching property symbol in supertype
-                        overrideCandidates += accessorSymbol
-                    }
+                    val accessorSymbol = generateAccessorSymbol(getterSymbol!!, setterSymbol, propertyName)
+                    overrideCandidates += accessorSymbol
                 }
             }
         }
@@ -141,13 +147,14 @@ class JavaClassUseSiteMemberScope(
         if (symbol.fir !is FirJavaClass) {
             return super.processFunctionsByName(name, processor)
         }
-        val potentialPropertyName = session.syntheticNamesProvider.propertyNameByAccessorName(name)
-            ?: return super.processFunctionsByName(name, processor)
+        val potentialPropertyNames = session.syntheticNamesProvider.possiblePropertyNamesByAccessorName(name)
         val accessors = mutableListOf<FirAccessorSymbol>()
-        val getterName = session.syntheticNamesProvider.getterNameBySetterName(name) ?: name
-        processAccessorFunctionsAndPropertiesByName(potentialPropertyName, listOf(getterName)) {
-            if (it is FirAccessorSymbol) {
-                accessors += it
+        val getterName by lazy { session.syntheticNamesProvider.getterNameBySetterName(name) ?: name }
+        for (potentialPropertyName in potentialPropertyNames) {
+            processAccessorFunctionsAndPropertiesByName(potentialPropertyName, listOf(getterName)) {
+                if (it is FirAccessorSymbol) {
+                    accessors += it
+                }
             }
         }
         if (accessors.isEmpty()) {

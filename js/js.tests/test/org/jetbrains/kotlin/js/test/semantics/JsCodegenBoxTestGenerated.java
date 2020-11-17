@@ -1082,6 +1082,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/bridges/genericProperty.kt");
         }
 
+        @TestMetadata("innerClassTypeParameters.kt")
+        public void testInnerClassTypeParameters() throws Exception {
+            runTest("compiler/testData/codegen/box/bridges/innerClassTypeParameters.kt");
+        }
+
         @TestMetadata("jsName.kt")
         public void testJsName() throws Exception {
             runTest("compiler/testData/codegen/box/bridges/jsName.kt");
@@ -11735,6 +11740,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("defaultFunctionsFromAnyForInlineClass.kt")
         public void testDefaultFunctionsFromAnyForInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/defaultFunctionsFromAnyForInlineClass.kt");
+        }
+
+        @TestMetadata("defaultInterfaceMethodsInInlineClass.kt")
+        public void testDefaultInterfaceMethodsInInlineClass() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/defaultInterfaceMethodsInInlineClass.kt");
         }
 
         @TestMetadata("defaultWithInlineClassArgument.kt")

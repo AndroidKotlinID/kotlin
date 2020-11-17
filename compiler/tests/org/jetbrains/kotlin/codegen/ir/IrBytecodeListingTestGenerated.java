@@ -752,6 +752,11 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         public void testHidden() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/deprecated/hidden.kt");
         }
+
+        @TestMetadata("inlineClassTypesInSignature.kt")
+        public void testInlineClassTypesInSignature() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/deprecated/inlineClassTypesInSignature.kt");
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/bytecodeListing/inline")
@@ -897,6 +902,11 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/constructorsWithDefaultParameterValues.kt");
         }
 
+        @TestMetadata("defaultInterfaceMethodsInInlineClass.kt")
+        public void testDefaultInterfaceMethodsInInlineClass() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/defaultInterfaceMethodsInInlineClass.kt");
+        }
+
         @TestMetadata("inlineCharSequence.kt")
         public void testInlineCharSequence() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineCharSequence.kt");
@@ -920,6 +930,16 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         @TestMetadata("inlineClassWithManyKindsOfMembers.kt")
         public void testInlineClassWithManyKindsOfMembers() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineClassWithManyKindsOfMembers.kt");
+        }
+
+        @TestMetadata("memberExtensionProperty.kt")
+        public void testMemberExtensionProperty() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/memberExtensionProperty.kt");
+        }
+
+        @TestMetadata("noArgConstructorForInlineClassParameter.kt")
+        public void testNoArgConstructorForInlineClassParameter() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/noArgConstructorForInlineClassParameter.kt");
         }
 
         @TestMetadata("noBridgesForErasedInlineClass.kt")

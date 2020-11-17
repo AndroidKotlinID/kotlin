@@ -410,6 +410,16 @@ public class CompileKotlinAgainstKotlinTestGenerated extends AbstractCompileKotl
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/fir"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("AnonymousObjectInProperty.kt")
+        public void testAnonymousObjectInProperty() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/AnonymousObjectInProperty.kt");
+        }
+
+        @TestMetadata("ExistingSymbolInFakeOverride.kt")
+        public void testExistingSymbolInFakeOverride() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/ExistingSymbolInFakeOverride.kt");
+        }
+
         @TestMetadata("LibraryProperty.kt")
         public void testLibraryProperty() throws Exception {
             runTest("compiler/testData/compileKotlinAgainstKotlin/fir/LibraryProperty.kt");

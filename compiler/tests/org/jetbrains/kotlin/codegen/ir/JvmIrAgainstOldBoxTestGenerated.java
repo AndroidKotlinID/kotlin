@@ -405,6 +405,16 @@ public class JvmIrAgainstOldBoxTestGenerated extends AbstractJvmIrAgainstOldBoxT
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/fir"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_MULTI_MODULE_IR_AGAINST_OLD, true);
         }
 
+        @TestMetadata("AnonymousObjectInProperty.kt")
+        public void testAnonymousObjectInProperty() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/AnonymousObjectInProperty.kt");
+        }
+
+        @TestMetadata("ExistingSymbolInFakeOverride.kt")
+        public void testExistingSymbolInFakeOverride() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/ExistingSymbolInFakeOverride.kt");
+        }
+
         @TestMetadata("LibraryProperty.kt")
         public void testLibraryProperty() throws Exception {
             runTest("compiler/testData/compileKotlinAgainstKotlin/fir/LibraryProperty.kt");

@@ -1477,6 +1477,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             runTest("compiler/testData/codegen/box/bridges/genericProperty.kt");
         }
 
+        @TestMetadata("innerClassTypeParameters.kt")
+        public void testInnerClassTypeParameters() throws Exception {
+            runTest("compiler/testData/codegen/box/bridges/innerClassTypeParameters.kt");
+        }
+
         @TestMetadata("kt12416.kt")
         public void testKt12416() throws Exception {
             runTest("compiler/testData/codegen/box/bridges/kt12416.kt");
@@ -13605,6 +13610,11 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("defaultFunctionsFromAnyForInlineClass.kt")
         public void testDefaultFunctionsFromAnyForInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/defaultFunctionsFromAnyForInlineClass.kt");
+        }
+
+        @TestMetadata("defaultInterfaceMethodsInInlineClass.kt")
+        public void testDefaultInterfaceMethodsInInlineClass() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/defaultInterfaceMethodsInInlineClass.kt");
         }
 
         @TestMetadata("defaultWithInlineClassArgument.kt")

@@ -208,6 +208,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
         runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/nullableTypeParameter.kt");
     }
 
+    @TestMetadata("plusAssignNullable.kt")
+    public void testPlusAssignNullable() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/plusAssignNullable.kt");
+    }
+
     @TestMetadata("problems.kt")
     public void testProblems() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems.kt");
@@ -241,6 +246,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
     @TestMetadata("runOnIntegerLiteral.kt")
     public void testRunOnIntegerLiteral() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/runOnIntegerLiteral.kt");
+    }
+
+    @TestMetadata("samForComparator.kt")
+    public void testSamForComparator() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/samForComparator.kt");
     }
 
     @TestMetadata("simpleLazy.kt")
