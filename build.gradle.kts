@@ -27,7 +27,7 @@ buildscript {
     dependencies {
         bootstrapCompilerClasspath(kotlin("compiler-embeddable", bootstrapKotlinVersion))
 
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.20")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.21")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
         classpath(kotlin("serialization", bootstrapKotlinVersion))
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
@@ -194,7 +194,7 @@ if (!project.hasProperty("versions.kotlin-native")) {
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
 val effectSystemEnabled by extra(project.getBooleanProperty("kotlin.compiler.effectSystemEnabled") ?: false)
 val newInferenceEnabled by extra(project.getBooleanProperty("kotlin.compiler.newInferenceEnabled") ?: false)
-val useJvmIrBackend by extra(project.getBooleanProperty("kotlin.build.useIR") ?: false)
+val useJvmIrBackend by extra(project.kotlinBuildProperties.useIR)
 
 val intellijSeparateSdks = project.getBooleanProperty("intellijSeparateSdks") ?: false
 
@@ -925,7 +925,8 @@ tasks {
                 ":kotlin-reflect:publish",
                 ":kotlin-main-kts:publish",
                 ":kotlin-stdlib-js:publish",
-                ":kotlin-test:kotlin-test-js:publish"
+                ":kotlin-test:kotlin-test-js:publish",
+                ":kotlin-coroutines-experimental-compat:publish"
             )
         }
     }

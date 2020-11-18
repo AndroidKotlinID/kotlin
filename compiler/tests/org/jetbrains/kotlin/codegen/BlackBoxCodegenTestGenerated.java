@@ -15582,6 +15582,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/inlineClasses/UIntArraySortExample.kt");
         }
 
+        @TestMetadata("UIntSafeAsInt.kt")
+        public void testUIntSafeAsInt() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/UIntSafeAsInt.kt");
+        }
+
         @TestMetadata("unboxNullableValueOfInlineClassWithNonNullUnderlyingType.kt")
         public void testUnboxNullableValueOfInlineClassWithNonNullUnderlyingType() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/unboxNullableValueOfInlineClassWithNonNullUnderlyingType.kt");
@@ -19172,6 +19177,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("funAccess.kt")
         public void testFunAccess() throws Exception {
             runTest("compiler/testData/codegen/box/jvmStatic/funAccess.kt");
+        }
+
+        @TestMetadata("functionReference.kt")
+        public void testFunctionReference() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmStatic/functionReference.kt");
         }
 
         @TestMetadata("importStaticMemberFromObject.kt")

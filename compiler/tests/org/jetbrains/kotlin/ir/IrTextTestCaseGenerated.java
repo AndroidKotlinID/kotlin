@@ -485,6 +485,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
                 runTest("compiler/testData/ir/irText/declarations/annotations/functionsWithAnnotations.kt");
             }
 
+            @TestMetadata("inheritingDeprecation.kt")
+            public void testInheritingDeprecation() throws Exception {
+                runTest("compiler/testData/ir/irText/declarations/annotations/inheritingDeprecation.kt");
+            }
+
             @TestMetadata("javaAnnotation.kt")
             public void testJavaAnnotation() throws Exception {
                 runTest("compiler/testData/ir/irText/declarations/annotations/javaAnnotation.kt");
@@ -1819,6 +1824,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("SignatureClash.kt")
         public void testSignatureClash() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/SignatureClash.kt");
+        }
+
+        @TestMetadata("throwableStackTrace.kt")
+        public void testThrowableStackTrace() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/throwableStackTrace.kt");
         }
 
         @TestMetadata("V8ArrayToList.kt")
