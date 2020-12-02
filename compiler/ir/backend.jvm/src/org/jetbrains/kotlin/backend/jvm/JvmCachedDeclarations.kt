@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.setSourceRange
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.load.java.JavaDescriptorVisibilities
 import org.jetbrains.kotlin.load.java.JvmAbi
@@ -135,9 +134,8 @@ class JvmCachedDeclarations(
                     annotations = oldField.annotations
                 }
 
-                initializer = oldField.initializer
-                    ?.replaceThisByStaticReference(this@JvmCachedDeclarations, oldParent, oldParent.thisReceiver!!)
-                    ?.patchDeclarationParents(this) as IrExpressionBody?
+                initializer = oldField.initializer?.patchDeclarationParents(this)
+                oldField.replaceThisByStaticReference(this@JvmCachedDeclarations, oldParent, oldParent.thisReceiver!!)
                 origin = if (irProperty.parentAsClass.isCompanion) JvmLoweredDeclarationOrigin.COMPANION_PROPERTY_BACKING_FIELD else origin
             }
         }
@@ -150,39 +148,52 @@ class JvmCachedDeclarations(
         return defaultImplsMethods.getOrPut(interfaceFun) {
             val defaultImpls = getDefaultImplsClass(interfaceFun.parentAsClass)
 
+            // If `interfaceFun` is not a real implementation, then we're generating stubs in a descendant
+            // interface's DefaultImpls. For example,
+            //
+            //     interface I1 { fun f() { ... } }
+            //     interface I2 : I1
+            //
+            // is supposed to allow using `I2.DefaultImpls.f` as if it was inherited from `I1.DefaultImpls`.
+            // The classes are not actually related and `I2.DefaultImpls.f` is not a fake override but a bridge.
+            val defaultImplsOrigin = when {
+                !forCompatibilityMode && !interfaceFun.isFakeOverride ->
+                    when {
+                        interfaceFun.origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER ->
+                            interfaceFun.origin
+                        interfaceFun.origin.isSynthetic ->
+                            JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS_SYNTHETIC
+                        else ->
+                            JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS
+                    }
+                interfaceFun.resolveFakeOverride()!!.origin.isSynthetic ->
+                    if (forCompatibilityMode)
+                        JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY_SYNTHETIC
+                    else
+                        JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_TO_SYNTHETIC
+                else ->
+                    if (forCompatibilityMode)
+                        JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY
+                    else
+                        JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE
+            }
+
+            // Interface functions are public or private, with one exception: clone in Cloneable, which is protected.
+            // However, Cloneable has no DefaultImpls, so this merely replicates the incorrect behavior of the old backend.
+            // We should rather not generate a bridge to clone when interface inherits from Cloneable at all.
+            val defaultImplsVisibility =
+                if (DescriptorVisibilities.isPrivate(interfaceFun.visibility))
+                    DescriptorVisibilities.PRIVATE
+                else
+                    DescriptorVisibilities.PUBLIC
+
             context.irFactory.createStaticFunctionWithReceivers(
                 defaultImpls, interfaceFun.name, interfaceFun,
                 dispatchReceiverType = parent.defaultType,
-                // If `interfaceFun` is not a real implementation, then we're generating stubs in a descendant
-                // interface's DefaultImpls. For example,
-                //
-                //     interface I1 { fun f() { ... } }
-                //     interface I2 : I1
-                //
-                // is supposed to allow using `I2.DefaultImpls.f` as if it was inherited from `I1.DefaultImpls`.
-                // The classes are not actually related and `I2.DefaultImpls.f` is not a fake override but a bridge.
-                origin = when {
-                    !forCompatibilityMode && !interfaceFun.isFakeOverride ->
-                        when {
-                            interfaceFun.origin == IrDeclarationOrigin.FUNCTION_FOR_DEFAULT_PARAMETER -> interfaceFun.origin
-                            interfaceFun.origin.isSynthetic -> JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS_SYNTHETIC
-                            else -> JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_WITH_MOVED_RECEIVERS
-                        }
-                    interfaceFun.resolveFakeOverride()!!.origin.isSynthetic ->
-                        if (forCompatibilityMode) JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY_SYNTHETIC
-                        else JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_TO_SYNTHETIC
-                    else ->
-                        if (forCompatibilityMode) JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE_FOR_COMPATIBILITY
-                        else JvmLoweredDeclarationOrigin.DEFAULT_IMPLS_BRIDGE
-                },
+                origin = defaultImplsOrigin,
                 // Old backend doesn't generate ACC_FINAL on DefaultImpls methods.
                 modality = Modality.OPEN,
-
-                // Interface functions are public or private, with one exception: clone in Cloneable, which is protected.
-                // However, Cloneable has no DefaultImpls, so this merely replicates the incorrect behavior of the old backend.
-                // We should rather not generate a bridge to clone when interface inherits from Cloneable at all.
-                visibility = if (interfaceFun.visibility == DescriptorVisibilities.PRIVATE) DescriptorVisibilities.PRIVATE else DescriptorVisibilities.PUBLIC,
-
+                visibility = defaultImplsVisibility,
                 isFakeOverride = false,
                 typeParametersFromContext = parent.typeParameters
             ).also {

@@ -61,8 +61,8 @@ fun CompilerConfiguration.setupJvmSpecificArguments(arguments: K2JVMCompilerArgu
             }
         } else {
             messageCollector.report(
-                ERROR, "Unknown `string-concat` mode: ${arguments.jvmTarget}\n" +
-                        "Supported versions: ${JvmStringConcat.values().joinToString { it.name.toLowerCase() }}"
+                ERROR, "Unknown -Xstring-concat mode: ${arguments.jvmTarget}\n" +
+                        "Supported versions: ${JvmStringConcat.values().joinToString { it.description }}"
             )
         }
     }
@@ -231,6 +231,7 @@ fun CompilerConfiguration.configureAdvancedJvmOptions(arguments: K2JVMCompilerAr
     put(CLIConfigurationKeys.ALLOW_KOTLIN_PACKAGE, arguments.allowKotlinPackage)
     put(JVMConfigurationKeys.USE_SINGLE_MODULE, arguments.singleModule)
     put(JVMConfigurationKeys.USE_OLD_SPILLED_VAR_TYPE_ANALYSIS, arguments.useOldSpilledVarTypeAnalysis)
+    put(JVMConfigurationKeys.USE_OLD_INLINE_CLASSES_MANGLING_SCHEME, arguments.useOldInlineClassesManglingScheme)
 
     arguments.declarationsOutputPath?.let { put(JVMConfigurationKeys.DECLARATIONS_JSON_PATH, it) }
 }

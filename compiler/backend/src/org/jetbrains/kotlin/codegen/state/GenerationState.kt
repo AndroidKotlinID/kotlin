@@ -195,6 +195,10 @@ class GenerationState private constructor(
 
     val languageVersionSettings = configuration.languageVersionSettings
 
+    val useOldManglingSchemeForFunctionsWithInlineClassesInSignatures =
+        configuration.getBoolean(JVMConfigurationKeys.USE_OLD_INLINE_CLASSES_MANGLING_SCHEME) ||
+                languageVersionSettings.languageVersion.run { major == 1 && minor < 4 }
+
     val target = configuration.get(JVMConfigurationKeys.JVM_TARGET) ?: JvmTarget.DEFAULT
     val runtimeStringConcat =
         if (target.bytecodeVersion >= JvmTarget.JVM_9.bytecodeVersion)
@@ -214,6 +218,7 @@ class GenerationState private constructor(
         classBuilderMode,
         this.moduleName,
         languageVersionSettings,
+        useOldManglingSchemeForFunctionsWithInlineClassesInSignatures,
         IncompatibleClassTrackerImpl(extraJvmDiagnosticsTrace),
         target,
         isIrBackend
@@ -318,6 +323,7 @@ class GenerationState private constructor(
                     else
                         BuilderFactoryForDuplicateSignatureDiagnostics(
                             it, bindingContext, diagnostics, this.moduleName, languageVersionSettings,
+                            useOldManglingSchemeForFunctionsWithInlineClassesInSignatures,
                             shouldGenerate = { origin -> !shouldOnlyCollectSignatures(origin) },
                         ).apply { duplicateSignatureFactory = this }
                 },

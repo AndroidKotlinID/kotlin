@@ -46,12 +46,14 @@ class JavaClassCacheManager(val file: File) : Closeable {
             is SourcesToReprocess.Incremental -> {
                 val toReprocess = filesToReprocess.toReprocess.toMutableSet()
 
-                val isolatingGenerated = aptCache.invalidateIsolatingGenerated(toReprocess)
-                val generatedDirtyTypes = javaCache.invalidateGeneratedTypes(isolatingGenerated).toMutableSet()
+                val (invalidatedIsolatingGenerated, invalidatedIsolatingId) = aptCache.invalidateIsolatingGenerated(toReprocess)
+                val generatedDirtyTypes = javaCache.invalidateGeneratedTypes(invalidatedIsolatingGenerated).toMutableSet() /*+*/
 
+                val aggregatedTypes = mutableListOf<String>()
                 if (!toReprocess.isEmpty()) {
                     // only if there are some files to reprocess we should invalidate the aggregating ones
-                    val aggregatingGenerated = aptCache.invalidateAggregating()
+                    val (aggregatingGenerated, aggregatedTypes1) = aptCache.invalidateAggregating()
+                    aggregatedTypes.addAll(aggregatedTypes1)
                     generatedDirtyTypes.addAll(javaCache.invalidateGeneratedTypes(aggregatingGenerated))
 
                     toReprocess.addAll(
@@ -59,7 +61,14 @@ class JavaClassCacheManager(val file: File) : Closeable {
                     )
                 }
 
-                SourcesToReprocess.Incremental(toReprocess.toList(), generatedDirtyTypes)
+                SourcesToReprocess.Incremental(
+                    toReprocess.toList(),
+                    generatedDirtyTypes,
+                    aggregatedTypes.also {
+                        it.removeAll(filesToReprocess.dirtyTypes)
+                        it.removeAll(generatedDirtyTypes)
+                        it.removeAll(invalidatedIsolatingId)
+                    })
             }
         }
     }
@@ -118,6 +127,11 @@ class JavaClassCacheManager(val file: File) : Closeable {
 }
 
 sealed class SourcesToReprocess {
-    class Incremental(val toReprocess: List<File>, val dirtyTypes: Set<String>) : SourcesToReprocess()
+    class Incremental(
+        val toReprocess: List<File>,
+        val dirtyTypes: Set<String>,
+        val unchangedAggregatedTypes: List<String>
+    ) : SourcesToReprocess()
+
     object FullRebuild : SourcesToReprocess()
 }

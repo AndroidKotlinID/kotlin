@@ -259,6 +259,7 @@ val IrClass.isInterface get() = kind == ClassKind.INTERFACE
 val IrClass.isClass get() = kind == ClassKind.CLASS
 val IrClass.isObject get() = kind == ClassKind.OBJECT
 val IrClass.isAnonymousObject get() = isClass && name == SpecialNames.NO_NAME_PROVIDED
+val IrClass.isNonCompanionObject: Boolean get() = isObject && !isCompanion
 val IrDeclarationWithName.fqNameWhenAvailable: FqName?
     get() = when (val parent = parent) {
         is IrDeclarationWithName -> parent.fqNameWhenAvailable?.child(name)
@@ -525,7 +526,16 @@ fun IrMemberAccessExpression<*>.getTypeSubstitutionMap(irFunction: IrFunction): 
 
     val result = mutableMapOf<IrTypeParameterSymbol, IrType>()
     if (dispatchReceiverTypeArguments.isNotEmpty()) {
-        val parentTypeParameters = extractTypeParameters(irFunction.parentClassOrNull!!)
+        val parentTypeParameters =
+            if (irFunction is IrConstructor) {
+                val constructedClass = irFunction.parentAsClass
+                if (!constructedClass.isInner && dispatchReceiver != null) {
+                    throw AssertionError("Non-inner class constructor reference with dispatch receiver:\n${this.dump()}")
+                }
+                extractTypeParameters(constructedClass.parent as IrClass)
+            } else {
+                extractTypeParameters(irFunction.parentClassOrNull!!)
+            }
         parentTypeParameters.withIndex().forEach { (index, typeParam) ->
             dispatchReceiverTypeArguments[index].typeOrNull?.let {
                 result[typeParam.symbol] = it

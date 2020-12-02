@@ -21,7 +21,9 @@ import org.jetbrains.kotlin.fir.java.enhancement.readOnlyToMutable
 import org.jetbrains.kotlin.fir.references.builder.buildErrorNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolvedAnnotations
+import org.jetbrains.kotlin.fir.resolve.bindSymbolToLookupTag
 import org.jetbrains.kotlin.fir.resolve.defaultType
+import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeUnresolvedReferenceError
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.getClassDeclaredCallableSymbols
 import org.jetbrains.kotlin.fir.resolve.toSymbol
@@ -31,6 +33,7 @@ import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
@@ -418,16 +421,51 @@ private fun FirRegularClass.createRawArguments(
     computeRawProjection(session, typeParameter, position, erasedUpperBound)
 }
 
+private fun FirAnnotationCallBuilder.buildArgumentMapping(
+    session: FirSession,
+    javaTypeParameterStack: JavaTypeParameterStack,
+    classId: ClassId?,
+    annotationArguments: Collection<JavaAnnotationArgument>
+): LinkedHashMap<FirExpression, FirValueParameter>? {
+    if (classId == null) {
+        annotationTypeRef = buildErrorTypeRef { diagnostic = ConeUnresolvedReferenceError() }
+        return null
+    }
+    val lookupTag = ConeClassLikeLookupTagImpl(classId)
+    annotationTypeRef = buildResolvedTypeRef {
+        type = ConeClassLikeTypeImpl(lookupTag, emptyArray(), isNullable = false)
+    }
+    if (annotationArguments.any { it.name != null }) {
+        val mapping = linkedMapOf<FirExpression, FirValueParameter>()
+        val annotationClassSymbol = session.firSymbolProvider.getClassLikeSymbolByFqName(classId).also {
+            lookupTag.bindSymbolToLookupTag(session, it)
+        }
+        if (annotationClassSymbol != null) {
+            val annotationConstructor =
+                (annotationClassSymbol.fir as FirRegularClass).declarations.filterIsInstance<FirConstructor>().first()
+            for (argument in annotationArguments) {
+                mapping[argument.toFirExpression(session, javaTypeParameterStack)] =
+                    annotationConstructor.valueParameters.find { it.name == (argument.name ?: JavaSymbolProvider.VALUE_METHOD_NAME) }
+                        ?: return null
+            }
+            return mapping
+        }
+    }
+    return null
+}
+
 internal fun JavaAnnotation.toFirAnnotationCall(
     session: FirSession, javaTypeParameterStack: JavaTypeParameterStack
 ): FirAnnotationCall {
     return buildAnnotationCall {
-        annotationTypeRef = buildResolvedTypeRef {
-            type = ConeClassLikeTypeImpl(FirRegularClassSymbol(classId!!).toLookupTag(), emptyArray(), isNullable = false)
-        }
-        argumentList = buildArgumentList {
-            for (argument in this@toFirAnnotationCall.arguments) {
-                arguments += argument.toFirExpression(session, javaTypeParameterStack)
+        val mapping = buildArgumentMapping(session, javaTypeParameterStack, classId, arguments)
+        argumentList = if (mapping != null) {
+            buildResolvedArgumentList(mapping)
+        } else {
+            buildArgumentList {
+                for (argument in this@toFirAnnotationCall.arguments) {
+                    arguments += argument.toFirExpression(session, javaTypeParameterStack)
+                }
             }
         }
         calleeReference = FirReferencePlaceholderForResolvedAnnotations

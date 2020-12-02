@@ -44,6 +44,7 @@ import org.jetbrains.kotlin.codegen.when.SwitchCodegen;
 import org.jetbrains.kotlin.codegen.when.SwitchCodegenProvider;
 import org.jetbrains.kotlin.config.ApiVersion;
 import org.jetbrains.kotlin.config.JVMAssertionsMode;
+import org.jetbrains.kotlin.config.JVMConfigurationKeys;
 import org.jetbrains.kotlin.config.LanguageFeature;
 import org.jetbrains.kotlin.descriptors.*;
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor;
@@ -374,22 +375,17 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         FunctionDescriptor functionDescriptor = (FunctionDescriptor) descriptor;
         if (!functionDescriptor.isSuspend()) return stackValue;
 
+        // When we call suspend operator fun invoke using parens, we cannot box receiver as return type inline class
+        if (resolvedCall instanceof VariableAsFunctionResolvedCall &&
+            functionDescriptor.isOperator() && functionDescriptor.getName().getIdentifier().equals("invoke")
+        ) return stackValue;
+
         KotlinType unboxedInlineClass = CoroutineCodegenUtilKt
                 .originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass(functionDescriptor, typeMapper);
 
         StackValue stackValueToWrap = stackValue;
-        KotlinType originalKotlinType;
-        if (unboxedInlineClass != null) {
-            originalKotlinType = unboxedInlineClass;
-        } else {
-            originalKotlinType = stackValueToWrap.kotlinType;
-        }
-        Type originalType;
-        if (unboxedInlineClass != null) {
-            originalType = typeMapper.mapType(unboxedInlineClass);
-        } else {
-            originalType = stackValueToWrap.type;
-        }
+        KotlinType originalKotlinType = unboxedInlineClass != null ? unboxedInlineClass : stackValueToWrap.kotlinType;
+        Type originalType = unboxedInlineClass != null ? typeMapper.mapType(unboxedInlineClass) : stackValueToWrap.type;
 
         stackValue = new StackValue(originalType, originalKotlinType) {
             @Override
@@ -1194,7 +1190,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             ClassDescriptor captureThis = closure.getCapturedOuterClassDescriptor();
             if (captureThis != null) {
                 StackValue thisOrOuter = generateThisOrOuter(captureThis, false);
-                assert !isPrimitive(thisOrOuter.type) || captureThis.isInline() :
+                assert !isPrimitive(thisOrOuter.type) || InlineClassesUtilsKt.isInlineClass(captureThis) :
                         "This or outer for " + captureThis + " should be non-primitive: " + thisOrOuter.type;
                 callGenerator.putCapturedValueOnStack(thisOrOuter, thisOrOuter.type, paramIndex++);
             }
@@ -2684,7 +2680,21 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             fd = ArgumentGeneratorKt.getFunctionWithDefaultArguments(fd);
         }
 
-        return typeMapper.mapToCallableMethod(fd, superCall, null, resolvedCall);
+        CallableMethod method = typeMapper.mapToCallableMethod(fd, superCall, null, resolvedCall);
+
+        if (method.getAsmMethod().getName().contains("-") &&
+            !state.getConfiguration().getBoolean(JVMConfigurationKeys.USE_OLD_INLINE_CLASSES_MANGLING_SCHEME)
+        ) {
+            Boolean classFileContainsMethod =
+                    InlineClassesCodegenUtilKt.classFileContainsMethod(fd, state, method.getAsmMethod());
+            if (classFileContainsMethod != null && !classFileContainsMethod) {
+                typeMapper.setUseOldManglingRulesForFunctionAcceptingInlineClass(true);
+                method = typeMapper.mapToCallableMethod(fd, superCall, null, resolvedCall);
+                typeMapper.setUseOldManglingRulesForFunctionAcceptingInlineClass(false);
+            }
+        }
+
+        return method;
     }
 
     public void invokeMethodWithArguments(
@@ -2900,6 +2910,17 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
 
         sourceCompiler.initializeInlineFunctionContext(functionDescriptor);
         JvmMethodSignature signature = typeMapper.mapSignatureWithGeneric(functionDescriptor, sourceCompiler.getContextKind());
+        if (signature.getAsmMethod().getName().contains("-") &&
+            !state.getConfiguration().getBoolean(JVMConfigurationKeys.USE_OLD_INLINE_CLASSES_MANGLING_SCHEME)
+        ) {
+            Boolean classFileContainsMethod =
+                    InlineClassesCodegenUtilKt.classFileContainsMethod(functionDescriptor, state, signature.getAsmMethod());
+            if (classFileContainsMethod != null && !classFileContainsMethod) {
+                typeMapper.setUseOldManglingRulesForFunctionAcceptingInlineClass(true);
+                signature = typeMapper.mapSignatureWithGeneric(functionDescriptor, sourceCompiler.getContextKind());
+                typeMapper.setUseOldManglingRulesForFunctionAcceptingInlineClass(false);
+            }
+        }
         Type methodOwner = typeMapper.mapImplementationOwner(functionDescriptor);
         if (isDefaultCompilation) {
             return new InlineCodegenForDefaultBody(functionDescriptor, this, state, methodOwner, signature, sourceCompiler);
@@ -4809,7 +4830,7 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             ReceiverParameterDescriptor dispatchReceiver = constructor.getDispatchReceiverParameter();
             ClassDescriptor containingDeclaration = constructor.getContainingDeclaration();
 
-            if (!containingDeclaration.isInline()) {
+            if (!InlineClassesUtilsKt.isInlineClass(containingDeclaration)) {
                 v.anew(objectType);
                 v.dup();
             }

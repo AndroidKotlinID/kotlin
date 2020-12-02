@@ -32,7 +32,7 @@ buildscript {
 }
 
 plugins {
-    id "com.gradle.enterprise" version "3.4.1"
+    id "com.gradle.enterprise" version "3.5"
 }
 
 def buildProperties = BuildPropertiesKt.getKotlinBuildPropertiesForSettings(settings)
@@ -43,7 +43,7 @@ gradleEnterprise {
         if (buildProperties.buildScanServer != null) {
             server = buildProperties.buildScanServer
             allowUntrustedServer = true
-            captureTaskInputFiles = false
+            captureTaskInputFiles = true
             publishAlways()
         } else {
             setTermsOfServiceUrl("https://gradle.com/terms-of-service")

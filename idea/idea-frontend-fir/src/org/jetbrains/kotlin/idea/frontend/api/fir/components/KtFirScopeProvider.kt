@@ -14,8 +14,8 @@ import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.impl.*
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacade
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacadeForCompletion
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.getFirFile
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
 import org.jetbrains.kotlin.idea.frontend.api.ValidityTokenOwner
@@ -40,12 +40,13 @@ import java.util.*
 
 internal class KtFirScopeProvider(
     analysisSession: KtAnalysisSession,
-    private val builder: KtSymbolByFirBuilder,
+    builder: KtSymbolByFirBuilder,
     private val project: Project,
     firResolveState: FirModuleResolveState,
     override val token: ValidityToken,
 ) : KtScopeProvider(), ValidityTokenOwner {
     override val analysisSession: KtAnalysisSession by weakRef(analysisSession)
+    private val builder by weakRef(builder)
     private val firResolveState by weakRef(firResolveState)
     private val firScopeStorage = FirScopeRegistry()
 
@@ -133,13 +134,13 @@ internal class KtFirScopeProvider(
     }
 
     private fun buildCompletionContextForEnclosingDeclaration(
-        originalFile: KtFile,
+        ktFile: KtFile,
         positionInFakeFile: KtElement
     ): LowLevelFirApiFacadeForCompletion.FirCompletionContext {
-        val originalFirFile = LowLevelFirApiFacade.getFirFile(originalFile, firResolveState)
-        val declarationContext = EnclosingDeclarationContext.detect(originalFile, positionInFakeFile)
+        val firFile = ktFile.getFirFile(firResolveState)
+        val declarationContext = EnclosingDeclarationContext.detect(ktFile, positionInFakeFile)
 
-        return declarationContext.buildCompletionContext(originalFirFile, firResolveState)
+        return declarationContext.buildCompletionContext(firFile, firResolveState)
     }
 
     private fun convertToKtScope(firScope: FirScope): KtScope {

@@ -6,12 +6,12 @@
 package org.jetbrains.kotlin.fir.analysis.checkers.extended
 
 import com.intellij.lang.LighterASTNode
-import com.intellij.openapi.util.Ref
 import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirExpressionChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.getChildren
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
 import org.jetbrains.kotlin.fir.analysis.getChild
@@ -51,8 +51,8 @@ object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVari
                 needToReport = true
             }
         } else if (assignmentSource is FirLightSourceElement) {
-            val lValueLightTree = (lValue.source as FirLightSourceElement).element
-            val rValueLightTree = (rValue.source as FirLightSourceElement).element
+            val lValueLightTree = lValue.source!!.lighterASTNode
+            val rValueLightTree = rValue.source!!.lighterASTNode
             if (lightTreeMatcher(lValueLightTree, rValueLightTree, assignmentSource)) {
                 needToReport = true
             }
@@ -71,10 +71,8 @@ object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVari
         source: FirLightSourceElement,
         prevOperator: LighterASTNode? = null
     ): Boolean {
-        val tree = source.tree
-        val childrenNullable = Ref<Array<LighterASTNode?>>()
-        tree.getChildren(expression, childrenNullable)
-        val children = childrenNullable.get().filterNotNull()
+        val tree = source.treeStructure
+        val children = expression.getChildren(tree).filterNotNull()
 
         val operator = children.firstOrNull { it.tokenType == KtNodeTypes.OPERATION_REFERENCE }
         if (prevOperator != null && !isLightNodesHierarchicallyTrue(prevOperator, operator)) return false

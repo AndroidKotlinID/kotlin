@@ -83,13 +83,14 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleResolve
 import org.jetbrains.kotlin.idea.fir.AbstractKtDeclarationAndFirDeclarationEqualityChecker
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirLazyDeclarationResolveTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleLazyResolveTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.file.structure.AbstractFileStructureTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.file.structure.AbstractFileStructureAndOutOfBlockModificationTrackerConsistencyTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.AbstractSessionsInvalidationTest
 import org.jetbrains.kotlin.idea.folding.AbstractKotlinFoldingTest
 import org.jetbrains.kotlin.idea.frontend.api.fir.AbstractResolveCallTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.trackers.AbstractProjectWideOutOfBlockKotlinModificationTrackerTest
 import org.jetbrains.kotlin.idea.frontend.api.scopes.AbstractMemberScopeByFqNameTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolFromLibraryPointerRestoreTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolsByFqNameBuildingTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolFromSourcePointerRestoreTest
-import org.jetbrains.kotlin.idea.frontend.api.symbols.AbstractSymbolsByPsiBuildingTest
+import org.jetbrains.kotlin.idea.frontend.api.symbols.*
 import org.jetbrains.kotlin.idea.hierarchy.AbstractHierarchyTest
 import org.jetbrains.kotlin.idea.hierarchy.AbstractHierarchyWithLibTest
 import org.jetbrains.kotlin.idea.highlighter.*
@@ -1017,6 +1018,10 @@ fun main(args: Array<String>) {
             testClass<AbstractSymbolFromLibraryPointerRestoreTest> {
                 model("resoreSymbolFromLibrary", extension = "txt")
             }
+
+            testClass<AbstractMemoryLeakInSymbolsTest> {
+                model("symbolMemoryLeak")
+            }
         }
 
         testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/testData") {
@@ -1035,6 +1040,18 @@ fun main(args: Array<String>) {
             }
             testClass<AbstractFirLazyDeclarationResolveTest> {
                 model("lazyResolve")
+            }
+            testClass<AbstractProjectWideOutOfBlockKotlinModificationTrackerTest> {
+                model("outOfBlockProjectWide")
+            }
+            testClass<AbstractFileStructureAndOutOfBlockModificationTrackerConsistencyTest> {
+                model("outOfBlockProjectWide")
+            }
+            testClass<AbstractFileStructureTest> {
+                model("fileStructure")
+            }
+            testClass<AbstractSessionsInvalidationTest> {
+                model("sessionInvalidation", recursive = false, extension = null)
             }
         }
 

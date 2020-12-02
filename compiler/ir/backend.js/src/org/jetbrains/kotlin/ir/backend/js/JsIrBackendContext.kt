@@ -43,13 +43,11 @@ class JsIrBackendContext(
     val additionalExportedDeclarationNames: Set<FqName>,
     override val configuration: CompilerConfiguration, // TODO: remove configuration from backend context
     override val scriptMode: Boolean = false,
-    override val es6mode: Boolean = false
+    override val es6mode: Boolean = false,
+    val propertyLazyInitialization: Boolean = false,
 ) : JsCommonBackendContext {
-    override val transformedFunction
-        get() = error("Use Mapping.inlineClassMemberToStatic instead")
-
-    override val lateinitNullableFields
-        get() = error("Use Mapping.lateInitFieldToNullableField instead")
+    val fileToInitializationFuns: MutableMap<IrFile, IrSimpleFunction?> = mutableMapOf()
+    val fileToInitializerPureness: MutableMap<IrFile, Boolean> = mutableMapOf()
 
     override val extractedLocalClasses: MutableSet<IrClass> = hashSetOf()
 
@@ -76,9 +74,6 @@ class JsIrBackendContext(
     val declarationLevelJsModules = mutableListOf<IrDeclarationWithName>()
 
     private val internalPackageFragmentDescriptor = EmptyPackageFragmentDescriptor(builtIns.builtInsModule, FqName("kotlin.js.internal"))
-    val implicitDeclarationFile = run {
-        syntheticFile("implicitDeclarations", irModuleFragment)
-    }
 
     private fun syntheticFile(name: String, module: IrModuleFragment): IrFile {
         return IrFileImpl(object : SourceManager.FileEntry {

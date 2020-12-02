@@ -6,21 +6,23 @@
 package org.jetbrains.kotlin.fir.backend.generators
 
 import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.fir.FirFakeSourceElementKind
 import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirNoReceiverExpression
-import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.fir.references.FirDelegateFieldReference
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirSuperReference
+import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolvedAnnotations
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.calls.getExpectedTypeForSAMConversion
 import org.jetbrains.kotlin.fir.resolve.calls.isFunctional
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
+import org.jetbrains.kotlin.fir.resolve.inference.isKMutableProperty
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -34,7 +36,6 @@ import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.psi.KtPropertyDelegate
 import org.jetbrains.kotlin.psi2ir.generators.hasNoSideEffects
 import org.jetbrains.kotlin.types.AbstractTypeApproximator
 
@@ -58,16 +59,20 @@ class CallAndReferenceGenerator(
         val symbol =
             callableReferenceAccess.calleeReference.toSymbolForCall(session, classifierStorage, declarationStorage, conversionScope)
         val type = callableReferenceAccess.typeRef.toIrType()
-        fun propertyOrigin(): IrStatementOrigin? =
-            when (callableReferenceAccess.source?.psi?.parent) {
-                is KtPropertyDelegate -> IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE
-                else -> null
-            }
+        // val x by y ->
+        //   val `x$delegate` = y
+        //   val x get() = `x$delegate`.getValue(this, ::x)
+        // The reference here (like the rest of the accessor) has DefaultAccessor source kind.
+        val isForDelegate = callableReferenceAccess.source?.kind == FirFakeSourceElementKind.DefaultAccessor
+        val origin = if (isForDelegate) IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE else null
         return callableReferenceAccess.convertWithOffsets { startOffset, endOffset ->
             when (symbol) {
                 is IrPropertySymbol -> {
                     val referencedProperty = symbol.owner
                     val referencedPropertyGetter = referencedProperty.getter
+                    val referencedPropertySetterSymbol =
+                        if (callableReferenceAccess.typeRef.coneType.isKMutableProperty(session)) referencedProperty.setter?.symbol
+                        else null
                     val backingFieldSymbol = when {
                         referencedPropertyGetter != null -> null
                         else -> referencedProperty.backingField?.symbol
@@ -75,19 +80,19 @@ class CallAndReferenceGenerator(
                     IrPropertyReferenceImpl(
                         startOffset, endOffset, type, symbol,
                         typeArgumentsCount = referencedPropertyGetter?.typeParameters?.size ?: 0,
-                        backingFieldSymbol,
-                        referencedPropertyGetter?.symbol,
-                        referencedProperty.setter?.symbol,
-                        propertyOrigin()
+                        field = backingFieldSymbol,
+                        getter = referencedPropertyGetter?.symbol,
+                        setter = referencedPropertySetterSymbol,
+                        origin = origin
                     )
                 }
                 is IrLocalDelegatedPropertySymbol -> {
                     IrLocalDelegatedPropertyReferenceImpl(
                         startOffset, endOffset, type, symbol,
-                        symbol.owner.delegate.symbol,
-                        symbol.owner.getter.symbol,
-                        symbol.owner.setter?.symbol,
-                        IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE
+                        delegate = symbol.owner.delegate.symbol,
+                        getter = symbol.owner.getter.symbol,
+                        setter = symbol.owner.setter?.symbol,
+                        origin = origin
                     )
                 }
                 is IrFieldSymbol -> {
@@ -104,10 +109,10 @@ class CallAndReferenceGenerator(
                         startOffset, endOffset, type,
                         propertySymbol,
                         typeArgumentsCount = (type as? IrSimpleType)?.arguments?.size ?: 0,
-                        symbol,
+                        field = symbol,
                         getter = if (referencedField.isStatic) null else propertySymbol.owner.getter?.symbol,
                         setter = if (referencedField.isStatic) null else propertySymbol.owner.setter?.symbol,
-                        propertyOrigin()
+                        origin
                     )
                 }
                 is IrConstructorSymbol -> {
@@ -441,8 +446,14 @@ class CallAndReferenceGenerator(
                             is FirDelegatedConstructorCall -> call.calleeReference
                             is FirAnnotationCall -> call.calleeReference
                             else -> null
-                        } as? FirResolvedNamedReference
-                        val function = (calleeReference?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
+                        }
+                        val function = if (calleeReference == FirReferencePlaceholderForResolvedAnnotations) {
+                            val coneClassLikeType = (call as FirAnnotationCall).annotationTypeRef.coneTypeSafe<ConeClassLikeType>()
+                            val firClass = (coneClassLikeType?.lookupTag?.toSymbol(session) as? FirRegularClassSymbol)?.fir
+                            firClass?.declarations?.filterIsInstance<FirConstructor>()?.firstOrNull()
+                        } else {
+                            ((calleeReference as? FirResolvedNamedReference)?.resolvedSymbol as? FirFunctionSymbol<*>)?.fir
+                        }
                         val valueParameters = function?.valueParameters
                         val argumentMapping = call.argumentMapping
                         if (argumentMapping != null && (annotationMode || argumentMapping.isNotEmpty())) {
@@ -555,11 +566,13 @@ class CallAndReferenceGenerator(
             }
         }
         with(adapterGenerator) {
-            irArgument = irArgument.applySuspendConversionIfNeeded(argument, parameter)
+            if (parameter?.returnTypeRef is FirResolvedTypeRef) {
+                // Java type case (from annotations)
+                irArgument = irArgument.applySuspendConversionIfNeeded(argument, parameter)
+                irArgument = irArgument.applySamConversionIfNeeded(argument, parameter)
+            }
         }
-        return irArgument
-            .applySamConversionIfNeeded(argument, parameter)
-            .applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
+        return irArgument.applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
     }
 
     private fun IrExpression.applySamConversionIfNeeded(

@@ -14,11 +14,11 @@ import org.jetbrains.kotlin.KtNodeTypes.TYPE_ARGUMENT_LIST
 import org.jetbrains.kotlin.fir.FirLightSourceElement
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
+import org.jetbrains.kotlin.fir.analysis.checkers.getChildren
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
-import org.jetbrains.kotlin.fir.lightNode
 import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.psi.KtTypeArgumentList
 
@@ -38,12 +38,12 @@ object FirTypeArgumentsNotAllowedExpressionChecker : FirQualifiedAccessChecker()
 
     private fun FirSourceElement.hasAnyArguments(): Boolean {
         val localPsi = this.psi
-        val localLight = this.lightNode
+        val localLight = this.lighterASTNode
 
         if (localPsi != null && localPsi !is PsiErrorElement) {
             return localPsi.hasAnyArguments()
-        } else if (localLight != null && this is FirLightSourceElement) {
-            return localLight.hasAnyArguments(this.tree)
+        } else if (this is FirLightSourceElement) {
+            return localLight.hasAnyArguments(this.treeStructure)
         }
 
         return false
@@ -57,12 +57,6 @@ object FirTypeArgumentsNotAllowedExpressionChecker : FirQualifiedAccessChecker()
     private fun LighterASTNode.hasAnyArguments(tree: FlyweightCapableTreeStructure<LighterASTNode>): Boolean {
         val children = getChildren(tree)
         return children.count { it != null } > 1 && children[1]?.tokenType == TYPE_ARGUMENT_LIST
-    }
-
-    private fun LighterASTNode.getChildren(tree: FlyweightCapableTreeStructure<LighterASTNode>): Array<out LighterASTNode?> {
-        val childrenRef = Ref<Array<LighterASTNode>>()
-        val childCount = tree.getChildren(this, childrenRef)
-        return if (childCount > 0) childrenRef.get() else emptyArray()
     }
 
     private fun DiagnosticReporter.report(source: FirSourceElement?) {

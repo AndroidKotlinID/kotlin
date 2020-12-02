@@ -486,7 +486,7 @@ class DeclarationsConverter(
 
                     //parse data class
                     if (modifiers.isDataClass() && firPrimaryConstructor != null) {
-                        val zippedParameters = properties.map { it.source?.lightNode!! to it }
+                        val zippedParameters = properties.map { it.source!!.lighterASTNode to it }
                         DataClassMembersGenerator(
                             baseSession,
                             classNode,
@@ -999,11 +999,23 @@ class DeclarationsConverter(
 
                     val convertedAccessors = accessors.map { convertGetterOrSetter(it, returnType, propertyVisibility, modifiers) }
                     this.getter = convertedAccessors.find { it.isGetter }
-                        ?: FirDefaultPropertyGetter(null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility)
+                        ?: FirDefaultPropertyGetter(
+                            null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
+                        ).also {
+                            currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
+                                it.containingClassAttr = lookupTag
+                            }
+                        }
                     this.setter =
                         if (isVar) {
                             convertedAccessors.find { it.isSetter }
-                                ?: FirDefaultPropertySetter(null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility)
+                                ?: FirDefaultPropertySetter(
+                                    null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
+                                ).also {
+                                    currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
+                                        it.containingClassAttr = lookupTag
+                                    }
+                                }
                         } else null
 
                     // Upward propagation of `inline` and `external` modifiers (from accessors to property)
@@ -1173,6 +1185,9 @@ class DeclarationsConverter(
             context.firFunctionTargets.removeLast()
         }.also {
             target.bind(it)
+            currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
+                it.containingClassAttr = lookupTag
+            }
         }
     }
 
@@ -1697,7 +1712,8 @@ class DeclarationsConverter(
         if (identifier == null)
             return buildErrorTypeRef { diagnostic = ConeSimpleDiagnostic("Incomplete user type", DiagnosticKind.Syntax) }
 
-        val theSource = userType.toFirSourceElement()
+        // Note: we take TYPE_REFERENCE, not USER_TYPE, as the source (to be consistent with RawFirBuilder)
+        val theSource = tree.getParent(userType)!!.toFirSourceElement()
         val qualifierPart = FirQualifierPartImpl(
             identifier.nameAsSafeName(),
             FirTypeArgumentListImpl(theSource).apply {
