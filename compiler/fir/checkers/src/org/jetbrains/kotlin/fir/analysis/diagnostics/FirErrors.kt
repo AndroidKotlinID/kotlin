@@ -12,7 +12,9 @@ import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertyAccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
@@ -147,6 +149,23 @@ object FirErrors {
     val LOCAL_OBJECT_NOT_ALLOWED by error1<FirSourceElement, KtNamedDeclaration, Name>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val LOCAL_INTERFACE_NOT_ALLOWED by error1<FirSourceElement, KtNamedDeclaration, Name>(SourceElementPositioningStrategies.DECLARATION_NAME)
 
+    // Properties & accessors
+    val ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
+    val PRIVATE_PROPERTY_IN_INTERFACE by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+
+    val ABSTRACT_PROPERTY_WITH_INITIALIZER by error1<FirSourceElement, PsiElement, FirExpression>()
+    val PROPERTY_INITIALIZER_IN_INTERFACE by error1<FirSourceElement, PsiElement, FirExpression>()
+    val PROPERTY_WITH_NO_TYPE_NO_INITIALIZER by error1<FirSourceElement, PsiElement, FirPropertySymbol>()
+
+    val ABSTRACT_DELEGATED_PROPERTY by error1<FirSourceElement, PsiElement, FirExpression>()
+    val DELEGATED_PROPERTY_IN_INTERFACE by error1<FirSourceElement, PsiElement, FirExpression>()
+    // TODO: val ACCESSOR_FOR_DELEGATED_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+
+    val ABSTRACT_PROPERTY_WITH_GETTER by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+    val ABSTRACT_PROPERTY_WITH_SETTER by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+    val PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+    val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+
     // Control flow diagnostics
     val UNINITIALIZED_VARIABLE by error1<FirSourceElement, PsiElement, FirPropertySymbol>()
     val WRONG_INVOCATION_KIND by warning3<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>, EventOccurrencesRange, EventOccurrencesRange>()
@@ -154,20 +173,20 @@ object FirErrors {
     val WRONG_IMPLIES_CONDITION by error0<FirSourceElement, PsiElement>()
 
     // Extended checkers group
-    val REDUNDANT_VISIBILITY_MODIFIER by warning0<FirSourceElement, PsiElement>()
-    val REDUNDANT_MODALITY_MODIFIER by warning0<FirSourceElement, PsiElement>()
+    val REDUNDANT_VISIBILITY_MODIFIER by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+    val REDUNDANT_MODALITY_MODIFIER by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
     val REDUNDANT_RETURN_UNIT_TYPE by warning0<FirSourceElement, PsiTypeElement>()
     val REDUNDANT_EXPLICIT_TYPE by warning0<FirSourceElement, PsiElement>()
     val REDUNDANT_SINGLE_EXPRESSION_STRING_TEMPLATE by warning0<FirSourceElement, PsiElement>()
-    val CAN_BE_VAL by warning0<FirSourceElement, PsiElement>()
-    val CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT by warning0<FirSourceElement, PsiElement>()
+    val CAN_BE_VAL by warning0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.VAL_OR_VAR_NODE)
+    val CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
     val REDUNDANT_CALL_OF_CONVERSION_METHOD by warning0<FirSourceElement, PsiElement>()
-    val ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_EQUALS by warning0<FirSourceElement, PsiElement>()
+    val ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_EQUALS by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
     val EMPTY_RANGE by warning0<FirSourceElement, PsiElement>()
     val REDUNDANT_SETTER_PARAMETER_TYPE by warning0<FirSourceElement, PsiElement>()
-    val UNUSED_VARIABLE by warning0<FirSourceElement, PsiElement>()
+    val UNUSED_VARIABLE by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val ASSIGNED_VALUE_IS_NEVER_READ by warning0<FirSourceElement, PsiElement>()
     val VARIABLE_INITIALIZER_IS_REDUNDANT by warning0<FirSourceElement, PsiElement>()
-    val VARIABLE_NEVER_READ by warning0<FirSourceElement, PsiElement>()
+    val VARIABLE_NEVER_READ by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val USELESS_CALL_ON_NOT_NULL by warning0<FirSourceElement, PsiElement>()
 }

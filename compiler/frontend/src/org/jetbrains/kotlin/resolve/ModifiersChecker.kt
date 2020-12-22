@@ -52,7 +52,7 @@ object ModifierCheckerCore {
         ABSTRACT_KEYWORD to EnumSet.of(CLASS_ONLY, LOCAL_CLASS, INTERFACE, MEMBER_PROPERTY, MEMBER_FUNCTION),
         OPEN_KEYWORD to EnumSet.of(CLASS_ONLY, LOCAL_CLASS, INTERFACE, MEMBER_PROPERTY, MEMBER_FUNCTION),
         FINAL_KEYWORD to EnumSet.of(CLASS_ONLY, LOCAL_CLASS, ENUM_CLASS, OBJECT, MEMBER_PROPERTY, MEMBER_FUNCTION),
-        SEALED_KEYWORD to EnumSet.of(CLASS_ONLY),
+        SEALED_KEYWORD to EnumSet.of(CLASS_ONLY, INTERFACE),
         INNER_KEYWORD to EnumSet.of(CLASS_ONLY),
         OVERRIDE_KEYWORD to EnumSet.of(MEMBER_PROPERTY, MEMBER_FUNCTION),
         PRIVATE_KEYWORD to defaultVisibilityTargets,
@@ -119,8 +119,7 @@ object ModifierCheckerCore {
         EXPECT_KEYWORD to listOf(LanguageFeature.MultiPlatformProjects),
         ACTUAL_KEYWORD to listOf(LanguageFeature.MultiPlatformProjects),
         LATEINIT_KEYWORD to listOf(LanguageFeature.LateinitTopLevelProperties, LanguageFeature.LateinitLocalVariables),
-        FUN_KEYWORD to listOf(LanguageFeature.FunctionalInterfaceConversion),
-        VALUE_KEYWORD to listOf(LanguageFeature.InlineClasses)
+        FUN_KEYWORD to listOf(LanguageFeature.FunctionalInterfaceConversion)
     )
 
     private val featureDependenciesTargets = mapOf(
@@ -128,6 +127,7 @@ object ModifierCheckerCore {
         LanguageFeature.LateinitLocalVariables to setOf(LOCAL_VARIABLE),
         LanguageFeature.LateinitTopLevelProperties to setOf(TOP_LEVEL_PROPERTY),
         LanguageFeature.InlineClasses to setOf(CLASS_ONLY),
+        LanguageFeature.JvmInlineValueClasses to setOf(CLASS_ONLY),
         LanguageFeature.FunctionalInterfaceConversion to setOf(INTERFACE)
     )
 

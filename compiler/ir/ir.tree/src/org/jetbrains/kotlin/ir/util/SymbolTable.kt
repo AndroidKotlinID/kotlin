@@ -901,7 +901,8 @@ class SymbolTable(
         valueParameterFactory: (IrValueParameterSymbol) -> IrValueParameter = {
             irFactory.createValueParameter(
                 startOffset, endOffset, origin, it, name ?: nameProvider.nameForDeclaration(descriptor),
-                descriptor.indexOrMinusOne, type, varargElementType, descriptor.isCrossinline, descriptor.isNoinline, false
+                descriptor.indexOrMinusOne, type, varargElementType, descriptor.isCrossinline, descriptor.isNoinline,
+                isHidden = false, isAssignable = false
             )
         }
     ): IrValueParameter =
@@ -1118,7 +1119,7 @@ fun SymbolTable.noUnboundLeft(message: String) {
     assert(unbound.isEmpty()) {
         "$message\n" +
                 unbound.joinToString("\n") {
-                    "$it ${it.signature?.toString() ?: "NON-PUBLIC API $it"}"
+                    "$it ${it.signature?.toString() ?: "(NON-PUBLIC API)"}"
                 }
     }
 }

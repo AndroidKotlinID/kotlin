@@ -7,6 +7,7 @@ plugins {
 val depenencyProjects = arrayOf(
     ":generators",
     ":compiler",
+    ":compiler:tests-for-compiler-generator",
     ":js:js.tests",
     ":compiler:tests-java8",
     ":core:descriptors.runtime"

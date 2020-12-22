@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.codegen.ir;
 import com.intellij.testFramework.TestDataPath;
 import org.jetbrains.kotlin.test.JUnit3RunnerWithInners;
 import org.jetbrains.kotlin.test.KotlinTestUtils;
+import org.jetbrains.kotlin.test.util.KtTestUtil;
 import org.jetbrains.kotlin.test.TargetBackend;
 import org.jetbrains.kotlin.test.TestMetadata;
 import org.junit.runner.RunWith;
@@ -25,12 +26,8 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM_IR, testDataFilePath);
     }
 
-    private void runTestWithPackageReplacement(String testDataFilePath, String packageName) throws Exception {
-        KotlinTestUtils.runTest(filePath -> doTestWithCoroutinesPackageReplacement(filePath, packageName), TargetBackend.JVM_IR, testDataFilePath);
-    }
-
     public void testAllFilesPresentInCompileKotlinAgainstKotlin() throws Exception {
-        KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
     }
 
     @TestMetadata("annotationInInterface.kt")
@@ -56,6 +53,11 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
     @TestMetadata("callsToMultifileClassFromOtherPackage.kt")
     public void testCallsToMultifileClassFromOtherPackage() throws Exception {
         runTest("compiler/testData/compileKotlinAgainstKotlin/callsToMultifileClassFromOtherPackage.kt");
+    }
+
+    @TestMetadata("clashingFakeOverrideSignatures.kt")
+    public void testClashingFakeOverrideSignatures() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/clashingFakeOverrideSignatures.kt");
     }
 
     @TestMetadata("classInObject.kt")
@@ -99,8 +101,8 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
     }
 
     @TestMetadata("coroutinesBinary.kt")
-    public void testCoroutinesBinary_1_3() throws Exception {
-        runTestWithPackageReplacement("compiler/testData/compileKotlinAgainstKotlin/coroutinesBinary.kt", "kotlin.coroutines");
+    public void testCoroutinesBinary() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/coroutinesBinary.kt");
     }
 
     @TestMetadata("defaultConstructor.kt")
@@ -146,6 +148,16 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
     @TestMetadata("expectClassActualTypeAlias.kt")
     public void testExpectClassActualTypeAlias() throws Exception {
         runTest("compiler/testData/compileKotlinAgainstKotlin/expectClassActualTypeAlias.kt");
+    }
+
+    @TestMetadata("importCompanion.kt")
+    public void testImportCompanion() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/importCompanion.kt");
+    }
+
+    @TestMetadata("inlineClassFakeOverrideMangling.kt")
+    public void testInlineClassFakeOverrideMangling() throws Exception {
+        runTest("compiler/testData/compileKotlinAgainstKotlin/inlineClassFakeOverrideMangling.kt");
     }
 
     @TestMetadata("inlineClassFromBinaryDependencies.kt")
@@ -412,7 +424,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         }
 
         public void testAllFilesPresentInFir() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/fir"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/fir"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
         }
 
         @TestMetadata("AnonymousObjectInProperty.kt")
@@ -423,6 +435,16 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         @TestMetadata("ExistingSymbolInFakeOverride.kt")
         public void testExistingSymbolInFakeOverride() throws Exception {
             runTest("compiler/testData/compileKotlinAgainstKotlin/fir/ExistingSymbolInFakeOverride.kt");
+        }
+
+        @TestMetadata("IncrementalCompilerRunner.kt")
+        public void testIncrementalCompilerRunner() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/IncrementalCompilerRunner.kt");
+        }
+
+        @TestMetadata("IrConstAcceptMultiModule.kt")
+        public void testIrConstAcceptMultiModule() throws Exception {
+            runTest("compiler/testData/compileKotlinAgainstKotlin/fir/IrConstAcceptMultiModule.kt");
         }
 
         @TestMetadata("LibraryProperty.kt")
@@ -440,7 +462,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         }
 
         public void testAllFilesPresentInJvm8() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
         }
 
         @TestMetadata("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults")
@@ -452,7 +474,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
             }
 
             public void testAllFilesPresentInDefaults() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
             }
 
             @TestMetadata("superCall.kt")
@@ -494,7 +516,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
                 }
 
                 public void testAllFilesPresentInAllCompatibility() throws Exception {
-                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/allCompatibility"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/allCompatibility"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
                 }
 
                 @TestMetadata("callStackTrace.kt")
@@ -541,7 +563,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
                     }
 
                     public void testAllFilesPresentInDelegationBy() throws Exception {
-                        KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/allCompatibility/delegationBy"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/allCompatibility/delegationBy"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
                     }
 
                     @TestMetadata("simple.kt")
@@ -565,7 +587,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
                 }
 
                 public void testAllFilesPresentInInterop() throws Exception {
-                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/interop"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/defaults/interop"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
                 }
 
                 @TestMetadata("likeMemberClash.kt")
@@ -614,7 +636,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
             }
 
             public void testAllFilesPresentInJvm8against6() throws Exception {
-                KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/jvm8against6"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/jvm8against6"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
             }
 
             @TestMetadata("jdk8Against6.kt")
@@ -656,7 +678,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
                 }
 
                 public void testAllFilesPresentInDelegation() throws Exception {
-                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/jvm8against6/delegation"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/jvm8/jvm8against6/delegation"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
                 }
 
                 @TestMetadata("diamond.kt")
@@ -686,7 +708,7 @@ public class IrCompileKotlinAgainstKotlinTestGenerated extends AbstractIrCompile
         }
 
         public void testAllFilesPresentInTypeAnnotations() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/typeAnnotations"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/compileKotlinAgainstKotlin/typeAnnotations"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
         }
 
         @TestMetadata("implicitReturn.kt")

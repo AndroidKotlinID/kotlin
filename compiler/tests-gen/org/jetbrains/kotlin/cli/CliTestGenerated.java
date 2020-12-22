@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.cli;
 import com.intellij.testFramework.TestDataPath;
 import org.jetbrains.kotlin.test.JUnit3RunnerWithInners;
 import org.jetbrains.kotlin.test.KotlinTestUtils;
+import org.jetbrains.kotlin.test.util.KtTestUtil;
 import org.jetbrains.kotlin.test.TestMetadata;
 import org.junit.runner.RunWith;
 
@@ -26,8 +27,18 @@ public class CliTestGenerated extends AbstractCliTest {
             KotlinTestUtils.runTest(this::doJvmTest, this, testDataFilePath);
         }
 
+        @TestMetadata("abiStabilityIncorrectValue.args")
+        public void testAbiStabilityIncorrectValue() throws Exception {
+            runTest("compiler/testData/cli/jvm/abiStabilityIncorrectValue.args");
+        }
+
+        @TestMetadata("abiStabilityUnstableWithOldBackend.args")
+        public void testAbiStabilityUnstableWithOldBackend() throws Exception {
+            runTest("compiler/testData/cli/jvm/abiStabilityUnstableWithOldBackend.args");
+        }
+
         public void testAllFilesPresentInJvm() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/jvm"), Pattern.compile("^(.+)\\.args$"), null, false);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/jvm"), Pattern.compile("^(.+)\\.args$"), null, false);
         }
 
         @TestMetadata("apiAndLanguageVersionsUnsupported.args")
@@ -530,6 +541,16 @@ public class CliTestGenerated extends AbstractCliTest {
             runTest("compiler/testData/cli/jvm/jvmDefaultAll.args");
         }
 
+        @TestMetadata("jvmRecordOk.args")
+        public void testJvmRecordOk() throws Exception {
+            runTest("compiler/testData/cli/jvm/jvmRecordOk.args");
+        }
+
+        @TestMetadata("jvmRecordWrongTarget.args")
+        public void testJvmRecordWrongTarget() throws Exception {
+            runTest("compiler/testData/cli/jvm/jvmRecordWrongTarget.args");
+        }
+
         @TestMetadata("kotlinHomeWithoutStdlib.args")
         public void testKotlinHomeWithoutStdlib() throws Exception {
             runTest("compiler/testData/cli/jvm/kotlinHomeWithoutStdlib.args");
@@ -875,7 +896,7 @@ public class CliTestGenerated extends AbstractCliTest {
         }
 
         public void testAllFilesPresentInJs() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/js"), Pattern.compile("^(.+)\\.args$"), null, false);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/js"), Pattern.compile("^(.+)\\.args$"), null, false);
         }
 
         @TestMetadata("createMetadata.args")
@@ -1068,7 +1089,7 @@ public class CliTestGenerated extends AbstractCliTest {
         }
 
         public void testAllFilesPresentInJs_dce() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/js-dce"), Pattern.compile("^(.+)\\.args$"), null, false);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/js-dce"), Pattern.compile("^(.+)\\.args$"), null, false);
         }
 
         @TestMetadata("dceExtraHelp.args")
@@ -1141,7 +1162,7 @@ public class CliTestGenerated extends AbstractCliTest {
         }
 
         public void testAllFilesPresentInMetadata() throws Exception {
-            KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/metadata"), Pattern.compile("^(.+)\\.args$"), null, false);
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/cli/metadata"), Pattern.compile("^(.+)\\.args$"), null, false);
         }
 
         @TestMetadata("kotlinPackage.args")
