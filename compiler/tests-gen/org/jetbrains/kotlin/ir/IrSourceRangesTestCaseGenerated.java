@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -42,6 +42,11 @@ public class IrSourceRangesTestCaseGenerated extends AbstractIrSourceRangesTestC
     @TestMetadata("kt17108.kt")
     public void testKt17108() throws Exception {
         runTest("compiler/testData/ir/sourceRanges/kt17108.kt");
+    }
+
+    @TestMetadata("kt24258.kt")
+    public void testKt24258() throws Exception {
+        runTest("compiler/testData/ir/sourceRanges/kt24258.kt");
     }
 
     @TestMetadata("compiler/testData/ir/sourceRanges/declarations")

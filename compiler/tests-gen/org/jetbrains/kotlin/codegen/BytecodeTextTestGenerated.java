@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -1513,6 +1513,16 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             @TestMetadata("simple.kt")
             public void testSimple() throws Exception {
                 runTest("compiler/testData/codegen/bytecodeText/coroutines/cleanup/simple.kt");
+            }
+
+            @TestMetadata("twoRefs.kt")
+            public void testTwoRefs() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/coroutines/cleanup/twoRefs.kt");
+            }
+
+            @TestMetadata("unusedParamNotSpill.kt")
+            public void testUnusedParamNotSpill() throws Exception {
+                runTest("compiler/testData/codegen/bytecodeText/coroutines/cleanup/unusedParamNotSpill.kt");
             }
 
             @TestMetadata("when.kt")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -194,6 +194,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("innerClassWithDelegatingConstructor.kt")
         public void testInnerClassWithDelegatingConstructor() throws Exception {
             runTest("compiler/testData/ir/irText/classes/innerClassWithDelegatingConstructor.kt");
+        }
+
+        @TestMetadata("kt19306.kt")
+        public void testKt19306() throws Exception {
+            runTest("compiler/testData/ir/irText/classes/kt19306.kt");
         }
 
         @TestMetadata("kt31649.kt")
@@ -1847,6 +1852,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/firProblems/putIfAbsent.kt");
         }
 
+        @TestMetadata("readWriteProperty.kt")
+        public void testReadWriteProperty() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/readWriteProperty.kt");
+        }
+
         @TestMetadata("recursiveCapturedTypeInPropertyReference.kt")
         public void testRecursiveCapturedTypeInPropertyReference() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/recursiveCapturedTypeInPropertyReference.kt");
@@ -1862,9 +1872,19 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/firProblems/SignatureClash.kt");
         }
 
+        @TestMetadata("SyntheticSetterType.kt")
+        public void testSyntheticSetterType() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/SyntheticSetterType.kt");
+        }
+
         @TestMetadata("throwableStackTrace.kt")
         public void testThrowableStackTrace() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/throwableStackTrace.kt");
+        }
+
+        @TestMetadata("typeParameterFromJavaClass.kt")
+        public void testTypeParameterFromJavaClass() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/typeParameterFromJavaClass.kt");
         }
 
         @TestMetadata("typeVariableAfterBuildMap.kt")
@@ -2223,6 +2243,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
         @TestMetadata("starProjection_OI.kt")
         public void testStarProjection_OI() throws Exception {
             runTest("compiler/testData/ir/irText/types/starProjection_OI.kt");
+        }
+
+        @TestMetadata("typeAliasWithUnsafeVariance.kt")
+        public void testTypeAliasWithUnsafeVariance() throws Exception {
+            runTest("compiler/testData/ir/irText/types/typeAliasWithUnsafeVariance.kt");
         }
 
         @TestMetadata("compiler/testData/ir/irText/types/nullChecks")

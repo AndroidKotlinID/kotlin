@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -2271,6 +2271,11 @@ public class ParsingTestGenerated extends AbstractParsingTest {
             @TestMetadata("kt2172.kt")
             public void testKt2172() throws Exception {
                 runTest("compiler/testData/psi/recovery/kt2172.kt");
+            }
+
+            @TestMetadata("kt24158.kt")
+            public void testKt24158() throws Exception {
+                runTest("compiler/testData/psi/recovery/kt24158.kt");
             }
 
             @TestMetadata("kt5102.kt")

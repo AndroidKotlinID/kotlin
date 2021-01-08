@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -62,6 +62,11 @@ public class Jdk9BlackBoxCodegenTestGenerated extends AbstractJdk9BlackBoxCodege
     @TestMetadata("concatDynamicWithInline.kt")
     public void testConcatDynamicWithInline() throws Exception {
         runTest("compiler/testData/codegen/java9/box/concatDynamicWithInline.kt");
+    }
+
+    @TestMetadata("kt36984.kt")
+    public void testKt36984() throws Exception {
+        runTest("compiler/testData/codegen/java9/box/kt36984.kt");
     }
 
     @TestMetadata("varHandle.kt")

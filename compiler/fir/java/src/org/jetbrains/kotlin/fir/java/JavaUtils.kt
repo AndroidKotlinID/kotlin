@@ -47,6 +47,7 @@ import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance.*
+import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeAsciiOnly
 import org.jetbrains.kotlin.utils.addToStdlib.runIf
 import java.lang.Deprecated
 import java.lang.annotation.Documented
@@ -92,9 +93,12 @@ internal fun FirTypeRef.toConeKotlinTypeProbablyFlexible(
     }
 
 internal fun JavaType.toFirJavaTypeRef(session: FirSession, javaTypeParameterStack: JavaTypeParameterStack): FirJavaTypeRef {
-    val annotations = (this as? JavaClassifierType)?.annotations.orEmpty()
     return buildJavaTypeRef {
-        annotations.mapTo(this.annotations) { it.toFirAnnotationCall(session, javaTypeParameterStack) }
+        annotationBuilder = {
+            (this@toFirJavaTypeRef as? JavaClassifierType)?.annotations.orEmpty().map {
+                it.toFirAnnotationCall(session, javaTypeParameterStack)
+            }
+        }
         type = this@toFirJavaTypeRef
     }
 }
@@ -137,7 +141,7 @@ internal fun JavaType?.toConeKotlinTypeWithoutEnhancement(
             val primitiveType = type
             val kotlinPrimitiveName = when (val javaName = primitiveType?.typeName?.asString()) {
                 null -> "Unit"
-                else -> javaName.capitalize()
+                else -> javaName.capitalizeAsciiOnly()
             }
 
             val classId = StandardClassIds.byName(kotlinPrimitiveName)
@@ -191,7 +195,7 @@ private fun JavaArrayType.toConeKotlinTypeWithoutEnhancement(
             )
         }
     } else {
-        val javaComponentName = componentType.type?.typeName?.asString()?.capitalize() ?: error("Array of voids")
+        val javaComponentName = componentType.type?.typeName?.asString()?.capitalizeAsciiOnly() ?: error("Array of voids")
         val classId = StandardClassIds.byName(javaComponentName + "Array")
 
         if (forAnnotationValueParameter) {
@@ -578,7 +582,7 @@ internal fun JavaValueParameter.toFirValueParameter(
         name = this@toFirValueParameter.name ?: Name.identifier("p$index")
         returnTypeRef = type.toFirJavaTypeRef(session, javaTypeParameterStack)
         isVararg = this@toFirValueParameter.isVararg
-        addAnnotationsFrom(session, this@toFirValueParameter, javaTypeParameterStack)
+        annotationBuilder = { annotations.map { it.toFirAnnotationCall(session, javaTypeParameterStack) }}
     }
 }
 
