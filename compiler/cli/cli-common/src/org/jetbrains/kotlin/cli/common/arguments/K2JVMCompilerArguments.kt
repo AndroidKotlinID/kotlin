@@ -71,7 +71,7 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(
         value = "-jvm-target",
         valueDescription = "<version>",
-        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13, 14 or 15), default is 1.6"
+        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13, 14 or 15), default is 1.8"
     )
     var jvmTarget: String? by NullableStringFreezableVar(JvmTarget.DEFAULT.description)
 
@@ -361,6 +361,15 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
 -Xstring-concat=inline              Performs string concatenation via `StringBuilder`"""
     )
     var stringConcat: String? by NullableStringFreezableVar(JvmStringConcat.INLINE.description)
+
+    @Argument(
+        value = "-Xsam-conversions",
+        valueDescription = "{class|indy}",
+        description = """Select code generation scheme for SAM conversions.
+-Xsam-conversions=indy              Generate SAM conversions using `invokedynamic` with `LambdaMetafactory.metafactory`. Requires `-jvm-target 8` or greater.
+-Xsam-conversions=class             Generate SAM conversions as explicit classes"""
+    )
+    var samConversions: String? by NullableStringFreezableVar(JvmSamConversions.CLASS.description)
 
     @Argument(
         value = "-Xklib",

@@ -30,7 +30,6 @@ dependencies {
     compile(project(":compiler:fir:checkers"))
     compile(project(":kotlin-util-klib"))
     compile(project(":kotlin-util-io"))
-    compile(project(":compiler:ir.serialization.common"))
 
     // TODO: as soon as cli-jvm is extracted out of this module, move this dependency there
     compileOnly(project(":compiler:ir.tree.impl"))
@@ -57,7 +56,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
     kotlinOptions {
         languageVersion = "1.3"
         apiVersion = "1.3"
-        freeCompilerArgs += "-Xskip-prerelease-check"
+        freeCompilerArgs = freeCompilerArgs - "-progressive" + "-Xskip-prerelease-check"
     }
 }
 

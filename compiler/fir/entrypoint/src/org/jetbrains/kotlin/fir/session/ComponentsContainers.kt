@@ -8,6 +8,8 @@ package org.jetbrains.kotlin.fir.session
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.analysis.CheckersComponent
+import org.jetbrains.kotlin.fir.caches.FirCachesFactory
+import org.jetbrains.kotlin.fir.caches.FirThreadUnsafeCachesFactory
 import org.jetbrains.kotlin.fir.extensions.FirExtensionService
 import org.jetbrains.kotlin.fir.extensions.FirPredicateBasedProvider
 import org.jetbrains.kotlin.fir.extensions.FirRegisteredPluginAnnotations
@@ -40,6 +42,12 @@ fun FirSession.registerCommonComponents(languageVersionSettings: LanguageVersion
     register(InferenceComponents::class, InferenceComponents(this))
 }
 
+@OptIn(SessionConfiguration::class)
+fun FirSession.registerThreadUnsafeCaches() {
+    register(FirCachesFactory::class, FirThreadUnsafeCachesFactory)
+}
+
+
 // -------------------------- Resolve components --------------------------
 
 /*
@@ -58,6 +66,7 @@ fun FirSession.registerResolveComponents() {
 @OptIn(SessionConfiguration::class)
 fun FirSession.registerJavaSpecificResolveComponents() {
     register(FirVisibilityChecker::class, FirJavaVisibilityChecker)
+    register(FirModuleVisibilityChecker::class, FirJvmModuleVisibilityChecker(this))
     register(ConeCallConflictResolverFactory::class, JvmCallConflictResolverFactory)
     register(FirEffectiveVisibilityResolver::class, FirJvmEffectiveVisibilityResolver(this))
     register(FirPlatformClassMapper::class, FirJavaClassMapper(this))

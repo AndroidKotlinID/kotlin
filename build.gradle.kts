@@ -52,7 +52,6 @@ pill {
     excludedDirs(
         "out",
         "buildSrc/build",
-        "buildSrc/prepare-deps/android-dx/build",
         "buildSrc/prepare-deps/intellij-sdk/build"
     )
 }
@@ -74,7 +73,7 @@ val kotlinVersion by extra(
         } ?: buildNumber
 )
 
-val kotlinLanguageVersion by extra("1.4")
+val kotlinLanguageVersion by extra("1.5")
 
 allprojects {
     group = "org.jetbrains.kotlin"
@@ -166,13 +165,12 @@ extra["versions.jansi"] = "1.16"
 extra["versions.jline"] = "3.3.1"
 extra["versions.junit"] = "4.12"
 extra["versions.javaslang"] = "2.0.6"
-extra["versions.ant"] = "1.8.2"
+extra["versions.ant"] = "1.10.7"
 extra["versions.android"] = "2.3.1"
 extra["versions.kotlinx-coroutines-core"] = "1.3.8"
 extra["versions.kotlinx-coroutines-jdk8"] = "1.3.8"
 extra["versions.json"] = "20160807"
 extra["versions.native-platform"] = "0.14"
-extra["versions.ant-launcher"] = "1.8.0"
 extra["versions.robolectric"] = "4.0"
 extra["versions.org.springframework"] = "4.2.0.RELEASE"
 extra["versions.jflex"] = "1.7.0"
@@ -188,13 +186,14 @@ extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.4.30-dev-17395"
+    extra["versions.kotlin-native"] = "1.5-dev-17775"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
 val effectSystemEnabled by extra(project.getBooleanProperty("kotlin.compiler.effectSystemEnabled") ?: false)
 val newInferenceEnabled by extra(project.getBooleanProperty("kotlin.compiler.newInferenceEnabled") ?: false)
 val useJvmIrBackend by extra(project.kotlinBuildProperties.useIR)
+val useJvmFir by extra(project.kotlinBuildProperties.useFir)
 
 val intellijSeparateSdks = project.getBooleanProperty("intellijSeparateSdks") ?: false
 
@@ -320,12 +319,33 @@ extra["compilerModulesForJps"] = listOf(
     ":compiler:compiler.version"
 )
 
+// TODO: fix remaining warnings and remove this property.
+extra["tasksWithWarnings"] = listOf(
+    ":kotlin-stdlib:compileTestKotlin",
+    ":kotlin-stdlib-jdk7:compileTestKotlin",
+    ":kotlin-stdlib-jdk8:compileTestKotlin",
+    ":compiler:cli:compileKotlin",
+    ":compiler:frontend:compileKotlin",
+    ":compiler:fir:tree:compileKotlin",
+    ":compiler:fir:resolve:compileKotlin",
+    ":compiler:fir:checkers:compileKotlin",
+    ":compiler:fir:java:compileKotlin",
+    ":kotlin-scripting-compiler:compileKotlin",
+    ":kotlin-scripting-compiler:compileTestKotlin",
+    ":plugins:uast-kotlin:compileKotlin",
+    ":plugins:uast-kotlin:compileTestKotlin",
+    ":plugins:uast-kotlin-idea:compileKotlin"
+)
+
+val tasksWithWarnings: List<String> by extra
+
 val coreLibProjects = listOfNotNull(
     ":kotlin-stdlib",
     ":kotlin-stdlib-common",
     ":kotlin-stdlib-js",
     ":kotlin-stdlib-jdk7",
     ":kotlin-stdlib-jdk8",
+    ":kotlin-test",
     ":kotlin-test:kotlin-test-annotations-common",
     ":kotlin-test:kotlin-test-common",
     ":kotlin-test:kotlin-test-jvm",
@@ -333,8 +353,7 @@ val coreLibProjects = listOfNotNull(
     ":kotlin-test:kotlin-test-junit5",
     ":kotlin-test:kotlin-test-testng",
     ":kotlin-test:kotlin-test-js".takeIf { !kotlinBuildProperties.isInJpsBuildIdeaSync },
-    ":kotlin-reflect",
-    ":kotlin-coroutines-experimental-compat"
+    ":kotlin-reflect"
 )
 
 val gradlePluginProjects = listOf(
@@ -408,8 +427,7 @@ allprojects {
         jcenter()
         maven(protobufRepo)
         maven(intellijRepo)
-        maven("https://dl.bintray.com/kotlin/ktor")
-        maven("https://kotlin.bintray.com/kotlin-dependencies")
+        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
         maven("https://jetbrains.bintray.com/intellij-third-party-dependencies")
         maven("https://dl.google.com/dl/android/maven2")
         bootstrapKotlinRepo?.let(::maven)
@@ -446,6 +464,26 @@ allprojects {
             if (useJvmIrBackend) {
                 useIR = true
             }
+
+            if (useJvmFir) {
+                freeCompilerArgs += "-Xuse-fir"
+                freeCompilerArgs += "-Xabi-stability=stable"
+            }
+        }
+    }
+
+    if (!kotlinBuildProperties.isInJpsBuildIdeaSync && !kotlinBuildProperties.useFir && !kotlinBuildProperties.disableWerror) {
+        // For compiler and stdlib, allWarningsAsErrors is configured in the corresponding "root" projects
+        // (compiler/build.gradle.kts and libraries/commonConfiguration.gradle).
+        val projectsWithWarningsAsErrors = listOf("core", "plugins").map { File(it).absoluteFile }
+        if (projectsWithWarningsAsErrors.any(projectDir::startsWith)) {
+            tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompile> {
+                if (path !in tasksWithWarnings) {
+                    kotlinOptions {
+                        allWarningsAsErrors = true
+                    }
+                }
+            }
         }
     }
 
@@ -467,7 +505,7 @@ allprojects {
     }
 
     tasks.withType<Test> {
-        outputs.doNotCacheIf("https://youtrack.jetbrains.com/issue/KTI-112") { !isTestDistributionEnabled() }
+        outputs.doNotCacheIf("https://youtrack.jetbrains.com/issue/KTI-112") { true }
     }
 
     normalization {
@@ -551,10 +589,11 @@ gradle.taskGraph.whenReady {
 
     val proguardMessage = "proguard is ${kotlinBuildProperties.proguard.toOnOff()}"
     val jarCompressionMessage = "jar compression is ${kotlinBuildProperties.jarCompression.toOnOff()}"
-                val profileMessage = "$profile build profile is active ($proguardMessage, $jarCompressionMessage). " +
-            "Use -Pteamcity=<true|false> to reproduce CI/local build"
 
-    logger.warn("\n\n$profileMessage")
+    logger.warn(
+        "$profile build profile is active ($proguardMessage, $jarCompressionMessage). " +
+                "Use -Pteamcity=<true|false> to reproduce CI/local build"
+    )
 
     allTasks.filterIsInstance<org.gradle.jvm.tasks.Jar>().forEach { task ->
         task.entryCompression = if (kotlinBuildProperties.jarCompression)
@@ -599,7 +638,10 @@ tasks {
 
     listOf("clean", "assemble", "install").forEach { taskName ->
         register("coreLibs${taskName.capitalize()}") {
-            coreLibProjects.forEach { projectName -> dependsOn("$projectName:$taskName") }
+            for (projectName in coreLibProjects) {
+                if (projectName.startsWith(":kotlin-test:") && taskName == "install") continue
+                dependsOn("$projectName:$taskName")
+            }
         }
     }
 
@@ -777,7 +819,6 @@ tasks {
 
     if (Ide.IJ()) {
         register("idea-new-project-wizard-tests") {
-            dependsOn("dist")
             dependsOn(
                 ":libraries:tools:new-project-wizard:test",
                 ":libraries:tools:new-project-wizard:new-project-wizard-cli:test",
@@ -850,7 +891,17 @@ tasks {
             ":generators:test"
         )
         if (Ide.IJ()) {
-            dependsOn("idea-new-project-wizard-tests")
+            dependsOn(
+                ":libraries:tools:new-project-wizard:test",
+                ":libraries:tools:new-project-wizard:new-project-wizard-cli:test",
+                ":idea:idea-new-project-wizard:test" // Temporary here. Remove after enabling builds for ideaIntegrationsTests
+            )
+        }
+    }
+
+    register("ideaIntegrationsTests") {
+        if (Ide.IJ()) {
+            dependsOn(":idea:idea-new-project-wizard:test")
         }
     }
 
@@ -930,8 +981,7 @@ tasks {
                 ":kotlin-reflect:publish",
                 ":kotlin-main-kts:publish",
                 ":kotlin-stdlib-js:publish",
-                ":kotlin-test:kotlin-test-js:publish",
-                ":kotlin-coroutines-experimental-compat:publish"
+                ":kotlin-test:kotlin-test-js:publish"
             )
         }
     }

@@ -12,12 +12,8 @@ import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
-import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertyAccessorSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
@@ -111,6 +107,7 @@ object FirErrors {
     val REDUNDANT_MODIFIER by error2<FirSourceElement, PsiElement, KtModifierKeywordToken, KtModifierKeywordToken>()
     val DEPRECATED_MODIFIER_PAIR by error2<FirSourceElement, PsiElement, KtModifierKeywordToken, KtModifierKeywordToken>()
     val INCOMPATIBLE_MODIFIERS by error2<FirSourceElement, PsiElement, KtModifierKeywordToken, KtModifierKeywordToken>()
+    val REDUNDANT_OPEN_IN_INTERFACE by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
 
     // Applicability
     val NONE_APPLICABLE by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>()
@@ -128,7 +125,7 @@ object FirErrors {
     val PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT by error0<FirSourceElement, PsiElement>()
     val UPPER_BOUND_VIOLATED by error2<FirSourceElement, PsiElement, FirTypeParameterSymbol, ConeKotlinType>()
     val TYPE_ARGUMENTS_NOT_ALLOWED by error0<FirSourceElement, PsiElement>()
-    val WRONG_NUMBER_OF_TYPE_ARGUMENTS by error2<FirSourceElement, PsiElement, Int, FirRegularClassSymbol>()
+    val WRONG_NUMBER_OF_TYPE_ARGUMENTS by error2<FirSourceElement, PsiElement, Int, FirClassLikeSymbol<*>>()
     val NO_TYPE_FOR_TYPE_PARAMETER by error0<FirSourceElement, PsiElement>()
     val TYPE_PARAMETERS_IN_OBJECT by error0<FirSourceElement, PsiElement>()
     val ILLEGAL_PROJECTION_USAGE by error0<FirSourceElement, PsiElement>()
@@ -138,10 +135,13 @@ object FirErrors {
     val RETURN_TYPE_MISMATCH_ON_OVERRIDE by error2<FirSourceElement, PsiElement, String, FirMemberDeclaration>()
     val PROPERTY_TYPE_MISMATCH_ON_OVERRIDE by error2<FirSourceElement, PsiElement, String, FirMemberDeclaration>()
     val VAR_TYPE_MISMATCH_ON_OVERRIDE by error2<FirSourceElement, PsiElement, String, FirMemberDeclaration>()
+    val CATCH_PARAMETER_WITH_DEFAULT_VALUE by error0<FirSourceElement, PsiElement>()
+    val REIFIED_TYPE_IN_CATCH_CLAUSE by error0<FirSourceElement, PsiElement>()
+    val TYPE_PARAMETER_IN_CATCH_CLAUSE by error0<FirSourceElement, PsiElement>()
 
     // Redeclarations
     val MANY_COMPANION_OBJECTS by error0<FirSourceElement, PsiElement>()
-    val CONFLICTING_OVERLOADS by error1<FirSourceElement, PsiElement, String>()
+    val CONFLICTING_OVERLOADS by error1<FirSourceElement, PsiElement, String>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE_OR_DEFAULT)
     val REDECLARATION by error1<FirSourceElement, PsiElement, String>()
     val ANY_METHOD_IMPLEMENTED_IN_INTERFACE by error0<FirSourceElement, PsiElement>()
 
@@ -149,28 +149,70 @@ object FirErrors {
     val LOCAL_OBJECT_NOT_ALLOWED by error1<FirSourceElement, KtNamedDeclaration, Name>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val LOCAL_INTERFACE_NOT_ALLOWED by error1<FirSourceElement, KtNamedDeclaration, Name>(SourceElementPositioningStrategies.DECLARATION_NAME)
 
+    // Functions
+    val ABSTRACT_FUNCTION_IN_NON_ABSTRACT_CLASS by error2<FirSourceElement, KtFunction, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
+    val ABSTRACT_FUNCTION_WITH_BODY by error1<FirSourceElement, KtFunction, FirMemberDeclaration>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
+    val NON_ABSTRACT_FUNCTION_WITH_NO_BODY by error1<FirSourceElement, KtFunction, FirMemberDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    val PRIVATE_FUNCTION_WITH_NO_BODY by error1<FirSourceElement, KtFunction, FirMemberDeclaration>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+    val NON_MEMBER_FUNCTION_NO_BODY by error1<FirSourceElement, KtFunction, FirMemberDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+
+    val FUNCTION_DECLARATION_WITH_NO_NAME by error0<FirSourceElement, KtFunction>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+
+    // TODO: val ANONYMOUS_FUNCTION_WITH_NAME by error1<FirSourceElement, PsiElement, Name>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val ANONYMOUS_FUNCTION_PARAMETER_WITH_DEFAULT_VALUE by error0<FirSourceElement, KtParameter>(SourceElementPositioningStrategies.PARAMETER_DEFAULT_VALUE)
+    val USELESS_VARARG_ON_PARAMETER by warning0<FirSourceElement, KtParameter>()
+
     // Properties & accessors
-    val ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
-    val PRIVATE_PROPERTY_IN_INTERFACE by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+    val ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS by error2<FirSourceElement, KtModifierListOwner, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
+    val PRIVATE_PROPERTY_IN_INTERFACE by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
 
-    val ABSTRACT_PROPERTY_WITH_INITIALIZER by error1<FirSourceElement, PsiElement, FirExpression>()
-    val PROPERTY_INITIALIZER_IN_INTERFACE by error1<FirSourceElement, PsiElement, FirExpression>()
-    val PROPERTY_WITH_NO_TYPE_NO_INITIALIZER by error1<FirSourceElement, PsiElement, FirPropertySymbol>()
+    val ABSTRACT_PROPERTY_WITH_INITIALIZER by error0<FirSourceElement, KtExpression>()
+    // TODO: val MUST_BE_INITIALIZED by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    // TODO: val MUST_BE_INITIALIZED_OR_BE_ABSTRACT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    // TODO: val EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
 
-    val ABSTRACT_DELEGATED_PROPERTY by error1<FirSourceElement, PsiElement, FirExpression>()
-    val DELEGATED_PROPERTY_IN_INTERFACE by error1<FirSourceElement, PsiElement, FirExpression>()
-    // TODO: val ACCESSOR_FOR_DELEGATED_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+    // TODO: val EXTENSION_PROPERTY_WITH_BACKING_FIELD by error0<FirSourceElement, KtExpression>()
+    // TODO: val PROPERTY_INITIALIZER_NO_BACKING_FIELD by error0<FirSourceElement, KtExpression>()
 
-    val ABSTRACT_PROPERTY_WITH_GETTER by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
-    val ABSTRACT_PROPERTY_WITH_SETTER by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
-    val PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
-    val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error1<FirSourceElement, PsiElement, FirPropertyAccessorSymbol>()
+    val PROPERTY_INITIALIZER_IN_INTERFACE by error0<FirSourceElement, KtExpression>()
+    val PROPERTY_WITH_NO_TYPE_NO_INITIALIZER by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    // TODO: val BACKING_FIELD_IN_INTERFACE by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+
+    val ABSTRACT_DELEGATED_PROPERTY by error0<FirSourceElement, KtPropertyDelegate>()
+    val DELEGATED_PROPERTY_IN_INTERFACE by error0<FirSourceElement, KtPropertyDelegate>()
+    // TODO: val ACCESSOR_FOR_DELEGATED_PROPERTY by error1<FirSourceElement, KtPropertyAccessor, FirPropertyAccessorSymbol>()
+
+    val ABSTRACT_PROPERTY_WITH_GETTER by error0<FirSourceElement, KtPropertyAccessor>()
+    val ABSTRACT_PROPERTY_WITH_SETTER by error0<FirSourceElement, KtPropertyAccessor>()
+    val PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY by error0<FirSourceElement, PsiElement>()
+    val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error0<FirSourceElement, PsiElement>()
+
+    // Multi-platform projects
+    val EXPECTED_DECLARATION_WITH_BODY by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    val EXPECTED_PROPERTY_INITIALIZER by error0<FirSourceElement, KtExpression>()
+    // TODO: need to cover `by` as well as delegate expression
+    val EXPECTED_DELEGATED_PROPERTY by error0<FirSourceElement, KtPropertyDelegate>()
+    val EXPECTED_PRIVATE_DECLARATION by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+
+    // Destructuring declaration
+    val INITIALIZER_REQUIRED_FOR_DESTRUCTURING_DECLARATION by error0<FirSourceElement, KtDestructuringDeclaration>()
+    val COMPONENT_FUNCTION_MISSING by error2<FirSourceElement, KtExpression, Name, ConeKotlinType>()
+    val COMPONENT_FUNCTION_AMBIGUITY by error2<FirSourceElement, KtExpression, Name, Collection<AbstractFirBasedSymbol<*>>>()
+    val COMPONENT_FUNCTION_ON_NULLABLE by error1<FirSourceElement, KtExpression, Name>()
+    // TODO: val COMPONENT_FUNCTION_RETURN_TYPE_MISMATCH by ...
 
     // Control flow diagnostics
     val UNINITIALIZED_VARIABLE by error1<FirSourceElement, PsiElement, FirPropertySymbol>()
     val WRONG_INVOCATION_KIND by warning3<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>, EventOccurrencesRange, EventOccurrencesRange>()
     val LEAKED_IN_PLACE_LAMBDA by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>()
-    val WRONG_IMPLIES_CONDITION by error0<FirSourceElement, PsiElement>()
+    val WRONG_IMPLIES_CONDITION by warning0<FirSourceElement, PsiElement>()
+
+    // Nullability
+    val UNSAFE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.DOT_BY_SELECTOR)
+    // TODO: val UNSAFE_IMPLICIT_INVOKE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>()
+    // TODO: val UNSAFE_INFIX_CALL by ...
+    // TODO: val UNSAFE_OPERATOR_CALL by ...
+    // TODO: val UNEXPECTED_SAFE_CALL by ...
 
     // Extended checkers group
     val REDUNDANT_VISIBILITY_MODIFIER by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)

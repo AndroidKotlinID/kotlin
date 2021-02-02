@@ -10,6 +10,8 @@ plugins {
 val compilerModules: Array<String> by rootProject.extra
 val otherCompilerModules = compilerModules.filter { it != path }
 
+val tasksWithWarnings: List<String> by rootProject.extra
+
 val effectSystemEnabled: Boolean by rootProject.extra
 val newInferenceEnabled: Boolean by rootProject.extra
 
@@ -63,7 +65,6 @@ dependencies {
     testRuntimeOnly(intellijPluginDep("java"))
 
     testRuntime(project(":kotlin-reflect"))
-    testRuntime(androidDxJar())
     testRuntime(toolsJar())
 
     antLauncherJar(commonDep("org.apache.ant", "ant"))
@@ -84,6 +85,16 @@ if (kotlinBuildProperties.isInJpsBuildIdeaSync) {
     apply(plugin = "idea")
     idea {
         this.module.generatedSourceDirs.add(generationRoot)
+    }
+} else if (!kotlinBuildProperties.useFir && !kotlinBuildProperties.disableWerror) {
+    allprojects {
+        tasks.withType<KotlinCompile<*>> {
+            if (path !in tasksWithWarnings) {
+                kotlinOptions {
+                    allWarningsAsErrors = true
+                }
+            }
+        }
     }
 }
 

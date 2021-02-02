@@ -253,7 +253,7 @@ class Fir2IrDeclarationStorage(
 
     private fun <T : IrFunction> T.declareDefaultSetterParameter(type: IrType): T {
         valueParameters = listOf(
-            createDefaultSetterParameter(startOffset, endOffset, origin, type, parent = this)
+            createDefaultSetterParameter(startOffset, endOffset, type, parent = this)
         )
         return this
     }
@@ -261,7 +261,6 @@ class Fir2IrDeclarationStorage(
     internal fun createDefaultSetterParameter(
         startOffset: Int,
         endOffset: Int,
-        origin: IrDeclarationOrigin,
         type: IrType,
         parent: IrFunction
     ): IrValueParameter {
@@ -1027,7 +1026,7 @@ class Fir2IrDeclarationStorage(
                         val irFunction = fir.convertWithOffsets { startOffset, endOffset ->
                             symbolTable.declareSimpleFunction(signature, { symbol }) {
                                 val isFakeOverride =
-                                    firFunctionSymbol is FirNamedFunctionSymbol && fir.isSubstitutionOverride &&
+                                    firFunctionSymbol is FirNamedFunctionSymbol && fir.isSubstitutionOrIntersectionOverride &&
                                             firFunctionSymbol.dispatchReceiverClassOrNull() !=
                                             firFunctionSymbol.originalForSubstitutionOverride?.dispatchReceiverClassOrNull()
                                 Fir2IrLazySimpleFunction(
@@ -1066,7 +1065,7 @@ class Fir2IrDeclarationStorage(
                 val irProperty = fir.convertWithOffsets { startOffset, endOffset ->
                     symbolTable.declareProperty(signature, { symbol }) {
                         val isFakeOverride =
-                            fir.isSubstitutionOverride &&
+                            fir.isSubstitutionOrIntersectionOverride &&
                                     firPropertySymbol.dispatchReceiverClassOrNull() !=
                                     firPropertySymbol.originalForSubstitutionOverride?.dispatchReceiverClassOrNull()
                         Fir2IrLazyProperty(

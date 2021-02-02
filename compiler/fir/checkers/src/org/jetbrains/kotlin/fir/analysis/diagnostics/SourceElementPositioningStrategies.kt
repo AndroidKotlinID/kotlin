@@ -33,6 +33,11 @@ object SourceElementPositioningStrategies {
         PositioningStrategies.DECLARATION_SIGNATURE
     )
 
+    val DECLARATION_SIGNATURE_OR_DEFAULT = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.DECLARATION_SIGNATURE_OR_DEFAULT,
+        PositioningStrategies.DECLARATION_SIGNATURE_OR_DEFAULT
+    )
+
     val VISIBILITY_MODIFIER = SourceElementPositioningStrategy(
         LightTreePositioningStrategies.VISIBILITY_MODIFIER,
         PositioningStrategies.VISIBILITY_MODIFIER
@@ -46,5 +51,20 @@ object SourceElementPositioningStrategies {
     val OPERATOR = SourceElementPositioningStrategy(
         LightTreePositioningStrategies.OPERATOR,
         PositioningStrategies.OPERATOR
+    )
+    
+    val PARAMETER_DEFAULT_VALUE = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.PARAMETER_DEFAULT_VALUE,
+        PositioningStrategies.PARAMETER_DEFAULT_VALUE
+    )
+
+    val PARAMETER_VARARG_MODIFIER = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.PARAMETER_VARARG_MODIFIER,
+        PositioningStrategies.PARAMETER_VARARG_MODIFIER
+    )
+
+    val DOT_BY_SELECTOR = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.DOT_BY_SELECTOR,
+        PositioningStrategies.DOT_BY_SELECTOR
     )
 }

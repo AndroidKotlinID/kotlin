@@ -15,39 +15,53 @@ import org.jetbrains.kotlin.fir.analysis.checkers.declaration.*
 object CommonDeclarationCheckers : DeclarationCheckers() {
     override val basicDeclarationCheckers: Set<FirBasicDeclarationChecker> = setOf(
         FirAnnotationArgumentChecker,
-        FirAnnotationClassDeclarationChecker,
         FirModifierChecker,
-        FirManyCompanionObjectsChecker,
-        FirLocalEntityNotAllowedChecker,
-        FirTypeParametersInObjectChecker,
         FirConflictsChecker,
-        FirConstructorInInterfaceChecker,
         FirConflictingProjectionChecker,
     )
 
     override val memberDeclarationCheckers: Set<FirMemberDeclarationChecker> = setOf(
         FirInfixFunctionDeclarationChecker,
         FirExposedVisibilityDeclarationChecker,
-        FirCommonConstructorDelegationIssuesChecker,
-        FirSupertypeInitializedWithoutPrimaryConstructor,
-        FirDelegationSuperCallInEnumConstructorChecker,
-        FirPrimaryConstructorRequiredForDataClassChecker,
-        FirMethodOfAnyImplementedInInterfaceChecker,
-        FirSupertypeInitializedInInterfaceChecker,
-        FirDelegationInInterfaceChecker,
-        FirInterfaceWithSuperclassChecker,
-        FirEnumClassSimpleChecker,
         FirSealedSupertypeChecker,
+    )
+
+    override val functionCheckers: Set<FirFunctionChecker> = setOf(
+        FirFunctionNameChecker,
+    )
+
+    override val propertyCheckers: Set<FirPropertyChecker> = setOf(
         FirInapplicableLateinitChecker,
+        FirDestructuringDeclarationChecker,
     )
 
     override val regularClassCheckers: Set<FirRegularClassChecker> = setOf(
+        FirAnnotationClassDeclarationChecker,
+        FirCommonConstructorDelegationIssuesChecker,
+        FirConstructorInInterfaceChecker,
+        FirDelegationSuperCallInEnumConstructorChecker,
+        FirDelegationInInterfaceChecker,
+        FirEnumClassSimpleChecker,
+        FirInterfaceWithSuperclassChecker,
+        FirLocalEntityNotAllowedChecker,
+        FirManyCompanionObjectsChecker,
+        FirMethodOfAnyImplementedInInterfaceChecker,
+        FirPrimaryConstructorRequiredForDataClassChecker,
+        FirSupertypeInitializedInInterfaceChecker,
+        FirSupertypeInitializedWithoutPrimaryConstructor,
+        FirTypeParametersInObjectChecker,
         FirTypeMismatchOnOverrideChecker,
+        FirMemberFunctionChecker,
         FirMemberPropertyChecker,
     )
 
     override val constructorCheckers: Set<FirConstructorChecker> = setOf(
         FirConstructorAllowedChecker,
+    )
+
+    override val fileCheckers: Set<FirFileChecker> = setOf(
+        FirTopLevelFunctionChecker,
+        FirTopLevelPropertyChecker,
     )
 
     override val controlFlowAnalyserCheckers: Set<FirControlFlowChecker> = setOf(

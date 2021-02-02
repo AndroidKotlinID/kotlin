@@ -79,7 +79,7 @@ class CirTreeMerger(
         parameters.targetProviders.forEachIndexed { targetIndex, targetProvider ->
             val commonModuleInfos = allModuleInfos[targetIndex].filterKeys { it in commonModuleNames }
             processTarget(rootNode, targetIndex, targetProvider, commonModuleInfos, dependeeModules)
-            parameters.progressLogger?.invoke("Loaded declarations for [${targetProvider.target.name}]")
+            parameters.progressLogger?.invoke("Loaded declarations for ${targetProvider.target.prettyName}")
             System.gc()
         }
 
@@ -102,11 +102,7 @@ class CirTreeMerger(
         commonModuleInfos: Map<String, ModuleInfo>,
         dependeeModules: Collection<ModuleDescriptor>
     ) {
-        rootNode.targetDeclarations[targetIndex] = CirRootFactory.create(
-            targetProvider.target,
-            targetProvider.builtInsClass.name,
-            targetProvider.builtInsProvider
-        )
+        rootNode.targetDeclarations[targetIndex] = CirRootFactory.create(targetProvider.target)
 
         val targetDependeeModules = targetProvider.dependeeModulesProvider?.loadModules(dependeeModules)?.values.orEmpty()
         val allDependeeModules = targetDependeeModules + dependeeModules
@@ -222,7 +218,11 @@ class CirTreeMerger(
         val functions: MutableMap<FunctionApproximationKey, CirFunctionNode> = classNode.functions
         val nestedClasses: MutableMap<Name, CirClassNode> = classNode.classes
 
-        classDescriptor.constructors.forEach { processClassConstructor(constructors, targetIndex, it, parentCommonDeclarationForMembers) }
+        if (classDescriptor.kind != ClassKind.ENUM_ENTRY) {
+            classDescriptor.constructors.forEach { constructorDescriptor ->
+                processClassConstructor(constructors, targetIndex, constructorDescriptor, parentCommonDeclarationForMembers)
+            }
+        }
 
         classDescriptor.unsubstitutedMemberScope.collectMembers(
             PropertyCollector { propertyDescriptor ->

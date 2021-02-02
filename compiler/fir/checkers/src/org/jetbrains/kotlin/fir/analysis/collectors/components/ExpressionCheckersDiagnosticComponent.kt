@@ -10,10 +10,15 @@ import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirExpressionChecke
 import org.jetbrains.kotlin.fir.analysis.checkersComponent
 import org.jetbrains.kotlin.fir.analysis.collectors.AbstractDiagnosticCollector
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.expressions.*
 
 class ExpressionCheckersDiagnosticComponent(collector: AbstractDiagnosticCollector) : AbstractDiagnosticCollectorComponent(collector) {
     private val checkers = session.checkersComponent.expressionCheckers
+
+    override fun visitAnonymousFunction(anonymousFunction: FirAnonymousFunction, data: CheckerContext) {
+        checkers.basicExpressionCheckers.check(anonymousFunction, data, reporter)
+    }
 
     override fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: CheckerContext) {
         checkers.basicExpressionCheckers.check(typeOperatorCall, data, reporter)
@@ -68,7 +73,7 @@ class ExpressionCheckersDiagnosticComponent(collector: AbstractDiagnosticCollect
     }
 
     override fun visitTryExpression(tryExpression: FirTryExpression, data: CheckerContext) {
-        checkers.basicExpressionCheckers.check(tryExpression, data, reporter)
+        checkers.tryExpressionCheckers.check(tryExpression, data, reporter)
     }
 
     override fun visitClassReferenceExpression(classReferenceExpression: FirClassReferenceExpression, data: CheckerContext) {

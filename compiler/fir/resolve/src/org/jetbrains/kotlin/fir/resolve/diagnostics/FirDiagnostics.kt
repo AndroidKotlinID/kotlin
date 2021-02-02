@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.calls.Candidate
+import org.jetbrains.kotlin.fir.resolve.calls.ResolutionDiagnostic
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
@@ -37,14 +38,16 @@ class ConeHiddenCandidateError(
     override val reason: String get() = "HIDDEN: ${describeSymbol(candidateSymbol)} is invisible"
 }
 
-class ConeInapplicableCandidateError(
+class ConeInapplicableCandidateError private constructor(
     val applicability: CandidateApplicability,
     val candidateSymbol: AbstractFirBasedSymbol<*>,
+    val diagnostics: List<ResolutionDiagnostic>,
     val errors: List<ConstraintSystemError>
 ) : ConeDiagnostic() {
     constructor(applicability: CandidateApplicability, candidate: Candidate) : this(
         applicability,
         candidate.symbol,
+        candidate.diagnostics,
         candidate.system.errors
     )
 
@@ -74,7 +77,7 @@ class ConeIllegalAnnotationError(val name: Name) : ConeDiagnostic() {
     override val reason: String get() = "Not a legal annotation: $name"
 }
 
-class ConeWrongNumberOfTypeArgumentsError(val desiredCount: Int, val type: FirRegularClassSymbol) : ConeDiagnostic() {
+class ConeWrongNumberOfTypeArgumentsError(val desiredCount: Int, val type: FirClassLikeSymbol<*>) : ConeDiagnostic() {
     override val reason: String get() = "Wrong number of type arguments"
 }
 

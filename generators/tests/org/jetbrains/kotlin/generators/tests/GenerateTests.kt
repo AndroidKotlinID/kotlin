@@ -312,7 +312,7 @@ fun main(args: Array<String>) {
                 model("resolve/resolveModeComparison")
             }
 
-            testClass<AbstractPsiCheckerTest> {
+            testClass<AbstractKotlinHighlightingPassTest> {
                 model("checker", recursive = false)
                 model("checker/regression")
                 model("checker/recovery")
@@ -1092,7 +1092,7 @@ fun main(args: Array<String>) {
                 model("resolve/references", pattern = KT_WITHOUT_DOTS_IN_NAME)
             }
 
-            testClass<AbstractFirPsiCheckerTest> {
+            testClass<AbstractFirKotlinHighlightingPassTest> {
                 model("checker", recursive = false)
                 model("checker/regression")
                 model("checker/recovery")
@@ -1443,13 +1443,18 @@ fun main(args: Array<String>) {
 
         testGroup("jps-plugin/jps-tests/test", "jps-plugin/testData") {
             testClass<AbstractIncrementalJvmJpsTest> {
-                model("incremental/multiModule/common", extension = null, excludeParentDirs = true)
-                model("incremental/multiModule/jvm", extension = null, excludeParentDirs = true)
-                model("incremental/multiModule/multiplatform/custom", extension = null, excludeParentDirs = true)
-                model("incremental/pureKotlin", extension = null, recursive = false)
-                model("incremental/withJava", extension = null, excludeParentDirs = true)
-                model("incremental/inlineFunCallSite", extension = null, excludeParentDirs = true)
-                model("incremental/classHierarchyAffected", extension = null, excludeParentDirs = true)
+                model("incremental/multiModule/common", extension = null, excludeParentDirs = true, targetBackend = TargetBackend.JVM_IR)
+                model("incremental/multiModule/jvm", extension = null, excludeParentDirs = true, targetBackend = TargetBackend.JVM_IR)
+                model(
+                    "incremental/multiModule/multiplatform/custom", extension = null, excludeParentDirs = true,
+                    targetBackend = TargetBackend.JVM_IR
+                )
+                model("incremental/pureKotlin", extension = null, recursive = false, targetBackend = TargetBackend.JVM_IR)
+                model("incremental/withJava", extension = null, excludeParentDirs = true, targetBackend = TargetBackend.JVM_IR)
+                model("incremental/inlineFunCallSite", extension = null, excludeParentDirs = true, targetBackend = TargetBackend.JVM_IR)
+                model(
+                    "incremental/classHierarchyAffected", extension = null, excludeParentDirs = true, targetBackend = TargetBackend.JVM_IR
+                )
             }
 
             actualizeMppJpsIncTestCaseDirs(testDataRoot, "incremental/multiModule/multiplatform/withGeneratedContent")
@@ -1518,8 +1523,8 @@ fun main(args: Array<String>) {
                 model("incremental/withJava", extension = null, excludeParentDirs = true, targetBackend = targetBackend)
                 model("incremental/incrementalJvmCompilerOnly", extension = null, excludeParentDirs = true, targetBackend = targetBackend)
             }
-            testClass<AbstractIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM))
-            testClass<AbstractIrIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
+            testClass<AbstractIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
+            testClass<AbstractIncrementalJvmOldBackendCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM))
 
             testClass<AbstractIncrementalJsCompilerRunnerTest> {
                 model("incremental/pureKotlin", extension = null, recursive = false)
@@ -1532,6 +1537,14 @@ fun main(args: Array<String>) {
                 model("incremental/pureKotlin", extension = null, recursive = false, excludedPattern = "^sealed.*")
                 model("incremental/classHierarchyAffected", extension = null, recursive = false)
                 model("incremental/js", extension = null, excludeParentDirs = true)
+            }
+
+            testClass<AbstractIncrementalMultiModuleJsCompilerRunnerTest> {
+                model("incremental/multiModule/common", extension = null, excludeParentDirs = true)
+            }
+
+            testClass<AbstractIncrementalMultiModuleJsKlibCompilerRunnerTest> {
+                model("incremental/multiModule/common", extension = null, excludeParentDirs = true)
             }
 
             testClass<AbstractIncrementalJsCompilerRunnerWithMetadataOnlyTest> {

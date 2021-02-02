@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.platform.konan.isNative
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.test.ApplicationEnvironmentDisposer
 import org.jetbrains.kotlin.test.model.TestFile
 import org.jetbrains.kotlin.test.model.TestModule
 import java.io.File
@@ -55,7 +56,7 @@ abstract class CompilerConfigurationProvider : TestService {
 
 val TestServices.compilerConfigurationProvider: CompilerConfigurationProvider by TestServices.testServiceAccessor()
 
-class CompilerConfigurationProviderImpl(
+open class CompilerConfigurationProviderImpl(
     override val testRootDisposable: Disposable,
     val configurators: List<EnvironmentConfigurator>
 ) : CompilerConfigurationProvider() {
@@ -63,22 +64,30 @@ class CompilerConfigurationProviderImpl(
 
     override fun getKotlinCoreEnvironment(module: TestModule): KotlinCoreEnvironment {
         return cache.getOrPut(module) {
-            val platform = module.targetPlatform
-            val configFiles = when {
-                platform.isJvm() -> EnvironmentConfigFiles.JVM_CONFIG_FILES
-                platform.isJs() -> EnvironmentConfigFiles.JS_CONFIG_FILES
-                platform.isNative() -> EnvironmentConfigFiles.NATIVE_CONFIG_FILES
-                // TODO: is it correct?
-                platform.isCommon() -> EnvironmentConfigFiles.METADATA_CONFIG_FILES
-                else -> error("Unknown platform: $platform")
-            }
-            val projectEnv = KotlinCoreEnvironment.createProjectEnvironmentForTests(testRootDisposable, CompilerConfiguration())
-            KotlinCoreEnvironment.createForTests(
-                projectEnv,
-                createCompilerConfiguration(module, projectEnv.project),
-                configFiles
-            )
+            createKotlinCoreEnvironment(module)
         }
+    }
+
+    protected open fun createKotlinCoreEnvironment(module: TestModule): KotlinCoreEnvironment {
+        val platform = module.targetPlatform
+        val configFiles = when {
+            platform.isJvm() -> EnvironmentConfigFiles.JVM_CONFIG_FILES
+            platform.isJs() -> EnvironmentConfigFiles.JS_CONFIG_FILES
+            platform.isNative() -> EnvironmentConfigFiles.NATIVE_CONFIG_FILES
+            // TODO: is it correct?
+            platform.isCommon() -> EnvironmentConfigFiles.METADATA_CONFIG_FILES
+            else -> error("Unknown platform: $platform")
+        }
+        val applicationEnvironment = KotlinCoreEnvironment.getOrCreateApplicationEnvironmentForTests(
+            ApplicationEnvironmentDisposer.ROOT_DISPOSABLE,
+            CompilerConfiguration()
+        )
+        val projectEnv = KotlinCoreEnvironment.ProjectEnvironment(testRootDisposable, applicationEnvironment)
+        return KotlinCoreEnvironment.createForTests(
+            projectEnv,
+            createCompilerConfiguration(module, projectEnv.project),
+            configFiles
+        )
     }
 
     private fun createCompilerConfiguration(module: TestModule, project: MockProject): CompilerConfiguration {
@@ -99,7 +108,7 @@ class CompilerConfigurationProviderImpl(
         }
         configuration.languageVersionSettings = module.languageVersionSettings
 
-        configurators.forEach { it.configureCompilerConfiguration(configuration, module, project) }
+        configurators.forEach { it.configureCompileConfigurationWithAdditionalConfigurationKeys(configuration, module, project) }
 
         return configuration
     }

@@ -221,7 +221,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
             is FirAnonymousObjectSymbol -> symbol.fir.typeParameters[index].symbol.toLookupTag()
             is FirRegularClassSymbol -> symbol.fir.typeParameters[index].symbol.toLookupTag()
             is FirTypeAliasSymbol -> symbol.fir.typeParameters[index].symbol.toLookupTag()
-            else -> error("?!:12")
+            else -> error("Unexpected FirClassLikeSymbol $symbol for ${this::class}, with classId ${(this as? ConeClassLikeLookupTag)?.classId}")
         }
     }
 
@@ -400,6 +400,11 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
             return StandardClassIds.primitiveTypes.contains(this.lookupTag.classId)
         }
         return false
+    }
+
+    override fun KotlinTypeMarker.getAnnotations(): List<AnnotationMarker> {
+        require(this is ConeKotlinType)
+        return emptyList() // TODO
     }
 
     override fun SimpleTypeMarker.isStubType(): Boolean {

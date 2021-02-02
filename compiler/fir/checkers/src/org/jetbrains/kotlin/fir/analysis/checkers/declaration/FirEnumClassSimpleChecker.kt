@@ -5,18 +5,17 @@
 
 package org.jetbrains.kotlin.fir.analysis.checkers.declaration
 
-import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.findNonInterfaceSupertype
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
-import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.isEnumClass
 
-object FirEnumClassSimpleChecker : FirMemberDeclarationChecker() {
-    override fun check(declaration: FirMemberDeclaration, context: CheckerContext, reporter: DiagnosticReporter) {
-        if (declaration !is FirClass<*> || declaration.classKind != ClassKind.ENUM_CLASS) {
+object FirEnumClassSimpleChecker : FirRegularClassChecker() {
+    override fun check(declaration: FirRegularClass, context: CheckerContext, reporter: DiagnosticReporter) {
+        if (!declaration.isEnumClass) {
             return
         }
 

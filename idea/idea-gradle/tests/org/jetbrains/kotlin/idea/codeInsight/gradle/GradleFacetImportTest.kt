@@ -104,7 +104,7 @@ class GradleFacetImportTest : GradleImportingTestCase() {
             Assert.assertFalse(compilerArguments!!.autoAdvanceLanguageVersion)
             Assert.assertFalse(compilerArguments!!.autoAdvanceApiVersion)
             Assert.assertEquals(JvmPlatforms.jvm16, targetPlatform)
-            Assert.assertEquals("1.6", (compilerArguments as K2JVMCompilerArguments).jvmTarget)
+            Assert.assertEquals("1.8", (compilerArguments as K2JVMCompilerArguments).jvmTarget)
             Assert.assertEquals(
                 "-Xallow-no-source-files -Xdump-declarations-to=tmpTest",
                 compilerSettings!!.additionalArguments
@@ -158,7 +158,7 @@ class GradleFacetImportTest : GradleImportingTestCase() {
             Assert.assertEquals("1.3", languageLevel!!.versionString)
             Assert.assertEquals("1.0", apiLevel!!.versionString)
             Assert.assertEquals(JvmPlatforms.jvm16, targetPlatform)
-            Assert.assertEquals("1.6", (compilerArguments as K2JVMCompilerArguments).jvmTarget)
+            Assert.assertEquals("1.8", (compilerArguments as K2JVMCompilerArguments).jvmTarget)
             Assert.assertEquals(
                 "-Xallow-no-source-files -Xdump-declarations-to=tmpTest",
                 compilerSettings!!.additionalArguments
@@ -183,26 +183,6 @@ class GradleFacetImportTest : GradleImportingTestCase() {
             ),
             getSourceRootInfos("project_test")
         )
-    }
-
-    @Test
-    fun testCoroutineImportByOptions() {
-        configureByFiles()
-        importProject()
-
-        with(facetSettings) {
-            Assert.assertEquals(LanguageFeature.State.ENABLED, coroutineSupport)
-        }
-    }
-
-    @Test
-    fun testCoroutineImportByProperties() {
-        configureByFiles()
-        importProject()
-
-        with(facetSettings) {
-            Assert.assertEquals(LanguageFeature.State.ENABLED, coroutineSupport)
-        }
     }
 
     @Test
@@ -270,7 +250,7 @@ class GradleFacetImportTest : GradleImportingTestCase() {
     @Test
     fun testJsImportTransitive() {
         configureByFiles()
-        importProject()
+        importProject(false)
 
         with(facetSettings) {
             Assert.assertEquals("1.3", languageLevel!!.versionString)
@@ -887,10 +867,14 @@ class GradleFacetImportTest : GradleImportingTestCase() {
     }
 
     override fun importProject() {
+        importProject(true)
+    }
+
+    fun importProject(skipIndexing: Boolean = true) {
         val isCreateEmptyContentRootDirectories = currentExternalProjectSettings.isCreateEmptyContentRootDirectories
         try {
             currentExternalProjectSettings.isCreateEmptyContentRootDirectories = true
-            super.importProject(true)
+            super.importProject(skipIndexing)
         } finally {
             currentExternalProjectSettings.isCreateEmptyContentRootDirectories = isCreateEmptyContentRootDirectories
         }

@@ -58,10 +58,11 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
         constructor: TypeConstructorMarker,
         arguments: List<TypeArgumentMarker>,
         nullable: Boolean,
-        isExtensionFunction: Boolean
+        isExtensionFunction: Boolean,
+        annotations: List<AnnotationMarker>? // TODO: process annotations
     ): SimpleTypeMarker {
         val attributes = if (isExtensionFunction) // TODO: assert correct type constructor
-            ConeAttributes.create(listOf(CompilerConeAttributes.ExtensionFunctionType))
+            ConeAttributes.WithExtensionFunctionType
         else ConeAttributes.Empty
         @Suppress("UNCHECKED_CAST")
         return when (constructor) {
@@ -358,6 +359,10 @@ interface ConeInferenceContext : TypeSystemInferenceExtensionContext, ConeTypeCo
 
     override fun TypeConstructorMarker.isCapturedTypeConstructor(): Boolean {
         return this is ConeCapturedTypeConstructor
+    }
+
+    override fun TypeConstructorMarker.isTypeParameterTypeConstructor(): Boolean {
+        return this.getTypeParameterClassifier() != null
     }
 
     override fun KotlinTypeMarker.removeExactAnnotation(): KotlinTypeMarker {

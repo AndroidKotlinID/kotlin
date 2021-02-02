@@ -8,10 +8,8 @@ package org.jetbrains.kotlin.idea.fir.low.level.api.file.structure
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.analysis.collectors.DiagnosticCollectorDeclarationAction
-import org.jetbrains.kotlin.fir.containingClass
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.psi
-import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -19,9 +17,9 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.diagnostics.FirIdeStructureEl
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.builder.ModuleFileCache
 import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.FirLazyDeclarationResolver
 import org.jetbrains.kotlin.idea.fir.low.level.api.providers.FirIdeProvider
+import org.jetbrains.kotlin.idea.fir.low.level.api.util.hasFqName
 import org.jetbrains.kotlin.idea.fir.low.level.api.util.isGeneratedDeclaration
 import org.jetbrains.kotlin.idea.fir.low.level.api.util.ktDeclaration
-import org.jetbrains.kotlin.idea.fir.low.level.api.util.replaceFirst
 import org.jetbrains.kotlin.psi.*
 
 internal class FileStructureElementDiagnostics(
@@ -81,8 +79,8 @@ internal class ReanalyzableFunctionStructureElement(
         firLazyDeclarationResolver: FirLazyDeclarationResolver,
         firIdeProvider: FirIdeProvider,
     ): ReanalyzableFunctionStructureElement {
-        val newFunction = firIdeProvider.buildFunctionWithBody(newKtDeclaration) as FirSimpleFunction
         val originalFunction = firSymbol.fir as FirSimpleFunction
+        val newFunction = firIdeProvider.buildFunctionWithBody(newKtDeclaration, originalFunction) as FirSimpleFunction
 
         return FileStructureUtil.withDeclarationReplaced(firFile, cache, originalFunction, newFunction) {
             firLazyDeclarationResolver.lazyResolveDeclaration(
@@ -119,8 +117,8 @@ internal class ReanalyzablePropertyStructureElement(
         firLazyDeclarationResolver: FirLazyDeclarationResolver,
         firIdeProvider: FirIdeProvider,
     ): ReanalyzablePropertyStructureElement {
-        val newProperty = firIdeProvider.buildPropertyWithBody(newKtDeclaration)
         val originalProperty = firSymbol.fir
+        val newProperty = firIdeProvider.buildPropertyWithBody(newKtDeclaration, originalProperty)
 
         return FileStructureUtil.withDeclarationReplaced(firFile, cache, originalProperty, newProperty) {
             firLazyDeclarationResolver.lazyResolveDeclaration(
@@ -181,9 +179,16 @@ internal class NonReanalyzableDeclarationStructureElement(
 
     companion object {
         private val recorder = object : FirElementsRecorder() {
+            override fun visitProperty(property: FirProperty, data: MutableMap<KtElement, FirElement>) {
+                val psi = property.psi as? KtProperty ?: return super.visitProperty(property, data)
+                if (!FileElementFactory.isReanalyzableContainer(psi) || !psi.hasFqName()) {
+                    super.visitProperty(property, data)
+                }
+            }
+
             override fun visitSimpleFunction(simpleFunction: FirSimpleFunction, data: MutableMap<KtElement, FirElement>) {
                 val psi = simpleFunction.psi as? KtNamedFunction ?: return super.visitSimpleFunction(simpleFunction, data)
-                if (!FileElementFactory.isReanalyzableContainer(psi) || KtPsiUtil.isLocal(psi)) {
+                if (!FileElementFactory.isReanalyzableContainer(psi) || !psi.hasFqName()) {
                     super.visitSimpleFunction(simpleFunction, data)
                 }
             }

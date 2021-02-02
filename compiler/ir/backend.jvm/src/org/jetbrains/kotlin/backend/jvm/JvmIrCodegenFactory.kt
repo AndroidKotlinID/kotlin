@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm
 
+import org.jetbrains.kotlin.analyzer.hasJdkCapability
 import org.jetbrains.kotlin.backend.common.CodegenUtil
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
@@ -20,7 +21,6 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.konan.DeserializedKlibModuleOrigin
 import org.jetbrains.kotlin.descriptors.konan.KlibModuleOrigin
 import org.jetbrains.kotlin.idea.MainFunctionDetector
-import org.jetbrains.kotlin.ir.backend.jvm.serialization.EmptyLoggingContext
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmIrLinker
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmManglerDesc
 import org.jetbrains.kotlin.ir.builders.TranslationPluginContext
@@ -56,11 +56,13 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
         doGenerateFilesInternal(input)
     }
 
-    fun convertToIr(state: GenerationState, files: Collection<KtFile>): JvmIrBackendInput {
+    @JvmOverloads
+    fun convertToIr(state: GenerationState, files: Collection<KtFile>, ignoreErrors: Boolean = false): JvmIrBackendInput {
         val extensions = JvmGeneratorExtensions()
         val mangler = JvmManglerDesc(MainFunctionDetector(state.bindingContext, state.languageVersionSettings))
-        val psi2ir = Psi2IrTranslator(state.languageVersionSettings, Psi2IrConfiguration())
+        val psi2ir = Psi2IrTranslator(state.languageVersionSettings, Psi2IrConfiguration(ignoreErrors))
         val symbolTable = SymbolTable(JvmIdSignatureDescriptor(mangler), IrFactoryImpl, JvmNameProvider)
+        val messageLogger = state.configuration[IrMessageLogger.IR_MESSAGE_LOGGER] ?: IrMessageLogger.None
         val psi2irContext = psi2ir.createGeneratorContext(state.module, state.bindingContext, symbolTable, extensions)
         val pluginExtensions = IrGenerationExtension.getInstances(state.project)
         val functionFactory = IrFunctionFactory(psi2irContext.irBuiltIns, symbolTable)
@@ -83,7 +85,7 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
         }
         val irLinker = JvmIrLinker(
             psi2irContext.moduleDescriptor,
-            EmptyLoggingContext,
+            messageLogger,
             psi2irContext.irBuiltIns,
             symbolTable,
             functionFactory,
@@ -96,7 +98,15 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
             psi2irContext.run {
                 val symbols = BuiltinSymbolsBase(irBuiltIns, moduleDescriptor.builtIns, symbolTable.lazyWrapper)
                 IrPluginContextImpl(
-                    moduleDescriptor, bindingContext, languageVersionSettings, symbolTable, typeTranslator, irBuiltIns, irLinker, symbols
+                    moduleDescriptor,
+                    bindingContext,
+                    languageVersionSettings,
+                    symbolTable,
+                    typeTranslator,
+                    irBuiltIns,
+                    irLinker,
+                    messageLogger,
+                    symbols
                 )
             }
         }
@@ -113,8 +123,15 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
             }
         }
 
-        val dependencies = psi2irContext.moduleDescriptor.allDependencyModules.map {
+        val dependencies = psi2irContext.moduleDescriptor.collectAllDependencyModulesTransitively().map {
             val kotlinLibrary = (it.getCapability(KlibModuleOrigin.CAPABILITY) as? DeserializedKlibModuleOrigin)?.library
+            if (it.hasJdkCapability) {
+                // For IDE environment only, i.e. when compiling for debugger
+                // Deserializer for built-ins module should exist because built-in types returned from SDK belong to that module,
+                // but JDK's built-ins module might not be in current module's dependencies
+                // We have to ensure that deserializer for built-ins module is created
+                irLinker.deserializeIrModuleHeader(it.builtIns.builtInsModule, null)
+            }
             irLinker.deserializeIrModuleHeader(it, kotlinLibrary)
         }
         val irProviders = listOf(irLinker)
@@ -144,6 +161,17 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
         )
     }
 
+    private fun ModuleDescriptor.collectAllDependencyModulesTransitively(): List<ModuleDescriptor> {
+        val result = LinkedHashSet<ModuleDescriptor>()
+        fun collectImpl(descriptor: ModuleDescriptor) {
+            val dependencies = descriptor.allDependencyModules
+            dependencies.forEach { if (it !in result) collectImpl(it) }
+            result += dependencies
+        }
+        collectImpl(this)
+        return result.toList()
+    }
+
     fun doGenerateFilesInternal(input: JvmIrBackendInput) {
         val (state, irModuleFragment, symbolTable, sourceManager, phaseConfig, irProviders, extensions, backendExtension) = input
         val context = JvmBackendContext(
@@ -151,11 +179,13 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
             symbolTable, phaseConfig, extensions, backendExtension
         )
         /* JvmBackendContext creates new unbound symbols, have to resolve them. */
-        ExternalDependenciesGenerator(symbolTable, irProviders, state.languageVersionSettings).generateUnboundSymbolsAsDependencies()
+        ExternalDependenciesGenerator(symbolTable, irProviders).generateUnboundSymbolsAsDependencies()
 
         state.mapInlineClass = { descriptor ->
             context.typeMapper.mapType(context.referenceClass(descriptor).defaultType)
         }
+
+        context.state.factory.registerSourceFiles(irModuleFragment.files.map(context.psiSourceManager::getKtFile))
 
         JvmLower(context).lower(irModuleFragment)
 

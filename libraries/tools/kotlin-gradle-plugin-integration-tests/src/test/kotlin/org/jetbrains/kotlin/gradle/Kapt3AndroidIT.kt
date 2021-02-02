@@ -1,8 +1,11 @@
 package org.jetbrains.kotlin.gradle
 
+import org.gradle.api.logging.configuration.WarningMode
 import org.jetbrains.kotlin.gradle.util.*
 import org.jetbrains.kotlin.test.util.KtTestUtil
 import org.junit.Assert
+import org.junit.Assume
+import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 
@@ -90,6 +93,51 @@ class Kapt3Android34IT : Kapt3AndroidIT() {
         get() = GradleVersionRequired.Until("5.4.1")
 }
 
+class Kapt3Android70IT : Kapt3AndroidIT() {
+    override val androidGradlePluginVersion: AGPVersion
+        get() = AGPVersion.v7_0_0
+
+    override val defaultGradleVersion: GradleVersionRequired
+        get() = GradleVersionRequired.AtLeast("6.8")
+
+    override fun defaultBuildOptions(): BuildOptions {
+        val javaHome = File(System.getProperty("jdk11Home")!!)
+        Assume.assumeTrue("JDK 11 should be available", javaHome.isDirectory)
+        return super.defaultBuildOptions().copy(javaHome = javaHome, warningMode = WarningMode.Summary)
+    }
+
+    @Ignore("KT-44350")
+    override fun testRealm() = Unit
+
+    @Ignore("KT-44350")
+    override fun testDatabinding() = Unit
+
+    @Ignore("KT-44350")
+    override fun testDagger() = Unit
+
+    @Ignore("KT-44350")
+    override fun testButterKnife() = Unit
+}
+
+class Kapt3Android42IT : Kapt3BaseIT() {
+    override val defaultGradleVersion: GradleVersionRequired
+        get() = GradleVersionRequired.AtLeast("6.7")
+
+    override fun defaultBuildOptions(): BuildOptions =
+        super.defaultBuildOptions().copy(androidGradlePluginVersion = AGPVersion.v4_2_0)
+
+    /** Regression test for https://youtrack.jetbrains.com/issue/KT-44020. */
+    @Test
+    fun testDatabindingWithAndroidX() {
+        val project = Project("android-databinding-androidX", directoryPrefix = "kapt2")
+
+        project.build("kaptDebugKotlin") {
+            assertSuccessful()
+            assertKaptSuccessful()
+        }
+    }
+}
+
 abstract class Kapt3AndroidIT : Kapt3BaseIT() {
     protected abstract val androidGradlePluginVersion: AGPVersion
 
@@ -100,7 +148,7 @@ abstract class Kapt3AndroidIT : Kapt3BaseIT() {
         )
 
     @Test
-    fun testButterKnife() {
+    open fun testButterKnife() {
         val project = Project("android-butterknife", directoryPrefix = "kapt2")
 
         project.build("assembleDebug") {
@@ -122,7 +170,7 @@ abstract class Kapt3AndroidIT : Kapt3BaseIT() {
     }
 
     @Test
-    fun testDagger() {
+    open fun testDagger() {
         val project = Project("android-dagger", directoryPrefix = "kapt2")
 
         project.build("assembleDebug") {
@@ -165,7 +213,7 @@ abstract class Kapt3AndroidIT : Kapt3BaseIT() {
     }
 
     @Test
-    fun testRealm() {
+    open fun testRealm() {
         val project = Project("android-realm", directoryPrefix = "kapt2")
 
         project.build("assembleDebug") {
@@ -228,7 +276,7 @@ abstract class Kapt3AndroidIT : Kapt3BaseIT() {
     }
 
     @Test
-    fun testDatabinding() {
+    open fun testDatabinding() {
         val project = Project("android-databinding", directoryPrefix = "kapt2")
         setupDataBinding(project)
 

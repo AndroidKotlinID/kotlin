@@ -38,10 +38,10 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.builder.buildImplicitTypeRef
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.stubs.elements.KtConstantExpressionElementType
+import org.jetbrains.kotlin.types.ConstantValueKind
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
@@ -154,7 +154,7 @@ class ExpressionsConverter(
                     val multiParameter = buildValueParameter {
                         session = baseSession
                         origin = FirDeclarationOrigin.Source
-                        returnTypeRef = buildImplicitTypeRef()
+                        returnTypeRef = valueParameter.firValueParameter.returnTypeRef
                         this.name = name
                         symbol = FirVariableSymbol(name)
                         defaultValue = null
@@ -375,14 +375,14 @@ class ExpressionsConverter(
                 }
                 val receiver = getAsFirExpression<FirExpression>(argument, "No operand")
                 if (operationToken == PLUS || operationToken == MINUS) {
-                    if (receiver is FirConstExpression<*> && receiver.kind == FirConstKind.IntegerLiteral) {
+                    if (receiver is FirConstExpression<*> && receiver.kind == ConstantValueKind.IntegerLiteral) {
                         val value = receiver.value as Long
                         val convertedValue = when (operationToken) {
                             MINUS -> -value
                             PLUS -> value
                             else -> error("Should not be here")
                         }
-                        return buildConstExpression(unaryExpression.toFirSourceElement(), FirConstKind.IntegerLiteral, convertedValue)
+                        return buildConstExpression(unaryExpression.toFirSourceElement(), ConstantValueKind.IntegerLiteral, convertedValue)
                     }
                 }
                 buildFunctionCall {

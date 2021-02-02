@@ -14,7 +14,15 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.serialization.konan.impl.ForwardDeclarationsFqNames
 
 internal val DEPRECATED_ANNOTATION_FQN: FqName = FqName(Deprecated::class.java.name).intern()
-internal val DEPRECATED_ANNOTATION_CID: ClassId = internedClassId(DEPRECATED_ANNOTATION_FQN)
+internal val DEPRECATED_ANNOTATION_CLASS_ID: ClassId = internedClassId(DEPRECATED_ANNOTATION_FQN)
+
+internal val ANY_CLASS_ID: ClassId = internedClassId(StandardNames.FqNames.any.toSafe().intern())
+private val NOTHING_CLASS_ID: ClassId = internedClassId(StandardNames.FqNames.nothing.toSafe().intern())
+
+internal val SPECIAL_CLASS_WITHOUT_SUPERTYPES_CLASS_IDS = listOf(
+    ANY_CLASS_ID,
+    NOTHING_CLASS_ID
+)
 
 private val STANDARD_KOTLIN_PACKAGES = listOf(
     StandardNames.BUILT_INS_PACKAGE_FQ_NAME.asString(),
@@ -35,6 +43,9 @@ private val OBJC_INTEROP_CALLABLE_ANNOTATIONS = listOf(
     "ObjCConstructor",
     "ObjCFactory"
 )
+
+internal val DEFAULT_CONSTRUCTOR_NAME = Name.identifier("<init>").intern()
+internal val DEFAULT_SETTER_VALUE_NAME = Name.identifier("value").intern()
 
 internal fun Name.strip(): String =
     asString().removeSurrounding("<", ">")

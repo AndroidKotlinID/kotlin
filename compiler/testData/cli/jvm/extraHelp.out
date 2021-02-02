@@ -92,6 +92,9 @@ where advanced options include:
                              profilerPath is a path to libasyncProfiler.so
                              Example: -Xprofile=<PATH_TO_ASYNC_PROFILER>/async-profiler/build/libasyncProfiler.so:event=cpu,interval=1ms,threads,start,framebuf=50000000:<SNAPSHOT_DIR_PATH>
   -Xrepeat=<number>          Debug option: Repeats modules compilation <number> times
+  -Xsam-conversions={class|indy} Select code generation scheme for SAM conversions.
+                             -Xsam-conversions=indy              Generate SAM conversions using `invokedynamic` with `LambdaMetafactory.metafactory`. Requires `-jvm-target 8` or greater.
+                             -Xsam-conversions=class             Generate SAM conversions as explicit classes
   -Xsanitize-parentheses     Transform '(' and ')' in method names to some other character sequence.
                              This mode can BREAK BINARY COMPATIBILITY and is only supposed to be used to workaround
                              problems with parentheses in identifiers on certain platforms
@@ -130,8 +133,6 @@ where advanced options include:
                              Run sticky condition checks on subsequent phases as well. Implies -Xcheck-phase-conditions
   -Xcommon-sources=<path>    Sources of the common module that need to be compiled together with this module in the multi-platform mode.
                              Should be a subset of sources passed as free arguments
-  -Xcoroutines={enable|warn|error}
-                             Enable coroutines or report warnings or errors on declarations and use sites of 'suspend' modifier
   -Xdisable-default-scripting-plugin
                              Do not enable scripting plugin by default
   -Xdisable-phases           Disable backend phases

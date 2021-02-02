@@ -7,16 +7,26 @@ package org.jetbrains.kotlin.fir.analysis.diagnostics
 
 import org.jetbrains.kotlin.diagnostics.rendering.DefaultErrorMessages
 import org.jetbrains.kotlin.diagnostics.rendering.DiagnosticFactoryToRendererMap
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.AMBIGUOUS_CALLS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.DECLARATION_NAME
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.NULLABLE_STRING
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.PROPERTY_NAME
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.RENDER_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.SYMBOL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.SYMBOLS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.TO_STRING
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_DELEGATED_PROPERTY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_FUNCTION_IN_NON_ABSTRACT_CLASS
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_FUNCTION_WITH_BODY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_PROPERTY_WITH_GETTER
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_PROPERTY_WITH_INITIALIZER
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_PROPERTY_WITH_SETTER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_SUPER_CALL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.AMBIGUITY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANNOTATION_CLASS_MEMBER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANNOTATION_PARAMETER_DEFAULT_VALUE_MUST_BE_CONSTANT
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANONYMOUS_FUNCTION_PARAMETER_WITH_DEFAULT_VALUE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANY_METHOD_IMPLEMENTED_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_EQUALS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGNED_VALUE_IS_NEVER_READ
@@ -24,12 +34,17 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGN_OPERATOR_A
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.BREAK_OR_CONTINUE_OUTSIDE_A_LOOP
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CAN_BE_VAL
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CATCH_PARAMETER_WITH_DEFAULT_VALUE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CLASS_IN_SUPERTYPE_FOR_ENUM
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.COMPONENT_FUNCTION_AMBIGUITY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.COMPONENT_FUNCTION_MISSING
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.COMPONENT_FUNCTION_ON_NULLABLE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CONFLICTING_OVERLOADS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CONFLICTING_PROJECTION
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CONSTRUCTOR_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CONSTRUCTOR_IN_OBJECT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CYCLIC_CONSTRUCTOR_DELEGATION_CALL
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.DELEGATED_PROPERTY_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.DELEGATION_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.DELEGATION_SUPER_CALL_IN_ENUM_CONSTRUCTOR
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.DEPRECATED_MODIFIER_PAIR
@@ -37,6 +52,10 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.DESERIALIZATION_E
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EMPTY_RANGE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ENUM_AS_SUPERTYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ERROR_FROM_JAVA_RESOLUTION
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPECTED_DECLARATION_WITH_BODY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPECTED_DELEGATED_PROPERTY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPECTED_PRIVATE_DECLARATION
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPECTED_PROPERTY_INITIALIZER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPLICIT_DELEGATION_CALL_REQUIRED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_FUNCTION_RETURN_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_PARAMETER_TYPE
@@ -46,6 +65,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_SUPER_CLA
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_SUPER_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_TYPEALIAS_EXPANDED_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.EXPOSED_TYPE_PARAMETER_BOUND
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.FUNCTION_DECLARATION_WITH_NO_NAME
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.HIDDEN
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ILLEGAL_CONST_EXPRESSION
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ILLEGAL_UNDERSCORE
@@ -54,6 +74,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INAPPLICABLE_INFI
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INAPPLICABLE_LATEINIT_MODIFIER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INCOMPATIBLE_MODIFIERS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INFERENCE_ERROR
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INITIALIZER_REQUIRED_FOR_DESTRUCTURING_DECLARATION
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INSTANCE_ACCESS_BEFORE_SUPER_CALL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INTERFACE_WITH_SUPERCLASS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.INVALID_TYPE_OF_ANNOTATION_MEMBER
@@ -64,6 +85,8 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.LOCAL_OBJECT_NOT_
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.MANY_COMPANION_OBJECTS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.MISSING_VAL_ON_ANNOTATION_PARAMETER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NONE_APPLICABLE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_ABSTRACT_FUNCTION_WITH_NO_BODY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_MEMBER_FUNCTION_NO_BODY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_PRIVATE_CONSTRUCTOR_IN_ENUM
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_PRIVATE_CONSTRUCTOR_IN_SEALED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NOT_AN_ANNOTATION_CLASS
@@ -75,8 +98,14 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NULLABLE_TYPE_OF_
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.OTHER_ERROR
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIMARY_CONSTRUCTOR_DELEGATION_CALL_EXPECTED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIMARY_CONSTRUCTOR_REQUIRED_FOR_DATA_CLASS
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIVATE_FUNCTION_WITH_NO_BODY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIVATE_PROPERTY_IN_INTERFACE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIVATE_SETTER_FOR_OPEN_PROPERTY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PROPERTY_INITIALIZER_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PROPERTY_TYPE_MISMATCH_ON_OVERRIDE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PROPERTY_WITH_NO_TYPE_NO_INITIALIZER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.QUALIFIED_SUPERTYPE_EXTENDED_BY_OTHER_SUPERTYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.RECURSION_IN_IMPLICIT_TYPES
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.RECURSION_IN_SUPERTYPES
@@ -85,10 +114,12 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_CALL_OF
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_EXPLICIT_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_MODALITY_MODIFIER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_MODIFIER
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_OPEN_IN_INTERFACE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_RETURN_UNIT_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_SETTER_PARAMETER_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_SINGLE_EXPRESSION_STRING_TEMPLATE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REDUNDANT_VISIBILITY_MODIFIER
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REIFIED_TYPE_IN_CATCH_CLAUSE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.REPEATED_MODIFIER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.RETURN_NOT_ALLOWED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.RETURN_TYPE_MISMATCH_ON_OVERRIDE
@@ -106,11 +137,14 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_MISMATCH
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETERS_IN_ENUM
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETERS_IN_OBJECT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETER_AS_SUPERTYPE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETER_IN_CATCH_CLAUSE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNINITIALIZED_VARIABLE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNRESOLVED_LABEL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNRESOLVED_REFERENCE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNSAFE_CALL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNUSED_VARIABLE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UPPER_BOUND_VIOLATED
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.USELESS_VARARG_ON_PARAMETER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIABLE_EXPECTED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIABLE_INITIALIZER_IS_REDUNDANT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIABLE_NEVER_READ
@@ -251,6 +285,7 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
             map.put(REDUNDANT_MODIFIER, "Modifier ''{0}'' is redundant because ''{1}'' is present", TO_STRING, TO_STRING)
             map.put(DEPRECATED_MODIFIER_PAIR, "Modifier ''{0}'' is deprecated in presence of ''{1}''", TO_STRING, TO_STRING)
             map.put(INCOMPATIBLE_MODIFIERS, "Modifier ''{0}'' is incompatible with ''{1}''", TO_STRING, TO_STRING)
+            map.put(REDUNDANT_OPEN_IN_INTERFACE, "Modifier 'open' is redundant for abstract interface members")
 
             // Applicability
             map.put(NONE_APPLICABLE, "None of the following functions are applicable: {0}", SYMBOLS)
@@ -305,6 +340,18 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
                 TO_STRING,
                 DECLARATION_NAME
             ) // #
+            map.put(
+                CATCH_PARAMETER_WITH_DEFAULT_VALUE,
+                "Catch clause parameter may not have a default value"
+            )
+            map.put(
+                REIFIED_TYPE_IN_CATCH_CLAUSE,
+                "Reified type is forbidden for catch parameter"
+            )
+            map.put(
+                TYPE_PARAMETER_IN_CATCH_CLAUSE,
+                "Type parameter is forbidden for catch parameter"
+            )
 
             // Redeclarations
             map.put(MANY_COMPANION_OBJECTS, "Only one companion object is allowed per class")
@@ -324,6 +371,76 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
                 TO_STRING
             )
 
+            // Functions
+            map.put(
+                ABSTRACT_FUNCTION_IN_NON_ABSTRACT_CLASS,
+                "Abstract function ''{0}'' in non-abstract class ''{1}''",
+                DECLARATION_NAME,
+                DECLARATION_NAME
+            )
+            map.put(ABSTRACT_FUNCTION_WITH_BODY, "A function ''{0}'' with body cannot be abstract", DECLARATION_NAME)
+            map.put(NON_ABSTRACT_FUNCTION_WITH_NO_BODY, "Function ''{0}'' without a body must be abstract", DECLARATION_NAME)
+            map.put(PRIVATE_FUNCTION_WITH_NO_BODY, "Function ''{0}'' without body cannot be private", DECLARATION_NAME)
+            map.put(NON_MEMBER_FUNCTION_NO_BODY, "Function ''{0}'' must have a body", DECLARATION_NAME)
+
+            map.put(FUNCTION_DECLARATION_WITH_NO_NAME, "Function declaration must have a name")
+
+            map.put(
+                ANONYMOUS_FUNCTION_PARAMETER_WITH_DEFAULT_VALUE,
+                "An anonymous function is not allowed to specify default values for its parameters"
+            )
+            map.put(USELESS_VARARG_ON_PARAMETER, "Vararg on this parameter is useless")
+
+            // Properties & accessors
+            map.put(
+                ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS,
+                "Abstract property ''{0}'' in non-abstract class ''{1}''",
+                DECLARATION_NAME,
+                DECLARATION_NAME
+            )
+            map.put(PRIVATE_PROPERTY_IN_INTERFACE, "Abstract property in an interface cannot be private")
+
+            map.put(ABSTRACT_PROPERTY_WITH_INITIALIZER, "Property with initializer cannot be abstract")
+            map.put(PROPERTY_INITIALIZER_IN_INTERFACE, "Property initializers are not allowed in interfaces")
+            map.put(
+                PROPERTY_WITH_NO_TYPE_NO_INITIALIZER,
+                "This property must either have a type annotation, be initialized or be delegated"
+            )
+
+            map.put(ABSTRACT_DELEGATED_PROPERTY, "Delegated property cannot be abstract")
+            map.put(DELEGATED_PROPERTY_IN_INTERFACE, "Delegated properties are not allowed in interfaces")
+
+            map.put(ABSTRACT_PROPERTY_WITH_GETTER, "Property with getter implementation cannot be abstract")
+            map.put(ABSTRACT_PROPERTY_WITH_SETTER, "Property with setter implementation cannot be abstract")
+            map.put(PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY, "Private setters are not allowed for abstract properties")
+            map.put(PRIVATE_SETTER_FOR_OPEN_PROPERTY, "Private setters are not allowed for open properties")
+
+            // Multi-platform projects
+            map.put(EXPECTED_DECLARATION_WITH_BODY, "Expected declaration must not have a body")
+            map.put(EXPECTED_PROPERTY_INITIALIZER, "Expected property cannot have an initializer")
+            map.put(EXPECTED_DELEGATED_PROPERTY, "Expected property cannot be delegated")
+            map.put(EXPECTED_PRIVATE_DECLARATION, "Expected declaration cannot be private")
+
+            // Destructuring declaration
+            map.put(INITIALIZER_REQUIRED_FOR_DESTRUCTURING_DECLARATION, "Initializer required for destructuring declaration")
+            map.put(
+                COMPONENT_FUNCTION_MISSING,
+                "Destructuring declaration initializer of type {1} must have a ''{0}()'' function",
+                TO_STRING,
+                RENDER_TYPE
+            )
+            map.put(
+                COMPONENT_FUNCTION_AMBIGUITY,
+                "Function ''{0}''() is ambiguous for this expression: {1}",
+                TO_STRING,
+                AMBIGUOUS_CALLS
+            )
+            map.put(
+                COMPONENT_FUNCTION_ON_NULLABLE,
+                "Not nullable value required to call ''{0}()'' function of destructuring declaration initializer",
+                TO_STRING
+            )
+
             // Control flow diagnostics
             map.put(UNINITIALIZED_VARIABLE, "{0} must be initialized before access", PROPERTY_NAME)
             map.put(
@@ -335,6 +452,18 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
             )
             map.put(LEAKED_IN_PLACE_LAMBDA, "Leaked in-place lambda: {2}", SYMBOL)
             map.put(FirErrors.WRONG_IMPLIES_CONDITION, "Wrong implies condition")
+
+            // Nullability
+            map.put(
+                UNSAFE_CALL,
+                "Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type {0}",
+                RENDER_TYPE
+            )
+            //map.put(
+            //    UNSAFE_IMPLICIT_INVOKE_CALL,
+            //    "Reference has a nullable type ''{0}'', use explicit \"?.invoke\" to make a function-like call instead.",
+            //    RENDER_TYPE
+            //)
 
             // Extended checkers group
             map.put(REDUNDANT_VISIBILITY_MODIFIER, "Redundant visibility modifier")

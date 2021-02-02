@@ -22,7 +22,7 @@ class DeclarationCheckersDiagnosticComponent(
     }
 
     override fun visitProperty(property: FirProperty, data: CheckerContext) {
-        checkers.memberDeclarationCheckers.check(property, data, reporter)
+        (checkers.memberDeclarationCheckers + checkers.propertyCheckers).check(property, data, reporter)
     }
 
     override fun visitRegularClass(regularClass: FirRegularClass, data: CheckerContext) {
@@ -30,7 +30,7 @@ class DeclarationCheckersDiagnosticComponent(
     }
 
     override fun visitSimpleFunction(simpleFunction: FirSimpleFunction, data: CheckerContext) {
-        checkers.memberDeclarationCheckers.check(simpleFunction, data, reporter)
+        (checkers.memberDeclarationCheckers + checkers.functionCheckers).check(simpleFunction, data, reporter)
     }
 
     override fun visitTypeAlias(typeAlias: FirTypeAlias, data: CheckerContext) {
@@ -38,7 +38,7 @@ class DeclarationCheckersDiagnosticComponent(
     }
 
     override fun visitConstructor(constructor: FirConstructor, data: CheckerContext) {
-        checkers.constructorCheckers.check(constructor, data, reporter)
+        (checkers.memberDeclarationCheckers + checkers.constructorCheckers).check(constructor, data, reporter)
     }
 
     override fun visitAnonymousFunction(anonymousFunction: FirAnonymousFunction, data: CheckerContext) {

@@ -12,8 +12,8 @@ import org.jetbrains.kotlin.idea.frontend.api.components.*
 import org.jetbrains.kotlin.idea.frontend.api.scopes.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolWithDeclarations
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolWithMembers
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolWithKind
+import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolWithMembers
 import org.jetbrains.kotlin.idea.frontend.api.symbols.pointers.KtSymbolPointer
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
 import org.jetbrains.kotlin.idea.references.KtReference
@@ -58,6 +58,9 @@ abstract class KtAnalysisSession(final override val token: ValidityToken) : Vali
     fun KtCallableSymbol.getOverriddenSymbols(containingDeclaration: KtClassOrObjectSymbol): List<KtCallableSymbol> =
         symbolDeclarationOverridesProvider.getOverriddenSymbols(this, containingDeclaration)
 
+    fun KtCallableSymbol.getIntersectionOverriddenSymbols(): Collection<KtCallableSymbol> =
+        symbolDeclarationOverridesProvider.getIntersectionOverriddenSymbols(this)
+
     fun KtExpression.getSmartCasts(): Collection<KtType> = smartCastProvider.getSmartCastedToTypes(this)
 
     fun KtExpression.getImplicitReceiverSmartCasts(): Collection<ImplicitReceiverSmartCast> =
@@ -76,6 +79,8 @@ abstract class KtAnalysisSession(final override val token: ValidityToken) : Vali
     fun KtType.isBuiltInFunctionalType(): Boolean = typeProvider.isBuiltinFunctionalType(this)
 
     val builtinTypes: KtBuiltinTypes get() = typeProvider.builtinTypes
+
+    fun KtClassOrObjectSymbol.buildSelfClassType(): KtType = typeProvider.buildSelfClassType(this)
 
     fun KtElement.getDiagnostics(): Collection<Diagnostic> = diagnosticProvider.getDiagnosticsForElement(this)
 

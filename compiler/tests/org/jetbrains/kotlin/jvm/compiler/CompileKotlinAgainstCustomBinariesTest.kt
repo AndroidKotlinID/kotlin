@@ -9,6 +9,7 @@ import com.intellij.openapi.util.io.FileUtil
 import junit.framework.TestCase
 import org.jetbrains.kotlin.cli.WrongBytecodeVersionTest
 import org.jetbrains.kotlin.cli.common.CLICompiler
+import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.MessageRenderer
 import org.jetbrains.kotlin.cli.common.messages.PrintingMessageCollector
@@ -382,7 +383,17 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
     }
 
     fun testRequireKotlinInNestedClassesAgainst13() {
-        val library = compileLibrary("library", additionalOptions = listOf("-language-version", "1.3"))
+        val library = compileLibrary(
+            "library",
+            additionalOptions = listOf("-language-version", "1.3"),
+            checkKotlinOutput = { actual ->
+                assertEquals(
+                    normalizeOutput(
+                        "warning: language version 1.3 is deprecated and its support will be removed in a future version of Kotlin\n" to ExitCode.OK
+                    ), actual
+                )
+            }
+        )
         compileKotlin("source.kt", tmpdir, listOf(library))
     }
 
@@ -515,52 +526,15 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
     }
 
     fun testWrongInlineTarget() {
-        val library = compileLibrary("library", additionalOptions = listOf("-jvm-target", "1.8"))
+        val library = compileLibrary("library", additionalOptions = listOf("-jvm-target", "11"))
 
-        compileKotlin("source.kt", tmpdir, listOf(library))
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-jvm-target", "1.8"))
 
         compileKotlin(
             "warningsOnly_1_3.kt", tmpdir, listOf(library),
             additionalOptions = listOf("-language-version", "1.3"),
             expectedFileName = "warningsOnly_1_3.txt"
         )
-    }
-
-    fun testObsoleteInlineSuspend() {
-        val version = intArrayOf(1, 0, 1) // legacy coroutines metadata
-        val options = listOf("-language-version", "1.2", "-Xcoroutines=enable")
-        val library = transformJar(
-            compileLibrary(
-                "library",
-                additionalOptions = options,
-                extraClassPath = listOf(ForTestCompileRuntime.coroutinesCompatForTests()),
-                checkKotlinOutput = { actual ->
-                    KotlinTestUtils.assertEqualsToFile(File(testDataDirectory, "library.output.txt"), actual)
-                }
-            ),
-            { _, bytes ->
-                val (resultBytes, removedCounter) = stripSuspensionMarksToImitateLegacyCompiler(
-                    WrongBytecodeVersionTest.transformMetadataInClassFile(bytes) { name, _ ->
-                        if (name == JvmAnnotationNames.BYTECODE_VERSION_FIELD_NAME) version else null
-                    })
-                // we expect 4 instructions to be removed in this test library
-                assertEquals(4, removedCounter)
-                resultBytes
-            })
-        compileKotlin(
-            "source.kt", tmpdir, listOf(library, ForTestCompileRuntime.coroutinesCompatForTests()), K2JVMCompiler(),
-            additionalOptions = options
-        )
-        val classLoader = URLClassLoader(
-            arrayOf(library.toURI().toURL(), tmpdir.toURI().toURL(), ForTestCompileRuntime.coroutinesCompatForTests().toURI().toURL()),
-            ForTestCompileRuntime.runtimeJarClassLoader()
-        )
-        @Suppress("UNCHECKED_CAST")
-        val result = classLoader
-            .loadClass("SourceKt")
-            .getDeclaredMethod("run")
-            .invoke(null) as Array<String>
-        assertEquals(result[0], result[1])
     }
 
     fun testInlineFunctionsWithMatchingJvmSignatures() {
@@ -580,43 +554,6 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         compileKotlin("source.kt", tmpdir, listOf(library))
     }
 
-    fun testReleaseCoroutineCallFromExperimental() {
-        val library = compileLibrary(
-            "library",
-            additionalOptions = listOf("-language-version", "1.3", "-api-version", "1.3"),
-            checkKotlinOutput = {}
-        )
-        compileKotlin(
-            "experimental.kt",
-            tmpdir,
-            listOf(library),
-            additionalOptions = listOf("-language-version", "1.2", "-Xskip-metadata-version-check")
-        )
-    }
-
-    fun testExperimentalCoroutineCallFromRelease() {
-        doTestExperimentalCoroutineCallFromRelease()
-    }
-
-    fun testExperimentalCoroutineCallFromReleaseWarnings() {
-        doTestExperimentalCoroutineCallFromRelease()
-    }
-
-    private fun doTestExperimentalCoroutineCallFromRelease() {
-        val library = compileLibrary(
-            "library",
-            additionalOptions = listOf("-language-version", "1.2"),
-            checkKotlinOutput = {},
-            extraClassPath = listOf(ForTestCompileRuntime.coroutinesCompatForTests())
-        )
-        compileKotlin(
-            "release.kt",
-            tmpdir,
-            listOf(library, ForTestCompileRuntime.coroutinesCompatForTests()),
-            additionalOptions = listOf("-language-version", "1.3", "-api-version", "1.3")
-        )
-    }
-
     fun testInternalFromForeignModule() {
         compileKotlin("source.kt", tmpdir, listOf(compileLibrary("library")))
     }
@@ -626,6 +563,11 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-Xfriend-paths=${library.path}"))
     }
 
+    fun testInternalFromFriendModuleFir() {
+        val library = compileLibrary("library")
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-Xfriend-paths=${library.path}", "-Xuse-fir"))
+    }
+
     fun testJvmDefaultClashWithOld() {
         val library = compileLibrary("library", additionalOptions = listOf("-Xjvm-default=disable"))
         compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-jvm-target", "1.8", "-Xjvm-default=all"))
@@ -633,7 +575,12 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
 
     fun testJvmDefaultCompatibilityAgainstJava() {
         val library = compileLibrary("library", additionalOptions = listOf("-Xjvm-default=disable"))
-        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-jvm-target", "1.8", "-Xjvm-default=all-compatibility"))
+        compileKotlin(
+            "source.kt",
+            tmpdir,
+            listOf(library),
+            additionalOptions = listOf("-jvm-target", "1.8", "-Xjvm-default=all-compatibility")
+        )
     }
 
     fun testInternalFromForeignModuleJs() {
@@ -755,6 +702,32 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         )
         // Difference in mangling becomes apparent only on load time as NSME, so, to check the mangling we need to load the classfile
         loadClassFile("SourceKt", tmpdir, library)
+    }
+
+    fun testAnonymousObjectTypeMetadata() {
+        val library = compileCommonLibrary(
+            libraryName = "library",
+        )
+        compileKotlin(
+            "anonymousObjectTypeMetadata.kt",
+            tmpdir,
+            listOf(library),
+            K2MetadataCompiler(),
+        )
+    }
+
+    fun testAnonymousObjectTypeMetadataKlib() {
+        val klibLibrary = compileCommonLibrary(
+            libraryName = "library",
+            listOf("-Xexpect-actual-linker"),
+        )
+        compileKotlin(
+            "anonymousObjectTypeMetadata.kt",
+            tmpdir,
+            listOf(klibLibrary),
+            K2MetadataCompiler(),
+            listOf("-Xexpect-actual-linker")
+        )
     }
 
     private fun loadClassFile(className: String, dir: File, library: File) {

@@ -36,6 +36,16 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         runTest("compiler/testData/codegen/bytecodeListing/accessorForProtectedPropertyWithPrivateSetterInObjectLiteral.kt");
     }
 
+    @TestMetadata("accessorForTopLevelMembers.kt")
+    public void testAccessorForTopLevelMembers() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/accessorForTopLevelMembers.kt");
+    }
+
+    @TestMetadata("accessorsForProtectedStaticJavaFieldInOtherPackage.kt")
+    public void testAccessorsForProtectedStaticJavaFieldInOtherPackage() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/accessorsForProtectedStaticJavaFieldInOtherPackage.kt");
+    }
+
     public void testAllFilesPresentInBytecodeListing() throws Exception {
         KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
     }
@@ -88,6 +98,16 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
     @TestMetadata("extension.kt")
     public void testExtension() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/extension.kt");
+    }
+
+    @TestMetadata("fileClassWithPrivateDeclarationsOnly_after.kt")
+    public void testFileClassWithPrivateDeclarationsOnly_after() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/fileClassWithPrivateDeclarationsOnly_after.kt");
+    }
+
+    @TestMetadata("fileClassWithPrivateDeclarationsOnly_before.kt")
+    public void testFileClassWithPrivateDeclarationsOnly_before() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/fileClassWithPrivateDeclarationsOnly_before.kt");
     }
 
     @TestMetadata("immutableCollection.kt")
@@ -1037,6 +1057,11 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/genericChild.kt");
         }
 
+        @TestMetadata("hiddenConstructor.kt")
+        public void testHiddenConstructor() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/hiddenConstructor.kt");
+        }
+
         @TestMetadata("inlineCharSequence.kt")
         public void testInlineCharSequence() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/inlineClasses/inlineCharSequence.kt");
@@ -1468,11 +1493,6 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         public void testSuspendMain() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/main/suspendMain.kt");
         }
-
-        @TestMetadata("suspendMain_before.kt")
-        public void testSuspendMain_before() throws Exception {
-            runTest("compiler/testData/codegen/bytecodeListing/main/suspendMain_before.kt");
-        }
     }
 
     @TestMetadata("compiler/testData/codegen/bytecodeListing/multiplatform")
@@ -1621,6 +1641,34 @@ public class IrBytecodeListingTestGenerated extends AbstractIrBytecodeListingTes
         @TestMetadata("wrapperInlinedFromAnotherClass.kt")
         public void testWrapperInlinedFromAnotherClass() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/sam/wrapperInlinedFromAnotherClass.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/bytecodeListing/sealed")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Sealed extends AbstractIrBytecodeListingTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM_IR, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSealed() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/sealed"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+        }
+
+        @TestMetadata("annotationsOnSealedConstructor.kt")
+        public void testAnnotationsOnSealedConstructor() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/sealed/annotationsOnSealedConstructor.kt");
+        }
+
+        @TestMetadata("sealedClassConstructor_1_4.kt")
+        public void testSealedClassConstructor_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/sealed/sealedClassConstructor_1_4.kt");
+        }
+
+        @TestMetadata("sealedClassConstructor_1_5.kt")
+        public void testSealedClassConstructor_1_5() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/sealed/sealedClassConstructor_1_5.kt");
         }
     }
 

@@ -5,10 +5,13 @@
 
 package org.jetbrains.kotlin.fir.checkers
 
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSealedClassConstructorCallChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.*
 
 object CommonExpressionCheckers : ExpressionCheckers() {
+    override val basicExpressionCheckers: Set<FirBasicExpressionChecker> = setOf(
+        FirAnonymousFunctionChecker,
+    )
+
     override val qualifiedAccessCheckers: Set<FirQualifiedAccessChecker> = setOf(
         FirSuperNotAvailableChecker,
         FirNotASupertypeChecker,
@@ -21,4 +24,8 @@ object CommonExpressionCheckers : ExpressionCheckers() {
         FirSealedClassConstructorCallChecker,
     )
     override val functionCallCheckers: Set<FirFunctionCallChecker> = setOf()
+
+    override val tryExpressionCheckers: Set<FirTryExpressionChecker> = setOf(
+        FirCatchParameterChecker
+    )
 }

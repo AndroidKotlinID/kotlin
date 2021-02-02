@@ -11,7 +11,6 @@ import org.jetbrains.kotlin.fir.FirFakeSourceElementKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.classId
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
-import org.jetbrains.kotlin.fir.expressions.classId
 import org.jetbrains.kotlin.fir.fakeElement
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
@@ -236,6 +235,7 @@ fun FirTypeRef.withReplacedConeType(
             this@withReplacedConeType.source
         type = newType
         annotations += this@withReplacedConeType.annotations
+        delegatedTypeRef = this@withReplacedConeType.delegatedTypeRef
     }
 }
 
@@ -269,17 +269,8 @@ fun FirTypeRef.approximatedForPublicPosition(approximator: AbstractTypeApproxima
     else
         this
 
-private fun ConeKotlinType.requiresApproximationInPublicPosition(): Boolean {
-    return when (this) {
-        is ConeIntegerLiteralType,
-        is ConeCapturedType,
-        is ConeDefinitelyNotNullType,
-        is ConeIntersectionType -> true
-        is ConeClassLikeType -> typeArguments.any {
-            it is ConeKotlinTypeProjection && it.type.requiresApproximationInPublicPosition()
-        }
-        else -> false
-    }
+private fun ConeKotlinType.requiresApproximationInPublicPosition(): Boolean = contains {
+    it is ConeIntegerLiteralType || it is ConeCapturedType || it is ConeDefinitelyNotNullType || it is ConeIntersectionType
 }
 
 /*

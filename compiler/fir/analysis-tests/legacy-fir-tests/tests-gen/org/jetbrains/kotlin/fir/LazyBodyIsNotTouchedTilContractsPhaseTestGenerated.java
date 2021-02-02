@@ -39,9 +39,24 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         runTest("compiler/fir/analysis-tests/testData/resolve/bareTypes.kt");
     }
 
+    @TestMetadata("bareTypes2.kt")
+    public void testBareTypes2() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/bareTypes2.kt");
+    }
+
+    @TestMetadata("bareTypesWithFlexibleArguments.kt")
+    public void testBareTypesWithFlexibleArguments() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/bareTypesWithFlexibleArguments.kt");
+    }
+
     @TestMetadata("cast.kt")
     public void testCast() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/cast.kt");
+    }
+
+    @TestMetadata("catchParameter.kt")
+    public void testCatchParameter() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/catchParameter.kt");
     }
 
     @TestMetadata("companion.kt")
@@ -1221,6 +1236,24 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         public void testValOnAnnotationParameter() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/valOnAnnotationParameter.kt");
         }
+
+        @TestMetadata("compiler/fir/analysis-tests/testData/resolve/diagnostics/functionAsExpression")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class FunctionAsExpression extends AbstractLazyBodyIsNotTouchedTilContractsPhaseTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInFunctionAsExpression() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/diagnostics/functionAsExpression"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+            }
+
+            @TestMetadata("Parameters.kt")
+            public void testParameters() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/functionAsExpression/Parameters.kt");
+            }
+        }
     }
 
     @TestMetadata("compiler/fir/analysis-tests/testData/resolve/expresssions")
@@ -2211,6 +2244,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         @TestMetadata("lambdaInElvis.kt")
         public void testLambdaInElvis() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/inference/lambdaInElvis.kt");
+        }
+
+        @TestMetadata("lambdasReturns.kt")
+        public void testLambdasReturns() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/inference/lambdasReturns.kt");
         }
 
         @TestMetadata("nestedExtensionFunctionType.kt")
