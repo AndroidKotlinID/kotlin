@@ -9,12 +9,15 @@ import org.jetbrains.kotlin.diagnostics.rendering.DefaultErrorMessages
 import org.jetbrains.kotlin.diagnostics.rendering.DiagnosticFactoryToRendererMap
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.AMBIGUOUS_CALLS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.DECLARATION_NAME
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.FQ_NAMES_IN_TYPES
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.NAME
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.NULLABLE_STRING
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.PROPERTY_NAME
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.RENDER_TYPE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.SYMBOL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.SYMBOLS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.TO_STRING
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderers.VISIBILITY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_DELEGATED_PROPERTY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_FUNCTION_IN_NON_ABSTRACT_CLASS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_FUNCTION_WITH_BODY
@@ -32,6 +35,8 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ARRAY_EQUALITY_OP
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGNED_VALUE_IS_NEVER_READ
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGN_OPERATOR_AMBIGUITY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.BREAK_OR_CONTINUE_OUTSIDE_A_LOOP
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CANNOT_CHANGE_ACCESS_PRIVILEGE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CANNOT_WEAKEN_ACCESS_PRIVILEGE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CAN_BE_VAL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.CATCH_PARAMETER_WITH_DEFAULT_VALUE
@@ -89,6 +94,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_ABSTRACT_FUNC
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_MEMBER_FUNCTION_NO_BODY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_PRIVATE_CONSTRUCTOR_IN_ENUM
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_PRIVATE_CONSTRUCTOR_IN_SEALED
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NOTHING_TO_OVERRIDE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NOT_AN_ANNOTATION_CLASS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NOT_A_LOOP_LABEL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NOT_A_SUPERTYPE
@@ -96,6 +102,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NO_THIS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NO_TYPE_FOR_TYPE_PARAMETER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NULLABLE_TYPE_OF_ANNOTATION_MEMBER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.OTHER_ERROR
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.OVERRIDING_FINAL_MEMBER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIMARY_CONSTRUCTOR_DELEGATION_CALL_EXPECTED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIMARY_CONSTRUCTOR_REQUIRED_FOR_DATA_CLASS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.PRIVATE_FUNCTION_WITH_NO_BODY
@@ -150,6 +157,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIABLE_INITIALI
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIABLE_NEVER_READ
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VARIANCE_ON_TYPE_PARAMETER_NOT_ALLOWED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VAR_ANNOTATION_PARAMETER
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VAR_OVERRIDDEN_BY_VAL
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.VAR_TYPE_MISMATCH_ON_OVERRIDE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.WRONG_INVOCATION_KIND
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.WRONG_NUMBER_OF_TYPE_ARGUMENTS
@@ -280,7 +288,7 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
             )
 
             // Modifiers
-            map.put(INAPPLICABLE_INFIX_MODIFIER, "''infix'' modifier is inapplicable on this function: {0}", TO_STRING)
+            map.put(INAPPLICABLE_INFIX_MODIFIER, "''infix'' modifier is inapplicable on this function")
             map.put(REPEATED_MODIFIER, "Repeated ''{0}''", TO_STRING)
             map.put(REDUNDANT_MODIFIER, "Modifier ''{0}'' is redundant because ''{1}'' is present", TO_STRING, TO_STRING)
             map.put(DEPRECATED_MODIFIER_PAIR, "Modifier ''{0}'' is deprecated in presence of ''{1}''", TO_STRING, TO_STRING)
@@ -322,35 +330,53 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
                 VARIANCE_ON_TYPE_PARAMETER_NOT_ALLOWED,
                 "Variance annotations are only allowed for type parameters of classes and interfaces"
             )
+            map.put(CATCH_PARAMETER_WITH_DEFAULT_VALUE, "Catch clause parameter may not have a default value")
+            map.put(REIFIED_TYPE_IN_CATCH_CLAUSE, "Reified type is forbidden for catch parameter")
+            map.put(TYPE_PARAMETER_IN_CATCH_CLAUSE, "Type parameter is forbidden for catch parameter")
+
+            // Overrides
+            map.put(NOTHING_TO_OVERRIDE, "''{0}'' overrides nothing", DECLARATION_NAME)
+            map.put(OVERRIDING_FINAL_MEMBER, "''{0}'' in ''{1}'' is final and cannot be overridden", NAME, TO_STRING)
+
+            map.put(
+                CANNOT_WEAKEN_ACCESS_PRIVILEGE,
+                "Cannot weaken access privilege ''{0}'' for ''{1}'' in ''{2}''",
+                VISIBILITY,
+                NAME,
+                TO_STRING
+            )
+            map.put(
+                CANNOT_CHANGE_ACCESS_PRIVILEGE,
+                "Cannot change access privilege ''{0}'' for ''{1}'' in ''{2}''",
+                VISIBILITY,
+                NAME,
+                TO_STRING
+            )
+
             map.put(
                 RETURN_TYPE_MISMATCH_ON_OVERRIDE,
                 "Return type of ''{0}'' is not a subtype of the return type of the overridden member ''{1}''",
-                TO_STRING,
-                DECLARATION_NAME
-            ) // #
+                DECLARATION_NAME,
+                FQ_NAMES_IN_TYPES
+            )
             map.put(
                 PROPERTY_TYPE_MISMATCH_ON_OVERRIDE,
                 "Type of ''{0}'' is not a subtype of the overridden property ''{1}''",
-                TO_STRING,
-                DECLARATION_NAME
-            ) // #
+                DECLARATION_NAME,
+                FQ_NAMES_IN_TYPES
+            )
             map.put(
                 VAR_TYPE_MISMATCH_ON_OVERRIDE,
                 "Type of ''{0}'' doesn''t match the type of the overridden var-property ''{1}''",
-                TO_STRING,
-                DECLARATION_NAME
-            ) // #
-            map.put(
-                CATCH_PARAMETER_WITH_DEFAULT_VALUE,
-                "Catch clause parameter may not have a default value"
+                DECLARATION_NAME,
+                FQ_NAMES_IN_TYPES
             )
+
             map.put(
-                REIFIED_TYPE_IN_CATCH_CLAUSE,
-                "Reified type is forbidden for catch parameter"
-            )
-            map.put(
-                TYPE_PARAMETER_IN_CATCH_CLAUSE,
-                "Type parameter is forbidden for catch parameter"
+                VAR_OVERRIDDEN_BY_VAL,
+                "Var-property {0} cannot be overridden by val-property {1}",
+                FQ_NAMES_IN_TYPES,
+                FQ_NAMES_IN_TYPES
             )
 
             // Redeclarations

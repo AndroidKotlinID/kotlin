@@ -15882,6 +15882,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("supertypeUsesNested.kt")
+            public void testSupertypeUsesNested() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/j+k/supertypeUsesNested.kt");
+            }
+
+            @Test
             @TestMetadata("traitDefaultCall.kt")
             public void testTraitDefaultCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/j+k/traitDefaultCall.kt");
@@ -31619,6 +31625,22 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
         }
 
         @Nested
+        @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/builderInference")
+        @TestDataPath("$PROJECT_ROOT")
+        public class BuilderInference {
+            @Test
+            public void testAllFilesPresentInBuilderInference() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/testsWithStdLib/builderInference"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+            }
+
+            @Test
+            @TestMetadata("completeIrrelevantCalls.kt")
+            public void testCompleteIrrelevantCalls() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/builderInference/completeIrrelevantCalls.kt");
+            }
+        }
+
+        @Nested
         @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/builtins")
         @TestDataPath("$PROJECT_ROOT")
         public class Builtins {
@@ -34492,6 +34514,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("classArrayInAnnotation.kt")
+            public void testClassArrayInAnnotation() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/reflection/classArrayInAnnotation.kt");
+            }
+
+            @Test
             @TestMetadata("noReflectionInClassPath.kt")
             public void testNoReflectionInClassPath() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/reflection/noReflectionInClassPath.kt");
@@ -34723,6 +34751,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             @TestMetadata("samOverloadsWithKtFunctionWithoutRefinedSams.kt")
             public void testSamOverloadsWithKtFunctionWithoutRefinedSams() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/resolve/samOverloadsWithKtFunctionWithoutRefinedSams.kt");
+            }
+
+            @Test
+            @TestMetadata("sameNameClassesFromSupertypes.kt")
+            public void testSameNameClassesFromSupertypes() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/resolve/sameNameClassesFromSupertypes.kt");
             }
         }
 
