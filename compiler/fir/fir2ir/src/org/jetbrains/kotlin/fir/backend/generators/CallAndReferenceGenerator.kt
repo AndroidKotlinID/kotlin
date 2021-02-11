@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.backend.generators
 
+import org.jetbrains.kotlin.backend.common.ir.isMethodOfAny
 import org.jetbrains.kotlin.fir.FirFakeSourceElementKind
 import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
@@ -24,6 +25,8 @@ import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
 import org.jetbrains.kotlin.fir.resolve.inference.isKMutableProperty
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
+import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutorByMap
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -53,7 +56,8 @@ class CallAndReferenceGenerator(
 
     private fun FirTypeRef.toIrType(): IrType = with(typeConverter) { toIrType() }
 
-    private fun ConeKotlinType.toIrType(): IrType = with(typeConverter) { toIrType() }
+    private fun ConeKotlinType.toIrType(conversionTypeContext: ConversionTypeContext = ConversionTypeContext.DEFAULT): IrType =
+        with(typeConverter) { toIrType(conversionTypeContext) }
 
     fun convertToIrCallableReference(
         callableReferenceAccess: FirCallableReferenceAccess,
@@ -437,6 +441,17 @@ class CallAndReferenceGenerator(
         }
     }
 
+    private fun FirFunctionCall.buildSubstitutorByCalledFunction(function: FirFunction<*>?): ConeSubstitutor? {
+        if (function == null) return null
+        val map = mutableMapOf<FirTypeParameterSymbol, ConeKotlinType>()
+        for ((index, typeParameter) in function.typeParameters.withIndex()) {
+            val typeProjection = typeArguments.getOrNull(index) as? FirTypeProjectionWithVariance ?: continue
+            val type = typeProjection.typeRef.coneTypeSafe<ConeKotlinType>() ?: continue
+            map[typeParameter.symbol] = type
+        }
+        return ConeSubstitutorByMap(map)
+    }
+
     internal fun IrExpression.applyCallArguments(call: FirCall?, annotationMode: Boolean): IrExpression {
         if (call == null) return this
         return when (this) {
@@ -459,14 +474,15 @@ class CallAndReferenceGenerator(
                         }
                         val valueParameters = function?.valueParameters
                         val argumentMapping = call.argumentMapping
+                        val substitutor = (call as? FirFunctionCall)?.buildSubstitutorByCalledFunction(function) ?: ConeSubstitutor.Empty
                         if (argumentMapping != null && (annotationMode || argumentMapping.isNotEmpty())) {
                             if (valueParameters != null) {
-                                return applyArgumentsWithReorderingIfNeeded(argumentMapping, valueParameters, annotationMode)
+                                return applyArgumentsWithReorderingIfNeeded(argumentMapping, valueParameters, substitutor, annotationMode)
                             }
                         }
                         for ((index, argument) in call.arguments.withIndex()) {
                             val valueParameter = valueParameters?.get(index)
-                            val argumentExpression = convertArgument(argument, valueParameter)
+                            val argumentExpression = convertArgument(argument, valueParameter, substitutor)
                             putValueArgument(index, argumentExpression)
                         }
                     }
@@ -494,6 +510,7 @@ class CallAndReferenceGenerator(
     private fun IrMemberAccessExpression<*>.applyArgumentsWithReorderingIfNeeded(
         argumentMapping: LinkedHashMap<FirExpression, FirValueParameter>,
         valueParameters: List<FirValueParameter>,
+        substitutor: ConeSubstitutor,
         annotationMode: Boolean
     ): IrExpression {
         // Assuming compile-time constants only inside annotation, we don't need a block to reorder arguments to preserve semantics.
@@ -504,7 +521,7 @@ class CallAndReferenceGenerator(
             return IrBlockImpl(startOffset, endOffset, type, IrStatementOrigin.ARGUMENTS_REORDERING_FOR_CALL).apply {
                 for ((argument, parameter) in argumentMapping) {
                     val parameterIndex = valueParameters.indexOf(parameter)
-                    val irArgument = convertArgument(argument, parameter)
+                    val irArgument = convertArgument(argument, parameter, substitutor)
                     if (irArgument.hasNoSideEffects()) {
                         putValueArgument(parameterIndex, irArgument)
                     } else {
@@ -519,7 +536,7 @@ class CallAndReferenceGenerator(
             }
         } else {
             for ((argument, parameter) in argumentMapping) {
-                val argumentExpression = convertArgument(argument, parameter, annotationMode)
+                val argumentExpression = convertArgument(argument, parameter, substitutor, annotationMode)
                 putValueArgument(valueParameters.indexOf(parameter), argumentExpression)
             }
             if (annotationMode) {
@@ -560,6 +577,7 @@ class CallAndReferenceGenerator(
     private fun convertArgument(
         argument: FirExpression,
         parameter: FirValueParameter?,
+        substitutor: ConeSubstitutor,
         annotationMode: Boolean = false
     ): IrExpression {
         var irArgument = visitor.convertToIrExpression(argument, annotationMode)
@@ -572,7 +590,7 @@ class CallAndReferenceGenerator(
             if (parameter?.returnTypeRef is FirResolvedTypeRef) {
                 // Java type case (from annotations)
                 irArgument = irArgument.applySuspendConversionIfNeeded(argument, parameter)
-                irArgument = irArgument.applySamConversionIfNeeded(argument, parameter)
+                irArgument = irArgument.applySamConversionIfNeeded(argument, parameter, substitutor)
             }
         }
         return irArgument.applyAssigningArrayElementsToVarargInNamedForm(argument, parameter)
@@ -581,6 +599,7 @@ class CallAndReferenceGenerator(
     private fun IrExpression.applySamConversionIfNeeded(
         argument: FirExpression,
         parameter: FirValueParameter?,
+        substitutor: ConeSubstitutor,
         shouldUnwrapVarargType: Boolean = false
     ): IrExpression {
         if (parameter == null) {
@@ -598,7 +617,7 @@ class CallAndReferenceGenerator(
                 if (irVarargElement is IrExpression) {
                     val firVarargArgument =
                         argumentMapping[irVarargElement] ?: error("Can't find the original FirExpression for ${irVarargElement.render()}")
-                    irVarargElement.applySamConversionIfNeeded(firVarargArgument, parameter, shouldUnwrapVarargType = true)
+                    irVarargElement.applySamConversionIfNeeded(firVarargArgument, parameter, substitutor, shouldUnwrapVarargType = true)
                 } else
                     irVarargElement
             }
@@ -607,7 +626,11 @@ class CallAndReferenceGenerator(
         if (!needSamConversion(argument, parameter)) {
             return this
         }
-        var samType = parameter.returnTypeRef.toIrType()
+        val samFirType = parameter.returnTypeRef.coneTypeSafe<ConeKotlinType>()?.let {
+            val substituted = substitutor.substituteOrSelf(it)
+            if (substituted is ConeRawType) substituted.lowerBound else substituted
+        }
+        var samType = samFirType?.toIrType(ConversionTypeContext.WITH_INVARIANT) ?: createErrorType()
         if (shouldUnwrapVarargType) {
             samType = samType.getArrayElementType(irBuiltIns)
         }
@@ -731,7 +754,23 @@ class CallAndReferenceGenerator(
                     symbol.owner as? IrFunction
                         ?: (symbol.owner as? IrProperty)?.getter
                 if (ownerFunction?.dispatchReceiverParameter != null) {
-                    dispatchReceiver = qualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression)
+                    val baseDispatchReceiver = qualifiedAccess.findIrDispatchReceiver(explicitReceiverExpression)
+                    dispatchReceiver =
+                        if (!ownerFunction.isMethodOfAny() || baseDispatchReceiver?.type?.classOrNull?.owner?.isInterface != true) {
+                            baseDispatchReceiver
+                        } else {
+                            // NB: for FE 1.0, this type cast is added by InterfaceObjectCallsLowering
+                            // However, it doesn't work for FIR due to different f/o structure
+                            // (FIR calls Any method directly, but FE 1.0 calls its interface f/o instead)
+                            IrTypeOperatorCallImpl(
+                                baseDispatchReceiver.startOffset,
+                                baseDispatchReceiver.endOffset,
+                                irBuiltIns.anyType,
+                                IrTypeOperator.IMPLICIT_CAST,
+                                irBuiltIns.anyType,
+                                baseDispatchReceiver
+                            )
+                        }
                 }
                 if (ownerFunction?.extensionReceiverParameter != null) {
                     extensionReceiver = qualifiedAccess.findIrExtensionReceiver(explicitReceiverExpression)?.let {

@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.idea.inspections.InfixCallFixActionFactory
 import org.jetbrains.kotlin.idea.inspections.PlatformUnresolvedProvider
 import org.jetbrains.kotlin.idea.inspections.RemoveAnnotationFix
 import org.jetbrains.kotlin.idea.intentions.*
+import org.jetbrains.kotlin.idea.quickfix.RemoveModifierFix.Companion.createRemoveModifierFromListOwnerPsiBasedFactory
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createCallable.*
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createClass.CreateClassFromCallWithConstructorCalleeActionFactory
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createClass.CreateClassFromConstructorCallActionFactory
@@ -56,7 +57,7 @@ import org.jetbrains.kotlin.resolve.konan.diagnostics.ErrorsNative.THROWS_LIST_E
 
 class QuickFixRegistrar : QuickFixContributor {
     override fun registerQuickFixes(quickFixes: QuickFixes) {
-        fun DiagnosticFactory<*>.registerFactory(vararg factory: KotlinIntentionActionsFactory) {
+        fun DiagnosticFactory<*>.registerFactory(vararg factory: QuickFixFactory) {
             quickFixes.register(this, *factory)
         }
 
@@ -64,7 +65,7 @@ class QuickFixRegistrar : QuickFixContributor {
             quickFixes.register(this, *action)
         }
 
-        val removeAbstractModifierFactory = RemoveModifierFix.createRemoveModifierFromListOwnerFactory(ABSTRACT_KEYWORD)
+        val removeAbstractModifierFactory = createRemoveModifierFromListOwnerPsiBasedFactory(ABSTRACT_KEYWORD )
         val addAbstractModifierFactory = AddModifierFix.createFactory(ABSTRACT_KEYWORD)
 
         ABSTRACT_PROPERTY_IN_PRIMARY_CONSTRUCTOR_PARAMETERS.registerFactory(removeAbstractModifierFactory)
@@ -98,7 +99,7 @@ class QuickFixRegistrar : QuickFixContributor {
         NON_MEMBER_FUNCTION_NO_BODY.registerFactory(AddFunctionBodyFix)
 
         NOTHING_TO_OVERRIDE.registerFactory(
-            RemoveModifierFix.createRemoveModifierFromListOwnerFactory(OVERRIDE_KEYWORD),
+            RemoveModifierFix.createRemoveModifierFromListOwnerPsiBasedFactory(OVERRIDE_KEYWORD),
             ChangeMemberFunctionSignatureFix,
             AddFunctionToSupertypeFix,
             AddPropertyToSupertypeFix
@@ -117,15 +118,15 @@ class QuickFixRegistrar : QuickFixContributor {
 
         val removeRedundantModifierFactory = RemoveModifierFix.createRemoveModifierFactory(true)
         REDUNDANT_MODIFIER.registerFactory(removeRedundantModifierFactory)
-        REDUNDANT_OPEN_IN_INTERFACE.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerFactory(OPEN_KEYWORD, true))
+        REDUNDANT_OPEN_IN_INTERFACE.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerPsiBasedFactory(OPEN_KEYWORD, true))
         REDUNDANT_INLINE_SUSPEND_FUNCTION_TYPE.registerFactory(RemoveModifierFix.createRemoveSuspendFactory())
-        UNNECESSARY_LATEINIT.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerFactory(LATEINIT_KEYWORD))
+        UNNECESSARY_LATEINIT.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerPsiBasedFactory(LATEINIT_KEYWORD))
 
         REDUNDANT_PROJECTION.registerFactory(RemoveModifierFix.createRemoveProjectionFactory(true))
         INCOMPATIBLE_MODIFIERS.registerFactory(RemoveModifierFix.createRemoveModifierFactory(false))
         VARIANCE_ON_TYPE_PARAMETER_NOT_ALLOWED.registerFactory(RemoveModifierFix.createRemoveVarianceFactory())
 
-        val removeOpenModifierFactory = RemoveModifierFix.createRemoveModifierFromListOwnerFactory(OPEN_KEYWORD)
+        val removeOpenModifierFactory = RemoveModifierFix.createRemoveModifierFromListOwnerPsiBasedFactory(OPEN_KEYWORD)
         NON_FINAL_MEMBER_IN_FINAL_CLASS.registerFactory(
             AddModifierFix.createFactory(OPEN_KEYWORD, KtClass::class.java),
             removeOpenModifierFactory
@@ -141,7 +142,7 @@ class QuickFixRegistrar : QuickFixContributor {
             removeModifierFactory
         )
         REDUNDANT_MODIFIER_IN_GETTER.registerFactory(removeRedundantModifierFactory)
-        WRONG_MODIFIER_TARGET.registerFactory(removeModifierFactory, ChangeVariableMutabilityFix.CONST_VAL_FACTORY)
+        WRONG_MODIFIER_TARGET.registerFactory(removeModifierFactory, ConstValFactory)
         DEPRECATED_MODIFIER.registerFactory(ReplaceModifierFix)
         REDUNDANT_MODIFIER_FOR_TARGET.registerFactory(removeModifierFactory)
         WRONG_MODIFIER_CONTAINING_DECLARATION.registerFactory(removeModifierFactory)
@@ -221,10 +222,10 @@ class QuickFixRegistrar : QuickFixContributor {
 
         VAL_WITH_SETTER.registerFactory(ChangeVariableMutabilityFix.VAL_WITH_SETTER_FACTORY)
         VAL_REASSIGNMENT.registerFactory(
-            ChangeVariableMutabilityFix.VAL_REASSIGNMENT_FACTORY, LiftAssignmentOutOfTryFix, AssignToPropertyFix
+            ReassignmentActionFactory(VAL_REASSIGNMENT), LiftAssignmentOutOfTryFix, AssignToPropertyFix
         )
-        CAPTURED_VAL_INITIALIZATION.registerFactory(ChangeVariableMutabilityFix.CAPTURED_VAL_INITIALIZATION_FACTORY)
-        CAPTURED_MEMBER_VAL_INITIALIZATION.registerFactory(ChangeVariableMutabilityFix.CAPTURED_MEMBER_VAL_INITIALIZATION_FACTORY)
+        CAPTURED_VAL_INITIALIZATION.registerFactory(ReassignmentActionFactory(CAPTURED_VAL_INITIALIZATION))
+        CAPTURED_MEMBER_VAL_INITIALIZATION.registerFactory(ReassignmentActionFactory(CAPTURED_MEMBER_VAL_INITIALIZATION))
         VAR_OVERRIDDEN_BY_VAL.registerFactory(ChangeVariableMutabilityFix.VAR_OVERRIDDEN_BY_VAL_FACTORY)
         VAR_ANNOTATION_PARAMETER.registerFactory(ChangeVariableMutabilityFix.VAR_ANNOTATION_PARAMETER_FACTORY)
 
@@ -417,7 +418,7 @@ class QuickFixRegistrar : QuickFixContributor {
             CreateDataClassPropertyFromDestructuringActionFactory
         )
 
-        DELEGATE_SPECIAL_FUNCTION_MISSING.registerFactory(ChangeVariableMutabilityFix.DELEGATED_PROPERTY_VAL_FACTORY)
+        DELEGATE_SPECIAL_FUNCTION_MISSING.registerFactory(DelegatedPropertyValFactory)
         DELEGATE_SPECIAL_FUNCTION_MISSING.registerFactory(CreatePropertyDelegateAccessorsActionFactory)
         DELEGATE_SPECIAL_FUNCTION_NONE_APPLICABLE.registerFactory(CreatePropertyDelegateAccessorsActionFactory)
 
@@ -539,7 +540,7 @@ class QuickFixRegistrar : QuickFixContributor {
         OVERLOADS_ANNOTATION_CLASS_CONSTRUCTOR.registerFactory(RemoveAnnotationFix.JvmOverloads)
         OVERLOADS_ANNOTATION_CLASS_CONSTRUCTOR_WARNING.registerFactory(RemoveAnnotationFix.JvmOverloads)
 
-        ACTUAL_WITHOUT_EXPECT.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerFactory(ACTUAL_KEYWORD))
+        ACTUAL_WITHOUT_EXPECT.registerFactory(RemoveModifierFix.createRemoveModifierFromListOwnerPsiBasedFactory(ACTUAL_KEYWORD))
         ACTUAL_WITHOUT_EXPECT.registerFactory(CreateExpectedFix)
         NO_ACTUAL_FOR_EXPECT.registerFactory(CreateActualFix)
         NO_ACTUAL_CLASS_MEMBER_FOR_EXPECTED_CLASS.registerFactory(AddActualFix)

@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
+import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirConstExpression
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
@@ -70,32 +71,49 @@ internal enum class ConversionTypeOrigin {
 
 class ConversionTypeContext internal constructor(
     internal val definitelyNotNull: Boolean,
-    internal val origin: ConversionTypeOrigin
+    internal val invariantProjection: Boolean = false,
+    internal val origin: ConversionTypeOrigin = ConversionTypeOrigin.DEFAULT,
 ) {
-    fun definitelyNotNull() = ConversionTypeContext(true, origin)
+    fun definitelyNotNull() = ConversionTypeContext(
+        definitelyNotNull = true,
+        invariantProjection = invariantProjection,
+        origin = origin
+    )
 
-    fun inSetter() = ConversionTypeContext(definitelyNotNull, ConversionTypeOrigin.SETTER)
+    fun inSetter() = ConversionTypeContext(
+        definitelyNotNull = definitelyNotNull,
+        invariantProjection = invariantProjection,
+        origin = ConversionTypeOrigin.SETTER
+    )
+
+    fun withInvariantProjections() = ConversionTypeContext(
+        definitelyNotNull = definitelyNotNull,
+        invariantProjection = true,
+        origin = origin
+    )
 
     companion object {
         internal val DEFAULT = ConversionTypeContext(
-            definitelyNotNull = false, origin = ConversionTypeOrigin.DEFAULT
+            definitelyNotNull = false, origin = ConversionTypeOrigin.DEFAULT, invariantProjection = false
         )
+        internal val WITH_INVARIANT = DEFAULT.withInvariantProjections()
     }
 }
 
 fun FirClassifierSymbol<*>.toSymbol(
     session: FirSession,
     classifierStorage: Fir2IrClassifierStorage,
-    typeContext: ConversionTypeContext = ConversionTypeContext.DEFAULT
+    typeContext: ConversionTypeContext = ConversionTypeContext.DEFAULT,
+    handleAnnotations: ((List<FirAnnotationCall>) -> Unit)? = null
 ): IrClassifierSymbol {
     return when (this) {
         is FirTypeParameterSymbol -> {
             classifierStorage.getIrTypeParameterSymbol(this, typeContext)
         }
         is FirTypeAliasSymbol -> {
-            val typeAlias = fir
-            val coneClassLikeType = typeAlias.expandedTypeRef.coneType as ConeClassLikeType
-            coneClassLikeType.lookupTag.toSymbol(session)!!.toSymbol(session, classifierStorage)
+            handleAnnotations?.invoke(fir.expandedTypeRef.annotations)
+            val coneClassLikeType = fir.expandedTypeRef.coneType as ConeClassLikeType
+            coneClassLikeType.lookupTag.toSymbol(session)!!.toSymbol(session, classifierStorage, typeContext, handleAnnotations)
         }
         is FirClassSymbol -> {
             classifierStorage.getIrClassSymbol(this)

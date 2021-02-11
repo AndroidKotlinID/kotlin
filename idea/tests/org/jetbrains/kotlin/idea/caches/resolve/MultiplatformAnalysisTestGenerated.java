@@ -199,6 +199,11 @@ public class MultiplatformAnalysisTestGenerated extends AbstractMultiplatformAna
         runTest("idea/testData/multiplatform/overrideExpectWithCompositeType/");
     }
 
+    @TestMetadata("platformDependencyInCommon")
+    public void testPlatformDependencyInCommon() throws Exception {
+        runTest("idea/testData/multiplatform/platformDependencyInCommon/");
+    }
+
     @TestMetadata("platformSpecificChecksInCommon")
     public void testPlatformSpecificChecksInCommon() throws Exception {
         runTest("idea/testData/multiplatform/platformSpecificChecksInCommon/");
@@ -262,5 +267,10 @@ public class MultiplatformAnalysisTestGenerated extends AbstractMultiplatformAna
     @TestMetadata("weaklyIncompatibleActualInIntermediateModule")
     public void testWeaklyIncompatibleActualInIntermediateModule() throws Exception {
         runTest("idea/testData/multiplatform/weaklyIncompatibleActualInIntermediateModule/");
+    }
+
+    @TestMetadata("whenExhaustivenessForSealed")
+    public void testWhenExhaustivenessForSealed() throws Exception {
+        runTest("idea/testData/multiplatform/whenExhaustivenessForSealed/");
     }
 }

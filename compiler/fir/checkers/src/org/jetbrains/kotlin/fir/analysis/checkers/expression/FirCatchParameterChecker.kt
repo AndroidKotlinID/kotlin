@@ -5,32 +5,27 @@
 
 package org.jetbrains.kotlin.fir.analysis.checkers.expression
 
-import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.analysis.cfa.FirReturnsImpliesAnalyzer.isSupertypeOf
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
+import org.jetbrains.kotlin.fir.analysis.checkers.isSubtypeOfThrowable
+import org.jetbrains.kotlin.fir.analysis.checkers.throwableClassLikeType
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
+import org.jetbrains.kotlin.fir.analysis.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.expressions.FirTryExpression
-import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.typeCheckerContext
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeParameterType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.constructClassLikeType
 
 object FirCatchParameterChecker : FirTryExpressionChecker() {
-    private val throwable = StandardClassIds.byName("Throwable")
-        .constructClassLikeType(emptyArray(), false)
-
     override fun check(expression: FirTryExpression, context: CheckerContext, reporter: DiagnosticReporter) {
         for (catchEntry in expression.catches) {
             val catchParameter = catchEntry.parameter
 
-            if (catchParameter.defaultValue != null)
-                catchParameter.source?.let { reporter.report(FirErrors.CATCH_PARAMETER_WITH_DEFAULT_VALUE.on(it), context) }
+            if (catchParameter.defaultValue != null) {
+                reporter.reportOn(catchParameter.source, FirErrors.CATCH_PARAMETER_WITH_DEFAULT_VALUE, context)
+            }
 
             val typeRef = catchParameter.returnTypeRef
+            // TODO: remaining implicit types should be resolved as an error type, along with proper error kind, most likely syntax error.
             if (typeRef !is FirResolvedTypeRef) return
 
             val coneType = typeRef.type
@@ -38,17 +33,16 @@ object FirCatchParameterChecker : FirTryExpressionChecker() {
                 val isReified = coneType.lookupTag.typeParameterSymbol.fir.isReified
 
                 if (isReified) {
-                    catchParameter.source?.let { reporter.report(FirErrors.REIFIED_TYPE_IN_CATCH_CLAUSE.on(it), context) }
+                    reporter.reportOn(catchParameter.source, FirErrors.REIFIED_TYPE_IN_CATCH_CLAUSE, context)
                 } else {
-                    catchParameter.source?.let { reporter.report(FirErrors.TYPE_PARAMETER_IN_CATCH_CLAUSE.on(it), context) }
+                    reporter.reportOn(catchParameter.source, FirErrors.TYPE_PARAMETER_IN_CATCH_CLAUSE, context)
                 }
             }
 
-            if (!coneType.isThrowable(context.session))
-                catchParameter.source?.let { reporter.report(FirErrors.TYPE_MISMATCH.on(it, throwable, coneType), context) }
+            val session = context.session
+            if (!coneType.isSubtypeOfThrowable(session)) {
+                reporter.reportOn(catchParameter.source, FirErrors.TYPE_MISMATCH, throwableClassLikeType(session), coneType, context)
+            }
         }
     }
-
-    private fun ConeKotlinType.isThrowable(session: FirSession) =
-        throwable.isSupertypeOf(session.typeCheckerContext, this.fullyExpandedType(session))
 }

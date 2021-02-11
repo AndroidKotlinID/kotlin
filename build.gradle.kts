@@ -130,6 +130,7 @@ extra["JDK_18"] = jdkPath("1.8")
 extra["JDK_9"] = jdkPath("9")
 extra["JDK_10"] = jdkPath("10")
 extra["JDK_11"] = jdkPath("11")
+extra["JDK_15"] = jdkPath("15")
 
 // allow opening the project without setting up all env variables (see KT-26413)
 if (!kotlinBuildProperties.isInIdeaSync) {
@@ -331,7 +332,6 @@ extra["tasksWithWarnings"] = listOf(
     ":compiler:fir:checkers:compileKotlin",
     ":compiler:fir:java:compileKotlin",
     ":kotlin-scripting-compiler:compileKotlin",
-    ":kotlin-scripting-compiler:compileTestKotlin",
     ":plugins:uast-kotlin:compileKotlin",
     ":plugins:uast-kotlin:compileTestKotlin",
     ":plugins:uast-kotlin-idea:compileKotlin"
@@ -957,7 +957,6 @@ tasks {
             dependsOn(
                 ":prepare:ide-plugin-dependencies:android-extensions-compiler-plugin-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:allopen-compiler-plugin-for-ide:publish",
-                ":prepare:ide-plugin-dependencies:allopen-compiler-plugin-tests-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:incremental-compilation-impl-tests-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:kotlin-build-common-tests-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:kotlin-compiler-for-ide:publish",
@@ -979,9 +978,7 @@ tasks {
                 ":kotlin-stdlib-jdk7:publish",
                 ":kotlin-stdlib-jdk8:publish",
                 ":kotlin-reflect:publish",
-                ":kotlin-main-kts:publish",
-                ":kotlin-stdlib-js:publish",
-                ":kotlin-test:kotlin-test-js:publish"
+                ":kotlin-main-kts:publish"
             )
         }
     }
