@@ -209,11 +209,15 @@ class GenerationState private constructor(
 
     val samConversionsScheme = run {
         val fromConfig = configuration.get(JVMConfigurationKeys.SAM_CONVERSIONS)
-            ?: JvmClosureGenerationScheme.DEFAULT
-        if (target >= fromConfig.minJvmTarget)
+        if (fromConfig != null && target >= fromConfig.minJvmTarget)
             fromConfig
-        else
-            JvmClosureGenerationScheme.DEFAULT
+        else {
+            // TODO wait for KT-44844 (properly support 'invokedynamic' in JPS incremental compilation)
+            // Use JvmClosureGenerationScheme.INDY if
+            //  JVM target is at least JVM_1_8 &&
+            //  SamWrapperClassesAreSynthetic language feature is supported
+            JvmClosureGenerationScheme.CLASS
+        }
     }
 
     val lambdasScheme = run {

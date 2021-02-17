@@ -138,8 +138,7 @@ internal val MOCK_CLASSIFIERS = CirKnownClassifiers(
                     isInner = false,
                     isExternal = false
                 )
-            },
-            CirEntityId.create("kotlin/Any")
+            }
         )
 
         override fun classNode(classId: CirEntityId) = MOCK_CLASS_NODE
@@ -151,7 +150,7 @@ internal val MOCK_CLASSIFIERS = CirKnownClassifiers(
         override fun isExportedForwardDeclaration(classId: CirEntityId) = false
         override fun addExportedForwardDeclaration(classId: CirEntityId) = error("This method should not be called")
     },
-    dependeeLibraries = emptyMap()
+    dependencies = emptyMap()
 )
 
 internal class MockModulesProvider private constructor(
@@ -190,7 +189,9 @@ internal class MockModulesProvider private constructor(
             languageVersionSettings = LanguageVersionSettingsImpl.DEFAULT,
             metadataVersion = KlibMetadataVersion.INSTANCE,
             skipExpects = false,
-            project = null
+            project = null,
+            includeOnlyModuleContent = true,
+            allowErrorTypes = false
         )
     }
 }

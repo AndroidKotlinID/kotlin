@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.idea.quickfix
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.idea.KotlinBundleIndependent
+import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
@@ -21,8 +21,8 @@ class ChangeVariableMutabilityFix(
 ) : KotlinPsiOnlyQuickFixAction<KtValVarKeywordOwner>(element) {
 
     override fun getText() = actionText
-        ?: (if (makeVar) KotlinBundleIndependent.message("change.to.var") else KotlinBundleIndependent.message("change.to.val")) +
-        if (deleteInitializer) KotlinBundleIndependent.message("and.delete.initializer") else ""
+        ?: (if (makeVar) KotlinBundle.message("change.to.var") else KotlinBundle.message("change.to.val")) +
+        if (deleteInitializer) KotlinBundle.message("and.delete.initializer") else ""
 
     override fun getFamilyName(): String = text
 
@@ -64,9 +64,9 @@ class ChangeVariableMutabilityFix(
                 listOf(ChangeVariableMutabilityFix(psiElement, false))
             }
 
-        val LATEINIT_VAL_FACTORY: QuickFixesPsiBasedFactory<PsiElement> =
-            quickFixesPsiBasedFactory { psiElement: PsiElement ->
-                val property = psiElement.getStrictParentOfType<KtProperty>() ?: return@quickFixesPsiBasedFactory emptyList()
+        val LATEINIT_VAL_FACTORY: QuickFixesPsiBasedFactory<KtModifierListOwner> =
+            quickFixesPsiBasedFactory { psiElement: KtModifierListOwner ->
+                val property = psiElement as? KtProperty ?: return@quickFixesPsiBasedFactory emptyList()
                 if (property.valOrVarKeyword.text != "val") {
                     emptyList()
                 } else {

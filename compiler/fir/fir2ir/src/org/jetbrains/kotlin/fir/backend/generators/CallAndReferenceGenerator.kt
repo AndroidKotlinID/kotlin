@@ -122,16 +122,6 @@ class CallAndReferenceGenerator(
                         origin
                     )
                 }
-                is IrConstructorSymbol -> {
-                    val constructor = symbol.owner
-                    val klass = constructor.parent as? IrClass
-                    IrFunctionReferenceImpl(
-                        startOffset, endOffset, type, symbol,
-                        typeArgumentsCount = constructor.typeParameters.size + (klass?.typeParameters?.size ?: 0),
-                        valueArgumentsCount = constructor.valueParameters.size,
-                        reflectionTarget = symbol
-                    )
-                }
                 is IrFunctionSymbol -> {
                     assert(type.isFunctionTypeOrSubtype()) {
                         "Callable reference whose symbol refers to a function should be of functional type."
@@ -144,9 +134,12 @@ class CallAndReferenceGenerator(
                             generateAdaptedCallableReference(callableReferenceAccess, explicitReceiverExpression, symbol, adaptedType)
                         }
                     } else {
+                        val klass = function.parent as? IrClass
+                        val typeArgumentCount = function.typeParameters.size +
+                                if (function is IrConstructor) klass?.typeParameters?.size ?: 0 else 0
                         IrFunctionReferenceImpl(
                             startOffset, endOffset, type, symbol,
-                            typeArgumentsCount = function.typeParameters.size,
+                            typeArgumentsCount = typeArgumentCount,
                             valueArgumentsCount = function.valueParameters.size,
                             reflectionTarget = symbol
                         )
@@ -643,7 +636,7 @@ class CallAndReferenceGenerator(
         // If the type of the argument is already an explicitly subtype of the type of the parameter, we don't need SAM conversion.
         if (argument.typeRef !is FirResolvedTypeRef ||
             AbstractTypeChecker.isSubtypeOf(
-                session.inferenceComponents.ctx,
+                session.inferenceComponents.ctx.newBaseTypeCheckerContext(errorTypesEqualToAnything = false, stubTypesEqualToAnything = true),
                 argument.typeRef.coneType,
                 parameter.returnTypeRef.coneType,
                 isFromNullabilityConstraint = true

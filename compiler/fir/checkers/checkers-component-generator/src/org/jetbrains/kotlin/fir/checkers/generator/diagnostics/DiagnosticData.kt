@@ -15,7 +15,6 @@ data class DiagnosticData(
     val psiType: KType,
     val parameters: List<DiagnosticParameter>,
     val positioningStrategy: PositioningStrategy,
-    val group: String?,
 )
 
 data class DiagnosticParameter(
@@ -42,6 +41,7 @@ enum class PositioningStrategy(private val strategy: String) {
     WHEN_EXPRESSION("WHEN_EXPRESSION"),
     IF_EXPRESSION("IF_EXPRESSION"),
     VARIANCE_MODIFIER("VARIANCE_MODIFIER"),
+    LATEINIT_MODIFIER("LATEINIT_MODIFIER"),
 
     ;
 
@@ -55,7 +55,3 @@ enum class PositioningStrategy(private val strategy: String) {
 
 fun DiagnosticData.hasDefaultPositioningStrategy(): Boolean =
     positioningStrategy == PositioningStrategy.DEFAULT
-
-data class DiagnosticList(
-    val diagnostics: List<DiagnosticData>,
-)

@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 public class FirBlackBoxInlineCodegenTestGenerated extends AbstractFirBlackBoxInlineCodegenTest {
     @Test
     public void testAllFilesPresentInBoxInline() throws Exception {
-        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true, "oldLanguageVersions");
+        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
     }
 
     @Nested
@@ -645,6 +645,18 @@ public class FirBlackBoxInlineCodegenTestGenerated extends AbstractFirBlackBoxIn
             @TestMetadata("kt8668_3.kt")
             public void testKt8668_3() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_3.kt");
+            }
+
+            @Test
+            @TestMetadata("kt8668_nested.kt")
+            public void testKt8668_nested() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_nested.kt");
+            }
+
+            @Test
+            @TestMetadata("kt8668_nested_2.kt")
+            public void testKt8668_nested_2() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_nested_2.kt");
             }
 
             @Test

@@ -40,7 +40,7 @@ public class FirBytecodeTextTestGenerated extends AbstractFirBytecodeTextTest {
 
     @Test
     public void testAllFilesPresentInBytecodeText() throws Exception {
-        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true, "oldLanguageVersions");
+        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
     }
 
     @Test
@@ -5572,6 +5572,12 @@ public class FirBytecodeTextTestGenerated extends AbstractFirBytecodeTextTest {
         @TestMetadata("subjectAny.kt")
         public void testSubjectAny() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/whenEnumOptimization/subjectAny.kt");
+        }
+
+        @Test
+        @TestMetadata("whenOr.kt")
+        public void testWhenOr() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/whenEnumOptimization/whenOr.kt");
         }
 
         @Test
