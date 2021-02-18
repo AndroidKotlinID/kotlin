@@ -114,6 +114,14 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     )
     var doNotClearBindingContext: Boolean by FreezableVar(false)
 
+    @Argument(
+        value = "-Xparallel-backend-threads",
+        description = "When using the IR backend, run lowerings by file in N parallel threads.\n" +
+                "0 means use a thread per processor core.\n" +
+                "Default value is 1"
+    )
+    var parallelBackendThreads: String by FreezableVar("1")
+
     @Argument(value = "-Xmodule-path", valueDescription = "<path>", description = "Paths where to find Java 9+ modules")
     var javaModulePath: String? by NullableStringFreezableVar(null)
 
@@ -361,7 +369,9 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         description = """Select code generation scheme for string concatenation.
 -Xstring-concat=indy-with-constants   Concatenate strings using `invokedynamic` `makeConcatWithConstants`. Requires `-jvm-target 9` or greater.
 -Xstring-concat=indy                Concatenate strings using `invokedynamic` `makeConcat`. Requires `-jvm-target 9` or greater.
--Xstring-concat=inline              Concatenate strings using `StringBuilder`"""
+-Xstring-concat=inline              Concatenate strings using `StringBuilder`
+default: `indy-with-constants` for JVM target 9 or greater, `inline` otherwise"""
+
     )
     var stringConcat: String? by NullableStringFreezableVar(JvmStringConcat.INLINE.description)
 

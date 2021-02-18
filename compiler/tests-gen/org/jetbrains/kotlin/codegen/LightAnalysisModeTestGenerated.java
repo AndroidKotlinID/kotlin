@@ -16793,6 +16793,54 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 runTest("compiler/testData/codegen/box/invokedynamic/sam/unboundFunctionReferenceEquality.kt");
             }
 
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class FunctionExpressionArgument extends AbstractLightAnalysisModeTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInFunctionExpressionArgument() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("capturedSamArgument.kt")
+                public void testCapturedSamArgument() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/capturedSamArgument.kt");
+                }
+
+                @TestMetadata("capturingLambda.kt")
+                public void testCapturingLambda() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/capturingLambda.kt");
+                }
+
+                @TestMetadata("extensionLambda1.kt")
+                public void testExtensionLambda1() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/extensionLambda1.kt");
+                }
+
+                @TestMetadata("extensionLambda2.kt")
+                public void testExtensionLambda2() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/extensionLambda2.kt");
+                }
+
+                @TestMetadata("genericSam1.kt")
+                public void testGenericSam1() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/genericSam1.kt");
+                }
+
+                @TestMetadata("genericSam2.kt")
+                public void testGenericSam2() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/genericSam2.kt");
+                }
+
+                @TestMetadata("simple.kt")
+                public void testSimple() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/simple.kt");
+                }
+            }
+
             @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/inlineClassInSignature")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -20317,6 +20365,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt16077.kt")
         public void testKt16077() throws Exception {
             runTest("compiler/testData/codegen/box/multifileClasses/kt16077.kt");
+        }
+
+        @TestMetadata("metadataFlag.kt")
+        public void testMetadataFlag() throws Exception {
+            runTest("compiler/testData/codegen/box/multifileClasses/metadataFlag.kt");
         }
 
         @TestMetadata("multifileClassPartsInitialization.kt")
@@ -28133,6 +28186,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("classifiersOfBuiltInTypes.kt")
             public void testClassifiersOfBuiltInTypes() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/types/classifiersOfBuiltInTypes.kt");
+            }
+
+            @TestMetadata("equalsForClassAndTypeParameterWithSameFqName.kt")
+            public void testEqualsForClassAndTypeParameterWithSameFqName() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/types/equalsForClassAndTypeParameterWithSameFqName.kt");
             }
 
             @TestMetadata("innerGenericArguments.kt")

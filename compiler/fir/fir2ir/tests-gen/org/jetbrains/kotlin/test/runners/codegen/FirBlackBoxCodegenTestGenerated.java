@@ -20036,6 +20036,58 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             }
 
             @Nested
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument")
+            @TestDataPath("$PROJECT_ROOT")
+            public class FunctionExpressionArgument {
+                @Test
+                public void testAllFilesPresentInFunctionExpressionArgument() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+                }
+
+                @Test
+                @TestMetadata("capturedSamArgument.kt")
+                public void testCapturedSamArgument() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/capturedSamArgument.kt");
+                }
+
+                @Test
+                @TestMetadata("capturingLambda.kt")
+                public void testCapturingLambda() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/capturingLambda.kt");
+                }
+
+                @Test
+                @TestMetadata("extensionLambda1.kt")
+                public void testExtensionLambda1() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/extensionLambda1.kt");
+                }
+
+                @Test
+                @TestMetadata("extensionLambda2.kt")
+                public void testExtensionLambda2() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/extensionLambda2.kt");
+                }
+
+                @Test
+                @TestMetadata("genericSam1.kt")
+                public void testGenericSam1() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/genericSam1.kt");
+                }
+
+                @Test
+                @TestMetadata("genericSam2.kt")
+                public void testGenericSam2() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/genericSam2.kt");
+                }
+
+                @Test
+                @TestMetadata("simple.kt")
+                public void testSimple() throws Exception {
+                    runTest("compiler/testData/codegen/box/invokedynamic/sam/functionExpressionArgument/simple.kt");
+                }
+            }
+
+            @Nested
             @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/inlineClassInSignature")
             @TestDataPath("$PROJECT_ROOT")
             public class InlineClassInSignature {
@@ -23956,6 +24008,12 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
         @TestMetadata("kt16077.kt")
         public void testKt16077() throws Exception {
             runTest("compiler/testData/codegen/box/multifileClasses/kt16077.kt");
+        }
+
+        @Test
+        @TestMetadata("metadataFlag.kt")
+        public void testMetadataFlag() throws Exception {
+            runTest("compiler/testData/codegen/box/multifileClasses/metadataFlag.kt");
         }
 
         @Test
@@ -35385,6 +35443,12 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             @TestMetadata("classifiersOfBuiltInTypes.kt")
             public void testClassifiersOfBuiltInTypes() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/types/classifiersOfBuiltInTypes.kt");
+            }
+
+            @Test
+            @TestMetadata("equalsForClassAndTypeParameterWithSameFqName.kt")
+            public void testEqualsForClassAndTypeParameterWithSameFqName() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/types/equalsForClassAndTypeParameterWithSameFqName.kt");
             }
 
             @Test
