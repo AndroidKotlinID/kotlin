@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.fir.scopes.impl.FirAbstractStarImportingScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirExplicitSimpleImportingScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirPackageMemberScope
 import org.jetbrains.kotlin.fir.scopes.processClassifiersByName
-import org.jetbrains.kotlin.fir.symbols.CallableId
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
@@ -326,8 +326,8 @@ private class ElementsToShortenCollector(private val shorteningContext: FirShort
     private fun processFunctionCall(functionCall: FirFunctionCall) {
         if (!canBePossibleToDropReceiver(functionCall)) return
 
-        val callExpression = functionCall.psi as? KtCallExpression ?: return
-        val qualifiedCallExpression = callExpression.getDotQualifiedExpressionForSelector() ?: return
+        val qualifiedCallExpression = functionCall.psi as? KtDotQualifiedExpression ?: return
+        val callExpression = qualifiedCallExpression.selectorExpression as? KtCallExpression ?: return
 
         val calleeReference = functionCall.calleeReference
         val callableId = findUnambiguousReferencedCallableId(calleeReference) ?: return

@@ -3141,6 +3141,12 @@ public class FirBytecodeTextTestGenerated extends AbstractFirBytecodeTextTest {
         public void testInterfaceHashCode() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/hashCode/interfaceHashCode.kt");
         }
+
+        @Test
+        @TestMetadata("interfaceHashCodeWithSmartCast.kt")
+        public void testInterfaceHashCodeWithSmartCast() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/hashCode/interfaceHashCodeWithSmartCast.kt");
+        }
     }
 
     @Nested
@@ -3942,6 +3948,12 @@ public class FirBytecodeTextTestGenerated extends AbstractFirBytecodeTextTest {
         @Test
         public void testAllFilesPresentInInvokedynamic() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/invokedynamic"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
+        }
+
+        @Test
+        @TestMetadata("functionRefToJavaInterface.kt")
+        public void testFunctionRefToJavaInterface() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/invokedynamic/functionRefToJavaInterface.kt");
         }
 
         @Test

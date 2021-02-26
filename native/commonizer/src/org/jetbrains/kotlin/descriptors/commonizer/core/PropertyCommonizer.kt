@@ -45,9 +45,9 @@ class PropertyCommonizer(classifiers: CirKnownClassifiers) : AbstractFunctionOrP
             isDelegate = false,
             getter = CirPropertyGetterFactory.DEFAULT_NO_ANNOTATIONS,
             setter = setter,
-            backingFieldAnnotations = null,
-            delegateFieldAnnotations = null,
-            compileTimeInitializer = constCompileTimeInitializer
+            backingFieldAnnotations = emptyList(),
+            delegateFieldAnnotations = emptyList(),
+            compileTimeInitializer = constCompileTimeInitializer ?: CirConstantValue.NullValue
         )
     }
 
@@ -55,7 +55,7 @@ class PropertyCommonizer(classifiers: CirKnownClassifiers) : AbstractFunctionOrP
         super.initialize(first)
 
         constCommonizationState = if (first.isConst) {
-            first.compileTimeInitializer?.let(::ConstSameValue) ?: NonConst
+            first.compileTimeInitializer.takeIf { it != CirConstantValue.NullValue }?.let(::ConstSameValue) ?: NonConst
         } else {
             NonConst
         }
@@ -105,11 +105,17 @@ class PropertyCommonizer(classifiers: CirKnownClassifiers) : AbstractFunctionOrP
 
     private sealed class ConstCommonizationState {
         object NonConst : ConstCommonizationState()
+
         abstract class Const : ConstCommonizationState() {
             val properties: MutableList<CirProperty> = mutableListOf()
         }
 
-        class ConstSameValue(val compileTimeInitializer: CirConstantValue<*>) : Const()
+        class ConstSameValue(val compileTimeInitializer: CirConstantValue<*>) : Const() {
+            init {
+                check(compileTimeInitializer != CirConstantValue.NullValue)
+            }
+        }
+
         class ConstMultipleValues(previous: ConstSameValue) : Const() {
             init {
                 properties += previous.properties

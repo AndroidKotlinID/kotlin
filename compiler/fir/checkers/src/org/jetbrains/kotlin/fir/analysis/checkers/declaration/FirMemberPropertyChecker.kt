@@ -39,6 +39,10 @@ object FirMemberPropertyChecker : FirRegularClassChecker() {
         // If multiple (potentially conflicting) modality modifiers are specified, not all modifiers are recorded at `status`.
         // So, our source of truth should be the full modifier list retrieved from the source.
         val modifierList = with(FirModifierList) { property.source.getModifierList() }
+
+        checkProperty(containingDeclaration, property, modifierList, reporter, context)
+        checkExpectDeclarationVisibilityAndBody(property, source, modifierList, reporter, context)
+
         val hasAbstractModifier = modifierList?.modifiers?.any { it.token == KtTokens.ABSTRACT_KEYWORD } == true
         val isAbstract = property.isAbstract || hasAbstractModifier
         if (containingDeclaration.isInterface &&
@@ -71,19 +75,17 @@ object FirMemberPropertyChecker : FirRegularClassChecker() {
                 reporter.reportOn(it, FirErrors.ABSTRACT_DELEGATED_PROPERTY, context)
             }
 
-            checkAccessor(property.getter, property.delegate) { src, _ ->
-                reporter.reportOn(src, FirErrors.ABSTRACT_PROPERTY_WITH_GETTER, context)
+            checkAccessor(property.getter, property.delegate) { src, _, hasBody ->
+                if (hasBody) reporter.reportOn(src, FirErrors.ABSTRACT_PROPERTY_WITH_GETTER, context)
             }
-            checkAccessor(property.setter, property.delegate) { src, symbol ->
-                if (symbol.fir.visibility == Visibilities.Private && property.visibility != Visibilities.Private) {
-                    reporter.reportOn(src, FirErrors.PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY, context)
-                } else {
-                    reporter.reportOn(src, FirErrors.ABSTRACT_PROPERTY_WITH_SETTER, context)
+            checkAccessor(property.setter, property.delegate) { src, symbol, hasBody ->
+                when {
+                    symbol.fir.visibility == Visibilities.Private && property.visibility != Visibilities.Private ->
+                        reporter.reportOn(src, FirErrors.PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY, context)
+                    hasBody -> reporter.reportOn(src, FirErrors.ABSTRACT_PROPERTY_WITH_SETTER, context)
                 }
             }
         }
-
-        checkPropertyInitializer(containingDeclaration, property, reporter, context)
 
         val hasOpenModifier = modifierList?.modifiers?.any { it.token == KtTokens.OPEN_KEYWORD } == true
         if (hasOpenModifier &&
@@ -98,24 +100,22 @@ object FirMemberPropertyChecker : FirRegularClassChecker() {
         }
         val isOpen = property.isOpen || hasOpenModifier
         if (isOpen) {
-            checkAccessor(property.setter, property.delegate) { src, symbol ->
+            checkAccessor(property.setter, property.delegate) { src, symbol, _ ->
                 if (symbol.fir.visibility == Visibilities.Private && property.visibility != Visibilities.Private) {
                     reporter.reportOn(src, FirErrors.PRIVATE_SETTER_FOR_OPEN_PROPERTY, context)
                 }
             }
         }
-
-        checkExpectDeclarationVisibilityAndBody(property, source, modifierList, reporter, context)
     }
 
     private fun checkAccessor(
         accessor: FirPropertyAccessor?,
         delegate: FirExpression?,
-        report: (FirSourceElement, FirPropertyAccessorSymbol) -> Unit,
+        report: (FirSourceElement, FirPropertyAccessorSymbol, hasBody: Boolean) -> Unit,
     ) {
-        if (accessor != null && accessor !is FirDefaultPropertyAccessor && accessor.hasBody && delegate == null) {
+        if (accessor != null && delegate == null) {
             accessor.source?.let {
-                report.invoke(it, accessor.symbol)
+                report.invoke(it, accessor.symbol, accessor.hasBody)
             }
         }
     }

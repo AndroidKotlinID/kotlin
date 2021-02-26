@@ -29,6 +29,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
     override val functionCheckers: Set<FirFunctionChecker> = setOf(
         FirContractChecker,
         FirFunctionNameChecker,
+        FirFunctionParameterChecker,
     )
 
     override val propertyCheckers: Set<FirPropertyChecker> = setOf(
@@ -39,6 +40,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
     override val classCheckers: Set<FirClassChecker> = setOf(
         FirOverrideChecker,
         FirThrowableSubclassChecker,
+        FirOpenMemberChecker,
     )
 
     override val regularClassCheckers: Set<FirRegularClassChecker> = setOf(

@@ -6,9 +6,9 @@
 package org.jetbrains.kotlin.descriptors.commonizer.cir.factory
 
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
+import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
-import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
 import org.jetbrains.kotlin.descriptors.commonizer.cir.impl.CirPropertyImpl
 import org.jetbrains.kotlin.descriptors.commonizer.utils.compactMap
@@ -20,7 +20,7 @@ object CirPropertyFactory {
                 constantValue = constantValue,
                 owner = source,
             )
-        }
+        } ?: CirConstantValue.NullValue
 
         return create(
             annotations = source.annotations.compactMap(CirAnnotationFactory::create),
@@ -39,8 +39,8 @@ object CirPropertyFactory {
             isDelegate = source.isDelegated,
             getter = source.getter?.let(CirPropertyGetterFactory::create),
             setter = source.setter?.let(CirPropertySetterFactory::create),
-            backingFieldAnnotations = source.backingField?.annotations?.compactMap(CirAnnotationFactory::create),
-            delegateFieldAnnotations = source.delegateField?.annotations?.compactMap(CirAnnotationFactory::create),
+            backingFieldAnnotations = source.backingField?.annotations?.compactMap(CirAnnotationFactory::create).orEmpty(),
+            delegateFieldAnnotations = source.delegateField?.annotations?.compactMap(CirAnnotationFactory::create).orEmpty(),
             compileTimeInitializer = compileTimeInitializer
         )
     }
@@ -63,9 +63,9 @@ object CirPropertyFactory {
         isDelegate: Boolean,
         getter: CirPropertyGetter?,
         setter: CirPropertySetter?,
-        backingFieldAnnotations: List<CirAnnotation>?,
-        delegateFieldAnnotations: List<CirAnnotation>?,
-        compileTimeInitializer: CirConstantValue<*>?
+        backingFieldAnnotations: List<CirAnnotation>,
+        delegateFieldAnnotations: List<CirAnnotation>,
+        compileTimeInitializer: CirConstantValue<*>
     ): CirProperty {
         return CirPropertyImpl(
             annotations = annotations,

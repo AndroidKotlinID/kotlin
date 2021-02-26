@@ -8,6 +8,7 @@ dependencies {
     compile(project(":compiler:cli-common"))
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.java"))
+    compile(project(":compiler:frontend:cfg"))
     compile(project(":compiler:backend-common"))
     compile(project(":compiler:backend"))
     compile(project(":compiler:backend.jvm"))
@@ -56,7 +57,9 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
     kotlinOptions {
         languageVersion = "1.3"
         apiVersion = "1.3"
-        freeCompilerArgs = freeCompilerArgs - "-progressive" + "-Xskip-prerelease-check"
+        freeCompilerArgs = freeCompilerArgs - "-progressive" + listOf(
+            "-Xskip-prerelease-check", "-Xsuppress-version-warnings"
+        )
     }
 }
 

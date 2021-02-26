@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
-import org.jetbrains.kotlin.fir.expressions.WhenMissingCase
 import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -238,6 +237,13 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.SEALED_SUPERTYPE_IN_LOCAL_CLASS) { firDiagnostic ->
         SealedSupertypeInLocalClassImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.SUPERTYPE_NOT_A_CLASS_OR_INTERFACE) { firDiagnostic ->
+        SupertypeNotAClassOrInterfaceImpl(
+            firDiagnostic.a,
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -723,6 +729,18 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.NON_FINAL_MEMBER_IN_FINAL_CLASS) { firDiagnostic ->
+        NonFinalMemberInFinalClassImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.NON_FINAL_MEMBER_IN_OBJECT) { firDiagnostic ->
+        NonFinalMemberInObjectImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.MANY_COMPANION_OBJECTS) { firDiagnostic ->
         ManyCompanionObjectsImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
@@ -821,6 +839,19 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.MULTIPLE_VARARG_PARAMETERS) { firDiagnostic ->
+        MultipleVarargParametersImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.FORBIDDEN_VARARG_PARAMETER_TYPE) { firDiagnostic ->
+        ForbiddenVarargParameterTypeImpl(
+            firSymbolBuilder.buildKtType(firDiagnostic.a),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS) { firDiagnostic ->
         AbstractPropertyInNonAbstractClassImpl(
             firSymbolBuilder.buildSymbol(firDiagnostic.a as FirDeclaration),
@@ -909,6 +940,12 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.EXPECTED_PRIVATE_DECLARATION) { firDiagnostic ->
         ExpectedPrivateDeclarationImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.VAL_WITH_SETTER) { firDiagnostic ->
+        ValWithSetterImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -1026,7 +1063,7 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     add(FirErrors.NO_ELSE_IN_WHEN) { firDiagnostic ->
         NoElseInWhenImpl(
             firDiagnostic.a.map { whenMissingCase ->
-                TODO("WhenMissingCase conversion is not supported yet")
+                whenMissingCase
             },
             firDiagnostic as FirPsiDiagnostic<*>,
             token,

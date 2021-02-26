@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -243,11 +244,12 @@ private fun BodyResolveComponents.typeFromSymbol(symbol: AbstractFirBasedSymbol<
 
 fun BodyResolveComponents.transformQualifiedAccessUsingSmartcastInfo(qualifiedAccessExpression: FirQualifiedAccessExpression): FirQualifiedAccessExpression {
     val typesFromSmartCast = dataFlowAnalyzer.getTypeUsingSmartcastInfo(qualifiedAccessExpression) ?: return qualifiedAccessExpression
+    val originalType = qualifiedAccessExpression.resultType.coneType
     val allTypes = typesFromSmartCast.also {
-        it += qualifiedAccessExpression.resultType.coneType
+        it += originalType
     }
     val intersectedType = ConeTypeIntersector.intersectTypes(session.inferenceComponents.ctx, allTypes)
-    // TODO: add check that intersectedType is not equal to original type
+    if (intersectedType == originalType) return qualifiedAccessExpression
     val intersectedTypeRef = buildResolvedTypeRef {
         source = qualifiedAccessExpression.resultType.source?.fakeElement(FirFakeSourceElementKind.SmartCastedTypeRef)
         type = intersectedType

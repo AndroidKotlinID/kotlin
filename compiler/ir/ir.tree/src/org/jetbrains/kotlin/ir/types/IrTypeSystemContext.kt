@@ -77,6 +77,9 @@ interface IrTypeSystemContext : TypeSystemContext, TypeSystemCommonSuperTypesCon
 
     override fun SimpleTypeMarker.isMarkedNullable(): Boolean = (this as IrSimpleType).hasQuestionMark
 
+    override fun KotlinTypeMarker.isMarkedNullable(): Boolean =
+        this is IrSimpleType && !isWithFlexibleNullability() && hasQuestionMark
+
     override fun SimpleTypeMarker.withNullability(nullable: Boolean): SimpleTypeMarker {
         val simpleType = this as IrSimpleType
         return if (simpleType.hasQuestionMark == nullable) simpleType
@@ -268,6 +271,11 @@ interface IrTypeSystemContext : TypeSystemContext, TypeSystemCommonSuperTypesCon
     }
 
     override fun TypeConstructorMarker.isIntegerLiteralTypeConstructor() = false
+
+    override fun TypeConstructorMarker.isLocalType(): Boolean {
+        if (this !is IrClassSymbol) return false
+        return this.owner.classId?.isLocal == true
+    }
 
     override fun createFlexibleType(lowerBound: SimpleTypeMarker, upperBound: SimpleTypeMarker): KotlinTypeMarker {
         require(lowerBound.isNothing())

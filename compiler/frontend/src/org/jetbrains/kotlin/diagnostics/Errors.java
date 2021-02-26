@@ -10,7 +10,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.kotlin.cfg.WhenMissingCase;
 import org.jetbrains.kotlin.config.LanguageFeature;
 import org.jetbrains.kotlin.config.LanguageVersion;
 import org.jetbrains.kotlin.config.LanguageVersionSettings;
@@ -366,6 +365,7 @@ public interface Errors {
     DiagnosticFactory0<PsiElement> SECONDARY_CONSTRUCTOR_WITH_BODY_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> INNER_CLASS_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> VALUE_CLASS_CANNOT_BE_CLONEABLE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> INLINE_CLASS_DEPRECATED = DiagnosticFactory0.create(WARNING);
 
     // Result class
 
@@ -1058,6 +1058,7 @@ public interface Errors {
     DiagnosticFactory1<KtWhenExpression, List<WhenMissingCase>> NON_EXHAUSTIVE_WHEN = DiagnosticFactory1.create(WARNING, WHEN_EXPRESSION);
     DiagnosticFactory1<KtWhenExpression, List<WhenMissingCase>>
             NON_EXHAUSTIVE_WHEN_ON_SEALED_CLASS = DiagnosticFactory1.create(INFO, WHEN_EXPRESSION);
+    DiagnosticFactory1<KtWhenExpression, String> EXPECT_TYPE_IN_WHEN_WITHOUT_ELSE = DiagnosticFactory1.create(ERROR, WHEN_EXPRESSION);
 
     DiagnosticFactory0<PsiElement> COMMA_IN_WHEN_CONDITION_WITHOUT_ARGUMENT = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> DUPLICATE_LABEL_IN_WHEN = DiagnosticFactory0.create(WARNING);

@@ -23,12 +23,13 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.util.Computable
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiJavaModule
+import java.util.concurrent.CopyOnWriteArrayList
 
 class KotlinBinaryClassCache : Disposable {
     private class RequestCache {
-        internal var virtualFile: VirtualFile? = null
-        internal var modificationStamp: Long = 0
-        internal var result: KotlinClassFinder.Result? = null
+        var virtualFile: VirtualFile? = null
+        var modificationStamp: Long = 0
+        var result: KotlinClassFinder.Result? = null
 
         fun cache(
             file: VirtualFile,
@@ -43,17 +44,22 @@ class KotlinBinaryClassCache : Disposable {
     }
 
     private val cache = object : ThreadLocal<RequestCache>() {
+        private val requestCaches = CopyOnWriteArrayList<RequestCache>()
+
         override fun initialValue(): RequestCache {
-            return RequestCache()
+            return RequestCache().also { requestCaches.add(it) }
+        }
+
+        override fun remove() {
+            for (cache in requestCaches) {
+                cache.result = null
+                cache.virtualFile = null
+            }
+            super.remove()
         }
     }
 
     override fun dispose() {
-        cache.get().apply {
-            result = null
-            virtualFile = null
-        }
-
         // This is only relevant for tests. We create a new instance of Application for each test, and so a new instance of this service is
         // also created for each test. However all tests share the same event dispatch thread, which would collect all instances of this
         // thread-local if they're not removed properly. Each instance would transitively retain VFS resulting in OutOfMemoryError
@@ -76,7 +82,6 @@ class KotlinBinaryClassCache : Disposable {
             }
 
             val aClass = ApplicationManager.getApplication().runReadAction(Computable {
-                @Suppress("DEPRECATION")
                 VirtualFileKotlinClass.create(file, fileContent)
             })
 

@@ -610,6 +610,7 @@ public class DefaultErrorMessages {
         MAP.put(NO_ELSE_IN_WHEN, "''when'' expression must be exhaustive, add necessary {0}", RENDER_WHEN_MISSING_CASES);
         MAP.put(NON_EXHAUSTIVE_WHEN, "''when'' expression on enum is recommended to be exhaustive, add {0}", RENDER_WHEN_MISSING_CASES);
         MAP.put(NON_EXHAUSTIVE_WHEN_ON_SEALED_CLASS, "''when'' expression on sealed classes is recommended to be exhaustive, add {0}", RENDER_WHEN_MISSING_CASES);
+        MAP.put(EXPECT_TYPE_IN_WHEN_WITHOUT_ELSE, "'when' with expect {0} as subject can not be exhaustive without else branch", STRING);
 
         MAP.put(TYPE_MISMATCH_IN_RANGE, "Type mismatch: incompatible types of range and element checked in it");
         MAP.put(CYCLIC_INHERITANCE_HIERARCHY, "There's a cycle in the inheritance hierarchy for this type");
@@ -723,6 +724,7 @@ public class DefaultErrorMessages {
         MAP.put(SECONDARY_CONSTRUCTOR_WITH_BODY_INSIDE_INLINE_CLASS, "Secondary constructors with bodies are reserved for for future releases");
         MAP.put(INNER_CLASS_INSIDE_INLINE_CLASS, "Inline class cannot have inner classes");
         MAP.put(VALUE_CLASS_CANNOT_BE_CLONEABLE, "Value class cannot be Cloneable");
+        MAP.put(INLINE_CLASS_DEPRECATED, "Inline classes are deprecated in favor of value classes");
 
         MAP.put(RESULT_CLASS_IN_RETURN_TYPE, "'kotlin.Result' cannot be used as a return type");
         MAP.put(RESULT_CLASS_WITH_NULLABLE_OPERATOR, "Expression of type 'kotlin.Result' cannot be used as a left operand of ''{0}''", STRING);

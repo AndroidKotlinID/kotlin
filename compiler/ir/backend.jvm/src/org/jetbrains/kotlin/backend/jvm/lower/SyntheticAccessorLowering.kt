@@ -229,8 +229,9 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
 
             val constructedClass = constructedClass
 
-            if (!DescriptorVisibilities.isPrivate(visibility) && !constructedClass.isInline && hasMangledParameters)
-                return true
+            if (!DescriptorVisibilities.isPrivate(visibility) && !constructedClass.isInline && hasMangledParameters &&
+                !constructedClass.isAnonymousObject
+            ) return true
 
             if (visibility != DescriptorVisibilities.PUBLIC && constructedClass.modality == Modality.SEALED)
                 return true
@@ -679,8 +680,6 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : IrEle
         val fromSubclassOfReceiversClass = !throughCrossinlineLambda &&
                 context.isSubclassOf(ownerClass) && (thisObjReference == null || context.symbol.isSubtypeOfClass(thisObjReference))
         return when {
-            // private suspend functions are generated as synthetic package private
-            declaration is IrFunction && declaration.isSuspend && declaration.visibility.isPrivate && samePackage -> true
             declaration.visibility.isPrivate && (throughCrossinlineLambda || ownerClass != context) -> false
             declaration.visibility.isProtected && !samePackage && !fromSubclassOfReceiversClass -> false
             withSuper && !fromSubclassOfReceiversClass -> false

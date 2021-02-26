@@ -89,6 +89,7 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.AbstractSessionsInva
 import org.jetbrains.kotlin.idea.fir.low.level.api.trackers.AbstractProjectWideOutOfBlockKotlinModificationTrackerTest
 import org.jetbrains.kotlin.idea.folding.AbstractKotlinFoldingTest
 import org.jetbrains.kotlin.idea.frontend.api.components.AbstractExpectedExpressionTypeTest
+import org.jetbrains.kotlin.idea.frontend.api.components.AbstractOverriddenDeclarationProviderTest
 import org.jetbrains.kotlin.idea.frontend.api.components.AbstractReturnExpressionTargetTest
 import org.jetbrains.kotlin.idea.frontend.api.fir.AbstractResolveCallTest
 import org.jetbrains.kotlin.idea.frontend.api.scopes.AbstractFileScopeTest
@@ -322,6 +323,10 @@ fun main(args: Array<String>) {
                 model("checker/duplicateJvmSignature")
                 model("checker/infos", testMethod = "doTestWithInfos")
                 model("checker/diagnosticsMessage")
+            }
+
+            testClass<AbstractKotlinHighlightWolfPassTest> {
+                model("checker/wolf")
             }
 
             testClass<AbstractJavaAgainstKotlinSourceCheckerTest> {
@@ -1036,6 +1041,10 @@ fun main(args: Array<String>) {
             testClass<AbstractExpectedExpressionTypeTest> {
                 model("components/expectedExpressionType")
             }
+
+            testClass<AbstractOverriddenDeclarationProviderTest> {
+                model("components/overridenDeclarations")
+            }
         }
 
         testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/testData") {
@@ -1105,6 +1114,7 @@ fun main(args: Array<String>) {
 
             testClass<AbstractHighLevelQuickFixTest> {
                 val pattern = "^([\\w\\-_]+)\\.kt$"
+                model("quickfix/abstract", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/lateinit", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/modifiers", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/override/typeMismatchOnOverride", pattern = pattern, filenameStartsLowerCase = true, recursive = false)

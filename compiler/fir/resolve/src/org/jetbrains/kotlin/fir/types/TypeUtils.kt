@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.fir.types
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.*
-import org.jetbrains.kotlin.fir.declarations.classId
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.resolve.calls.NewCommonSuperTypeCalculator
 import org.jetbrains.kotlin.types.AbstractStrictEqualityTypeChecker
 import org.jetbrains.kotlin.types.AbstractTypeApproximator
+import org.jetbrains.kotlin.types.AbstractTypeChecker
 import org.jetbrains.kotlin.types.TypeApproximatorConfiguration
 import org.jetbrains.kotlin.types.model.*
 
@@ -43,6 +44,9 @@ fun ConeInferenceContext.intersectTypesOrNull(types: List<ConeKotlinType>): Cone
         else -> ConeTypeIntersector.intersectTypes(this, types)
     }
 }
+
+fun TypeCheckerProviderContext.equalTypes(a: ConeKotlinType, b: ConeKotlinType): Boolean =
+    AbstractTypeChecker.equalTypes(this, a, b)
 
 fun ConeDefinitelyNotNullType.Companion.create(original: ConeKotlinType): ConeDefinitelyNotNullType? {
     return when {
@@ -309,7 +313,8 @@ private fun FirTypeRef.hideLocalTypeIfNeeded(
                 ?.type as? ConeClassLikeType)
                 ?.lookupTag as? ConeClassLookupTagWithFixedSymbol)
                 ?.symbol?.fir
-        if (firClass?.classId?.isLocal != true) {
+        if (firClass !is FirAnonymousObject) {
+            // NB: local classes are acceptable here, but reported by EXPOSED_* checkers as errors
             return this
         }
         if (firClass.superTypeRefs.size > 1) {
@@ -318,7 +323,7 @@ private fun FirTypeRef.hideLocalTypeIfNeeded(
             }
         }
         val superType = firClass.superTypeRefs.single()
-        if (superType is FirResolvedTypeRef && !superType.isAny) {
+        if (superType is FirResolvedTypeRef) {
             return superType
         }
     }

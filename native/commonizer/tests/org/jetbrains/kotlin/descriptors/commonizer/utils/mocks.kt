@@ -123,7 +123,7 @@ private fun createPackageFragmentForClassifier(classifierFqName: FqName): Packag
     }
 
 internal val MOCK_CLASSIFIERS = CirKnownClassifiers(
-    commonized = object : CirCommonizedClassifiers {
+    commonizedNodes = object : CirCommonizedClassifierNodes {
         private val MOCK_CLASS_NODE = CirClassNode(
             CommonizedGroup(0),
             LockBasedStorageManager.NO_LOCKS.createNullableLazyValue {
@@ -153,7 +153,7 @@ internal val MOCK_CLASSIFIERS = CirKnownClassifiers(
         override fun isExportedForwardDeclaration(classId: CirEntityId) = false
         override fun addExportedForwardDeclaration(classId: CirEntityId) = error("This method should not be called")
     },
-    dependencies = emptyMap()
+    commonDependencies = CirProvidedClassifiers.EMPTY
 )
 
 internal class MockModulesProvider private constructor(
@@ -245,7 +245,7 @@ fun MockNativeManifestDataProvider(
     exportForwardDeclarations: List<String> = emptyList(),
     nativeTargets: Collection<String> = emptyList(),
     shortName: String? = "mock"
-): TargetedNativeManifestDataProvider = TargetedNativeManifestDataProvider { target, libraryName ->
+): TargetedNativeManifestDataProvider = TargetedNativeManifestDataProvider { _, _ ->
     NativeSensitiveManifestData(
         uniqueName = uniqueName,
         versions = versions,

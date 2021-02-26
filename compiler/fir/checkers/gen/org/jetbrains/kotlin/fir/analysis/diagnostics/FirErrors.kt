@@ -9,6 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiTypeElement
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.diagnostics.WhenMissingCase
 import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.diagnostics.SourceElementPositioningStrategies
@@ -16,7 +17,6 @@ import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.expressions.WhenMissingCase
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -55,7 +55,7 @@ object FirErrors {
     // General syntax
     val ILLEGAL_CONST_EXPRESSION by error0<FirSourceElement, PsiElement>()
     val ILLEGAL_UNDERSCORE by error0<FirSourceElement, PsiElement>()
-    val EXPRESSION_REQUIRED by error0<FirSourceElement, PsiElement>()
+    val EXPRESSION_REQUIRED by error0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.SELECTOR_BY_QUALIFIED)
     val BREAK_OR_CONTINUE_OUTSIDE_A_LOOP by error0<FirSourceElement, PsiElement>()
     val NOT_A_LOOP_LABEL by error0<FirSourceElement, PsiElement>()
     val VARIABLE_EXPECTED by error0<FirSourceElement, PsiElement>()
@@ -63,8 +63,8 @@ object FirErrors {
     val DELEGATION_IN_INTERFACE by error0<FirSourceElement, PsiElement>()
 
     // Unresolved
-    val HIDDEN by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>()
-    val UNRESOLVED_REFERENCE by error1<FirSourceElement, PsiElement, String>()
+    val HIDDEN by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
+    val UNRESOLVED_REFERENCE by error1<FirSourceElement, PsiElement, String>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val UNRESOLVED_LABEL by error0<FirSourceElement, PsiElement>()
     val DESERIALIZATION_ERROR by error0<FirSourceElement, PsiElement>()
     val ERROR_FROM_JAVA_RESOLUTION by error0<FirSourceElement, PsiElement>()
@@ -75,7 +75,7 @@ object FirErrors {
     // Super
     val SUPER_IS_NOT_AN_EXPRESSION by error0<FirSourceElement, PsiElement>()
     val SUPER_NOT_AVAILABLE by error0<FirSourceElement, PsiElement>()
-    val ABSTRACT_SUPER_CALL by error0<FirSourceElement, PsiElement>()
+    val ABSTRACT_SUPER_CALL by error0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val INSTANCE_ACCESS_BEFORE_SUPER_CALL by error1<FirSourceElement, PsiElement, String>()
 
     // Supertypes
@@ -90,6 +90,7 @@ object FirErrors {
     val CLASS_IN_SUPERTYPE_FOR_ENUM by error0<FirSourceElement, PsiElement>()
     val SEALED_SUPERTYPE by error0<FirSourceElement, PsiElement>()
     val SEALED_SUPERTYPE_IN_LOCAL_CLASS by error0<FirSourceElement, PsiElement>()
+    val SUPERTYPE_NOT_A_CLASS_OR_INTERFACE by error1<FirSourceElement, KtElement, String>()
 
     // Constructor problems
     val CONSTRUCTOR_IN_OBJECT by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
@@ -138,12 +139,12 @@ object FirErrors {
     val REDUNDANT_OPEN_IN_INTERFACE by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.OPEN_MODIFIER)
 
     // Applicability
-    val NONE_APPLICABLE by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>()
-    val INAPPLICABLE_CANDIDATE by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>()
+    val NONE_APPLICABLE by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
+    val INAPPLICABLE_CANDIDATE by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val INAPPLICABLE_LATEINIT_MODIFIER by error1<FirSourceElement, KtModifierListOwner, String>(SourceElementPositioningStrategies.LATEINIT_MODIFIER)
 
     // Ambiguity
-    val AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>()
+    val AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val ASSIGN_OPERATOR_AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>()
 
     // Types & type parameters
@@ -175,6 +176,8 @@ object FirErrors {
     val PROPERTY_TYPE_MISMATCH_ON_OVERRIDE by error2<FirSourceElement, KtNamedDeclaration, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.DECLARATION_RETURN_TYPE)
     val VAR_TYPE_MISMATCH_ON_OVERRIDE by error2<FirSourceElement, KtNamedDeclaration, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.DECLARATION_RETURN_TYPE)
     val VAR_OVERRIDDEN_BY_VAL by error2<FirSourceElement, KtNamedDeclaration, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.VAL_OR_VAR_NODE)
+    val NON_FINAL_MEMBER_IN_FINAL_CLASS by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.OPEN_MODIFIER)
+    val NON_FINAL_MEMBER_IN_OBJECT by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.OPEN_MODIFIER)
 
     // Redeclarations
     val MANY_COMPANION_OBJECTS by error0<FirSourceElement, PsiElement>()
@@ -195,6 +198,8 @@ object FirErrors {
     val FUNCTION_DECLARATION_WITH_NO_NAME by error0<FirSourceElement, KtFunction>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
     val ANONYMOUS_FUNCTION_PARAMETER_WITH_DEFAULT_VALUE by error0<FirSourceElement, KtParameter>(SourceElementPositioningStrategies.PARAMETER_DEFAULT_VALUE)
     val USELESS_VARARG_ON_PARAMETER by warning0<FirSourceElement, KtParameter>()
+    val MULTIPLE_VARARG_PARAMETERS by error0<FirSourceElement, KtParameter>(SourceElementPositioningStrategies.PARAMETER_VARARG_MODIFIER)
+    val FORBIDDEN_VARARG_PARAMETER_TYPE by error1<FirSourceElement, KtParameter, ConeKotlinType>(SourceElementPositioningStrategies.PARAMETER_VARARG_MODIFIER)
 
     // Properties & accessors
     val ABSTRACT_PROPERTY_IN_NON_ABSTRACT_CLASS by error2<FirSourceElement, KtModifierListOwner, FirMemberDeclaration, FirMemberDeclaration>(SourceElementPositioningStrategies.MODALITY_MODIFIER)
@@ -209,9 +214,10 @@ object FirErrors {
     val DELEGATED_PROPERTY_IN_INTERFACE by error0<FirSourceElement, KtPropertyDelegate>()
     val ABSTRACT_PROPERTY_WITH_GETTER by error0<FirSourceElement, KtPropertyAccessor>()
     val ABSTRACT_PROPERTY_WITH_SETTER by error0<FirSourceElement, KtPropertyAccessor>()
-    val PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY by error0<FirSourceElement, PsiElement>()
-    val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error0<FirSourceElement, PsiElement>()
+    val PRIVATE_SETTER_FOR_ABSTRACT_PROPERTY by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.PRIVATE_MODIFIER)
+    val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.PRIVATE_MODIFIER)
     val EXPECTED_PRIVATE_DECLARATION by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
+    val VAL_WITH_SETTER by error0<FirSourceElement, KtPropertyAccessor>()
 
     // Multi-platform projects
     val EXPECTED_DECLARATION_WITH_BODY by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
@@ -231,8 +237,8 @@ object FirErrors {
     val WRONG_IMPLIES_CONDITION by warning0<FirSourceElement, PsiElement>()
 
     // Nullability
-    val UNSAFE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.DOT_BY_SELECTOR)
-    val UNSAFE_IMPLICIT_INVOKE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>()
+    val UNSAFE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.DOT_BY_QUALIFIED)
+    val UNSAFE_IMPLICIT_INVOKE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val UNSAFE_INFIX_CALL by error3<FirSourceElement, KtExpression, FirExpression, String, FirExpression>()
     val UNSAFE_OPERATOR_CALL by error3<FirSourceElement, KtExpression, FirExpression, String, FirExpression>()
 
@@ -241,7 +247,7 @@ object FirErrors {
     val INVALID_IF_AS_EXPRESSION by error0<FirSourceElement, KtIfExpression>(SourceElementPositioningStrategies.IF_EXPRESSION)
 
     // Function contracts
-    val ERROR_IN_CONTRACT_DESCRIPTION by error1<FirSourceElement, KtElement, String>()
+    val ERROR_IN_CONTRACT_DESCRIPTION by error1<FirSourceElement, KtElement, String>(SourceElementPositioningStrategies.SELECTOR_BY_QUALIFIED)
 
     // Extended checkers
     val REDUNDANT_VISIBILITY_MODIFIER by warning0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
@@ -251,7 +257,7 @@ object FirErrors {
     val REDUNDANT_SINGLE_EXPRESSION_STRING_TEMPLATE by warning0<FirSourceElement, PsiElement>()
     val CAN_BE_VAL by warning0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.VAL_OR_VAR_NODE)
     val CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
-    val REDUNDANT_CALL_OF_CONVERSION_METHOD by warning0<FirSourceElement, PsiElement>()
+    val REDUNDANT_CALL_OF_CONVERSION_METHOD by warning0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.SELECTOR_BY_QUALIFIED)
     val ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_EQUALS by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
     val EMPTY_RANGE by warning0<FirSourceElement, PsiElement>()
     val REDUNDANT_SETTER_PARAMETER_TYPE by warning0<FirSourceElement, PsiElement>()
@@ -259,6 +265,6 @@ object FirErrors {
     val ASSIGNED_VALUE_IS_NEVER_READ by warning0<FirSourceElement, PsiElement>()
     val VARIABLE_INITIALIZER_IS_REDUNDANT by warning0<FirSourceElement, PsiElement>()
     val VARIABLE_NEVER_READ by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.DECLARATION_NAME)
-    val USELESS_CALL_ON_NOT_NULL by warning0<FirSourceElement, PsiElement>()
+    val USELESS_CALL_ON_NOT_NULL by warning0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.SELECTOR_BY_QUALIFIED)
 
 }

@@ -9,6 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiTypeElement
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.diagnostics.WhenMissingCase
 import org.jetbrains.kotlin.idea.frontend.api.diagnostics.KtDiagnosticWithPsi
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtCallableSymbol
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtClassLikeSymbol
@@ -176,6 +177,11 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class SealedSupertypeInLocalClass : KtFirDiagnostic<PsiElement>() {
         override val diagnosticClass get() = SealedSupertypeInLocalClass::class
+    }
+
+    abstract class SupertypeNotAClassOrInterface : KtFirDiagnostic<KtElement>() {
+        override val diagnosticClass get() = SupertypeNotAClassOrInterface::class
+        abstract val reason: String
     }
 
     abstract class ConstructorInObject : KtFirDiagnostic<KtDeclaration>() {
@@ -515,6 +521,14 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         abstract val overriddenDeclaration: KtSymbol
     }
 
+    abstract class NonFinalMemberInFinalClass : KtFirDiagnostic<KtNamedDeclaration>() {
+        override val diagnosticClass get() = NonFinalMemberInFinalClass::class
+    }
+
+    abstract class NonFinalMemberInObject : KtFirDiagnostic<KtNamedDeclaration>() {
+        override val diagnosticClass get() = NonFinalMemberInObject::class
+    }
+
     abstract class ManyCompanionObjects : KtFirDiagnostic<PsiElement>() {
         override val diagnosticClass get() = ManyCompanionObjects::class
     }
@@ -581,6 +595,15 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = UselessVarargOnParameter::class
     }
 
+    abstract class MultipleVarargParameters : KtFirDiagnostic<KtParameter>() {
+        override val diagnosticClass get() = MultipleVarargParameters::class
+    }
+
+    abstract class ForbiddenVarargParameterType : KtFirDiagnostic<KtParameter>() {
+        override val diagnosticClass get() = ForbiddenVarargParameterType::class
+        abstract val varargParameterType: KtType
+    }
+
     abstract class AbstractPropertyInNonAbstractClass : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = AbstractPropertyInNonAbstractClass::class
         abstract val property: KtSymbol
@@ -631,16 +654,20 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = AbstractPropertyWithSetter::class
     }
 
-    abstract class PrivateSetterForAbstractProperty : KtFirDiagnostic<PsiElement>() {
+    abstract class PrivateSetterForAbstractProperty : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = PrivateSetterForAbstractProperty::class
     }
 
-    abstract class PrivateSetterForOpenProperty : KtFirDiagnostic<PsiElement>() {
+    abstract class PrivateSetterForOpenProperty : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = PrivateSetterForOpenProperty::class
     }
 
     abstract class ExpectedPrivateDeclaration : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = ExpectedPrivateDeclaration::class
+    }
+
+    abstract class ValWithSetter : KtFirDiagnostic<KtPropertyAccessor>() {
+        override val diagnosticClass get() = ValWithSetter::class
     }
 
     abstract class ExpectedDeclarationWithBody : KtFirDiagnostic<KtDeclaration>() {
@@ -723,7 +750,7 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class NoElseInWhen : KtFirDiagnostic<KtWhenExpression>() {
         override val diagnosticClass get() = NoElseInWhen::class
-        abstract val missingWhenCases: List<Any>
+        abstract val missingWhenCases: List<WhenMissingCase>
     }
 
     abstract class InvalidIfAsExpression : KtFirDiagnostic<KtIfExpression>() {

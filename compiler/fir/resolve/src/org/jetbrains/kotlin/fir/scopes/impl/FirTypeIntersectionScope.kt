@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.originalForIntersectionOverrideAttr
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.*
-import org.jetbrains.kotlin.fir.symbols.CallableId
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
@@ -134,14 +134,18 @@ class FirTypeIntersectionScope private constructor(
 
     private fun <D : FirCallableSymbol<*>> chooseIntersectionOverrideModality(
         extractedOverridden: Collection<MemberWithBaseScope<D>>
-    ): Modality {
+    ): Modality? {
         var hasOpen = false
         var hasAbstract = false
 
         for ((member) in extractedOverridden) {
             when ((member.fir as FirMemberDeclaration).modality) {
                 Modality.FINAL -> return Modality.FINAL
-                Modality.SEALED -> error("Members should not be sealed: $member")
+                Modality.SEALED -> {
+                    // Members should not be sealed. But, that will be reported as WRONG_MODIFIER_TARGET, and here we shouldn't raise an
+                    // internal error. Instead, let the intersection override have the default modality: null.
+                    return null
+                }
                 Modality.OPEN -> {
                     hasOpen = true
                 }
@@ -258,7 +262,7 @@ class FirTypeIntersectionScope private constructor(
     private fun createIntersectionOverride(
         mostSpecific: FirNamedFunctionSymbol,
         overrides: Collection<FirCallableSymbol<*>>,
-        newModality: Modality,
+        newModality: Modality?,
         newVisibility: Visibility,
     ): FirNamedFunctionSymbol {
 
@@ -287,7 +291,7 @@ class FirTypeIntersectionScope private constructor(
     private fun createIntersectionOverride(
         mostSpecific: FirPropertySymbol,
         overrides: Collection<FirCallableSymbol<*>>,
-        newModality: Modality,
+        newModality: Modality?,
         newVisibility: Visibility,
     ): FirPropertySymbol {
         val newSymbol = FirIntersectionOverridePropertySymbol(mostSpecific.callableId, overrides)

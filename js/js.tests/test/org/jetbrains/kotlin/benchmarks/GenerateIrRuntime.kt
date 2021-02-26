@@ -55,7 +55,9 @@ import org.jetbrains.kotlin.progress.ProgressIndicatorAndCompilationCanceledStat
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.Psi2IrConfiguration
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
+import org.jetbrains.kotlin.psi2ir.generators.TypeTranslatorImpl
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.CompilerEnvironment
 import org.jetbrains.kotlin.resolve.multiplatform.isCommonSource
 import org.jetbrains.kotlin.serialization.js.ModuleKind
 import org.junit.After
@@ -435,6 +437,7 @@ class GenerateIrRuntime {
                 configuration,
                 emptyList(),
                 friendModuleDescriptors = emptyList(),
+                CompilerEnvironment,
                 thisIsBuiltInsModule = true,
                 customBuiltInsModule = null
             )
@@ -511,9 +514,7 @@ class GenerateIrRuntime {
         val mangler = JsManglerDesc
         val signaturer = IdSignatureDescriptor(mangler)
         val symbolTable = SymbolTable(signaturer, PersistentIrFactory())
-        val typeTranslator = TypeTranslator(symbolTable, languageVersionSettings, moduleDescriptor.builtIns).also {
-            it.constantValueGenerator = ConstantValueGenerator(moduleDescriptor, symbolTable)
-        }
+        val typeTranslator = TypeTranslatorImpl(symbolTable, languageVersionSettings, moduleDescriptor)
 
         val irBuiltIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, symbolTable)
         val functionFactory = IrFunctionFactory(irBuiltIns, symbolTable)
@@ -540,10 +541,7 @@ class GenerateIrRuntime {
         val mangler = JsManglerDesc
         val signaturer = IdSignatureDescriptor(mangler)
         val symbolTable = SymbolTable(signaturer, PersistentIrFactory())
-        val typeTranslator = TypeTranslator(symbolTable, languageVersionSettings, moduleDescriptor.builtIns).also {
-            it.constantValueGenerator = ConstantValueGenerator(moduleDescriptor, symbolTable)
-        }
-
+        val typeTranslator = TypeTranslatorImpl(symbolTable, languageVersionSettings, moduleDescriptor)
         val irBuiltIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, symbolTable)
 
         val functionFactory = IrFunctionFactory(irBuiltIns, symbolTable)

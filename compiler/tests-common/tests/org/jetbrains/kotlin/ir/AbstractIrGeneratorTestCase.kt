@@ -34,20 +34,20 @@ import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.util.IdSignatureComposer
 import org.jetbrains.kotlin.ir.util.NameProvider
 import org.jetbrains.kotlin.ir.util.SymbolTable
-import org.jetbrains.kotlin.ir.util.generateTypicalIrProviderList
 import org.jetbrains.kotlin.js.analyze.TopDownAnalyzerFacadeForJS
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.Psi2IrConfiguration
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
 import org.jetbrains.kotlin.psi2ir.generators.GeneratorExtensions
+import org.jetbrains.kotlin.psi2ir.generators.generateTypicalIrProviderList
 import org.jetbrains.kotlin.resolve.AnalyzingUtils
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.CompilerEnvironment
 import org.jetbrains.kotlin.resolve.lazy.JvmResolveUtil
 import org.jetbrains.kotlin.test.ConfigurationKind
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import org.jetbrains.kotlin.test.util.KtTestUtil.getAnnotationsJar
 import java.io.File
-import java.util.*
 
 abstract class AbstractIrGeneratorTestCase : CodegenTestCase() {
     override fun doMultiFileTest(wholeFile: File, files: List<TestFile>) {
@@ -126,7 +126,8 @@ abstract class AbstractIrGeneratorTestCase : CodegenTestCase() {
                 TopDownAnalyzerFacadeForJS.analyzeFiles(
                     ktFilesToAnalyze, environment.project, environment.configuration,
                     moduleDescriptors = emptyList(),
-                    friendModuleDescriptors = emptyList()
+                    friendModuleDescriptors = emptyList(),
+                    CompilerEnvironment,
                 ),
                 psi2ir, ktFilesToAnalyze, GeneratorExtensions(),
                 createIdSignatureComposer = { IdSignatureDescriptor(JsManglerDesc) }

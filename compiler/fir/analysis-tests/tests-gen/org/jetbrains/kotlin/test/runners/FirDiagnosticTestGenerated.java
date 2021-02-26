@@ -828,6 +828,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("kt37056.kt")
+            public void testKt37056() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/callResolution/kt37056.kt");
+            }
+
+            @Test
             @TestMetadata("lambdaAsReceiver.kt")
             public void testLambdaAsReceiver() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/callResolution/lambdaAsReceiver.kt");
@@ -3263,6 +3269,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
                 runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/smartcastToNothing.kt");
             }
 
+            @Test
+            @TestMetadata("smartcastToTypeParameter.kt")
+            public void testSmartcastToTypeParameter() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/smartcastToTypeParameter.kt");
+            }
+
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/booleans")
             @TestDataPath("$PROJECT_ROOT")
@@ -3629,6 +3641,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
             @TestMetadata("capturedParametersOfInnerClasses.kt")
             public void testCapturedParametersOfInnerClasses() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/types/capturedParametersOfInnerClasses.kt");
+            }
+
+            @Test
+            @TestMetadata("castToBareType.kt")
+            public void testCastToBareType() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/types/castToBareType.kt");
             }
         }
 
@@ -4166,6 +4184,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("referenceToJavaStdlib.kt")
+            public void testReferenceToJavaStdlib() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/callableReferences/referenceToJavaStdlib.kt");
+            }
+
+            @Test
             @TestMetadata("sam.kt")
             public void testSam() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/callableReferences/sam.kt");
@@ -4593,6 +4617,12 @@ public class FirDiagnosticTestGenerated extends AbstractFirDiagnosticTest {
             @TestMetadata("delegateWithAnonymousObject.kt")
             public void testDelegateWithAnonymousObject() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/delegates/delegateWithAnonymousObject.kt");
+            }
+
+            @Test
+            @TestMetadata("kt41917.kt")
+            public void testKt41917() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/delegates/kt41917.kt");
             }
 
             @Test
