@@ -42,6 +42,9 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val VARIABLE_EXPECTED by error<FirSourceElement, PsiElement>()
         val RETURN_NOT_ALLOWED by error<FirSourceElement, PsiElement>()
         val DELEGATION_IN_INTERFACE by error<FirSourceElement, PsiElement>()
+        val NESTED_CLASS_NOT_ALLOWED by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<String>("declaration")
+        }
     }
 
     val UNRESOLVED by object : DiagnosticGroup("Unresolved") {
@@ -163,6 +166,8 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val INAPPLICABLE_LATEINIT_MODIFIER by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.LATEINIT_MODIFIER) {
             parameter<String>("reason")
         }
+
+        val VARARG_OUTSIDE_PARENTHESES by error<FirSourceElement, KtExpression>()
     }
 
     val AMBIGUITY by object : DiagnosticGroup("Ambiguity") {
@@ -249,7 +254,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     }
 
     val REDECLARATIONS by object : DiagnosticGroup("Redeclarations") {
-        val MANY_COMPANION_OBJECTS by error<FirSourceElement, PsiElement>()
+        val MANY_COMPANION_OBJECTS by error<FirSourceElement, KtObjectDeclaration>(PositioningStrategy.COMPANION_OBJECT)
         val CONFLICTING_OVERLOADS by error<FirSourceElement, PsiElement>(PositioningStrategy.DECLARATION_SIGNATURE_OR_DEFAULT) {
             parameter<Collection<AbstractFirBasedSymbol<*>>>("conflictingOverloads")
         }
@@ -352,7 +357,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     }
 
     val CONTROL_FLOW by object : DiagnosticGroup("Control flow diagnostics") {
-        val UNINITIALIZED_VARIABLE by error<FirSourceElement, PsiElement> {
+        val UNINITIALIZED_VARIABLE by error<FirSourceElement, KtSimpleNameExpression> {
+            parameter<FirPropertySymbol>("variable")
+        }
+        val VAL_REASSIGNMENT by error<FirSourceElement, KtExpression> {
             parameter<FirPropertySymbol>("variable")
         }
         val WRONG_INVOCATION_KIND by warning<FirSourceElement, PsiElement> {

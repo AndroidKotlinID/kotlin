@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.load.java.SpecialGenericSignatures
 import org.jetbrains.kotlin.load.java.SpecialGenericSignatures.Companion.ERASED_COLLECTION_PARAMETER_NAMES
 import org.jetbrains.kotlin.load.java.SpecialGenericSignatures.Companion.sameAsBuiltinMethodWithErasedValueParameters
+import org.jetbrains.kotlin.load.java.SpecialGenericSignatures.Companion.sameAsRenamedInJvmBuiltin
 import org.jetbrains.kotlin.load.java.getPropertyNamesCandidatesByAccessorName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.AbstractTypeChecker
@@ -43,6 +44,7 @@ class JavaClassUseSiteMemberScope(
 ) {
     private val typeParameterStack = klass.javaTypeParameterStack
     private val specialFunctions = hashMapOf<Name, Collection<FirNamedFunctionSymbol>>()
+    private val accessorByNameMap = hashMapOf<Name, FirAccessorSymbol>()
 
     override fun getCallableNames(): Set<Name> {
         return declaredMemberScope.getContainingCallableNamesIfPresent() + superTypesScope.getCallableNames()
@@ -57,16 +59,18 @@ class JavaClassUseSiteMemberScope(
         setterSymbol: FirNamedFunctionSymbol?,
         syntheticPropertyName: Name,
     ): FirAccessorSymbol {
-        return buildSyntheticProperty {
-            session = this@JavaClassUseSiteMemberScope.session
-            name = syntheticPropertyName
-            symbol = FirAccessorSymbol(
-                accessorId = getterSymbol.callableId,
-                callableId = CallableId(getterSymbol.callableId.packageName, getterSymbol.callableId.className, syntheticPropertyName)
-            )
-            delegateGetter = getterSymbol.fir
-            delegateSetter = setterSymbol?.fir
-        }.symbol
+        return accessorByNameMap.getOrPut(syntheticPropertyName) {
+            buildSyntheticProperty {
+                session = this@JavaClassUseSiteMemberScope.session
+                name = syntheticPropertyName
+                symbol = FirAccessorSymbol(
+                    accessorId = getterSymbol.callableId,
+                    callableId = CallableId(getterSymbol.callableId.packageName, getterSymbol.callableId.className, syntheticPropertyName)
+                )
+                delegateGetter = getterSymbol.fir
+                delegateSetter = setterSymbol?.fir
+            }.symbol
+        }
     }
 
     override fun processPropertiesByName(name: Name, processor: (FirVariableSymbol<*>) -> Unit) {
@@ -104,29 +108,16 @@ class JavaClassUseSiteMemberScope(
     }
 
     private fun FirVariableSymbol<*>.createOverridePropertyIfExists(scope: FirScope): FirPropertySymbol? {
-        if (this !is FirPropertySymbol || !doesClassOverridesProperty(this, scope)) return null
-
-        val getterSymbol = this.findGetterOverride(scope)!!
+        if (this !is FirPropertySymbol) return null
+        val getterSymbol = this.findGetterOverride(scope) ?: return null
         val setterSymbol =
             if (this.fir.isVar)
-                this.findSetterOverride(scope)!!
+                this.findSetterOverride(scope) ?: return null
             else
                 null
+        if (setterSymbol != null && setterSymbol.fir.modality != getterSymbol.fir.modality) return null
 
         return generateAccessorSymbol(getterSymbol, setterSymbol, fir.name)
-    }
-
-    private fun doesClassOverridesProperty(
-        propertySymbolFromSupertype: FirPropertySymbol,
-        scope: FirScope,
-    ): Boolean {
-        val getter = propertySymbolFromSupertype.findGetterOverride(scope)
-        val setter = propertySymbolFromSupertype.findSetterOverride(scope)
-
-        if (getter == null) return false
-        if (!propertySymbolFromSupertype.fir.isVar) return true
-
-        return setter != null && setter.fir.modality == getter.fir.modality
     }
 
     private fun FirPropertySymbol.findGetterOverride(
@@ -201,7 +192,7 @@ class JavaClassUseSiteMemberScope(
         val renamedSpecialBuiltInNames = SpecialGenericSignatures.getBuiltinFunctionNamesByJvmName(name)
 
         if (potentialPropertyNames.isEmpty() && renamedSpecialBuiltInNames.isEmpty() &&
-            !name.sameAsBuiltinMethodWithErasedValueParameters
+            !name.sameAsBuiltinMethodWithErasedValueParameters && !name.sameAsRenamedInJvmBuiltin
         ) {
             return super.processFunctionsByName(name, processor)
         }
@@ -397,10 +388,7 @@ class JavaClassUseSiteMemberScope(
 
         superTypesScope.processOverriddenFunctions(this) {
             if (!it.isFromBuiltInClass(session)) return@processOverriddenFunctions ProcessorAction.NEXT
-            if (SpecialGenericSignatures.SIGNATURE_TO_JVM_REPRESENTATION_NAME.containsKey(
-                    it.fir.computeJvmSignature()
-                )
-            ) {
+            if (SpecialGenericSignatures.SIGNATURE_TO_JVM_REPRESENTATION_NAME.containsKey(it.fir.computeJvmSignature())) {
                 result = it
                 return@processOverriddenFunctions ProcessorAction.STOP
             }

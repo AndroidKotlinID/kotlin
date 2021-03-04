@@ -24,10 +24,12 @@ import org.jetbrains.kotlin.psi.KtFunction
 import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtModifierListOwner
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPropertyAccessor
 import org.jetbrains.kotlin.psi.KtPropertyDelegate
+import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 import org.jetbrains.kotlin.psi.KtTypeParameter
 import org.jetbrains.kotlin.psi.KtTypeParameterList
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -95,6 +97,13 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.DELEGATION_IN_INTERFACE) { firDiagnostic ->
         DelegationInInterfaceImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.NESTED_CLASS_NOT_ALLOWED) { firDiagnostic ->
+        NestedClassNotAllowedImpl(
+            firDiagnostic.a,
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -527,6 +536,12 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     add(FirErrors.INAPPLICABLE_LATEINIT_MODIFIER) { firDiagnostic ->
         InapplicableLateinitModifierImpl(
             firDiagnostic.a,
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.VARARG_OUTSIDE_PARENTHESES) { firDiagnostic ->
+        VarargOutsideParenthesesImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -1001,6 +1016,13 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.UNINITIALIZED_VARIABLE) { firDiagnostic ->
         UninitializedVariableImpl(
+            firSymbolBuilder.buildVariableSymbol(firDiagnostic.a.fir as FirProperty),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.VAL_REASSIGNMENT) { firDiagnostic ->
+        ValReassignmentImpl(
             firSymbolBuilder.buildVariableSymbol(firDiagnostic.a.fir as FirProperty),
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
