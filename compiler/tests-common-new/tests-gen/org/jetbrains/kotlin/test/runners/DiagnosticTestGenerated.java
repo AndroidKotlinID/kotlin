@@ -8988,6 +8988,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("customExtensionOverKotlinExtensionInConst.kt")
+            public void testCustomExtensionOverKotlinExtensionInConst() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/evaluate/customExtensionOverKotlinExtensionInConst.kt");
+            }
+
+            @Test
             @TestMetadata("divisionByZero.kt")
             public void testDivisionByZero() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/evaluate/divisionByZero.kt");
@@ -14585,6 +14591,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("stringTemplate.kt")
             public void testStringTemplate() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inline/stringTemplate.kt");
+            }
+
+            @Test
+            @TestMetadata("superCallDepecation.kt")
+            public void testSuperCallDepecation() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inline/superCallDepecation.kt");
             }
 
             @Test

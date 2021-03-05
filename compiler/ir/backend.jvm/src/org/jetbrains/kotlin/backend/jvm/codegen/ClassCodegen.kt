@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.psi.PsiSourceManager
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
@@ -250,7 +251,7 @@ class ClassCodegen private constructor(
         if (entry is MultifileFacadeFileEntry) {
             return entry.partFiles.flatMap { it.loadSourceFilesInfo() }
         }
-        return listOfNotNull(context.psiSourceManager.getFileEntry(this)?.let { File(it.name) })
+        return listOf(File(entry.name))
     }
 
     companion object {
@@ -462,7 +463,7 @@ class ClassCodegen private constructor(
 
     private val IrDeclaration.descriptorOrigin: JvmDeclarationOrigin
         get() {
-            val psiElement = context.psiSourceManager.findPsiElement(this)
+            val psiElement = PsiSourceManager.findPsiElement(this)
             // For declarations inside lambdas, produce a descriptor which refers back to the original function.
             // This is needed for plugins which check for lambdas inside of inline functions using the descriptor
             // contained in JvmDeclarationOrigin. This matches the behavior of the JVM backend.

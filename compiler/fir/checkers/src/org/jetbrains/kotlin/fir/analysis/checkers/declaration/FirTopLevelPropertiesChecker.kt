@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 
 // See old FE's [DeclarationsChecker]
-object FirTopLevelPropertyChecker : FirFileChecker() {
+object FirTopLevelPropertiesChecker : FirFileChecker() {
     override fun check(declaration: FirFile, context: CheckerContext, reporter: DiagnosticReporter) {
         for (topLevelDeclaration in declaration.declarations) {
             if (topLevelDeclaration is FirProperty) {
@@ -28,7 +28,8 @@ object FirTopLevelPropertyChecker : FirFileChecker() {
         // So, our source of truth should be the full modifier list retrieved from the source.
         val modifierList = with(FirModifierList) { source.getModifierList() }
 
-        checkProperty(null, property, modifierList, reporter, context)
-        checkExpectDeclarationVisibilityAndBody(property, source, modifierList, reporter, context)
+        checkPropertyInitializer(null, property, modifierList, property.initializer != null, reporter, context)
+        checkPropertyAccessors(property, reporter, context)
+        checkExpectDeclarationVisibilityAndBody(property, source, reporter, context)
     }
 }

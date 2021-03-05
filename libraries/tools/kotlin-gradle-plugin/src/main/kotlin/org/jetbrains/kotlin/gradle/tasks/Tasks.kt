@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.build.report.metrics.BuildMetricsReporter
 import org.jetbrains.kotlin.build.report.metrics.BuildMetricsReporterImpl
 import org.jetbrains.kotlin.build.report.metrics.BuildTime
 import org.jetbrains.kotlin.build.report.metrics.measure
+import org.jetbrains.kotlin.cli.common.CompilerSystemProperties
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
@@ -140,18 +141,10 @@ public class GradleCompileTaskProvider {
         sessionsDir = GradleCompilerRunner.sessionsDir(task.project)
         projectName = task.project.rootProject.name.normalizeForFlagFile()
         val modulesInfo = GradleCompilerRunner.buildModulesInfo(task.project.gradle)
-        buildModulesInfo = if (!isConfigurationCacheAvailable(task.project.gradle)) {
-            task.project.provider {
-                object : IncrementalModuleInfoProvider {
-                    override val info = modulesInfo
-                }
-            }
-        } else {
-            task.project.gradle.sharedServices.registerIfAbsent(
-                IncrementalModuleInfoBuildService.getServiceName(), IncrementalModuleInfoBuildService::class.java
-            ) {
-                it.parameters.info.set(modulesInfo)
-            }
+        buildModulesInfo = task.project.gradle.sharedServices.registerIfAbsent(
+            IncrementalModuleInfoBuildService.getServiceName(), IncrementalModuleInfoBuildService::class.java
+        ) {
+            it.parameters.info.set(modulesInfo)
         }
         path = task.path
         logger = task.logger
@@ -334,6 +327,24 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
 
     @TaskAction
     fun execute(inputs: IncrementalTaskInputs) {
+        CompilerSystemProperties.systemPropertyGetter = {
+            if (it in kotlinDaemonProperties) kotlinDaemonProperties[it] else System.getProperty(it)
+        }
+        CompilerSystemProperties.systemPropertySetter = setter@{ key, value ->
+            val oldValue = kotlinDaemonProperties[key]
+            if (oldValue == value) return@setter oldValue
+            kotlinDaemonProperties[key] = value
+            System.setProperty(key, value)
+            oldValue
+        }
+        CompilerSystemProperties.systemPropertyCleaner = {
+            val oldValue = kotlinDaemonProperties[it]
+            kotlinDaemonProperties.remove(it)
+            System.clearProperty(it)
+            oldValue
+        }
+        CompilerSystemProperties.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY.value = "true"
+
         // If task throws exception, but its outputs are changed during execution,
         // then Gradle forces next build to be non-incremental (see Gradle's DefaultTaskArtifactStateRepository#persistNewOutputs)
         // To prevent this, we backup outputs before incremental build and restore when exception is thrown
@@ -424,6 +435,15 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments>() : AbstractKo
     protected fun hasFilesInTaskBuildDirectory(): Boolean {
         val taskBuildDir = taskBuildDirectory
         return taskBuildDir.walk().any { it != taskBuildDir && it.isFile }
+    }
+
+    @get:Internal
+    val kotlinDaemonProperties: MutableMap<String, String?> by lazy {
+        if (isGradleVersionAtLeast(6, 5)) {
+            CompilerSystemProperties.values()
+                .associate { it.property to project.providers.systemProperty(it.property).forUseAtConfigurationTime().orNull }
+                .toMutableMap()
+        } else mutableMapOf()
     }
 }
 
@@ -603,7 +623,11 @@ internal open class KotlinCompileWithWorkers @Inject constructor(
     private val workerExecutor: WorkerExecutor
 ) : KotlinCompile() {
 
-    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(GradleCompileTaskProvider(this), workerExecutor)
+    override fun compilerRunner() =
+        GradleCompilerRunnerWithWorkers(
+            GradleCompileTaskProvider(this),
+            workerExecutor
+        )
 }
 
 @CacheableTask
@@ -611,14 +635,22 @@ internal open class Kotlin2JsCompileWithWorkers @Inject constructor(
     private val workerExecutor: WorkerExecutor
 ) : Kotlin2JsCompile() {
 
-    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(GradleCompileTaskProvider(this), workerExecutor)
+    override fun compilerRunner() =
+        GradleCompilerRunnerWithWorkers(
+            GradleCompileTaskProvider(this),
+            workerExecutor
+        )
 }
 
 @CacheableTask
 internal open class KotlinCompileCommonWithWorkers @Inject constructor(
     private val workerExecutor: WorkerExecutor
 ) : KotlinCompileCommon() {
-    override fun compilerRunner() = GradleCompilerRunnerWithWorkers(GradleCompileTaskProvider(this), workerExecutor)
+    override fun compilerRunner() =
+        GradleCompilerRunnerWithWorkers(
+            GradleCompileTaskProvider(this),
+            workerExecutor
+        )
 }
 
 @CacheableTask
@@ -686,17 +718,6 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
 
     override fun getSourceRoots() = SourceRoots.KotlinOnly.create(getSource(), sourceFilesExtensions)
 
-    @get:InputFiles
-    @get:Optional
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    internal val friendDependencies: List<String>
-        get() {
-            val filter = libraryFilter
-            return friendPaths.files.filter {
-                it.exists() && filter(it)
-            }.map { it.absolutePath }
-        }
-
     @Suppress("unused")
     @get:InputFiles
     @get:Optional
@@ -759,6 +780,10 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
                 it.joinToString(File.pathSeparator) else
                 null
         }
+
+        val friendDependencies: List<String> = friendPaths.files.filter {
+            it.exists() && libraryFilter(it)
+        }.map { it.absolutePath }
 
         args.friendModules = friendDependencies.joinToString(File.pathSeparator)
 

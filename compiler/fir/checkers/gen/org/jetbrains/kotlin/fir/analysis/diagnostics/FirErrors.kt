@@ -171,6 +171,10 @@ object FirErrors {
     val GENERIC_THROWABLE_SUBCLASS by error0<FirSourceElement, KtTypeParameterList>()
     val INNER_CLASS_OF_GENERIC_THROWABLE_SUBCLASS by error0<FirSourceElement, KtClassOrObject>(SourceElementPositioningStrategies.DECLARATION_NAME)
 
+    // Reflection
+    val CLASS_LITERAL_LHS_NOT_A_CLASS by error0<FirSourceElement, KtExpression>()
+    val NULLABLE_TYPE_IN_CLASS_LITERAL_LHS by error0<FirSourceElement, KtExpression>()
+
     // overrides
     val NOTHING_TO_OVERRIDE by error1<FirSourceElement, KtModifierListOwner, FirMemberDeclaration>(SourceElementPositioningStrategies.OVERRIDE_MODIFIER)
     val CANNOT_WEAKEN_ACCESS_PRIVILEGE by error3<FirSourceElement, KtModifierListOwner, Visibility, FirCallableDeclaration<*>, Name>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
@@ -211,6 +215,9 @@ object FirErrors {
     val ABSTRACT_PROPERTY_WITH_INITIALIZER by error0<FirSourceElement, KtExpression>()
     val PROPERTY_INITIALIZER_IN_INTERFACE by error0<FirSourceElement, KtExpression>()
     val PROPERTY_WITH_NO_TYPE_NO_INITIALIZER by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    val MUST_BE_INITIALIZED by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    val MUST_BE_INITIALIZED_OR_BE_ABSTRACT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
+    val EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
     val BACKING_FIELD_IN_INTERFACE by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
     val EXTENSION_PROPERTY_WITH_BACKING_FIELD by error0<FirSourceElement, KtExpression>()
     val PROPERTY_INITIALIZER_NO_BACKING_FIELD by error0<FirSourceElement, KtExpression>()
@@ -222,6 +229,7 @@ object FirErrors {
     val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.PRIVATE_MODIFIER)
     val EXPECTED_PRIVATE_DECLARATION by error0<FirSourceElement, KtModifierListOwner>(SourceElementPositioningStrategies.VISIBILITY_MODIFIER)
     val VAL_WITH_SETTER by error0<FirSourceElement, KtPropertyAccessor>()
+    val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.CONST_MODIFIER)
 
     // Multi-platform projects
     val EXPECTED_DECLARATION_WITH_BODY by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)

@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.signaturer.FirMangler
 import org.jetbrains.kotlin.fir.symbols.FirBuiltinSymbols
+import org.jetbrains.kotlin.ir.PsiIrFileEntry
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrModuleFragmentImpl
@@ -29,14 +30,12 @@ import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi2ir.PsiSourceManager
 import org.jetbrains.kotlin.psi2ir.generators.GeneratorExtensions
 import org.jetbrains.kotlin.psi2ir.generators.TypeTranslatorImpl
 import org.jetbrains.kotlin.psi2ir.generators.generateTypicalIrProviderList
 
 class Fir2IrConverter(
     private val moduleDescriptor: FirModuleDescriptor,
-    private val sourceManager: PsiSourceManager,
     private val components: Fir2IrComponents
 ) : Fir2IrComponents by components {
 
@@ -58,7 +57,7 @@ class Fir2IrConverter(
 
     fun registerFileAndClasses(file: FirFile): IrFile {
         val irFile = IrFileImpl(
-            sourceManager.getOrCreateFileEntry(file.psi as KtFile),
+            PsiIrFileEntry(file.psi as KtFile),
             moduleDescriptor.getPackage(file.packageFqName).fragments.first()
         )
         declarationStorage.registerFile(file, irFile)
@@ -91,7 +90,7 @@ class Fir2IrConverter(
         anonymousObject: FirAnonymousObject,
         irClass: IrClass = classifierStorage.getCachedIrClass(anonymousObject)!!
     ): IrClass {
-        anonymousObject.getPrimaryConstructorIfAny()?.let {
+        anonymousObject.primaryConstructor?.let {
             irClass.declarations += declarationStorage.createIrConstructor(
                 it, irClass, isLocal = true
             )
@@ -127,7 +126,7 @@ class Fir2IrConverter(
         regularClass: FirRegularClass,
         irClass: IrClass = classifierStorage.getCachedIrClass(regularClass)!!
     ): IrClass {
-        val irConstructor = regularClass.getPrimaryConstructorIfAny()?.let {
+        val irConstructor = regularClass.primaryConstructor?.let {
             declarationStorage.getOrCreateIrConstructor(it, irClass, isLocal = regularClass.isLocal)
         }
         if (irConstructor != null) {
@@ -265,11 +264,10 @@ class Fir2IrConverter(
                 TypeTranslatorImpl(symbolTable, languageVersionSettings, moduleDescriptor, extensions = generatorExtensions)
             val irBuiltIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, symbolTable)
             FirBuiltinSymbols(irBuiltIns, moduleDescriptor.builtIns, symbolTable)
-            val sourceManager = PsiSourceManager()
             val components = Fir2IrComponentsStorage(session, scopeSession, symbolTable, irBuiltIns, irFactory, mangler)
             val conversionScope = Fir2IrConversionScope()
             val classifierStorage = Fir2IrClassifierStorage(components)
-            val converter = Fir2IrConverter(moduleDescriptor, sourceManager, components)
+            val converter = Fir2IrConverter(moduleDescriptor, components)
             val fir2irVisitor = Fir2IrVisitor(converter, components, conversionScope)
             val declarationStorage = Fir2IrDeclarationStorage(components, moduleDescriptor)
             val typeConverter = Fir2IrTypeConverter(components)
@@ -308,9 +306,7 @@ class Fir2IrConverter(
             }
 
             for (firFile in firFiles) {
-                val irFile = firFile.accept(fir2irVisitor, null) as IrFile
-                val fileEntry = sourceManager.getOrCreateFileEntry(firFile.psi as KtFile)
-                sourceManager.putFileEntry(irFile, fileEntry)
+                firFile.accept(fir2irVisitor, null)
             }
 
             externalDependenciesGenerator.generateUnboundSymbolsAsDependencies()
@@ -319,7 +315,7 @@ class Fir2IrConverter(
 
             evaluateConstants(irModuleFragment)
 
-            return Fir2IrResult(irModuleFragment, symbolTable, sourceManager, components)
+            return Fir2IrResult(irModuleFragment, symbolTable, components)
         }
     }
 }

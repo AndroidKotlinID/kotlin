@@ -212,6 +212,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val INNER_CLASS_OF_GENERIC_THROWABLE_SUBCLASS by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME)
     }
 
+    val REFLECTION by object : DiagnosticGroup("Reflection") {
+        val CLASS_LITERAL_LHS_NOT_A_CLASS by error<FirSourceElement, KtExpression>()
+        val NULLABLE_TYPE_IN_CLASS_LITERAL_LHS by error<FirSourceElement, KtExpression>()
+    }
+
     val OVERRIDES by object : DiagnosticGroup("overrides") {
         val NOTHING_TO_OVERRIDE by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.OVERRIDE_MODIFIER) {
             parameter<FirMemberDeclaration>("declaration")
@@ -314,6 +319,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val PROPERTY_INITIALIZER_IN_INTERFACE by error<FirSourceElement, KtExpression>()
         val PROPERTY_WITH_NO_TYPE_NO_INITIALIZER by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
 
+        val MUST_BE_INITIALIZED by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
+        val MUST_BE_INITIALIZED_OR_BE_ABSTRACT by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
+        val EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
+
         val BACKING_FIELD_IN_INTERFACE by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
         val EXTENSION_PROPERTY_WITH_BACKING_FIELD by error<FirSourceElement, KtExpression>()
         val PROPERTY_INITIALIZER_NO_BACKING_FIELD by error<FirSourceElement, KtExpression>()
@@ -328,6 +337,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val PRIVATE_SETTER_FOR_OPEN_PROPERTY by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.PRIVATE_MODIFIER)
         val EXPECTED_PRIVATE_DECLARATION by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.VISIBILITY_MODIFIER)
         val VAL_WITH_SETTER by error<FirSourceElement, KtPropertyAccessor>()
+        val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER)
     }
 
     val MPP_PROJECTS by object : DiagnosticGroup("Multi-platform projects") {

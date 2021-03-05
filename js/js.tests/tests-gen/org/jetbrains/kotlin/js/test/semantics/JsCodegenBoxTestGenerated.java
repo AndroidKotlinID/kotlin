@@ -821,6 +821,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/binaryOp/kt23030_properIeee754comparisons.kt");
         }
 
+        @TestMetadata("kt44402.kt")
+        public void testKt44402() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/kt44402.kt");
+        }
+
         @TestMetadata("kt6747_identityEquals.kt")
         public void testKt6747_identityEquals() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/kt6747_identityEquals.kt");
@@ -10401,6 +10406,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("classCanNotBeCastedToVoid.kt")
         public void testClassCanNotBeCastedToVoid() throws Exception {
             runTest("compiler/testData/codegen/box/fir/classCanNotBeCastedToVoid.kt");
+        }
+
+        @TestMetadata("falsePositiveBoundSmartcast.kt")
+        public void testFalsePositiveBoundSmartcast() throws Exception {
+            runTest("compiler/testData/codegen/box/fir/falsePositiveBoundSmartcast.kt");
         }
     }
 

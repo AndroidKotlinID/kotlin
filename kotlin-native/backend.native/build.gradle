@@ -177,6 +177,7 @@ dependencies {
     compilerCompile project(":kotlin-util-klib")
     compilerCompile project(":kotlin-util-klib-metadata")
     compilerCompile project(":compiler:ir.serialization.common")
+    compilerCompile project(":compiler:ir.psi2ir")
     use(LocalDependenciesKt) {
         compilerCompile(intellijCoreDep()){
             artifact {
@@ -215,8 +216,10 @@ task stdlib(dependsOn: "${hostName}Stdlib")
 
 def commonSrc = project(":kotlin-stdlib-common").files("src/kotlin", "src/generated", "../unsigned/src", "../src").files
 
+def interopRuntimeCommonSrc = project(':kotlin-native:Interop:Runtime').file('src/main/kotlin')
+
 final List<File> stdLibSrc = [
-        project(':kotlin-native:Interop:Runtime').file('src/main/kotlin'),
+        interopRuntimeCommonSrc,
         project(':kotlin-native:Interop:Runtime').file('src/native/kotlin'),
         project(':kotlin-native:Interop:JsRuntime').file('src/main/kotlin'),
         project(':kotlin-native:runtime').file('src/main/kotlin')
@@ -260,6 +263,7 @@ targetList.each { target ->
                 "-Xcommon-sources=${commonSrc.join(',')}",
                 "-Xcommon-sources=${testAnnotationCommon.join(',')}",
                 "-Xcommon-sources=${testCommon.join(',')}",
+                "-Xcommon-sources=$interopRuntimeCommonSrc",
                 *stdLibSrc]
         stdLibSrc.forEach { inputs.dir(it) }
         commonSrc.forEach{

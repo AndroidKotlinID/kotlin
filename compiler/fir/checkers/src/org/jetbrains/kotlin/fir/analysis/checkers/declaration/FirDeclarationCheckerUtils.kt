@@ -19,19 +19,53 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.types.FirImplicitTypeRef
 import org.jetbrains.kotlin.lexer.KtTokens
 
+internal fun isInsideExpectClass(containingClass: FirRegularClass, context: CheckerContext): Boolean {
+    return isInsideSpecificClass(containingClass, context) { klass -> klass.isExpect }
+}
+
+internal fun isInsideExternalClass(containingClass: FirRegularClass, context: CheckerContext): Boolean {
+    return isInsideSpecificClass(containingClass, context) { klass -> klass.isExternal }
+}
+
 // Note that the class that contains the currently visiting declaration will *not* be in the context's containing declarations *yet*.
-internal fun isInsideExpectClass(containingDeclaration: FirRegularClass, context: CheckerContext): Boolean =
-    containingDeclaration.isExpect || context.containingDeclarations.asReversed().any { it is FirRegularClass && it.isExpect }
+private inline fun isInsideSpecificClass(
+    containingClass: FirRegularClass,
+    context: CheckerContext,
+    predicate: (FirRegularClass) -> Boolean
+): Boolean {
+    return predicate.invoke(containingClass) ||
+            context.containingDeclarations.asReversed().any { it is FirRegularClass && predicate.invoke(it) }
+}
+
+internal fun FirMemberDeclaration.isEffectivelyExpect(
+    containingClass: FirRegularClass?,
+    context: CheckerContext,
+): Boolean {
+    if (this.isExpect) return true
+
+    return containingClass != null && isInsideExpectClass(containingClass, context)
+}
+
+internal fun FirMemberDeclaration.isEffectivelyExternal(
+    containingClass: FirRegularClass?,
+    context: CheckerContext,
+): Boolean {
+    if (this.isExternal) return true
+
+    // NB: [MemberDescriptor.isEffectivelyExternal] checks property accessors for property and vice versa.
+    // But, raw FIR creation already did such upward/downward propagation of modifiers.
+
+    return containingClass != null && isInsideExternalClass(containingClass, context)
+}
 
 // TODO: check class too
 internal fun checkExpectDeclarationVisibilityAndBody(
     declaration: FirMemberDeclaration,
     source: FirSourceElement,
-    modifierList: FirModifierList?,
     reporter: DiagnosticReporter,
     context: CheckerContext
 ) {
-    if (declaration.isExpect || modifierList?.modifiers?.any { it.token == KtTokens.EXPECT_KEYWORD } == true) {
+    if (declaration.isExpect) {
         if (Visibilities.isPrivate(declaration.visibility)) {
             reporter.reportOn(source, FirErrors.EXPECTED_PRIVATE_DECLARATION, context)
         }
@@ -41,21 +75,11 @@ internal fun checkExpectDeclarationVisibilityAndBody(
     }
 }
 
-internal fun checkProperty(
+internal fun checkPropertyInitializer(
     containingClass: FirRegularClass?,
     property: FirProperty,
     modifierList: FirModifierList?,
-    reporter: DiagnosticReporter,
-    context: CheckerContext
-) {
-    checkPropertyInitializer(containingClass, modifierList, property, reporter, context)
-    checkPropertyAccessors(property, reporter, context)
-}
-
-private fun checkPropertyInitializer(
-    containingClass: FirRegularClass?,
-    modifierList: FirModifierList?,
-    property: FirProperty,
+    isInitialized: Boolean,
     reporter: DiagnosticReporter,
     context: CheckerContext
 ) {
@@ -78,7 +102,7 @@ private fun checkPropertyInitializer(
         }
     }
 
-    val isExpect = property.isExpect || modifierList?.modifiers?.any { it.token == KtTokens.EXPECT_KEYWORD } == true
+    val isExpect = property.isEffectivelyExpect(containingClass, context)
 
     when {
         property.initializer != null -> {
@@ -112,18 +136,16 @@ private fun checkPropertyInitializer(
             }
         }
         else -> {
-            val isExternal = property.isExternal || modifierList?.modifiers?.any { it.token == KtTokens.EXTERNAL_KEYWORD } == true
-            // TODO: need to analyze class anonymous initializer to see if the property is initialized there.
-            val isUninitialized = false
-            if (backingFieldRequired && !inInterface && !property.isLateInit && !isExpect && isUninitialized && !isExternal) {
+            val isExternal = property.isEffectivelyExternal(containingClass, context)
+            if (backingFieldRequired && !inInterface && !property.isLateInit && !isExpect && !isInitialized && !isExternal) {
                 property.source?.let {
                     if (property.receiverTypeRef != null && !property.hasAccessorImplementation) {
-                        // reporter.reportOn(it, FirErrors.EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT, context)
-                    } else {
-                        if (containingClass != null || property.hasAccessorImplementation) {
-                            // reporter.reportOn(it, FirErrors.MUST_BE_INITIALIZED, context)
+                        reporter.reportOn(it, FirErrors.EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT, context)
+                    } else { // TODO: can be suppressed not to report diagnostics about no body
+                        if (containingClass == null || property.hasAccessorImplementation) {
+                            reporter.reportOn(it, FirErrors.MUST_BE_INITIALIZED, context)
                         } else {
-                            // reporter.reportOn(it, FirErrors.MUST_BE_INITIALIZED_OR_BE_ABSTRACT, context)
+                            reporter.reportOn(it, FirErrors.MUST_BE_INITIALIZED_OR_BE_ABSTRACT, context)
                         }
                     }
                 }
@@ -132,7 +154,7 @@ private fun checkPropertyInitializer(
     }
 }
 
-private fun checkPropertyAccessors(
+internal fun checkPropertyAccessors(
     property: FirProperty,
     reporter: DiagnosticReporter,
     context: CheckerContext
@@ -147,6 +169,5 @@ private fun checkPropertyAccessors(
 private val FirProperty.hasAccessorImplementation: Boolean
     get() = (getter !is FirDefaultPropertyAccessor && getter?.hasBody == true) ||
             (setter !is FirDefaultPropertyAccessor && setter?.hasBody == true)
-
 
 internal val FirClass<*>.canHaveOpenMembers: Boolean get() = modality() != Modality.FINAL || classKind == ClassKind.ENUM_CLASS

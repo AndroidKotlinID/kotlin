@@ -1045,6 +1045,23 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         }
 
         @Nested
+        @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constVal")
+        @TestDataPath("$PROJECT_ROOT")
+        @Execution(ExecutionMode.SAME_THREAD)
+        public class ConstVal {
+            @Test
+            public void testAllFilesPresentInConstVal() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/constVal"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+            }
+
+            @Test
+            @TestMetadata("constValNotTopLevelOrObject.kt")
+            public void testConstValNotTopLevelOrObject() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/constVal/constValNotTopLevelOrObject.kt");
+            }
+        }
+
+        @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constructors")
         @TestDataPath("$PROJECT_ROOT")
         @Execution(ExecutionMode.SAME_THREAD)
@@ -3547,6 +3564,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                 @TestMetadata("boundSafeCallAndIsCheck.kt")
                 public void testBoundSafeCallAndIsCheck() throws Exception {
                     runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/safeCalls/boundSafeCallAndIsCheck.kt");
+                }
+
+                @Test
+                @TestMetadata("complexIfWithOr.kt")
+                public void testComplexIfWithOr() throws Exception {
+                    runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/safeCalls/complexIfWithOr.kt");
                 }
 
                 @Test

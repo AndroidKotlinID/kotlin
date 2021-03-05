@@ -894,6 +894,24 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         }
     }
 
+    @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constVal")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ConstVal extends AbstractLazyBodyIsNotTouchedTilContractsPhaseTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInConstVal() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/constVal"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("constValNotTopLevelOrObject.kt")
+        public void testConstValNotTopLevelOrObject() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/constVal/constValNotTopLevelOrObject.kt");
+        }
+    }
+
     @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constructors")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -3121,6 +3139,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
             @TestMetadata("boundSafeCallAndIsCheck.kt")
             public void testBoundSafeCallAndIsCheck() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/safeCalls/boundSafeCallAndIsCheck.kt");
+            }
+
+            @TestMetadata("complexIfWithOr.kt")
+            public void testComplexIfWithOr() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/safeCalls/complexIfWithOr.kt");
             }
 
             @TestMetadata("safeCallAndEqualityToBool.kt")

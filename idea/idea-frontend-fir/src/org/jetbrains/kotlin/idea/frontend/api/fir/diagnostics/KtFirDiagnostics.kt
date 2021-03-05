@@ -483,6 +483,14 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = InnerClassOfGenericThrowableSubclass::class
     }
 
+    abstract class ClassLiteralLhsNotAClass : KtFirDiagnostic<KtExpression>() {
+        override val diagnosticClass get() = ClassLiteralLhsNotAClass::class
+    }
+
+    abstract class NullableTypeInClassLiteralLhs : KtFirDiagnostic<KtExpression>() {
+        override val diagnosticClass get() = NullableTypeInClassLiteralLhs::class
+    }
+
     abstract class NothingToOverride : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = NothingToOverride::class
         abstract val declaration: KtSymbol
@@ -637,6 +645,18 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = PropertyWithNoTypeNoInitializer::class
     }
 
+    abstract class MustBeInitialized : KtFirDiagnostic<KtProperty>() {
+        override val diagnosticClass get() = MustBeInitialized::class
+    }
+
+    abstract class MustBeInitializedOrBeAbstract : KtFirDiagnostic<KtProperty>() {
+        override val diagnosticClass get() = MustBeInitializedOrBeAbstract::class
+    }
+
+    abstract class ExtensionPropertyMustHaveAccessorsOrBeAbstract : KtFirDiagnostic<KtProperty>() {
+        override val diagnosticClass get() = ExtensionPropertyMustHaveAccessorsOrBeAbstract::class
+    }
+
     abstract class BackingFieldInInterface : KtFirDiagnostic<KtProperty>() {
         override val diagnosticClass get() = BackingFieldInInterface::class
     }
@@ -679,6 +699,10 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class ValWithSetter : KtFirDiagnostic<KtPropertyAccessor>() {
         override val diagnosticClass get() = ValWithSetter::class
+    }
+
+    abstract class ConstValNotTopLevelOrObject : KtFirDiagnostic<KtProperty>() {
+        override val diagnosticClass get() = ConstValNotTopLevelOrObject::class
     }
 
     abstract class ExpectedDeclarationWithBody : KtFirDiagnostic<KtDeclaration>() {

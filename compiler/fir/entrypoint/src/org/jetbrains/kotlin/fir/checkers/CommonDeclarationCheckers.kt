@@ -35,6 +35,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
     override val propertyCheckers: Set<FirPropertyChecker> = setOf(
         FirInapplicableLateinitChecker,
         FirDestructuringDeclarationChecker,
+        FirConstPropertyChecker,
     )
 
     override val classCheckers: Set<FirClassChecker> = setOf(
@@ -58,8 +59,8 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
         FirSupertypeInitializedInInterfaceChecker,
         FirSupertypeInitializedWithoutPrimaryConstructor,
         FirTypeParametersInObjectChecker,
-        FirMemberFunctionChecker,
-        FirMemberPropertyChecker,
+        FirMemberFunctionsChecker,
+        FirMemberPropertiesChecker,
         FirNestedClassChecker,
     )
 
@@ -68,8 +69,8 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
     )
 
     override val fileCheckers: Set<FirFileChecker> = setOf(
-        FirTopLevelFunctionChecker,
-        FirTopLevelPropertyChecker,
+        FirTopLevelFunctionsChecker,
+        FirTopLevelPropertiesChecker,
     )
 
     override val controlFlowAnalyserCheckers: Set<FirControlFlowChecker> = setOf(

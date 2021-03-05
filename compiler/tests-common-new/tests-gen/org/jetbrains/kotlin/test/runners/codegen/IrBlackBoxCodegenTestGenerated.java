@@ -167,6 +167,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @Test
+        @TestMetadata("javaAnnotationOnSecondaryConstructorOfLocalClass.kt")
+        public void testJavaAnnotationOnSecondaryConstructorOfLocalClass() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/javaAnnotationOnSecondaryConstructorOfLocalClass.kt");
+        }
+
+        @Test
         @TestMetadata("javaNegativePropertyAsAnnotationParameter.kt")
         public void testJavaNegativePropertyAsAnnotationParameter() throws Exception {
             runTest("compiler/testData/codegen/box/annotations/javaNegativePropertyAsAnnotationParameter.kt");
@@ -1440,6 +1446,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("kt23030_properIeee754comparisons.kt")
         public void testKt23030_properIeee754comparisons() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/kt23030_properIeee754comparisons.kt");
+        }
+
+        @Test
+        @TestMetadata("kt44402.kt")
+        public void testKt44402() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/kt44402.kt");
         }
 
         @Test
@@ -14279,6 +14291,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @Test
+        @TestMetadata("floorDiv.kt")
+        public void testFloorDiv() throws Exception {
+            runTest("compiler/testData/codegen/box/evaluate/floorDiv.kt");
+        }
+
+        @Test
         @TestMetadata("intrinsics.kt")
         public void testIntrinsics() throws Exception {
             runTest("compiler/testData/codegen/box/evaluate/intrinsics.kt");
@@ -14336,6 +14354,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("plus.kt")
         public void testPlus() throws Exception {
             runTest("compiler/testData/codegen/box/evaluate/plus.kt");
+        }
+
+        @Test
+        @TestMetadata("rem.kt")
+        public void testRem() throws Exception {
+            runTest("compiler/testData/codegen/box/evaluate/rem.kt");
         }
 
         @Test
@@ -14944,6 +14968,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("FakeOverrideBuilder.kt")
         public void testFakeOverrideBuilder() throws Exception {
             runTest("compiler/testData/codegen/box/fir/FakeOverrideBuilder.kt");
+        }
+
+        @Test
+        @TestMetadata("falsePositiveBoundSmartcast.kt")
+        public void testFalsePositiveBoundSmartcast() throws Exception {
+            runTest("compiler/testData/codegen/box/fir/falsePositiveBoundSmartcast.kt");
         }
 
         @Test

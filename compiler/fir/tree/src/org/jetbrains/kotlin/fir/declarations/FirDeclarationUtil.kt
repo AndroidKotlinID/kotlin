@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.declarations.builder.FirRegularClassBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
 import org.jetbrains.kotlin.fir.declarations.impl.FirFileImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirRegularClassImpl
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousObjectSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
@@ -117,8 +118,34 @@ val FirClassSymbol<*>.superConeTypes
 
 val FirClass<*>.superConeTypes get() = superTypeRefs.mapNotNull { it.coneTypeSafe<ConeClassLikeType>() }
 
-fun FirClass<*>.getPrimaryConstructorIfAny(): FirConstructor? =
-    declarations.filterIsInstance<FirConstructor>().firstOrNull()?.takeIf { it.isPrimary }
+val FirClass<*>.anonymousInitializers: List<FirAnonymousInitializer>
+    get() = declarations.filterIsInstance<FirAnonymousInitializer>()
+
+val FirClass<*>.constructors: List<FirConstructor>
+    get() = declarations.filterIsInstance<FirConstructor>()
+
+val FirConstructor.delegatedThisConstructor: FirConstructor?
+    get() = delegatedConstructor?.takeIf { it.isThis }
+        ?.let { (it.calleeReference as? FirResolvedNamedReference)?.resolvedSymbol?.fir as? FirConstructor }
+
+private object ConstructorDelegationComparator : Comparator<FirConstructor> {
+    override fun compare(p0: FirConstructor?, p1: FirConstructor?): Int {
+        if (p0 == null && p1 == null) return 0
+        if (p0 == null) return -1
+        if (p1 == null) return 1
+        if (p0.delegatedThisConstructor == p1) return 1
+        if (p1.delegatedThisConstructor == p0) return -1
+        // If neither is a delegation to each other, the order doesn't matter.
+        // Here we return 0 to preserve the original order.
+        return 0
+    }
+}
+
+val FirClass<*>.constructorsSortedByDelegation: List<FirConstructor>
+    get() = constructors.sortedWith(ConstructorDelegationComparator)
+
+val FirClass<*>.primaryConstructor: FirConstructor?
+    get() = constructors.firstOrNull()?.takeIf { it.isPrimary }
 
 fun FirRegularClass.collectEnumEntries(): Collection<FirEnumEntry> {
     assert(classKind == ClassKind.ENUM_CLASS)
@@ -168,8 +195,8 @@ val FirProperty.hasBackingField: Boolean
             else -> {
                 val getter = getter ?: return true
                 if (isVar && setter == null) return true
-                if (setter?.hasBody == false) return true
-                if (!getter.hasBody) return true
+                if (setter?.hasBody == false && setter?.isAbstract == false) return true
+                if (!getter.hasBody && !getter.isAbstract) return true
 
                 return isReferredViaField == true
             }

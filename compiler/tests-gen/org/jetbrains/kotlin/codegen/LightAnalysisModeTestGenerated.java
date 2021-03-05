@@ -152,6 +152,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/annotations/javaAnnotationOnProperty.kt");
         }
 
+        @TestMetadata("javaAnnotationOnSecondaryConstructorOfLocalClass.kt")
+        public void testJavaAnnotationOnSecondaryConstructorOfLocalClass() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/javaAnnotationOnSecondaryConstructorOfLocalClass.kt");
+        }
+
         @TestMetadata("javaNegativePropertyAsAnnotationParameter.kt")
         public void testJavaNegativePropertyAsAnnotationParameter() throws Exception {
             runTest("compiler/testData/codegen/box/annotations/javaNegativePropertyAsAnnotationParameter.kt");
@@ -1274,6 +1279,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt23030_properIeee754comparisons.kt")
         public void testKt23030_properIeee754comparisons() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/kt23030_properIeee754comparisons.kt");
+        }
+
+        @TestMetadata("kt44402.kt")
+        public void testKt44402() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/kt44402.kt");
         }
 
         @TestMetadata("kt6747_identityEquals.kt")
@@ -11739,6 +11749,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/evaluate/divide.kt");
         }
 
+        @TestMetadata("floorDiv.kt")
+        public void testFloorDiv() throws Exception {
+            runTest("compiler/testData/codegen/box/evaluate/floorDiv.kt");
+        }
+
         @TestMetadata("intrinsics.kt")
         public void testIntrinsics() throws Exception {
             runTest("compiler/testData/codegen/box/evaluate/intrinsics.kt");
@@ -11787,6 +11802,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("plus.kt")
         public void testPlus() throws Exception {
             runTest("compiler/testData/codegen/box/evaluate/plus.kt");
+        }
+
+        @TestMetadata("rem.kt")
+        public void testRem() throws Exception {
+            runTest("compiler/testData/codegen/box/evaluate/rem.kt");
         }
 
         @TestMetadata("simpleCallBinary.kt")
@@ -12336,6 +12356,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("FakeOverrideBuilder.kt")
         public void testFakeOverrideBuilder() throws Exception {
             runTest("compiler/testData/codegen/box/fir/FakeOverrideBuilder.kt");
+        }
+
+        @TestMetadata("falsePositiveBoundSmartcast.kt")
+        public void testFalsePositiveBoundSmartcast() throws Exception {
+            runTest("compiler/testData/codegen/box/fir/falsePositiveBoundSmartcast.kt");
         }
 
         @TestMetadata("Fir2IrClassifierStorage.kt")

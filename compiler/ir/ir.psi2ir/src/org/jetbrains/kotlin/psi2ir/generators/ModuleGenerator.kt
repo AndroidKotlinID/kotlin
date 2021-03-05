@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.psi2ir.generators
 
 import org.jetbrains.kotlin.backend.common.CodegenUtil
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.ir.PsiIrFileEntry
 import org.jetbrains.kotlin.ir.declarations.DescriptorMetadataSource
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
@@ -101,12 +102,10 @@ class ModuleGenerator(
     }
 
     private fun createEmptyIrFile(ktFile: KtFile): IrFileImpl {
-        val fileEntry = context.sourceManager.getOrCreateFileEntry(ktFile)
+        val fileEntry = PsiIrFileEntry(ktFile)
         val packageFragmentDescriptor = context.moduleDescriptor.findPackageFragmentForFile(ktFile)!!
-        val irFile = IrFileImpl(fileEntry, packageFragmentDescriptor).apply {
+        return IrFileImpl(fileEntry, packageFragmentDescriptor).apply {
             metadata = DescriptorMetadataSource.File(CodegenUtil.getMemberDescriptorsToGenerate(ktFile, context.bindingContext))
         }
-        context.sourceManager.putFileEntry(irFile, fileEntry)
-        return irFile
     }
 }

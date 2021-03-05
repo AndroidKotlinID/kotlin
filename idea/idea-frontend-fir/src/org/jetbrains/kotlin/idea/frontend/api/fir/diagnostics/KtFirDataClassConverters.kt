@@ -679,6 +679,18 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.CLASS_LITERAL_LHS_NOT_A_CLASS) { firDiagnostic ->
+        ClassLiteralLhsNotAClassImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.NULLABLE_TYPE_IN_CLASS_LITERAL_LHS) { firDiagnostic ->
+        NullableTypeInClassLiteralLhsImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.NOTHING_TO_OVERRIDE) { firDiagnostic ->
         NothingToOverrideImpl(
             firSymbolBuilder.buildSymbol(firDiagnostic.a as FirDeclaration),
@@ -899,6 +911,24 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.MUST_BE_INITIALIZED) { firDiagnostic ->
+        MustBeInitializedImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.MUST_BE_INITIALIZED_OR_BE_ABSTRACT) { firDiagnostic ->
+        MustBeInitializedOrBeAbstractImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT) { firDiagnostic ->
+        ExtensionPropertyMustHaveAccessorsOrBeAbstractImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.BACKING_FIELD_IN_INTERFACE) { firDiagnostic ->
         BackingFieldInInterfaceImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
@@ -961,6 +991,12 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.VAL_WITH_SETTER) { firDiagnostic ->
         ValWithSetterImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT) { firDiagnostic ->
+        ConstValNotTopLevelOrObjectImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
