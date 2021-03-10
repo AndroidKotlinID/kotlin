@@ -18938,6 +18938,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("literalReceiverWithIntegerValueType.kt")
+            public void testLiteralReceiverWithIntegerValueType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/numbers/literalReceiverWithIntegerValueType.kt");
+            }
+
+            @Test
             @TestMetadata("numberAsUnionAndIntersection.kt")
             public void testNumberAsUnionAndIntersection() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/numbers/numberAsUnionAndIntersection.kt");
@@ -30802,6 +30808,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
         @TestMetadata("elvisOnUnitInLet.kt")
         public void testElvisOnUnitInLet() throws Exception {
             runTest("compiler/testData/diagnostics/testsWithStdLib/elvisOnUnitInLet.kt");
+        }
+
+        @Test
+        @TestMetadata("exitProcess.kt")
+        public void testExitProcess() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/exitProcess.kt");
         }
 
         @Test

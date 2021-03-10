@@ -145,7 +145,7 @@ object LightTreePositioningStrategies {
 
                     return markRange(startElement, nameIdentifier, startOffset, endOffset, tree, node)
                 }
-                return markElement(node, startOffset, endOffset, tree)
+                return markElement(nameIdentifier, startOffset, endOffset, tree, node)
             }
             if (node.tokenType == KtNodeTypes.FUN) {
                 return DECLARATION_SIGNATURE.mark(node, startOffset, endOffset, tree)
@@ -294,6 +294,12 @@ object LightTreePositioningStrategies {
 
     val CONST_MODIFIER: LightTreePositioningStrategy =
         ModifierSetBasedLightTreePositioningStrategy(TokenSet.create(KtTokens.CONST_KEYWORD))
+
+    val INLINE_OR_VALUE_MODIFIER: LightTreePositioningStrategy =
+        ModifierSetBasedLightTreePositioningStrategy(TokenSet.create(KtTokens.INLINE_KEYWORD, KtTokens.VALUE_KEYWORD))
+
+    val INNER_MODIFIER: LightTreePositioningStrategy =
+        ModifierSetBasedLightTreePositioningStrategy(TokenSet.create(KtTokens.INNER_KEYWORD))
 
     val OPERATOR: LightTreePositioningStrategy = object : LightTreePositioningStrategy() {
         override fun mark(

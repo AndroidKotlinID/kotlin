@@ -5,9 +5,8 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.core
 
-import org.jetbrains.kotlin.descriptors.DescriptorVisibility
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirTypeFactory
 import org.jetbrains.kotlin.descriptors.commonizer.core.CommonizedTypeAliasAnswer.Companion.FAILURE_MISSING_IN_SOME_TARGET
 import org.jetbrains.kotlin.descriptors.commonizer.core.CommonizedTypeAliasAnswer.Companion.SUCCESS_FROM_DEPENDENCY_LIBRARY
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirKnownClassifiers
@@ -39,11 +38,11 @@ class TypeCommonizer(private val classifiers: CirKnownClassifiers) : AbstractSta
 private class ClassTypeCommonizer(private val classifiers: CirKnownClassifiers) : AbstractStandardCommonizer<CirClassType, CirClassType>() {
     private lateinit var classId: CirEntityId
     private val outerType = OuterClassTypeCommonizer(classifiers)
-    private lateinit var anyVisibility: DescriptorVisibility
+    private lateinit var anyVisibility: Visibility
     private val arguments = TypeArgumentListCommonizer(classifiers)
     private var isMarkedNullable = false
 
-    override fun commonizationResult() = CirTypeFactory.createClassType(
+    override fun commonizationResult() = CirClassType.createInterned(
         classId = classId,
         outerType = outerType.result,
         // N.B. The 'visibility' field in class types is needed ONLY for TA commonization. The class type constructed here is
@@ -127,7 +126,7 @@ private class TypeAliasTypeCommonizer(private val classifiers: CirKnownClassifie
             // type alias has been commonized to expect class, need to build type for expect class
             fun forClass(commonClass: CirClass) = object : CommonizedTypeAliasTypeBuilder {
                 override fun build(typeAliasId: CirEntityId, arguments: List<CirTypeProjection>, isMarkedNullable: Boolean) =
-                    CirTypeFactory.createClassType(
+                    CirClassType.createInterned(
                         classId = typeAliasId,
                         outerType = null, // there can't be outer type
                         visibility = commonClass.visibility,
@@ -143,8 +142,8 @@ private class TypeAliasTypeCommonizer(private val classifiers: CirKnownClassifie
             // type alias don't needs to be commonized because it is from the standard library
             fun forKnownUnderlyingType(underlyingType: CirClassOrTypeAliasType) = object : CommonizedTypeAliasTypeBuilder {
                 override fun build(typeAliasId: CirEntityId, arguments: List<CirTypeProjection>, isMarkedNullable: Boolean): CirTypeAliasType {
-                    val underlyingTypeWithProperNullability = CirTypeFactory.makeNullableIfNecessary(underlyingType, isMarkedNullable)
-                    return CirTypeFactory.createTypeAliasType(
+                    val underlyingTypeWithProperNullability = underlyingType.makeNullableIfNecessary(isMarkedNullable)
+                    return CirTypeAliasType.createInterned(
                         typeAliasId = typeAliasId,
                         underlyingType = underlyingTypeWithProperNullability, // TODO replace arguments???
                         arguments = arguments,
@@ -202,10 +201,8 @@ private fun commonizeClass(classId: CirEntityId, classifiers: CirKnownClassifier
 
     return when (val node = classifiers.commonizedNodes.classNode(classId)) {
         null -> {
-            // No node means that the class was not subject for commonization.
-            // - Either it is missing in certain targets at all => not commonized.
-            // - Or it is a known forward declaration => consider it as commonized.
-            classifiers.forwardDeclarations.isExportedForwardDeclaration(classId)
+            // No node means that the type alias was not subject for commonization. It is missing in some target(s) => not commonized.
+            false
         }
         else -> {
             // Common declaration in node is not null -> successfully commonized.

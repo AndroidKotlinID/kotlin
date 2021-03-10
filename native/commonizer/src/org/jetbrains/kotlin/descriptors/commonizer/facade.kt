@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.descriptors.commonizer.core.CommonizationVisitor
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.*
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirNode.Companion.dimension
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirTreeMerger.CirTreeMergeResult
-import org.jetbrains.kotlin.descriptors.commonizer.metadata.MetadataBuilder
+import org.jetbrains.kotlin.descriptors.commonizer.metadata.CirTreeSerializer
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
 import org.jetbrains.kotlin.storage.StorageManager
@@ -40,13 +40,12 @@ private fun mergeAndCommonize(storageManager: StorageManager, parameters: Common
     // build merged tree:
     val classifiers = CirKnownClassifiers(
         commonizedNodes = CirCommonizedClassifierNodes.default(),
-        forwardDeclarations = CirForwardDeclarations.default(),
         commonDependencies = CirProvidedClassifiers.of(
             CirFictitiousFunctionClassifiers,
             CirProvidedClassifiers.by(parameters.dependencyModulesProvider)
         )
     )
-    val mergeResult = CirTreeMerger(storageManager, classifiers, parameters).merge()
+    val mergeResult = CirTreeMerger(storageManager, classifiers, parameters).build()
 
     // commonize:
     val mergedTree = mergeResult.root
@@ -60,7 +59,7 @@ private fun serializeTarget(mergeResult: CirTreeMergeResult, targetIndex: Int, p
     val mergedTree = mergeResult.root
     val target = mergedTree.getTarget(targetIndex)
 
-    MetadataBuilder.build(mergedTree, targetIndex, parameters.statsCollector) { metadataModule ->
+    CirTreeSerializer.serializeSingleTarget(mergedTree, targetIndex, parameters.statsCollector) { metadataModule ->
         val libraryName = metadataModule.name
         val serializedMetadata = with(metadataModule.write(KLIB_FRAGMENT_WRITE_STRATEGY)) {
             SerializedMetadata(header, fragments, fragmentNames)

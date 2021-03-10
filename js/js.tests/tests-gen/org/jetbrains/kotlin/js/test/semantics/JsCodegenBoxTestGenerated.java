@@ -15899,6 +15899,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/multiplatform"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
         }
 
+        @TestMetadata("expectProperty.kt")
+        public void testExpectProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/multiplatform/expectProperty.kt");
+        }
+
         @TestMetadata("optionalExpectation.kt")
         public void testOptionalExpectation() throws Exception {
             runTest("compiler/testData/codegen/box/multiplatform/optionalExpectation.kt");
@@ -16364,6 +16369,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("kt4086.kt")
         public void testKt4086() throws Exception {
             runTest("compiler/testData/codegen/box/objects/kt4086.kt");
+        }
+
+        @TestMetadata("kt45170.kt")
+        public void testKt45170() throws Exception {
+            runTest("compiler/testData/codegen/box/objects/kt45170.kt");
         }
 
         @TestMetadata("kt535.kt")
@@ -18145,6 +18155,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("typeInferredFromGetter.kt")
         public void testTypeInferredFromGetter() throws Exception {
             runTest("compiler/testData/codegen/box/properties/typeInferredFromGetter.kt");
+        }
+
+        @TestMetadata("unreachableUninitializedProperty.kt")
+        public void testUnreachableUninitializedProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/unreachableUninitializedProperty.kt");
         }
 
         @TestMetadata("compiler/testData/codegen/box/properties/const")

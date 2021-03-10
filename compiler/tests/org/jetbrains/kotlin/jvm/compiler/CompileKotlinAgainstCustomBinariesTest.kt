@@ -593,6 +593,11 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-jvm-target", "1.8", "-Xjvm-default=all"))
     }
 
+    fun testJvmDefaultClashWithNoCompatibility() {
+        val library = compileLibrary("library", additionalOptions = listOf("-Xjvm-default=disable"))
+        compileKotlin("source.kt", tmpdir, listOf(library), additionalOptions = listOf("-jvm-target", "1.8", "-Xjvm-default=all-compatibility"))
+    }
+
     fun testJvmDefaultCompatibilityAgainstJava() {
         val library = compileLibrary("library", additionalOptions = listOf("-Xjvm-default=disable"))
         compileKotlin(
@@ -689,6 +694,16 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         val features = listOf("-XXLanguage:+AllowSealedInheritorsInDifferentFilesOfSamePackage", "-XXLanguage:+SealedInterfaces")
         val library = compileLibrary("library", additionalOptions = features, checkKotlinOutput = {})
         compileKotlin("main.kt", tmpdir, listOf(library), additionalOptions = features)
+    }
+
+    fun testUnreachableExtensionVarPropertyDeclaration() {
+        val (output, exitCode) = compileKotlin("source.kt", tmpdir, expectedFileName = null)
+        assertEquals("Output:\n$output", ExitCode.INTERNAL_ERROR, exitCode)
+    }
+
+    fun testUnreachableExtensionValPropertyDeclaration() {
+        val (output, exitCode) = compileKotlin("source.kt", tmpdir, expectedFileName = null)
+        assertEquals("Output:\n$output", ExitCode.INTERNAL_ERROR, exitCode)
     }
 
     // If this test fails, then bootstrap compiler most likely should be advanced

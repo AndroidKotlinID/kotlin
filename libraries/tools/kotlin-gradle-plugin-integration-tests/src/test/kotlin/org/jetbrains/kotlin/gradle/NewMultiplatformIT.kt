@@ -1532,26 +1532,19 @@ class NewMultiplatformIT : BaseGradleIT() {
             assertFileExists(groupDir + "mpp-lib-myjvm")
         }
 
-        fun doTestPomRewriting(mppProjectDependency: Boolean, legacyPublishing: Boolean, keepPomIntact: Boolean? = null) {
+        fun doTestPomRewriting(mppProjectDependency: Boolean, keepPomIntact: Boolean? = null) {
 
             val params = mutableListOf("clean", ":jvm-app:publish", ":js-app:publish").apply {
                 if (mppProjectDependency)
                     add("-PmppProjectDependency=true")
-                if (legacyPublishing)
-                    add("-PlegacyPublishing=true")
                 if (keepPomIntact == true)
                     add("-Pkotlin.mpp.keepMppDependenciesIntactInPoms=true")
             }.toTypedArray()
 
             build(*params, options = defaultBuildOptions().copy(warningMode = WarningMode.Summary)) {
                 assertSuccessful()
-                if (legacyPublishing) {
-                    assertTasksExecuted(":jvm-app:uploadArchives")
-                    assertTasksExecuted(":js-app:uploadArchives")
-                } else {
-                    assertTasksExecuted(":jvm-app:publishMainPublicationToMavenRepository")
-                    assertTasksExecuted(":js-app:publishMainPublicationToMavenRepository")
-                }
+                assertTasksExecuted(":jvm-app:publishMainPublicationToMavenRepository")
+                assertTasksExecuted(":js-app:publishMainPublicationToMavenRepository")
 
                 val jvmModuleDir = groupDir + "jvm-app/1.0/"
                 val jsModuleDir = groupDir + "js-app/1.0/"
@@ -1584,16 +1577,14 @@ class NewMultiplatformIT : BaseGradleIT() {
             }
         }
 
-        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = false)
-        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = true)
-        doTestPomRewriting(mppProjectDependency = true, legacyPublishing = false)
+        doTestPomRewriting(mppProjectDependency = false)
+        doTestPomRewriting(mppProjectDependency = true)
 
         // This case doesn't work and never did; TODO investigate KT-29975
         // doTestPomRewriting(mppProjectDependency = true, legacyPublishing = true)
 
         // Also check that the flag for keeping POMs intact works:
-        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = false, keepPomIntact = true)
-        doTestPomRewriting(mppProjectDependency = false, legacyPublishing = true, keepPomIntact = true)
+        doTestPomRewriting(mppProjectDependency = false, keepPomIntact = true)
     }
 
     @Test
@@ -1628,7 +1619,7 @@ class NewMultiplatformIT : BaseGradleIT() {
                 )
 
                 // Native:
-                assertFileExists("build/classes/kotlin/linux64/integrationTest/new-mpp-associate-compilations_integrationTest.klib")
+                assertFileExists("build/classes/kotlin/linux64/integrationTest/klib/new-mpp-associate-compilations_integrationTest.klib")
             }
 
             gradleBuildScript().appendText(
@@ -1706,10 +1697,10 @@ class NewMultiplatformIT : BaseGradleIT() {
                     }
                 }
 
-            val interopManifest = getManifest("foo/build/classes/kotlin/linux/main/foo-cinterop-bar.klib")
+            val interopManifest = getManifest("foo/build/classes/kotlin/linux/main/cinterop/foo-cinterop-bar.klib")
             assertEquals("org.sample.one:foo-cinterop-bar", interopManifest[KLIB_PROPERTY_UNIQUE_NAME])
 
-            val nativeManifest = getManifest("foo/build/classes/kotlin/linux/main/foo.klib")
+            val nativeManifest = getManifest("foo/build/classes/kotlin/linux/main/klib/foo.klib")
             assertEquals("org.sample.one:foo", nativeManifest[KLIB_PROPERTY_UNIQUE_NAME])
             // Check the short name that is used as a prefix in generated ObjC headers.
             assertEquals("foo", nativeManifest[KLIB_PROPERTY_SHORT_NAME])

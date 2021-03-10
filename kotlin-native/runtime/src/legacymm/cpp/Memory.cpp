@@ -1353,7 +1353,7 @@ inline void decrementRC(ContainerHeader* container) {
         container->setBuffered();
         if (state->toFree != nullptr) {
           state->toFree->push_back(container);
-          MEMORY_LOG("toFree is now %d\n", state->toFree->size())
+          MEMORY_LOG("toFree is now %lu\n", state->toFree->size())
           if (state->gcSuspendCount == 0 && state->toRelease->size() >= state->gcThreshold) {
             GC_LOG("Calling GC from DecrementRC: %d\n", state->toRelease->size())
             garbageCollect(state, false);
@@ -1396,7 +1396,7 @@ inline void enqueueDecrementRC(ContainerHeader* container) {
   auto* state = memoryState;
   if (CanCollect) {
     if (state->toRelease->size() >= state->gcThreshold && state->gcSuspendCount == 0) {
-      GC_LOG("Calling GC from EnqueueDecrementRC: %d\n", state->toRelease->size())
+      GC_LOG("Calling GC from EnqueueDecrementRC: %zu\n", state->toRelease->size())
       garbageCollect(state, false);
     }
   }
@@ -1856,7 +1856,7 @@ void garbageCollect(MemoryState* state, bool force) {
     return;
   }
 
-  GC_LOG(">>> %s GC: threshold = %d toFree %d toRelease %d alloc = %lld\n", \
+  GC_LOG(">>> %s GC: threshold = %zu toFree %zu toRelease %zu alloc = %lld\n", \
      force ? "forced" : "regular", state->gcThreshold, state->toFree->size(),
      state->toRelease->size(), allocSinceLastGc)
 
@@ -1892,10 +1892,10 @@ void garbageCollect(MemoryState* state, bool force) {
   size_t stackReferences = afterDecrements - beforeDecrements;
   if (state->gcErgonomics && stackReferences * 5 > state->gcThreshold) {
     increaseGcThreshold(state);
-    GC_LOG("||| GC: too many stack references, increased threshold to %d\n", state->gcThreshold);
+    GC_LOG("||| GC: too many stack references, increased threshold to %zu\n", state->gcThreshold);
   }
 
-  GC_LOG("||| GC: toFree %d toRelease %d\n", state->toFree->size(), state->toRelease->size())
+  GC_LOG("||| GC: toFree %zu toRelease %zu\n", state->toFree->size(), state->toRelease->size())
 #if PROFILE_GC
   auto processFinalizerQueueStartTime = konan::getTimeMicros();
 #endif
@@ -1938,7 +1938,7 @@ void garbageCollect(MemoryState* state, bool force) {
     auto gcToComputeRatio = double(gcEndTime - gcStartTime) / (gcStartTime - state->lastGcTimestamp + 1);
     if (!force && gcToComputeRatio > kGcToComputeRatioThreshold) {
       increaseGcThreshold(state);
-      GC_LOG("Adjusting GC threshold to %d\n", state->gcThreshold);
+      GC_LOG("Adjusting GC threshold to %zu\n", state->gcThreshold);
     }
   }
   GC_LOG("GC: gcToComputeRatio=%f duration=%lld sinceLast=%lld\n", double(gcEndTime - gcStartTime) / (gcStartTime - state->lastGcTimestamp + 1), (gcEndTime - gcStartTime), gcStartTime - state->lastGcTimestamp);
@@ -1950,7 +1950,7 @@ void garbageCollect(MemoryState* state, bool force) {
   }
 #endif
 
-  GC_LOG("<<< GC: toFree %d toRelease %d\n", state->toFree->size(), state->toRelease->size())
+  GC_LOG("<<< GC: toFree %zu toRelease %zu\n", state->toFree->size(), state->toRelease->size())
 }
 
 void rememberNewContainer(ContainerHeader* container) {
@@ -2193,6 +2193,37 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object) {
 }
 
 template <bool Strict>
+void updateHeapRefsInsideOneArray(const ArrayHeader* array, int fromIndex, int toIndex, int count) {
+  // In case of coping inside same array number of decrements and increments of RC can be decreased.
+  auto countIndex = [=](int i) { return (fromIndex < toIndex) ? count - 1 - i : i; };
+  int rewrittenElementsNumber = std::abs(fromIndex - toIndex);
+  // Release rewritten elements.
+  for (int i = 0; i < rewrittenElementsNumber; i++) {
+    int index = countIndex(i);
+    ObjHeader* old = *ArrayAddressOfElementAt(array, toIndex + index);
+    *const_cast<const ObjHeader**>(ArrayAddressOfElementAt(array, toIndex + index)) =
+      *ArrayAddressOfElementAt(array, fromIndex + index);
+    if (old != nullptr) {
+      releaseHeapRef<Strict>(old);
+    }
+  }
+  for (int i = rewrittenElementsNumber; i < count - rewrittenElementsNumber; i++) {
+    int index = countIndex(i);
+    *const_cast<const ObjHeader**>(ArrayAddressOfElementAt(array, toIndex + index)) =
+         *ArrayAddressOfElementAt(array, fromIndex + index);
+  }
+  for (int i = count - rewrittenElementsNumber; i < count; i++) {
+    int index = countIndex(i);
+    ObjHeader* object = *ArrayAddressOfElementAt(array, fromIndex + index);
+    // Add extra heap ref for copied elements.
+    if (object != nullptr) {
+      addHeapRef(object);
+    }
+    *const_cast<const ObjHeader**>(ArrayAddressOfElementAt(array, toIndex + index)) = object;
+  }
+}
+
+template <bool Strict>
 void updateStackRef(ObjHeader** location, const ObjHeader* object) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 1)
   RuntimeAssert(object != reinterpret_cast<ObjHeader*>(1), "Markers disallowed here");
@@ -2241,7 +2272,7 @@ inline void checkIfGcNeeded(MemoryState* state) {
   if (state != nullptr && state->allocSinceLastGc > state->allocSinceLastGcThreshold && state->gcSuspendCount == 0) {
     // To avoid GC trashing check that at least 10ms passed since last GC.
     if (konan::getTimeMicros() - state->lastGcTimestamp > 10 * 1000) {
-      GC_LOG("Calling GC from checkIfGcNeeded: %d\n", state->toRelease->size())
+      GC_LOG("Calling GC from checkIfGcNeeded: %zu\n", state->toRelease->size())
       garbageCollect(state, false);
     }
   }
@@ -2252,7 +2283,7 @@ inline void checkIfForceCyclicGcNeeded(MemoryState* state) {
       && state->gcSuspendCount == 0) {
     // To avoid GC trashing check that at least 10ms passed since last GC.
     if (konan::getTimeMicros() - state->lastGcTimestamp > 10 * 1000) {
-      GC_LOG("Calling GC from checkIfForceCyclicGcNeeded: %d\n", state->toFree->size())
+      GC_LOG("Calling GC from checkIfForceCyclicGcNeeded: %zu\n", state->toFree->size())
       garbageCollect(state, true);
     }
   }
@@ -2585,7 +2616,7 @@ KInt getGCThreshold() {
 }
 
 void setGCCollectCyclesThreshold(KLong value) {
-  GC_LOG("setGCCollectCyclesThreshold %d\n", value)
+  GC_LOG("setGCCollectCyclesThreshold %lld\n", value)
   if (value <= 0) {
     ThrowIllegalArgumentException();
   }
@@ -2617,7 +2648,7 @@ void setTuneGCThreshold(KBoolean value) {
 }
 
 KBoolean getTuneGCThreshold() {
-  GC_LOG("getTuneGCThreshold %d\n")
+  GC_LOG("getTuneGCThreshold %d\n", memoryState->gcErgonomics)
   return memoryState->gcErgonomics;
 }
 
@@ -3365,6 +3396,15 @@ RUNTIME_NOTHROW void UpdateHeapRefStrict(ObjHeader** location, const ObjHeader* 
 }
 RUNTIME_NOTHROW void UpdateHeapRefRelaxed(ObjHeader** location, const ObjHeader* object) {
   updateHeapRef<false>(location, object);
+}
+
+RUNTIME_NOTHROW void UpdateHeapRefsInsideOneArrayStrict(const ArrayHeader* array, int fromIndex, int toIndex,
+                                                        int count) {
+  updateHeapRefsInsideOneArray<true>(array, fromIndex, toIndex, count);
+}
+RUNTIME_NOTHROW void UpdateHeapRefsInsideOneArrayRelaxed(const ArrayHeader* array, int fromIndex, int toIndex,
+                                                         int count) {
+  updateHeapRefsInsideOneArray<false>(array, fromIndex, toIndex, count);
 }
 
 RUNTIME_NOTHROW void UpdateReturnRefStrict(ObjHeader** returnSlot, const ObjHeader* value) {

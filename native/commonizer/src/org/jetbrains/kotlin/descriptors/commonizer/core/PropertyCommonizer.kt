@@ -7,8 +7,7 @@ package org.jetbrains.kotlin.descriptors.commonizer.core
 
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirConstantValue
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirProperty
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirPropertyFactory
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirPropertyGetterFactory
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirPropertyGetter
 import org.jetbrains.kotlin.descriptors.commonizer.core.PropertyCommonizer.ConstCommonizationState.*
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirKnownClassifiers
 
@@ -28,7 +27,7 @@ class PropertyCommonizer(classifiers: CirKnownClassifiers) : AbstractFunctionOrP
             constCommonizationState.properties.forEach { it.isConst = false }
         }
 
-        return CirPropertyFactory.create(
+        return CirProperty.create(
             annotations = emptyList(),
             name = name,
             typeParameters = typeParameters.result,
@@ -43,7 +42,7 @@ class PropertyCommonizer(classifiers: CirKnownClassifiers) : AbstractFunctionOrP
             isLateInit = false,
             isConst = constCompileTimeInitializer != null,
             isDelegate = false,
-            getter = CirPropertyGetterFactory.DEFAULT_NO_ANNOTATIONS,
+            getter = CirPropertyGetter.DEFAULT_NO_ANNOTATIONS,
             setter = setter,
             backingFieldAnnotations = emptyList(),
             delegateFieldAnnotations = emptyList(),

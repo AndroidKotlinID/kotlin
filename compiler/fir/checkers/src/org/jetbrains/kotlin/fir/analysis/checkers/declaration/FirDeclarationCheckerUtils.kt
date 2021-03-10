@@ -171,3 +171,10 @@ private val FirProperty.hasAccessorImplementation: Boolean
             (setter !is FirDefaultPropertyAccessor && setter?.hasBody == true)
 
 internal val FirClass<*>.canHaveOpenMembers: Boolean get() = modality() != Modality.FINAL || classKind == ClassKind.ENUM_CLASS
+
+internal fun FirRegularClass.isInlineOrValueClass(): Boolean {
+    if (this.classKind != ClassKind.CLASS) return false
+
+    val modifierList = with(FirModifierList) { source.getModifierList() }
+    return isInline || modifierList?.modifiers?.any { it.token == KtTokens.VALUE_KEYWORD } == true
+}

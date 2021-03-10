@@ -9,15 +9,7 @@ import org.jetbrains.kotlin.descriptors.commonizer.cir.CirClassOrTypeAliasType
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirClassType
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeAliasType
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeProjection
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirTypeFactory
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirKnownClassifiers
-
-tailrec fun computeExpandedType(underlyingType: CirClassOrTypeAliasType): CirClassType {
-    return when (underlyingType) {
-        is CirClassType -> underlyingType
-        is CirTypeAliasType -> computeExpandedType(underlyingType.underlyingType)
-    }
-}
 
 internal tailrec fun computeSuitableUnderlyingType(
     classifiers: CirKnownClassifiers,
@@ -40,7 +32,7 @@ private fun CirClassType.withCommonizedArguments(classifiers: CirKnownClassifier
     val newOuterType = existingOuterType?.let { it.withCommonizedArguments(classifiers) ?: return null }
 
     return if (newArguments !== existingArguments || newOuterType !== existingOuterType)
-        CirTypeFactory.createClassType(
+        CirClassType.createInterned(
             classId = classifierId,
             outerType = newOuterType,
             visibility = visibility,
@@ -62,7 +54,7 @@ private fun CirTypeAliasType.withCommonizedArguments(classifiers: CirKnownClassi
     } ?: return null
 
     return if (newArguments !== existingArguments || newUnderlyingType !== existingUnderlyingType)
-        CirTypeFactory.createTypeAliasType(
+        CirTypeAliasType.createInterned(
             typeAliasId = classifierId,
             underlyingType = newUnderlyingType,
             arguments = newArguments,

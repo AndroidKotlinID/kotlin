@@ -8,8 +8,6 @@ package org.jetbrains.kotlin.descriptors.commonizer.core
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirClassFactory
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirTypeAliasFactory
 import org.jetbrains.kotlin.descriptors.commonizer.mergedtree.CirKnownClassifiers
 
 /**
@@ -50,7 +48,7 @@ private class TypeAliasShortCircuitingCommonizer(
     private val expandedType = TypeCommonizer(classifiers)
     private val visibility = VisibilityCommonizer.lowering()
 
-    override fun commonizationResult() = CirTypeAliasFactory.create(
+    override fun commonizationResult() = CirTypeAlias.create(
         annotations = emptyList(),
         name = name,
         typeParameters = typeParameters.result,
@@ -86,7 +84,7 @@ private class TypeAliasLiftingUpCommonizer(classifiers: CirKnownClassifiers) : A
     override fun commonizationResult(): CirTypeAlias {
         val underlyingType = underlyingType.result as CirClassOrTypeAliasType
 
-        return CirTypeAliasFactory.create(
+        return CirTypeAlias.create(
             annotations = emptyList(),
             name = name,
             typeParameters = typeParameters.result,
@@ -113,7 +111,7 @@ private class TypeAliasExpectClassCommonizer : AbstractStandardCommonizer<CirTyp
     private lateinit var name: CirName
     private val classVisibility = VisibilityCommonizer.equalizing()
 
-    override fun commonizationResult(): CirClass = CirClassFactory.create(
+    override fun commonizationResult(): CirClass = CirClass.create(
         annotations = emptyList(),
         name = name,
         typeParameters = emptyList(),
@@ -123,7 +121,7 @@ private class TypeAliasExpectClassCommonizer : AbstractStandardCommonizer<CirTyp
         companion = null,
         isCompanion = false,
         isData = false,
-        isInline = false,
+        isValue = false,
         isInner = false,
         isExternal = false
     )

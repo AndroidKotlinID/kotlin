@@ -5,16 +5,13 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.core
 
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirAnnotation
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirConstantValue
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.commonizer.cir.*
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirConstantValue.*
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirEntityId
-import org.jetbrains.kotlin.descriptors.commonizer.cir.CirName
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirAnnotationFactory
-import org.jetbrains.kotlin.descriptors.commonizer.cir.factory.CirTypeFactory
 import org.jetbrains.kotlin.descriptors.commonizer.core.AnnotationsCommonizer.Companion.FALLBACK_MESSAGE
-import org.jetbrains.kotlin.descriptors.commonizer.utils.*
+import org.jetbrains.kotlin.descriptors.commonizer.utils.DEPRECATED_ANNOTATION_CLASS_ID
+import org.jetbrains.kotlin.descriptors.commonizer.utils.compactMap
+import org.jetbrains.kotlin.descriptors.commonizer.utils.compactMapOf
 import kotlin.DeprecationLevel.WARNING
 
 /**
@@ -72,7 +69,7 @@ private class DeprecatedAnnotationCommonizer : Commonizer<CirAnnotation, CirAnno
                 } else
                     compactMapOf(PROPERTY_NAME_REPLACE_WITH, replaceWithExpression.toReplaceWithValue(replaceWithImports))
 
-            return CirAnnotationFactory.create(
+            return CirAnnotation.createInterned(
                 type = DEPRECATED_ANNOTATION_TYPE,
                 constantValueArguments = constantValueArguments,
                 annotationValueArguments = annotationValueArguments
@@ -153,10 +150,10 @@ private class DeprecatedAnnotationCommonizer : Commonizer<CirAnnotation, CirAnno
             it.name to EnumValue(DEPRECATION_LEVEL_CLASS_ID, CirName.create(it.name))
         }
 
-        private fun buildAnnotationType(classId: CirEntityId) = CirTypeFactory.createClassType(
+        private fun buildAnnotationType(classId: CirEntityId) = CirClassType.createInterned(
             classId = classId,
             outerType = null,
-            visibility = DescriptorVisibilities.PUBLIC,
+            visibility = Visibilities.Public,
             arguments = emptyList(),
             isMarkedNullable = false
         )
@@ -214,7 +211,7 @@ private class DeprecatedAnnotationCommonizer : Commonizer<CirAnnotation, CirAnno
         }
 
         private inline fun createReplaceWithAnnotation(expression: String, imports: List<String>): CirAnnotation =
-            CirAnnotationFactory.create(
+            CirAnnotation.createInterned(
                 type = REPLACE_WITH_ANNOTATION_TYPE,
                 constantValueArguments = compactMapOf(
                     PROPERTY_NAME_EXPRESSION, StringValue(expression),

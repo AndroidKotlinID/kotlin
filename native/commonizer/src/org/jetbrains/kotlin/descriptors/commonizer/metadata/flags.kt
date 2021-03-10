@@ -10,8 +10,8 @@ import kotlinx.metadata.Flags
 import kotlinx.metadata.flagsOf
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.commonizer.cir.*
 
 internal const val NO_FLAGS: Flags = 0
@@ -90,7 +90,7 @@ internal fun CirClass.classFlags(isExpect: Boolean): Flags =
         Flag.Class.IS_DATA.takeIf { isData },
         Flag.Class.IS_EXTERNAL.takeIf { isExternal },
         Flag.Class.IS_EXPECT.takeIf { isExpect },
-        Flag.Class.IS_INLINE.takeIf { isInline },
+        Flag.Class.IS_VALUE.takeIf { isValue },
         //Flag.Class.IS_FUN.takeIf { false }
     )
 
@@ -104,9 +104,9 @@ private inline val CirHasAnnotations.hasAnnotationsFlag: Flag?
     get() = if (annotations.isNotEmpty()) Flag.Common.HAS_ANNOTATIONS else null
 
 // Since 1.4.30 a special @JvmInline annotation is generated to distinguish JVM-inline from value classes.
-// This has an effect on class serialization: Every class with isInline == true automatically gets HAS_ANNOTATIONS flag.
+// This has an effect on class serialization: Every class with isValue == true automatically gets HAS_ANNOTATIONS flag.
 private inline val CirClass.hasAnnotationsFlag: Flag?
-    get() = if (annotations.isNotEmpty() || isInline) Flag.Common.HAS_ANNOTATIONS else null
+    get() = if (annotations.isNotEmpty() || isValue) Flag.Common.HAS_ANNOTATIONS else null
 
 private inline val CirProperty.hasAnnotationsFlag: Flag?
     get() = if (annotations.isNotEmpty() || !backingFieldAnnotations.isNullOrEmpty() || !delegateFieldAnnotations.isNullOrEmpty())
@@ -116,10 +116,10 @@ private inline val CirProperty.hasAnnotationsFlag: Flag?
 
 private inline val CirHasVisibility.visibilityFlag: Flag
     get() = when (visibility) {
-        DescriptorVisibilities.PUBLIC -> Flag.Common.IS_PUBLIC
-        DescriptorVisibilities.PROTECTED -> Flag.Common.IS_PROTECTED
-        DescriptorVisibilities.INTERNAL -> Flag.Common.IS_INTERNAL
-        DescriptorVisibilities.PRIVATE -> Flag.Common.IS_PRIVATE
+        Visibilities.Public -> Flag.Common.IS_PUBLIC
+        Visibilities.Protected -> Flag.Common.IS_PROTECTED
+        Visibilities.Internal -> Flag.Common.IS_INTERNAL
+        Visibilities.Private -> Flag.Common.IS_PRIVATE
         else -> error("Unexpected visibility: $this")
     }
 
