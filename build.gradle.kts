@@ -565,10 +565,13 @@ allprojects {
     }
 }
 
-gradle.buildFinished {
-    val taskGraph = gradle?.taskGraph
-    if (taskGraph != null) {
-        taskGraph.allTasks
+if ((gradle.startParameter as? org.gradle.api.internal.StartParameterInternal)?.isConfigurationCache != true) {
+    // TODO: remove it once Gradle is bumped to 6.8:
+    // See https://docs.gradle.org/6.8/release-notes.html#more-cache-hits-when-empty-directories-are-present
+    gradle.buildFinished {
+        val taskGraph = gradle?.taskGraph
+        if (taskGraph != null) {
+            taskGraph.allTasks
                 .filterIsInstance<SourceTask>()
                 .filter { it.didWork }
                 .forEach {
@@ -578,6 +581,7 @@ gradle.buildFinished {
                         }
                     }
                 }
+        }
     }
 }
 
@@ -621,17 +625,12 @@ val ideaPlugin by task<Task> {
 }
 
 tasks {
-    named("clean") {
-        doLast {
-            delete("$buildDir/repo")
-            delete(distDir)
-        }
+    named<Delete>("clean") {
+        delete += setOf("$buildDir/repo", distDir)
     }
 
-    register("cleanupArtifacts") {
-        doLast {
-            delete(artifactsDir)
-        }
+    register<Delete>("cleanupArtifacts") {
+        delete = setOf(artifactsDir)
     }
 
     listOf("clean", "assemble", "install").forEach { taskName ->
@@ -730,10 +729,12 @@ tasks {
     register("scriptingTest") {
         dependsOn("dist")
         dependsOn(":kotlin-script-util:test")
-        dependsOn(":kotlin-scripting-compiler-embeddable:test")
+        dependsOn(":kotlin-scripting-compiler:test")
+        dependsOn(":kotlin-scripting-compiler:testWithIr")
         dependsOn(":kotlin-scripting-common:test")
         dependsOn(":kotlin-scripting-jvm:test")
         dependsOn(":kotlin-scripting-jvm-host-test:test")
+        dependsOn(":kotlin-scripting-jvm-host-test:testWithIr")
         dependsOn(":kotlin-scripting-dependencies:test")
         dependsOn(":kotlin-scripting-dependencies-maven:test")
         dependsOn(":kotlin-scripting-jsr223-test:test")
@@ -741,6 +742,7 @@ tasks {
 //        dependsOn(":kotlin-scripting-jvm-host-test:embeddableTest")
         dependsOn(":kotlin-scripting-jsr223-test:embeddableTest")
         dependsOn(":kotlin-main-kts-test:test")
+        dependsOn(":kotlin-main-kts-test:testWithIr")
         dependsOn(":kotlin-scripting-ide-services-test:test")
         dependsOn(":kotlin-scripting-ide-services-test:embeddableTest")
         dependsOn(":kotlin-scripting-js-test:test")
@@ -892,17 +894,11 @@ tasks {
         if (Ide.IJ()) {
             dependsOn(
                 ":libraries:tools:new-project-wizard:test",
-                ":libraries:tools:new-project-wizard:new-project-wizard-cli:test",
-                ":idea:idea-new-project-wizard:test" // Temporary here. Remove after enabling builds for ideaIntegrationsTests
+                ":libraries:tools:new-project-wizard:new-project-wizard-cli:test"
             )
         }
     }
 
-    register("ideaIntegrationsTests") {
-        if (Ide.IJ()) {
-            dependsOn(":idea:idea-new-project-wizard:test")
-        }
-    }
 
     register("kaptIdeTest") {
         dependsOn(":kotlin-annotation-processing:test")
@@ -1209,7 +1205,8 @@ val Jar.outputFile: File
 val Project.sourceSetsOrNull: SourceSetContainer?
     get() = convention.findPlugin(JavaPluginConvention::class.java)?.sourceSets
 
-val disableVerificationTasks = System.getProperty("disable.verification.tasks") == "true"
+val disableVerificationTasks = providers.systemProperty("disable.verification.tasks")
+    .forUseAtConfigurationTime().orNull?.toBoolean() ?: false
 if (disableVerificationTasks) {
     gradle.taskGraph.whenReady {
         allTasks.forEach {

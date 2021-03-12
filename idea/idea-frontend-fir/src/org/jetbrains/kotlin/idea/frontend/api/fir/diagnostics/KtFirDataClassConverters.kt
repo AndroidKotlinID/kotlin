@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.psi.KtModifierListOwner
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtPrimaryConstructor
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPropertyAccessor
 import org.jetbrains.kotlin.psi.KtPropertyDelegate
@@ -319,6 +320,24 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.SEALED_CLASS_CONSTRUCTOR_CALL) { firDiagnostic ->
         SealedClassConstructorCallImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.DATA_CLASS_WITHOUT_PARAMETERS) { firDiagnostic ->
+        DataClassWithoutParametersImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.DATA_CLASS_VARARG_PARAMETER) { firDiagnostic ->
+        DataClassVarargParameterImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.DATA_CLASS_NOT_PROPERTY_PARAMETER) { firDiagnostic ->
+        DataClassNotPropertyParameterImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -634,6 +653,13 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.VARARG_OUTSIDE_PARENTHESES) { firDiagnostic ->
         VarargOutsideParenthesesImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.NAMED_ARGUMENTS_NOT_ALLOWED) { firDiagnostic ->
+        NamedArgumentsNotAllowedImpl(
+            firDiagnostic.a,
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -1021,6 +1047,12 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.UNNECESSARY_LATEINIT) { firDiagnostic ->
+        UnnecessaryLateinitImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.BACKING_FIELD_IN_INTERFACE) { firDiagnostic ->
         BackingFieldInInterfaceImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
@@ -1107,6 +1139,12 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.EXPECTED_DELEGATED_PROPERTY) { firDiagnostic ->
         ExpectedDelegatedPropertyImpl(
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.EXPECTED_LATEINIT_PROPERTY) { firDiagnostic ->
+        ExpectedLateinitPropertyImpl(
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )

@@ -14,19 +14,21 @@ import org.jetbrains.kotlin.fir.declarations.isInfix
 import org.jetbrains.kotlin.fir.declarations.isOperator
 import org.jetbrains.kotlin.fir.diagnostics.*
 import org.jetbrains.kotlin.fir.resolve.calls.InapplicableWrongReceiver
+import org.jetbrains.kotlin.fir.resolve.calls.NamedArgumentNotAllowed
+import org.jetbrains.kotlin.fir.resolve.calls.ResolutionDiagnostic
 import org.jetbrains.kotlin.fir.resolve.calls.VarargArgumentOutsideParentheses
 import org.jetbrains.kotlin.fir.resolve.diagnostics.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.resolve.calls.tower.isSuccess
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
+import org.jetbrains.kotlin.utils.ifEmpty
 
-fun ConeDiagnostic.toFirDiagnostic(source: FirSourceElement): FirDiagnostic<FirSourceElement>? = when (this) {
+private fun ConeDiagnostic.toFirDiagnostic(source: FirSourceElement): FirDiagnostic<FirSourceElement>? = when (this) {
     is ConeUnresolvedReferenceError -> FirErrors.UNRESOLVED_REFERENCE.on(source, this.name?.asString() ?: "<No name>")
     is ConeUnresolvedSymbolError -> FirErrors.UNRESOLVED_REFERENCE.on(source, this.classId.asString())
     is ConeUnresolvedNameError -> FirErrors.UNRESOLVED_REFERENCE.on(source, this.name.asString())
     is ConeHiddenCandidateError -> FirErrors.HIDDEN.on(source, this.candidateSymbol)
-    is ConeInapplicableCandidateError -> mapInapplicableCandidateError(this, source)
     is ConeAmbiguityError -> if (!this.applicability.isSuccess) {
         FirErrors.NONE_APPLICABLE.on(source, this.candidates)
     } else {
@@ -52,6 +54,13 @@ fun ConeDiagnostic.toFirDiagnostic(source: FirSourceElement): FirDiagnostic<FirS
     else -> throw IllegalArgumentException("Unsupported diagnostic type: ${this.javaClass}")
 }
 
+fun ConeDiagnostic.toFirDiagnostics(source: FirSourceElement): List<FirDiagnostic<FirSourceElement>> {
+    if (this is ConeInapplicableCandidateError) {
+        return mapInapplicableCandidateError(this, source)
+    }
+    return listOfNotNull(toFirDiagnostic(source))
+}
+
 private fun ConeKotlinType.isEffectivelyNotNull(): Boolean {
     return when (this) {
         is ConeClassLikeType -> !isMarkedNullable
@@ -62,14 +71,12 @@ private fun ConeKotlinType.isEffectivelyNotNull(): Boolean {
     }
 }
 
-private fun mapInapplicableCandidateError(
+private fun mapUnsafeCallError(
     diagnostic: ConeInapplicableCandidateError,
     source: FirSourceElement,
-): FirDiagnostic<*> {
-    // TODO: Need to distinguish SMARTCAST_IMPOSSIBLE
-    val rootCause = diagnostic.candidate.diagnostics.find { it.applicability == diagnostic.applicability }
-    if (rootCause != null &&
-        rootCause is InapplicableWrongReceiver &&
+    rootCause: ResolutionDiagnostic?,
+): FirDiagnostic<*>? {
+    if (rootCause is InapplicableWrongReceiver &&
         rootCause.actualType?.isNullable == true &&
         (rootCause.expectedType == null || rootCause.expectedType!!.isEffectivelyNotNull())
     ) {
@@ -96,11 +103,26 @@ private fun mapInapplicableCandidateError(
 
         return FirErrors.UNSAFE_CALL.on(source, rootCause.actualType!!)
     }
+    return null
+}
 
-    return when (rootCause) {
-        is VarargArgumentOutsideParentheses -> FirErrors.VARARG_OUTSIDE_PARENTHESES.on(rootCause.argument.source ?: source)
-        else -> FirErrors.INAPPLICABLE_CANDIDATE.on(source, diagnostic.candidate.symbol)
-    }
+private fun mapInapplicableCandidateError(
+    diagnostic: ConeInapplicableCandidateError,
+    source: FirSourceElement,
+): List<FirDiagnostic<FirSourceElement>> {
+    // TODO: Need to distinguish SMARTCAST_IMPOSSIBLE
+    return diagnostic.candidate.diagnostics.filter { it.applicability == diagnostic.applicability }.mapNotNull { rootCause ->
+        mapUnsafeCallError(diagnostic, source, rootCause)?.let { return@mapNotNull it }
+
+        when (rootCause) {
+            is VarargArgumentOutsideParentheses -> FirErrors.VARARG_OUTSIDE_PARENTHESES.on(rootCause.argument.source ?: source)
+            is NamedArgumentNotAllowed -> FirErrors.NAMED_ARGUMENTS_NOT_ALLOWED.on(
+                rootCause.argument.source ?: source,
+                rootCause.forbiddenNamedArgumentsTarget
+            )
+            else -> null
+        }
+    }.ifEmpty { listOf(FirErrors.INAPPLICABLE_CANDIDATE.on(source, diagnostic.candidate.symbol)) }
 }
 
 private fun ConeSimpleDiagnostic.getFactory(): FirDiagnosticFactory0<FirSourceElement, *> {

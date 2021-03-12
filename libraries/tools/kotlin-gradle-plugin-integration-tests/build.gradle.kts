@@ -11,11 +11,11 @@ pill {
     variant = PillExtension.Variant.FULL
 }
 
-val kotlinGradlePluginTest = project(":kotlin-gradle-plugin").sourceSets.getByName("test")
+val kotlinGradlePluginTest = project(":kotlin-gradle-plugin").sourceSets.named("test").map { it.output }
 
 dependencies {
     testImplementation(project(":kotlin-gradle-plugin"))
-    testImplementation(kotlinGradlePluginTest.output)
+    testImplementation(kotlinGradlePluginTest)
     testImplementation(project(":kotlin-gradle-subplugin-example"))
     testImplementation(project(":kotlin-allopen"))
     testImplementation(project(":kotlin-noarg"))
@@ -39,6 +39,7 @@ dependencies {
 
     testImplementation(gradleApi())
     testImplementation("com.google.code.gson:gson:${rootProject.extra["versions.jar.gson"]}")
+    testApiJUnit5(vintageEngine = true)
 
     testRuntimeOnly(projectRuntimeJar(":kotlin-android-extensions"))
     testRuntimeOnly(project(":compiler:tests-mutes"))
@@ -50,11 +51,12 @@ dependencies {
 }
 
 // Aapt2 from Android Gradle Plugin 3.2 and below does not handle long paths on Windows.
-val shortenTempRootName = System.getProperty("os.name")!!.contains("Windows")
+val shortenTempRootName = project.providers.systemProperty("os.name").forUseAtConfigurationTime().get().contains("Windows")
 
 val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild ||
         try {
-            project.properties["gradle.integration.tests.split.tasks"]?.toString()?.toBoolean() ?: false
+            project.providers.gradleProperty("gradle.integration.tests.split.tasks").forUseAtConfigurationTime().orNull
+                ?.toBoolean() ?: false
         } catch (_: Exception) { false }
 
 fun Test.includeMppAndAndroid(include: Boolean) {
@@ -84,32 +86,56 @@ fun Test.advanceGradleVersion() {
 }
 
 // additional configuration in tasks.withType<Test> below
-projectTest("test", shortenTempRootName = shortenTempRootName) {
+projectTest(
+    "test",
+    shortenTempRootName = shortenTempRootName,
+    jUnit5Enabled = true
+) {
     includeMppAndAndroid(false)
     includeNative(false)
 }
 
-projectTest("testAdvanceGradleVersion", shortenTempRootName = shortenTempRootName) {
+projectTest(
+    "testAdvanceGradleVersion",
+    shortenTempRootName = shortenTempRootName,
+    jUnit5Enabled = true
+) {
     advanceGradleVersion()
     includeMppAndAndroid(false)
     includeNative(false)
 }
 
 if (isTeamcityBuild) {
-    projectTest("testNative", shortenTempRootName = shortenTempRootName) {
+    projectTest(
+        "testNative",
+        shortenTempRootName = shortenTempRootName,
+        jUnit5Enabled = true
+    ) {
         includeNative(true)
     }
 
-    projectTest("testAdvanceGradleVersionNative", shortenTempRootName = shortenTempRootName) {
+    projectTest(
+        "testAdvanceGradleVersionNative",
+        shortenTempRootName = shortenTempRootName,
+        jUnit5Enabled = true
+    ) {
         advanceGradleVersion()
         includeNative(true)
     }
 
-    projectTest("testMppAndAndroid", shortenTempRootName = shortenTempRootName) {
+    projectTest(
+        "testMppAndAndroid",
+        shortenTempRootName = shortenTempRootName,
+        jUnit5Enabled = true
+    ) {
         includeMppAndAndroid(true)
     }
 
-    projectTest("testAdvanceGradleVersionMppAndAndroid", shortenTempRootName = shortenTempRootName) {
+    projectTest(
+        "testAdvanceGradleVersionMppAndAndroid",
+        shortenTempRootName = shortenTempRootName,
+        jUnit5Enabled = true
+    ) {
         advanceGradleVersion()
         includeMppAndAndroid(true)
     }
@@ -125,36 +151,14 @@ tasks.named<Task>("check") {
     }
 }
 
-gradle.taskGraph.whenReady {
-    // Validate that all dependencies "install" tasks are added to "test" dependencies
-    // Test dependencies are specified as paths to avoid forcing dependency resolution
-    // and also to avoid specifying evaluationDependsOn for each testCompile dependency.
-
-    val notAddedTestTasks = hashSetOf<String>()
-    val test = tasks.getByName("test")
-    val testDependencies = test.dependsOn
-
-    for (dependency in configurations.getByName("testCompile").allDependencies) {
-        if (dependency !is ProjectDependency) continue
-
-        val task = dependency.dependencyProject.tasks.findByName("install")
-        if (task != null && !testDependencies.contains(task.path)) {
-            notAddedTestTasks.add("\"${task.path}\"")
-        }
-    }
-
-    if (!notAddedTestTasks.isEmpty()) {
-        throw GradleException("Add the following tasks to ${test.path} dependencies:\n  ${notAddedTestTasks.joinToString(",\n  ")}")
-    }
-}
-
 tasks.withType<KotlinCompile> {
     kotlinOptions.jdkHome = rootProject.extra["JDK_18"] as String
     kotlinOptions.jvmTarget = "1.8"
 }
 
 tasks.withType<Test> {
-    onlyIf { !project.hasProperty("noTest") }
+    val noTestProperty = project.providers.gradleProperty("noTest")
+    onlyIf { !noTestProperty.isPresent }
 
     dependsOn(":kotlin-gradle-plugin:validatePlugins")
     dependsOnKotlinGradlePluginInstall()
@@ -167,7 +171,7 @@ tasks.withType<Test> {
     systemProperty("jdk10Home", rootProject.extra["JDK_10"] as String)
     systemProperty("jdk11Home", rootProject.extra["JDK_11"] as String)
 
-    val mavenLocalRepo = System.getProperty("maven.repo.local")
+    val mavenLocalRepo = project.providers.systemProperty("maven.repo.local").forUseAtConfigurationTime().orNull
     if (mavenLocalRepo != null) {
         systemProperty("maven.repo.local", mavenLocalRepo)
     }
@@ -175,6 +179,7 @@ tasks.withType<Test> {
     useAndroidSdk()
 
     maxHeapSize = "512m"
+    useJUnitPlatform()
 
     testLogging {
         // set options for log level LIFECYCLE
@@ -208,8 +213,4 @@ tasks.withType<Test> {
             override fun beforeTest(testDescriptor: TestDescriptor) {}
         })
     }
-}
-
-java {
-    withSourcesJar()
 }

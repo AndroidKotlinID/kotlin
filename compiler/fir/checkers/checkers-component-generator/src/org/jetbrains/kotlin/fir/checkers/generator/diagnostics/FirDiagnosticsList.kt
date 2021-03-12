@@ -10,6 +10,7 @@ import com.intellij.psi.PsiTypeElement
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.diagnostics.WhenMissingCase
+import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.PrivateForInline
@@ -18,7 +19,9 @@ import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
@@ -99,9 +102,14 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val PRIMARY_CONSTRUCTOR_DELEGATION_CALL_EXPECTED by warning<FirSourceElement, PsiElement>(PositioningStrategy.SECONDARY_CONSTRUCTOR_DELEGATION_CALL)
         val SUPERTYPE_INITIALIZED_WITHOUT_PRIMARY_CONSTRUCTOR by warning<FirSourceElement, PsiElement>()
         val DELEGATION_SUPER_CALL_IN_ENUM_CONSTRUCTOR by warning<FirSourceElement, PsiElement>()
-        val PRIMARY_CONSTRUCTOR_REQUIRED_FOR_DATA_CLASS by warning<FirSourceElement, PsiElement>()
+        val PRIMARY_CONSTRUCTOR_REQUIRED_FOR_DATA_CLASS by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
         val EXPLICIT_DELEGATION_CALL_REQUIRED by warning<FirSourceElement, PsiElement>(PositioningStrategy.SECONDARY_CONSTRUCTOR_DELEGATION_CALL)
         val SEALED_CLASS_CONSTRUCTOR_CALL by error<FirSourceElement, PsiElement>()
+
+        // TODO: Consider creating a parameter list position strategy and report on the parameter list instead
+        val DATA_CLASS_WITHOUT_PARAMETERS by error<FirSourceElement, KtPrimaryConstructor>()
+        val DATA_CLASS_VARARG_PARAMETER by error<FirSourceElement, KtParameter>()
+        val DATA_CLASS_NOT_PROPERTY_PARAMETER by error<FirSourceElement, KtParameter>()
     }
 
     val ANNOTATIONS by object : DiagnosticGroup("Annotations") {
@@ -190,6 +198,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         }
 
         val VARARG_OUTSIDE_PARENTHESES by error<FirSourceElement, KtExpression>()
+
+        // TODO: implement a position strategy that highlights the argument name instead of the whole named argument
+        val NAMED_ARGUMENTS_NOT_ALLOWED by error<FirSourceElement, PsiElement> {
+            parameter<ForbiddenNamedArgumentsTarget>("forbiddenNamedArgumentsTarget")
+        }
     }
 
     val AMBIGUITY by object : DiagnosticGroup("Ambiguity") {
@@ -344,6 +357,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val MUST_BE_INITIALIZED by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
         val MUST_BE_INITIALIZED_OR_BE_ABSTRACT by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
         val EXTENSION_PROPERTY_MUST_HAVE_ACCESSORS_OR_BE_ABSTRACT by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
+        val UNNECESSARY_LATEINIT by warning<FirSourceElement, KtProperty>(PositioningStrategy.LATEINIT_MODIFIER)
 
         val BACKING_FIELD_IN_INTERFACE by error<FirSourceElement, KtProperty>(PositioningStrategy.DECLARATION_SIGNATURE)
         val EXTENSION_PROPERTY_WITH_BACKING_FIELD by error<FirSourceElement, KtExpression>()
@@ -368,6 +382,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
 
         // TODO: need to cover `by` as well as delegate expression
         val EXPECTED_DELEGATED_PROPERTY by error<FirSourceElement, KtPropertyDelegate>()
+        val EXPECTED_LATEINIT_PROPERTY by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.LATEINIT_MODIFIER)
     }
 
     val DESTRUCTING_DECLARATION by object : DiagnosticGroup("Destructuring declaration") {

@@ -363,6 +363,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
         }
 
         @Test
+        @TestMetadata("initializedAfterRethrow.kt")
+        public void testInitializedAfterRethrow() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/initializedAfterRethrow.kt");
+        }
+
+        @Test
         @TestMetadata("InvokeAndRecursiveResolve.kt")
         public void testInvokeAndRecursiveResolve() throws Exception {
             runTest("compiler/testData/diagnostics/tests/InvokeAndRecursiveResolve.kt");
@@ -32246,6 +32252,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 @TestMetadata("isNullOrEmpty.kt")
                 public void testIsNullOrEmpty() throws Exception {
                     runTest("compiler/testData/diagnostics/testsWithStdLib/contracts/fromStdlib/isNullOrEmpty.kt");
+                }
+
+                @Test
+                @TestMetadata("kt45243.kt")
+                public void testKt45243() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/contracts/fromStdlib/kt45243.kt");
                 }
 
                 @Test

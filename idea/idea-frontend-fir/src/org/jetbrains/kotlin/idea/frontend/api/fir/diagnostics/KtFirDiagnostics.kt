@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.psi.KtModifierListOwner
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtPrimaryConstructor
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPropertyAccessor
 import org.jetbrains.kotlin.psi.KtPropertyDelegate
@@ -38,6 +39,7 @@ import org.jetbrains.kotlin.psi.KtTypeParameter
 import org.jetbrains.kotlin.psi.KtTypeParameterList
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.KtWhenExpression
+import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 
 /*
  * This file was generated automatically
@@ -223,7 +225,7 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = DelegationSuperCallInEnumConstructor::class
     }
 
-    abstract class PrimaryConstructorRequiredForDataClass : KtFirDiagnostic<PsiElement>() {
+    abstract class PrimaryConstructorRequiredForDataClass : KtFirDiagnostic<KtNamedDeclaration>() {
         override val diagnosticClass get() = PrimaryConstructorRequiredForDataClass::class
     }
 
@@ -233,6 +235,18 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class SealedClassConstructorCall : KtFirDiagnostic<PsiElement>() {
         override val diagnosticClass get() = SealedClassConstructorCall::class
+    }
+
+    abstract class DataClassWithoutParameters : KtFirDiagnostic<KtPrimaryConstructor>() {
+        override val diagnosticClass get() = DataClassWithoutParameters::class
+    }
+
+    abstract class DataClassVarargParameter : KtFirDiagnostic<KtParameter>() {
+        override val diagnosticClass get() = DataClassVarargParameter::class
+    }
+
+    abstract class DataClassNotPropertyParameter : KtFirDiagnostic<KtParameter>() {
+        override val diagnosticClass get() = DataClassNotPropertyParameter::class
     }
 
     abstract class AnnotationArgumentKclassLiteralOfTypeParameterError : KtFirDiagnostic<KtExpression>() {
@@ -454,6 +468,11 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class VarargOutsideParentheses : KtFirDiagnostic<KtExpression>() {
         override val diagnosticClass get() = VarargOutsideParentheses::class
+    }
+
+    abstract class NamedArgumentsNotAllowed : KtFirDiagnostic<PsiElement>() {
+        override val diagnosticClass get() = NamedArgumentsNotAllowed::class
+        abstract val forbiddenNamedArgumentsTarget: ForbiddenNamedArgumentsTarget
     }
 
     abstract class Ambiguity : KtFirDiagnostic<PsiElement>() {
@@ -719,6 +738,10 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = ExtensionPropertyMustHaveAccessorsOrBeAbstract::class
     }
 
+    abstract class UnnecessaryLateinit : KtFirDiagnostic<KtProperty>() {
+        override val diagnosticClass get() = UnnecessaryLateinit::class
+    }
+
     abstract class BackingFieldInInterface : KtFirDiagnostic<KtProperty>() {
         override val diagnosticClass get() = BackingFieldInInterface::class
     }
@@ -777,6 +800,10 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class ExpectedDelegatedProperty : KtFirDiagnostic<KtPropertyDelegate>() {
         override val diagnosticClass get() = ExpectedDelegatedProperty::class
+    }
+
+    abstract class ExpectedLateinitProperty : KtFirDiagnostic<KtModifierListOwner>() {
+        override val diagnosticClass get() = ExpectedLateinitProperty::class
     }
 
     abstract class InitializerRequiredForDestructuringDeclaration : KtFirDiagnostic<KtDestructuringDeclaration>() {
