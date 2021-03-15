@@ -658,11 +658,16 @@ class ExpressionCodegen(
         val genericOrAnyOverride = irFunction.overriddenSymbols.any {
             val overriddenParam = if (index < 0) it.owner.dispatchReceiverParameter!! else it.owner.valueParameters[index]
             overriddenParam.type.erasedUpperBound.fqNameWhenAvailable != StandardNames.RESULT_FQ_NAME
-        } || irFunction.parentAsClass.origin == JvmLoweredDeclarationOrigin.LAMBDA_IMPL
+        } || irFunction.parentAsClass.let { it.origin == JvmLoweredDeclarationOrigin.LAMBDA_IMPL && !it.isSamAdapter() }
         if (!genericOrAnyOverride) return
+
+        // Result parameter of SAM-wrapper to Java SAM is already unboxed in visitGetValue, do not unbox it anymore
+        if (irFunction.parentAsClass.superTypes.any { it.getClass()?.isFromJava() == true }) return
 
         StackValue.unboxInlineClass(OBJECT_TYPE, arg.type.erasedUpperBound.defaultType.toIrBasedKotlinType(), mv)
     }
+
+    private fun IrClass.isSamAdapter(): Boolean = this.superTypes.any { it.getClass()?.isFun == true }
 
     private fun onlyResultInlineClassParameters(): Boolean = irFunction.valueParameters.all {
         !it.type.erasedUpperBound.isInline || it.type.erasedUpperBound.fqNameWhenAvailable == StandardNames.RESULT_FQ_NAME
@@ -1061,10 +1066,10 @@ class ExpressionCodegen(
         mv.fakeAlwaysFalseIfeq(endLabel)
         data.withBlock(LoopInfo(loop, continueLabel, endLabel)) {
             loop.body?.accept(this, data)?.discard()
+            mv.visitLabel(continueLabel)
+            loop.condition.markLineNumber(true)
+            loop.condition.accept(this, data).coerceToBoolean().jumpIfTrue(entry)
         }
-        mv.visitLabel(continueLabel)
-        loop.condition.markLineNumber(true)
-        loop.condition.accept(this, data).coerceToBoolean().jumpIfTrue(entry)
         mv.mark(endLabel)
         addInlineMarker(mv, false)
         return unitValue

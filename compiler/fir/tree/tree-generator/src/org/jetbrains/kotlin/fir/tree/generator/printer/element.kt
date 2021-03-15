@@ -89,13 +89,17 @@ fun SmartPrinter.printElement(element: Element) {
 
             fun Field.replaceDeclaration(override: Boolean, overridenType: Importable? = null, forceNullable: Boolean = false) {
                 println()
+                if (name == "source") {
+                    println("@FirImplementationDetail")
+                }
                 abstract()
                 if (override) print("override ")
                 println(replaceFunctionDeclaration(overridenType, forceNullable))
             }
 
             allFields.filter { it.withReplace }.forEach {
-                it.replaceDeclaration(overridenFields[it, it], forceNullable = it.useNullableForReplace)
+                val override = overridenFields[it, it] && !(it.name == "source" && fullQualifiedName.endsWith("FirQualifiedAccess"))
+                it.replaceDeclaration(override, forceNullable = it.useNullableForReplace)
                 for (overridenType in it.overridenTypes) {
                     it.replaceDeclaration(true, overridenType)
                 }

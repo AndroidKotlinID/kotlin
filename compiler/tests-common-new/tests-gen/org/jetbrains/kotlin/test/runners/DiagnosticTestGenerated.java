@@ -15102,12 +15102,6 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
-            @TestMetadata("varPropertyWithInlineClassReceiver.kt")
-            public void testVarPropertyWithInlineClassReceiver() throws Exception {
-                runTest("compiler/testData/diagnostics/tests/inlineClasses/varPropertyWithInlineClassReceiver.kt");
-            }
-
-            @Test
             @TestMetadata("varargsOnParametersOfInlineClassType.kt")
             public void testVarargsOnParametersOfInlineClassType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inlineClasses/varargsOnParametersOfInlineClassType.kt");
@@ -28828,6 +28822,18 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("dontIntersectUpperBoundWithExpectedType.kt")
+            public void testDontIntersectUpperBoundWithExpectedType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/dontIntersectUpperBoundWithExpectedType.kt");
+            }
+
+            @Test
+            @TestMetadata("dontLoseUpperNonExpectedTypeConstraints.kt")
+            public void testDontLoseUpperNonExpectedTypeConstraints() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/dontLoseUpperNonExpectedTypeConstraints.kt");
+            }
+
+            @Test
             @TestMetadata("extFunctionTypeAsUpperBound.kt")
             public void testExtFunctionTypeAsUpperBound() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/extFunctionTypeAsUpperBound.kt");
@@ -28861,6 +28867,24 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("implicitNothingOnDelegates.kt")
             public void testImplicitNothingOnDelegates() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/implicitNothingOnDelegates.kt");
+            }
+
+            @Test
+            @TestMetadata("kt42042.kt")
+            public void testKt42042() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/kt42042.kt");
+            }
+
+            @Test
+            @TestMetadata("kt42396.kt")
+            public void testKt42396() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/kt42396.kt");
+            }
+
+            @Test
+            @TestMetadata("kt42472.kt")
+            public void testKt42472() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/kt42472.kt");
             }
 
             @Test

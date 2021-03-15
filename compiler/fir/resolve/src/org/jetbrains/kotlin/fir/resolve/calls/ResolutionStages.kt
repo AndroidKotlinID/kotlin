@@ -70,6 +70,7 @@ object CheckExtensionReceiver : ResolutionStage() {
         )
         candidate.resolvePlainArgumentType(
             candidate.csBuilder,
+            argumentExtensionReceiverValue.receiverExpression,
             argumentType = argumentType,
             expectedType = expectedType,
             sink = sink,
@@ -251,7 +252,7 @@ internal object PostponedVariablesInitializerResolutionStage : ResolutionStage()
 
             for (freshVariable in candidate.freshVariables) {
                 if (candidate.csBuilder.isPostponedTypeVariable(freshVariable)) continue
-                if (freshVariable !is TypeParameterBasedTypeVariable) continue
+                if (freshVariable !is ConeTypeParameterBasedTypeVariable) continue
                 val typeParameterSymbol = freshVariable.typeParameterSymbol
                 val typeHasVariable = receiverType.contains {
                     (it as? ConeTypeParameterType)?.lookupTag?.typeParameterSymbol == typeParameterSymbol

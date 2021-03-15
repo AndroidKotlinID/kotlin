@@ -81,7 +81,10 @@ object CirDeserializers {
         upperBounds = source.filteredUpperBounds.compactMap { type(it, typeResolver) }
     )
 
-    private fun extensionReceiver(receiverParameterType: KmType, typeResolver: CirTypeResolver): CirExtensionReceiver = CirExtensionReceiver.create(
+    private fun extensionReceiver(
+        receiverParameterType: KmType,
+        typeResolver: CirTypeResolver
+    ): CirExtensionReceiver = CirExtensionReceiver.create(
         annotations = emptyList(), // TODO nowhere to read receiver annotations from, see KT-42490
         type = type(receiverParameterType, typeResolver)
     )
@@ -264,7 +267,7 @@ object CirDeserializers {
         isInner = Flag.Class.IS_INNER(source.flags),
         isExternal = Flag.Class.IS_EXTERNAL(source.flags)
     ).apply {
-        setSupertypes(source.filteredSupertypes.compactMap { type(it, typeResolver) })
+        supertypes = source.filteredSupertypes.compactMap { type(it, typeResolver) }
     }
 
     fun defaultEnumEntry(
@@ -294,7 +297,7 @@ object CirDeserializers {
             arguments = emptyList(),
             isMarkedNullable = false
         )
-        setSupertypes(listOf(enumClassType))
+        supertypes = listOf(enumClassType)
     }
 
     @Suppress("NOTHING_TO_INLINE")

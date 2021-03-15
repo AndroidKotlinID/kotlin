@@ -100,6 +100,7 @@ internal class FirComponentCallImpl(
         return this
     }
 
+    @FirImplementationDetail
     override fun replaceSource(newSource: FirSourceElement?) {
         source = newSource
     }

@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.*
+import org.jetbrains.kotlin.fir.FirImplementationDetail
 
 /*
  * This file was generated automatically
@@ -90,6 +91,7 @@ internal class FirCallableReferenceAccessImpl(
         return this
     }
 
+    @FirImplementationDetail
     override fun replaceSource(newSource: FirSourceElement?) {
         source = newSource
     }

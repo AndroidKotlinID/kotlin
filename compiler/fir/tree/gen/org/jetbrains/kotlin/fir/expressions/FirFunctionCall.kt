@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.*
+import org.jetbrains.kotlin.fir.FirImplementationDetail
 
 /*
  * This file was generated automatically
@@ -30,6 +31,7 @@ abstract class FirFunctionCall : FirQualifiedAccessExpression(), FirCall {
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitFunctionCall(this, data)
 
+    @FirImplementationDetail
     abstract override fun replaceSource(newSource: FirSourceElement?)
 
     abstract override fun replaceTypeRef(newTypeRef: FirTypeRef)

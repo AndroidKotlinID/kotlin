@@ -94,6 +94,7 @@ open class FirFunctionCallImpl @FirImplementationDetail constructor(
         return this
     }
 
+    @FirImplementationDetail
     override fun replaceSource(newSource: FirSourceElement?) {
         source = newSource
     }

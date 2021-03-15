@@ -498,8 +498,10 @@ class ExpressionsConverter(
             }
 
             it.replaceExplicitReceiver(firReceiver)
+
+            @OptIn(FirImplementationDetail::class)
+            it.replaceSource(dotQualifiedExpression.toFirSourceElement())
         }
-        firSelector.replaceSource(dotQualifiedExpression.toFirSourceElement())
         return firSelector
     }
 
