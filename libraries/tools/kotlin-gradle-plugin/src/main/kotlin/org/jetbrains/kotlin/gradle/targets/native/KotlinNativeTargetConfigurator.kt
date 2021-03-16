@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.gradle.plugin.PropertiesProvider.Companion.KOTLIN_NA
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.targets.metadata.isKotlinGranularMetadataEnabled
 import org.jetbrains.kotlin.gradle.targets.native.*
+import org.jetbrains.kotlin.gradle.targets.native.internal.commonizeCInteropTask
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
@@ -298,14 +299,17 @@ open class KotlinNativeTargetConfigurator<T : KotlinNativeTarget>(
 
     private fun Project.createCInteropTasks(compilation: KotlinNativeCompilation) {
         compilation.cinterops.all { interop ->
-            val interopTask = registerTask<CInteropProcess>(interop.interopProcessingTaskName) {
-                it.settings = interop
+            val interopTask = registerTask<CInteropProcess>(interop.interopProcessingTaskName, listOf(interop)) {
                 it.destinationDir = provider { klibOutputDirectory(compilation).resolve("cinterop") }
                 it.group = INTEROP_GROUP
                 it.description = "Generates Kotlin/Native interop library '${interop.name}' " +
                         "for compilation '${compilation.name}'" +
                         "of target '${it.konanTarget.name}'."
                 it.enabled = compilation.konanTarget.enabledOnCurrentHost
+            }
+
+            project.commonizeCInteropTask?.configure { commonizeCInteropTask ->
+                commonizeCInteropTask.from((interopTask.get()))
             }
 
             val interopOutput = project.files(interopTask.map { it.outputFileProvider })

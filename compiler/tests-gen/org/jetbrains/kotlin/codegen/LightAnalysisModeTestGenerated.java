@@ -2218,6 +2218,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
             }
 
+            @TestMetadata("adaptedVarargFunImportedFromObject.kt")
+            public void testAdaptedVarargFunImportedFromObject() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/adaptedVarargFunImportedFromObject.kt");
+            }
+
             public void testAllFilesPresentInAdaptedReferences() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference/adaptedReferences"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
             }
@@ -12909,6 +12914,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("max.kt")
         public void testMax() throws Exception {
             runTest("compiler/testData/codegen/box/functions/max.kt");
+        }
+
+        @TestMetadata("mutualInline.kt")
+        public void testMutualInline() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/mutualInline.kt");
         }
 
         @TestMetadata("nothisnoclosure.kt")
@@ -29103,6 +29113,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestMetadata("kt4281.kt")
         public void testKt4281() throws Exception {
             runTest("compiler/testData/codegen/box/regressions/kt4281.kt");
+        }
+
+        @TestMetadata("kt44993.kt")
+        public void testKt44993() throws Exception {
+            runTest("compiler/testData/codegen/box/regressions/kt44993.kt");
         }
 
         @TestMetadata("kt5056.kt")

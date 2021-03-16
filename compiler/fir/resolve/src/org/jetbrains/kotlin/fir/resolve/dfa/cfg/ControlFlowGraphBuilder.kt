@@ -832,6 +832,9 @@ class ControlFlowGraphBuilder {
         val enterTryNodeBlock = createTryMainBlockEnterNode(tryExpression)
         addNewSimpleNode(enterTryNodeBlock)
 
+        val exitTryNodeBlock = createTryMainBlockExitNode(tryExpression)
+        tryMainExitNodes.push(exitTryNodeBlock)
+
         for (catch in tryExpression.catches) {
             val catchNode = createCatchClauseEnterNode(catch)
             catchNodeStorage.push(catchNode)
@@ -850,10 +853,9 @@ class ControlFlowGraphBuilder {
         return enterTryExpressionNode to enterTryNodeBlock
     }
 
-    fun exitTryMainBlock(tryExpression: FirTryExpression): TryMainBlockExitNode {
+    fun exitTryMainBlock(): TryMainBlockExitNode {
         levelCounter--
-        val node = createTryMainBlockExitNode(tryExpression)
-        tryMainExitNodes.push(node)
+        val node = tryMainExitNodes.top()
         popAndAddEdge(node)
         val finallyEnterNode = finallyEnterNodes.topOrNull()
         // NB: Check the level to avoid adding an edge to the finally block at an upper level.
@@ -1266,14 +1268,14 @@ class ControlFlowGraphBuilder {
             tryExitNodes.top().fir.finallyBlock == null -> {
                 // (3)... without finally ...(4)
                 // Either in try-main or catch.
-                if (tryExitNodes.size == tryMainExitNodes.size) {
+                if (tryMainExitNodes.top().followingNodes.isNotEmpty()) {
                     // (4)... in catch, i.e., re-throw.
                     exitTargetsForTry.top()
                 } else {
-                    // (4)... in try-main. We already have:
-                    // edges from try-main enter node to each catch clause enter node and
-                    // edges from catch clause enter node to exit target (w/ UncaughtExceptionPath)
-                    return
+                    // (4)... in try-main. Route to exit of try main block.
+                    // We already have edges from the exit of try main block to each catch clause.
+                    // This edge makes the remaining part of try main block, e.g., following `when` branches, marked as dead.
+                    tryMainExitNodes.top()
                 }
             }
             // (3)... within finally.

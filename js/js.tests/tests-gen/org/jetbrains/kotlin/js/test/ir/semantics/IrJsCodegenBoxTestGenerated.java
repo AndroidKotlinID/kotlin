@@ -1493,6 +1493,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
             }
 
+            @TestMetadata("adaptedVarargFunImportedFromObject.kt")
+            public void testAdaptedVarargFunImportedFromObject() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/adaptedVarargFunImportedFromObject.kt");
+            }
+
             public void testAllFilesPresentInAdaptedReferences() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference/adaptedReferences"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR, true);
             }
@@ -10844,6 +10849,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("localReturnInsideFunctionExpression.kt")
         public void testLocalReturnInsideFunctionExpression() throws Exception {
             runTest("compiler/testData/codegen/box/functions/localReturnInsideFunctionExpression.kt");
+        }
+
+        @TestMetadata("mutualInline.kt")
+        public void testMutualInline() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/mutualInline.kt");
         }
 
         @TestMetadata("nothisnoclosure.kt")

@@ -157,7 +157,7 @@ abstract class BaseGradleIT {
             // enableFeaturePreview("GRADLE_METADATA") is no longer needed when building with Gradle 5.4 or above
             if (GradleVersion.version(wrapperVersion) >= GradleVersion.version("5.4")) {
                 settingsScript.apply {
-                    if(exists()) {
+                    if (exists()) {
                         modify {
                             it.replace("enableFeaturePreview('GRADLE_METADATA')", "//")
                         }
@@ -249,7 +249,8 @@ abstract class BaseGradleIT {
         val projectName: String,
         val gradleVersionRequirement: GradleVersionRequired = defaultGradleVersion,
         directoryPrefix: String? = null,
-        val minLogLevel: LogLevel = LogLevel.DEBUG
+        val minLogLevel: LogLevel = LogLevel.DEBUG,
+        val addHeapDumpOptions: Boolean = true
     ) {
         internal val testCase = this@BaseGradleIT
 
@@ -258,8 +259,59 @@ abstract class BaseGradleIT {
         val projectDir = File(workingDir.canonicalFile, projectName)
 
         open fun setupWorkingDir() {
-            if (!projectDir.isDirectory || projectDir.listFiles().isEmpty())
+            if (!projectDir.isDirectory || projectDir.listFiles().isEmpty()) {
                 copyRecursively(this.resourcesRoot, workingDir)
+                if (addHeapDumpOptions) {
+                    addHeapDumpOptionsToPropertiesFile()
+                }
+            }
+        }
+
+        private fun addHeapDumpOptionsToPropertiesFile() {
+            val propertiesFile = File(projectDir, "gradle.properties")
+            propertiesFile.createNewFile()
+
+            val heapDumpOutOfErrorStr = "-XX:+HeapDumpOnOutOfMemoryError"
+            val heapDumpPathStr = "-XX:HeapDumpPath=\"${System.getProperty("user.dir")}${File.separatorChar}build\""
+
+            val gradlePropertiesText = propertiesFile.readText()
+
+            val presentJvmArgsLine = gradlePropertiesText
+                .lines()
+                .singleOrNull { it.contains("org.gradle.jvmargs") } // Can't write back if there are several lines with jvmargs
+
+            val updated: Boolean
+            val updatedJvmArgsLine = if (presentJvmArgsLine == null) {
+                updated = true
+                "org.gradle.jvmargs=$heapDumpOutOfErrorStr $heapDumpPathStr"
+            } else {
+                val options = buildString {
+                    if (!presentJvmArgsLine.contains("HeapDumpOnOutOfMemoryError")) {
+                        append(" $heapDumpOutOfErrorStr")
+                    }
+                    if (!presentJvmArgsLine.contains("HeapDumpPath")) {
+                        append(" $heapDumpPathStr")
+                    }
+                }
+
+                if (options.isEmpty()) {
+                    // All options are already present
+                    updated = false
+                    presentJvmArgsLine
+                } else {
+                    updated = true
+                    "$presentJvmArgsLine$options"
+                }
+            }
+
+            if (!updated) {
+                return
+            }
+
+            val lines = listOf("# modified in addHeapDumpOptionsToPropertiesFile", updatedJvmArgsLine) +
+                    gradlePropertiesText.lines().filter { !it.contains("org.gradle.jvmargs") }
+
+            propertiesFile.writeText(lines.joinToString(separator = "\n"))
         }
 
         fun relativize(files: Iterable<File>): List<String> =
@@ -340,20 +392,21 @@ abstract class BaseGradleIT {
 
         val cmd = createBuildCommand(wrapperDir, params, options)
 
-        println("<=== Test build: ${this.projectName} $cmd ===>")
-
         if (!projectDir.exists()) {
             setupWorkingDir()
         }
 
         maybeUpdateSettingsScript(wrapperVersion, gradleSettingsScript())
 
-        val result = runProcess(cmd, projectDir, env, options)
+        var result: ProcessRunResult? = null
         try {
+            result = runProcess(cmd, projectDir, env, options)
             CompiledProject(this, result.output, result.exitCode).check()
         } catch (t: Throwable) {
+            println("<=== Test build: ${this.projectName} $cmd ===>")
+
             // to prevent duplication of output
-            if (!options.forceOutputToStdout) {
+            if (!options.forceOutputToStdout && result != null) {
                 println(result.output)
             }
             throw t
@@ -524,6 +577,12 @@ abstract class BaseGradleIT {
         }
     }
 
+    fun CompiledProject.assertTasksNotExecuted(tasks: Iterable<String>) {
+        for (task in tasks) {
+            assertNotContains("(Executing actions for task|Executing task) '$task'".toRegex())
+        }
+    }
+
     fun CompiledProject.assertTasksExecutedByPrefix(taskPrefixes: Iterable<String>) {
         for (prefix in taskPrefixes) {
             assertContainsRegex("(Executing actions for task|Executing task) '$prefix\\w*'".toRegex())
@@ -532,6 +591,10 @@ abstract class BaseGradleIT {
 
     fun CompiledProject.assertTasksExecuted(vararg tasks: String) {
         assertTasksExecuted(tasks.toList())
+    }
+
+    fun CompiledProject.assertTasksNotExecuted(vararg tasks: String) {
+        assertTasksNotExecuted(tasks.toList())
     }
 
     fun CompiledProject.assertTasksRetrievedFromCache(tasks: Iterable<String>) {

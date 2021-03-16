@@ -16,7 +16,6 @@ internal class KonanDistributionRepository(
     targets: Set<LeafCommonizerTarget>,
     libraryLoader: NativeLibraryLoader,
 ) : Repository {
-
     private val librariesByTarget: Map<LeafCommonizerTarget, Lazy<Set<NativeLibrary>>> =
         targets.associateWith { target ->
             lazy {

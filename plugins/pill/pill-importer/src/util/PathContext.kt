@@ -3,9 +3,11 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.pill
+package org.jetbrains.kotlin.pill.util
 
 import org.gradle.api.Project
+import org.jetbrains.kotlin.pill.model.PModule
+import org.jetbrains.kotlin.pill.model.PProject
 import java.io.File
 
 private val USER_HOME_DIR_PATH = System.getProperty("user.home").withSlash()
