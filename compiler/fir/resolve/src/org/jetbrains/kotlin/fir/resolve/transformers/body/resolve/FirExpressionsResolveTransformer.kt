@@ -302,7 +302,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
     }
 
     override fun transformBlock(block: FirBlock, data: ResolutionMode): CompositeTransformResult<FirStatement> {
-        withNewLocalScope {
+        context.forBlock {
             transformBlockInCurrentScope(block, data)
         }
         return block.compose()
@@ -688,7 +688,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
             return resolvedReference.compose()
         }
 
-        context.towerDataContextForCallableReferences[callableReferenceAccess] = context.towerDataContext
+        context.storeCallableReferenceContext(callableReferenceAccess)
 
         dataFlowAnalyzer.exitCallableReference(callableReferenceAccessWithTransformedLHS)
         return callableReferenceAccessWithTransformedLHS.compose()
@@ -827,35 +827,10 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
         var result = delegatedConstructorCall
         try {
             val lastDispatchReceiver = implicitReceiverStack.lastDispatchReceiver()
-
-            // because there's a `context.saveContextForAnonymousFunction(anonymousFunction)`
-            // call inside of the FirDeclarationResolveTransformer and accessing `this`
-            // inside a lambda which is a value parameter of a constructor delegate
-            // is prohibited
-            context.withTowerDataMode(FirTowerDataMode.CONSTRUCTOR_HEADER) {
-                context.withTowerDataCleanup {
-                    if ((context.containerIfAny as? FirConstructor)?.isPrimary == true) {
-                        context.getPrimaryConstructorAllParametersScope()?.let(context::addLocalScope)
-                    }
-
-                    // it's just a constructor parameters scope created in
-                    // `FirDeclarationResolveTransformer::doTransformConstructor()`
-                    context.towerDataContextsForClassParts.forMemberDeclaration.localScopes.lastOrNull()?.let(context::addLocalScope)
-
-                    if (containingClass is FirRegularClass && !containingConstructor.isPrimary) {
-                        context.addReceiver(
-                            null,
-                            InaccessibleImplicitReceiverValue(
-                                containingClass.symbol,
-                                containingClass.defaultType(),
-                                session,
-                                scopeSession
-                            )
-                        )
-                    }
-                    delegatedConstructorCall.transformChildren(transformer, ResolutionMode.ContextDependent)
-                }
+            context.forDelegatedConstructor(containingConstructor, containingClass as? FirRegularClass, components) {
+                delegatedConstructorCall.transformChildren(transformer, ResolutionMode.ContextDependent)
             }
+
             val reference = delegatedConstructorCall.calleeReference
             val constructorType: ConeClassLikeType = when (reference) {
                 is FirThisReference -> {
@@ -922,9 +897,7 @@ open class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransform
             augmentedArraySetCall.assignCall.explicitReceiver as FirFunctionCall
         )
 
-        val firstResult = withLocalScopeCleanup {
-            augmentedArraySetCall.setGetBlock.transformSingle(transformer, ResolutionMode.ContextIndependent)
-        }
+        val firstResult = augmentedArraySetCall.setGetBlock.transformSingle(transformer, ResolutionMode.ContextIndependent)
         val secondResult = augmentedArraySetCall.assignCall.transformSingle(transformer, ResolutionMode.ContextIndependent)
 
         fun isSuccessful(functionCall: FirFunctionCall): Boolean =

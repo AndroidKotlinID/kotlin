@@ -2098,6 +2098,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("LocalDeclarations.kt")
+            public void testLocalDeclarations() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/backingField/LocalDeclarations.kt");
+            }
+
+            @Test
             @TestMetadata("SetterWithExplicitType.kt")
             public void testSetterWithExplicitType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/backingField/SetterWithExplicitType.kt");
@@ -10082,28 +10088,6 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 @TestMetadata("unresolvedReferenceInReturnBlock.kt")
                 public void testUnresolvedReferenceInReturnBlock() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/functionLiterals/return/unresolvedReferenceInReturnBlock.kt");
-                }
-            }
-
-            @Nested
-            @TestMetadata("compiler/testData/diagnostics/tests/functionLiterals/suspend")
-            @TestDataPath("$PROJECT_ROOT")
-            public class Suspend {
-                @Test
-                public void testAllFilesPresentInSuspend() throws Exception {
-                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/functionLiterals/suspend"), Pattern.compile("^(.*)\\.kts?$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
-                }
-
-                @Test
-                @TestMetadata("disabled.kt")
-                public void testDisabled() throws Exception {
-                    runTest("compiler/testData/diagnostics/tests/functionLiterals/suspend/disabled.kt");
-                }
-
-                @Test
-                @TestMetadata("enabled.kt")
-                public void testEnabled() throws Exception {
-                    runTest("compiler/testData/diagnostics/tests/functionLiterals/suspend/enabled.kt");
                 }
             }
         }

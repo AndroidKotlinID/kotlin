@@ -160,6 +160,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<KtModifierKeywordToken>("modifier2")
         }
         val REDUNDANT_OPEN_IN_INTERFACE by warning<FirSourceElement, KtModifierListOwner>(PositioningStrategy.OPEN_MODIFIER)
+        val WRONG_MODIFIER_TARGET by error<FirSourceElement, PsiElement> {
+            parameter<KtModifierKeywordToken>("modifier")
+            parameter<String>("target")
+        }
     }
 
     val INLINE_CLASSES by object : DiagnosticGroup("Inline classes") {
@@ -231,7 +235,6 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<Int>("expectedCount")
             parameter<FirClassLikeSymbol<*>>("classifier")
         }
-        val NO_TYPE_FOR_TYPE_PARAMETER by error<FirSourceElement, PsiElement>()
         val TYPE_PARAMETERS_IN_OBJECT by error<FirSourceElement, PsiElement>()
         val ILLEGAL_PROJECTION_USAGE by error<FirSourceElement, PsiElement>()
         val TYPE_PARAMETERS_IN_ENUM by error<FirSourceElement, PsiElement>()
@@ -245,11 +248,24 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val TYPE_PARAMETER_IN_CATCH_CLAUSE by error<FirSourceElement, PsiElement>()
         val GENERIC_THROWABLE_SUBCLASS by error<FirSourceElement, KtTypeParameterList>()
         val INNER_CLASS_OF_GENERIC_THROWABLE_SUBCLASS by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME)
+
+        val KCLASS_WITH_NULLABLE_TYPE_PARAMETER_IN_SIGNATURE by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirTypeParameterSymbol>("typeParameter")
+        }
+
+        val TYPE_PARAMETER_AS_REIFIED by error<FirSourceElement, PsiElement> {
+            parameter<FirTypeParameterSymbol>("typeParameter")
+        }
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
+        val CALLABLE_REFERENCE_LHS_NOT_A_CLASS by error<FirSourceElement, KtExpression>()
+
         val CLASS_LITERAL_LHS_NOT_A_CLASS by error<FirSourceElement, KtExpression>()
         val NULLABLE_TYPE_IN_CLASS_LITERAL_LHS by error<FirSourceElement, KtExpression>()
+        val EXPRESSION_OF_NULLABLE_TYPE_IN_CLASS_LITERAL_LHS by error<FirSourceElement, PsiElement> {
+            parameter<ConeKotlinType>("lhsType")
+        }
     }
 
     val OVERRIDES by object : DiagnosticGroup("overrides") {
@@ -341,6 +357,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val FORBIDDEN_VARARG_PARAMETER_TYPE by error<FirSourceElement, KtParameter>(PositioningStrategy.PARAMETER_VARARG_MODIFIER) {
             parameter<ConeKotlinType>("varargParameterType")
         }
+        val VALUE_PARAMETER_WITH_NO_TYPE_ANNOTATION by error<FirSourceElement, KtParameter>()
     }
 
     val PROPERTIES_AND_ACCESSORS by object : DiagnosticGroup("Properties & accessors") {
@@ -410,6 +427,12 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val VAL_REASSIGNMENT by error<FirSourceElement, KtExpression> {
             parameter<FirPropertySymbol>("variable")
         }
+        val VAL_REASSIGNMENT_VIA_BACKING_FIELD by warning<FirSourceElement, KtExpression> {
+            parameter<FirPropertySymbol>("variable")
+        }
+        val VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR by error<FirSourceElement, KtExpression> {
+            parameter<FirPropertySymbol>("variable")
+        }
         val WRONG_INVOCATION_KIND by warning<FirSourceElement, PsiElement> {
             parameter<AbstractFirBasedSymbol<*>>("declaration")
             parameter<EventOccurrencesRange>("requiredRange")
@@ -446,6 +469,15 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<List<WhenMissingCase>>("missingWhenCases")
         }
         val INVALID_IF_AS_EXPRESSION by error<FirSourceElement, KtIfExpression>(PositioningStrategy.IF_EXPRESSION)
+    }
+
+    val CONTEXT_TRACKING by object : DiagnosticGroup("Context tracking") {
+        val TYPE_PARAMETER_IS_NOT_AN_EXPRESSION by error<FirSourceElement, KtSimpleNameExpression> {
+            parameter<FirTypeParameterSymbol>("typeParameter")
+        }
+        val TYPE_PARAMETER_ON_LHS_OF_DOT by error<FirSourceElement, KtSimpleNameExpression> {
+            parameter<FirTypeParameterSymbol>("typeParameter")
+        }
     }
 
     val FUNCTION_CONTRACTS by object : DiagnosticGroup("Function contracts") {

@@ -127,7 +127,7 @@ fun ConeKotlinType.toRegularClass(session: FirSession): FirRegularClass? {
     return safeAs<ConeClassLikeType>()?.fullyExpandedType(session)?.toRegularClass(session)
 }
 
-fun ConeKotlinType.isInline(session: FirSession) : Boolean = toRegularClass(session)?.isInline == true
+fun ConeKotlinType.isInline(session: FirSession): Boolean = toRegularClass(session)?.isInline == true
 
 /**
  * Returns the FirRegularClass associated with this
@@ -143,7 +143,7 @@ fun FirTypeRef.toRegularClass(session: FirSession): FirRegularClass? {
 inline fun <reified T : Any> FirQualifiedAccessExpression.getDeclaration(): T? {
     return this.calleeReference.safeAs<FirResolvedNamedReference>()
         ?.resolvedSymbol
-        ?.fir.safeAs<T>()
+        ?.fir.safeAs()
 }
 
 /**
@@ -152,17 +152,6 @@ inline fun <reified T : Any> FirQualifiedAccessExpression.getDeclaration(): T? {
  */
 fun FirSymbolOwner<*>.getContainingClass(context: CheckerContext): FirClassLikeDeclaration<*>? =
     this.safeAs<FirCallableMemberDeclaration<*>>()?.containingClass()?.toSymbol(context.session)?.fir
-
-/**
- * Returns the FirClassLikeDeclaration the type alias is pointing
- * to provided `this` is a FirTypeAlias. Returns this otherwise.
- */
-fun FirClassLikeDeclaration<*>.followAlias(session: FirSession): FirClassLikeDeclaration<*> {
-    return this.safeAs<FirTypeAlias>()
-        ?.expandedTypeRef
-        ?.firClassLike(session)
-        ?: return this
-}
 
 /**
  * Returns the FirClassLikeDeclaration that the

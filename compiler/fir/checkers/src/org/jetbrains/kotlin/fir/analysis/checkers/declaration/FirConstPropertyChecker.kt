@@ -13,10 +13,19 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.isConst
+import org.jetbrains.kotlin.lexer.KtTokens
 
 object FirConstPropertyChecker : FirPropertyChecker() {
     override fun check(declaration: FirProperty, context: CheckerContext, reporter: DiagnosticReporter) {
         if (!declaration.isConst) return
+
+        if (declaration.isVar) {
+            val constModifier = declaration.getModifier(KtTokens.CONST_KEYWORD)
+            constModifier?.let {
+                reporter.reportOn(it.source, FirErrors.WRONG_MODIFIER_TARGET, it.token, "vars", context)
+            }
+        }
+
         val classKind = (context.containingDeclarations.lastOrNull() as? FirRegularClass)?.classKind
         if (classKind != ClassKind.OBJECT && context.containingDeclarations.size > 1) {
             reporter.reportOn(declaration.source, FirErrors.CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT, context)

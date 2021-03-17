@@ -11,10 +11,8 @@ buildscript {
 
     repositories {
         if (cacheRedirectorEnabled) {
-            maven("https://cache-redirector.jetbrains.com/jcenter.bintray.com")
             maven("https://cache-redirector.jetbrains.com/maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
         } else {
-            jcenter()
             maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
         }
 
@@ -84,10 +82,9 @@ extra["versions.androidDxSources"] = "5.0.0_r2"
 extra["customDepsOrg"] = "kotlin.build"
 
 repositories {
-    jcenter()
+    mavenCentral()
     maven("https://jetbrains.bintray.com/intellij-third-party-dependencies/")
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
-    maven("https://kotlin.bintray.com/kotlinx")
     gradlePluginPortal()
 
     extra["bootstrapKotlinRepo"]?.let {
