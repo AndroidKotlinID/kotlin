@@ -19,10 +19,9 @@ fun withLocals(p: Int): Int {
 //             │ fun (Int).plus(Int): Int
 //             │ │ fun ((Int, Int) -> Int).invoke(Int, Int): Int
 //             │ │ │ withLocals.sum.y: Int
-//             │ │ │ │ fun (Int).plus(Int): Int
-//             │ │ │ │ │ withLocals.sum.z: Int
-//             │ │ │ │ │ │
-        return x + f(y + z)
+//             │ │ │ │  withLocals.sum.z: Int
+//             │ │ │ │  │
+        return x + f(y, z)
     }
 
 //      Int              constructor Any()
@@ -32,7 +31,7 @@ fun withLocals(p: Int): Int {
 //                │ fun (Any).hashCode(): Int
 //                │ │
         fun foo() = hashCode()
-//     fun (withLocals.<no name provided>).foo(): Int
+//     fun (<anonymous>).foo(): Int
 //     │
     }).foo()
 

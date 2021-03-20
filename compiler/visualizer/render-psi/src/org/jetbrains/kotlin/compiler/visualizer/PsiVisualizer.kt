@@ -10,10 +10,11 @@ import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.analyzer.AnalysisResult
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.compiler.visualizer.Annotator.annotate
+import org.jetbrains.kotlin.contracts.parsing.isEqualsDescriptor
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
-import org.jetbrains.kotlin.descriptors.impl.LazyPackageViewDescriptorImpl
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 import org.jetbrains.kotlin.renderer.ClassifierNamePolicy
@@ -21,19 +22,19 @@ import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.renderer.ParameterNameRenderingPolicy
 import org.jetbrains.kotlin.renderer.render
 import org.jetbrains.kotlin.resolve.BindingContext.*
-import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getAbbreviatedTypeOrType
 import org.jetbrains.kotlin.resolve.calls.callUtil.getCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
+import org.jetbrains.kotlin.resolve.calls.util.isSingleUnderscore
 import org.jetbrains.kotlin.resolve.descriptorUtil.declaresOrInheritsDefaultValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
-import org.jetbrains.kotlin.resolve.lazy.descriptors.LazyPackageDescriptor
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 import org.jetbrains.kotlin.types.*
-import java.util.ArrayList
+import org.jetbrains.kotlin.types.expressions.DoubleColonLHS
+import java.util.*
 
 class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : BaseRenderer() {
     private val bindingContext = analysisResult.bindingContext
@@ -92,6 +93,7 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
 
         private fun renderVariableType(variable: KtVariableDeclaration) {
             val descriptor = bindingContext[VARIABLE, variable]
+            if (variable.isSingleUnderscore) return
             addAnnotation(renderType(descriptor), variable.nameIdentifier!!)
             variable.acceptChildren(this)
         }
@@ -110,33 +112,36 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
         }
 
         override fun visitTypeReference(typeReference: KtTypeReference) {
-            if (typeReference.text.isNotEmpty()) {
-                val hasResolvedCall = with(object : KtVisitorVoid() {
-                    var hasCall: Boolean = false
-                    override fun visitKtElement(element: KtElement) {
-                        if (!hasCall) {
-                            hasCall = element.getResolvedCall(bindingContext) != null
-                            element.acceptChildren(this)
-                        }
-                    }
-                }) {
-                    typeReference.accept(this)
-                    this.hasCall
-                }
-
-                if (!hasResolvedCall) {
-                    val type = typeReference.getAbbreviatedTypeOrType(bindingContext)
-                    addAnnotation(renderType(type), typeReference)
-                }
+            if (typeReference.text.isEmpty()) {
+                return super.visitTypeReference(typeReference)
             }
-            super.visitTypeReference(typeReference)
+
+            val hasResolvedCall = with(object : KtVisitorVoid() {
+                var hasCall: Boolean = false
+                override fun visitKtElement(element: KtElement) {
+                    if (!hasCall) {
+                        element.getResolvedCall(bindingContext)?.let {
+                            hasCall = true
+                            element.accept(this@Renderer)
+                        } ?: element.acceptChildren(this)
+                    }
+                }
+            }) {
+                typeReference.accept(this)
+                this.hasCall
+            }
+
+            if (!hasResolvedCall) {
+                val type = typeReference.getAbbreviatedTypeOrType(bindingContext)
+                addAnnotation(renderType(type), typeReference)
+            }
         }
 
         override fun visitConstantExpression(expression: KtConstantExpression) {
             addAnnotation(renderType(expression), expression)
         }
 
-        private fun renderCall(expression: KtExpression): ResolvedCall<out CallableDescriptor>? {
+        private fun renderCall(expression: KtExpression, renderOn: PsiElement = expression): ResolvedCall<out CallableDescriptor>? {
             val call = expression.getCall(bindingContext)
             val resolvedCall = expression.getResolvedCall(bindingContext)
             if (call == null) {
@@ -145,13 +150,6 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
                 addAnnotation("[ERROR: not resolved]", expression)
                 return null
             }
-
-            val descriptor = resolvedCall.resultingDescriptor
-            val typeArguments = if (resolvedCall.typeArguments.isNotEmpty()) {
-                buildString { resolvedCall.typeArguments.values.joinTo(this, ", ", "<", ">") { renderType(it) } }
-            } else ""
-            val annotation = descriptorRenderer.render(descriptor).replace(argumentsLabel, typeArguments)
-            addAnnotation(annotation, expression, deleteDuplicate = false)
 
             fun addReceiverAnnotation(receiver: ReceiverValue?, receiverKind: ExplicitReceiverKind) {
                 if (receiver != null && resolvedCall.explicitReceiverKind != receiverKind) {
@@ -165,6 +163,16 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
             addReceiverAnnotation(resolvedCall.extensionReceiver, ExplicitReceiverKind.EXTENSION_RECEIVER)
             addReceiverAnnotation(resolvedCall.dispatchReceiver, ExplicitReceiverKind.DISPATCH_RECEIVER)
 
+            val descriptor = resolvedCall.candidateDescriptor
+            val typeArguments = resolvedCall.typeArguments
+                .takeIf { it.isNotEmpty() }
+                ?.values?.joinToString(", ", "<", ">") { renderType(it) } ?: ""
+            val annotation = when {
+                descriptor.isEqualsDescriptor() -> "EQ operator call"
+                else -> descriptorRenderer.render(descriptor).replace(argumentsLabel, typeArguments)
+            }
+            addAnnotation(annotation, renderOn, deleteDuplicate = false)
+
             return resolvedCall
         }
 
@@ -175,6 +183,14 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
             } else {
                 renderCall(expression)
             }
+        }
+
+        override fun visitBinaryExpression(expression: KtBinaryExpression) {
+            val opName = expression.operationReference.getReferencedName()
+            expression.left?.takeIf { it.node.elementType == KtNodeTypes.ARRAY_ACCESS_EXPRESSION && opName == "=" }?.let {
+                renderCall(it, expression.operationReference)
+            }
+            super.visitBinaryExpression(expression)
         }
 
         override fun visitIfExpression(expression: KtIfExpression) {
@@ -214,6 +230,21 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
                 }
             }
         }
+
+        override fun visitClassLiteralExpression(expression: KtClassLiteralExpression) {
+            val doubleColonLhs = bindingContext[DOUBLE_COLON_LHS, expression.receiverExpression]
+            doubleColonLhs?.takeIf { it is DoubleColonLHS.Type }?.let {
+                addAnnotation(descriptorRenderer.render(it.type.constructor.declarationDescriptor!!), expression)
+            } ?: super.visitClassLiteralExpression(expression)
+        }
+
+        override fun visitPrefixExpression(expression: KtPrefixExpression) {
+            val opName = expression.operationReference.getReferencedName()
+            if (expression.baseExpression?.node?.elementType == KtNodeTypes.INTEGER_CONSTANT && opName == "-") {
+                return expression.baseExpression!!.accept(this)
+            }
+            super.visitPrefixExpression(expression)
+        }
     }
 
     inner class PsiDescriptorRenderer(
@@ -247,6 +278,7 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
         }
 
         fun renderType(type: KotlinType): String {
+            if (type.toString() == SpecialNames.NO_NAME_PROVIDED.asString()) return "<anonymous>"
             return typeRenderer.renderType(type)
         }
 
@@ -348,11 +380,12 @@ class PsiVisualizer(private val file: KtFile, analysisResult: AnalysisResult) : 
         }
 
         override fun visitPackageFragmentDescriptor(descriptor: PackageFragmentDescriptor, data: StringBuilder) {
-            data.append("package-fragment ${renderFqName(descriptor, removeCurrentPackage = false)}")
+            //data.append("package-fragment ${renderFqName(descriptor, removeCurrentPackage = false)}")
         }
 
         override fun visitPackageViewDescriptor(descriptor: PackageViewDescriptor, data: StringBuilder) {
-            data.append("package ${renderFqName(descriptor, removeCurrentPackage = false)}")
+            // don't render package because support the same logic in fir is very hard
+            //data.append("package ${renderFqName(descriptor, removeCurrentPackage = false)}")
         }
 
         override fun visitVariableDescriptor(variable: VariableDescriptor, data: StringBuilder) {

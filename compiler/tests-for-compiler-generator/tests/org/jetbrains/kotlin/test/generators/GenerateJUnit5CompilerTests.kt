@@ -12,6 +12,8 @@ import org.jetbrains.kotlin.test.runners.*
 import org.jetbrains.kotlin.test.runners.codegen.*
 import org.jetbrains.kotlin.test.runners.ir.AbstractFir2IrTextTest
 import org.jetbrains.kotlin.test.runners.ir.AbstractIrTextTest
+import org.jetbrains.kotlin.visualizer.fir.AbstractFirVisualizerTest
+import org.jetbrains.kotlin.visualizer.psi.AbstractPsiVisualizerTest
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 
@@ -153,6 +155,26 @@ fun generateJUnit5CompilerTests(args: Array<String>) {
 
             testClass<AbstractFirBytecodeTextTest> {
                 model("codegen/bytecodeText")
+            }
+        }
+
+        testGroup("compiler/visualizer/tests-gen", "compiler/fir/raw-fir/psi2fir/testData") {
+            testClass<AbstractPsiVisualizerTest>("PsiVisualizerForRawFirDataGenerated") {
+                model("rawBuilder")
+            }
+
+            testClass<AbstractFirVisualizerTest>("FirVisualizerForRawFirDataGenerated") {
+                model("rawBuilder")
+            }
+        }
+
+        testGroup("compiler/visualizer/tests-gen", "compiler/visualizer/testData") {
+            testClass<AbstractPsiVisualizerTest>("PsiVisualizerForUncommonCasesGenerated") {
+                model("uncommonCases/testFiles")
+            }
+
+            testClass<AbstractFirVisualizerTest>("FirVisualizerForUncommonCasesGenerated") {
+                model("uncommonCases/testFiles")
             }
         }
     }

@@ -8726,6 +8726,21 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/defaultArguments/inheritedFromInterfaceViaAbstractSuperclass.kt");
         }
 
+        @TestMetadata("kt36853.kt")
+        public void testKt36853() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853.kt");
+        }
+
+        @TestMetadata("kt36853_nestedObject.kt")
+        public void testKt36853_nestedObject() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853_nestedObject.kt");
+        }
+
+        @TestMetadata("kt36853a.kt")
+        public void testKt36853a() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853a.kt");
+        }
+
         @TestMetadata("kt6382.kt")
         public void testKt6382() throws Exception {
             runTest("compiler/testData/codegen/box/defaultArguments/kt6382.kt");
@@ -9277,6 +9292,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("kt4138.kt")
         public void testKt4138() throws Exception {
             runTest("compiler/testData/codegen/box/delegatedProperty/kt4138.kt");
+        }
+
+        @TestMetadata("kt45431.kt")
+        public void testKt45431() throws Exception {
+            runTest("compiler/testData/codegen/box/delegatedProperty/kt45431.kt");
         }
 
         @TestMetadata("kt6722.kt")
@@ -12919,6 +12939,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/inlineClasses/kt44141.kt");
         }
 
+        @TestMetadata("kt44867.kt")
+        public void testKt44867() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt44867.kt");
+        }
+
         @TestMetadata("mangledDefaultParameterFunction.kt")
         public void testMangledDefaultParameterFunction() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/mangledDefaultParameterFunction.kt");
@@ -14327,6 +14352,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("createdNestedInOuterMember.kt")
         public void testCreatedNestedInOuterMember() throws Exception {
             runTest("compiler/testData/codegen/box/innerNested/createdNestedInOuterMember.kt");
+        }
+
+        @TestMetadata("extenderNestedClass.kt")
+        public void testExtenderNestedClass() throws Exception {
+            runTest("compiler/testData/codegen/box/innerNested/extenderNestedClass.kt");
         }
 
         @TestMetadata("extensionFun.kt")

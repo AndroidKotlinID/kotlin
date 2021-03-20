@@ -23,10 +23,9 @@ fun main() {
     val a = Vector(1, 2)
 //      Vector
 //      │   constructor Vector(Int, Int)
-//      │   │      fun (Int).unaryMinus(): Int
-//      │   │      │Int
-//      │   │      ││  Int
-//      │   │      ││  │
+//      │   │       Int
+//      │   │       │  Int
+//      │   │       │  │
     val b = Vector(-1, 10)
 
 //  fun io/println(Any?): Unit
@@ -49,7 +48,7 @@ fun main() {
     println("a hash - ${a.hashCode()}")
 
 //                             val main.a: Vector
-//                             │ fun (Vector).equals(Any?): Boolean
+//                             │ EQ operator call
 //  fun io/println(Any?): Unit │ │      val main.b: Vector
 //  │                          │ │      │
     println("a is equal to b ${a.equals(b)}")

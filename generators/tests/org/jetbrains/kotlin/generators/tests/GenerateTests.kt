@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.AbstractDataFlowValueRenderingTest
 import org.jetbrains.kotlin.addImport.AbstractAddImportTest
 import org.jetbrains.kotlin.addImportAlias.AbstractAddImportAliasTest
 import org.jetbrains.kotlin.allopen.AbstractBytecodeListingTestForAllOpen
+import org.jetbrains.kotlin.allopen.AbstractIrBytecodeListingTestForAllOpen
 import org.jetbrains.kotlin.android.parcel.AbstractParcelBoxTest
 import org.jetbrains.kotlin.android.parcel.AbstractParcelBytecodeListingTest
 import org.jetbrains.kotlin.android.parcel.AbstractParcelIrBoxTest
@@ -46,6 +47,7 @@ import org.jetbrains.kotlin.idea.codeInsight.postfix.AbstractPostfixTemplateProv
 import org.jetbrains.kotlin.idea.codeInsight.surroundWith.AbstractSurroundWithTest
 import org.jetbrains.kotlin.idea.codeInsight.unwrap.AbstractUnwrapRemoveTest
 import org.jetbrains.kotlin.idea.completion.AbstractHighLevelJvmBasicCompletionTest
+import org.jetbrains.kotlin.idea.completion.AbstractHighLevelMultiFileJvmBasicCompletionTest
 import org.jetbrains.kotlin.idea.completion.test.*
 import org.jetbrains.kotlin.idea.completion.test.handlers.*
 import org.jetbrains.kotlin.idea.completion.test.weighers.AbstractBasicCompletionWeigherTest
@@ -196,6 +198,8 @@ import org.jetbrains.kotlin.tools.projectWizard.wizard.AbstractYamlNewWizardProj
 import org.jetbrains.kotlinx.serialization.AbstractSerializationIrBytecodeListingTest
 import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginBytecodeListingTest
 import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginDiagnosticTest
+import org.jetbrains.kotlinx.serialization.idea.AbstractSerializationPluginIdeDiagnosticTest
+import org.jetbrains.kotlinx.serialization.idea.AbstractSerializationQuickFixTest
 
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
@@ -1175,6 +1179,10 @@ fun main(args: Array<String>) {
             testClass<AbstractHighLevelWeigherTest> {
                 model("weighers/basic", pattern = KT_OR_KTS_WITHOUT_DOTS_IN_NAME)
             }
+
+            testClass<AbstractHighLevelMultiFileJvmBasicCompletionTest> {
+                model("basic/multifile", extension = null, recursive = false)
+            }
         }
 
         testGroup("idea/idea-fir/tests", "idea/testData/findUsages") {
@@ -1388,10 +1396,6 @@ fun main(args: Array<String>) {
 
             testClass<AbstractMultiFileJvmBasicCompletionTest> {
                 model("basic/multifile", extension = null, recursive = false)
-            }
-
-            testClass<AbstractMultiFileJvmBasicCompletionTest>("MultiFilePrimitiveJvmBasicCompletionTestGenerated") {
-                model("basic/multifilePrimitive", extension = null, recursive = false)
             }
 
             testClass<AbstractMultiFileSmartCompletionTest> {
@@ -1753,6 +1757,9 @@ fun main(args: Array<String>) {
             testClass<AbstractBytecodeListingTestForAllOpen> {
                 model("bytecodeListing", extension = "kt")
             }
+            testClass<AbstractIrBytecodeListingTestForAllOpen> {
+                model("bytecodeListing", extension = "kt")
+            }
         }
 
         testGroup("plugins/noarg/noarg-cli/test", "plugins/noarg/noarg-cli/testData") {
@@ -1792,6 +1799,18 @@ fun main(args: Array<String>) {
 
             testClass<AbstractSerializationIrBytecodeListingTest> {
                 model("codegen")
+            }
+        }
+
+        testGroup(
+            "plugins/kotlin-serialization/kotlin-serialization-ide/test",
+            "plugins/kotlin-serialization/kotlin-serialization-ide/testData"
+        ) {
+            testClass<AbstractSerializationPluginIdeDiagnosticTest> {
+                model("diagnostics")
+            }
+            testClass<AbstractSerializationQuickFixTest> {
+                model("quickfix", pattern = "^([\\w\\-_]+)\\.kt$", filenameStartsLowerCase = true)
             }
         }
 
