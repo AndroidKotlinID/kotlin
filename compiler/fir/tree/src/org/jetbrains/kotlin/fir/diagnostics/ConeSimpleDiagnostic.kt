@@ -21,7 +21,6 @@ enum class DiagnosticKind {
     IllegalUnderscore,
     DeserializationError,
     InferenceError,
-    TypeParameterAsSupertype,
     EnumAsSupertype,
     RecursionInSupertypes,
     RecursionInImplicitTypes,
@@ -29,7 +28,6 @@ enum class DiagnosticKind {
     SuperNotAllowed,
     ValueParameterWithNoTypeAnnotation,
     UnknownCallableKind,
-    SymbolNotFound,
     IllegalProjectionUsage,
     MissingStdlibClass,
     Other

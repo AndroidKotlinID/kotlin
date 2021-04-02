@@ -6,9 +6,12 @@
 package org.jetbrains.kotlin.gradle.internal
 
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
+import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.workers.IsolationMode
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -27,7 +30,10 @@ import java.net.URL
 import java.net.URLClassLoader
 import javax.inject.Inject
 
-abstract class KaptWithoutKotlincTask @Inject constructor(private val workerExecutor: WorkerExecutor) : KaptTask() {
+abstract class KaptWithoutKotlincTask @Inject constructor(
+    objectFactory: ObjectFactory,
+    private val workerExecutor: WorkerExecutor
+) : KaptTask(objectFactory) {
     @get:InputFiles
     @get:Classpath
     @Suppress("unused")
@@ -69,6 +75,14 @@ abstract class KaptWithoutKotlincTask @Inject constructor(private val workerExec
         for (option in options) {
             result[option.key] = option.value
         }
+        annotationProcessorOptionProviders.forEach {
+            (it as List<Any>).forEach {
+                (it as CommandLineArgumentProvider).asArguments().forEach {
+                    result[it.removePrefix("-A")] = ""
+                }
+            }
+        }
+
         return result
     }
 
@@ -98,16 +112,16 @@ abstract class KaptWithoutKotlincTask @Inject constructor(private val workerExec
         val optionsForWorker = KaptOptionsForWorker(
             projectDir,
             compileClasspath,
-            javaSourceRoots.toList(),
+            source.files.toList(),
 
             changedFiles,
             compiledSources,
-            incAptCache,
+            incAptCache.orNull?.asFile,
             classpathChanges.toList(),
 
             destinationDir,
             classesDir,
-            stubsDir,
+            stubsDir.asFile.get(),
 
             kaptClasspath.files.toList(),
             annotationProcessorFqNames,

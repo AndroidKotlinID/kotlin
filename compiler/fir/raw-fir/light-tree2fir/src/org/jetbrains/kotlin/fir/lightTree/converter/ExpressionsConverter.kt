@@ -825,10 +825,11 @@ class ExpressionsConverter(
         }
         val getArgument = context.arraySetArgument.remove(arrayAccess)
         return buildFunctionCall {
-            source = arrayAccess.toFirSourceElement()
+            val isGet = getArgument == null
+            source = (if (isGet) arrayAccess else arrayAccess.getParent()!!).toFirSourceElement()
             calleeReference = buildSimpleNamedReference {
-                source = this@buildFunctionCall.source
-                name = if (getArgument == null) OperatorNameConventions.GET else OperatorNameConventions.SET
+                source = arrayAccess.toFirSourceElement().fakeElement(FirFakeSourceElementKind.ArrayAccessNameReference)
+                name = if (isGet) OperatorNameConventions.GET else OperatorNameConventions.SET
             }
             explicitReceiver = firExpression
             argumentList = buildArgumentList {
@@ -887,18 +888,22 @@ class ExpressionsConverter(
      */
     private fun convertDoWhile(doWhileLoop: LighterASTNode): FirElement {
         var block: LighterASTNode? = null
-        var firCondition: FirExpression = buildErrorExpression(null, ConeSimpleDiagnostic("No condition in do-while loop", DiagnosticKind.Syntax))
-        doWhileLoop.forEachChildren {
-            when (it.tokenType) {
-                BODY -> block = it
-                CONDITION -> firCondition = getAsFirExpression(it, "No condition in do-while loop")
-            }
-        }
+        var firCondition: FirExpression =
+            buildErrorExpression(null, ConeSimpleDiagnostic("No condition in do-while loop", DiagnosticKind.Syntax))
 
+        val target: FirLoopTarget
         return FirDoWhileLoopBuilder().apply {
             source = doWhileLoop.toFirSourceElement()
+            // For break/continue in the do-while loop condition, prepare the loop target first so that it can refer to the same loop.
+            target = prepareTarget()
+            doWhileLoop.forEachChildren {
+                when (it.tokenType) {
+                    BODY -> block = it
+                    CONDITION -> firCondition = getAsFirExpression(it, "No condition in do-while loop")
+                }
+            }
             condition = firCondition
-        }.configure { convertLoopBody(block) }
+        }.configure(target) { convertLoopBody(block) }
     }
 
     /**
@@ -915,10 +920,14 @@ class ExpressionsConverter(
             }
         }
 
+        val target: FirLoopTarget
         return FirWhileLoopBuilder().apply {
             source = whileLoop.toFirSourceElement()
             condition = firCondition
-        }.configure { convertLoopBody(block) }
+            // break/continue in the while loop condition will refer to an outer loop if any.
+            // So, prepare the loop target after building the condition.
+            target = prepareTarget()
+        }.configure(target) { convertLoopBody(block) }
     }
 
     /**
@@ -937,6 +946,7 @@ class ExpressionsConverter(
             }
         }
 
+        val target: FirLoopTarget
         return buildBlock {
             source = forLoop.toFirSourceElement()
             val iteratorVal = generateTemporaryVariable(
@@ -953,7 +963,10 @@ class ExpressionsConverter(
                     calleeReference = buildSimpleNamedReference { name = Name.identifier("hasNext") }
                     explicitReceiver = generateResolvedAccessExpression(null, iteratorVal)
                 }
-            }.configure {
+                // break/continue in the for loop condition will refer to an outer loop if any.
+                // So, prepare the loop target after building the condition.
+                target = prepareTarget()
+            }.configure(target) {
                 // NB: just body.toFirBlock() isn't acceptable here because we need to add some statements
                 buildBlock block@{
                     source = blockNode?.toFirSourceElement()

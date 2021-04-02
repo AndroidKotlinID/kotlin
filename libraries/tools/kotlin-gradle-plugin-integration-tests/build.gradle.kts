@@ -15,6 +15,7 @@ val kotlinGradlePluginTest = project(":kotlin-gradle-plugin").sourceSets.named("
 
 dependencies {
     testImplementation(project(":kotlin-gradle-plugin"))
+    testImplementation(project(":kotlin-tooling-metadata"))
     testImplementation(kotlinGradlePluginTest)
     testImplementation(project(":kotlin-gradle-subplugin-example"))
     testImplementation(project(":kotlin-allopen"))
@@ -81,7 +82,7 @@ fun Test.includeNative(include: Boolean) {
 }
 
 fun Test.advanceGradleVersion() {
-    val gradleVersionForTests = "7.0-milestone-2"
+    val gradleVersionForTests = "7.0-rc-1"
     systemProperty("kotlin.gradle.version.for.tests", gradleVersionForTests)
 }
 

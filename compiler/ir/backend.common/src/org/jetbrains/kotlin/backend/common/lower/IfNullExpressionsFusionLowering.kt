@@ -19,6 +19,8 @@ import org.jetbrains.kotlin.ir.symbols.IrVariableSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.isNullable
 import org.jetbrains.kotlin.ir.util.fileOrNull
+import org.jetbrains.kotlin.ir.util.isTrivial
+import org.jetbrains.kotlin.ir.util.shallowCopy
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
@@ -189,11 +191,10 @@ class IfNullExpressionsFusionLowering(val context: CommonBackendContext) : FileL
             null
     }
 
-    private fun IrExpression.isTrivial() =
-        this is IrExpressionWithCopy
-
     private fun IrExpression.copyIfTrivial() =
-        if (this is IrExpressionWithCopy) copy() else this
+        if (isTrivial()) {
+            shallowCopy()
+        } else this
 
     private fun IrExpression.remap(from: IrVariable, to: Lazy<IrVariable>): IrExpression =
         copyIfTrivial().transform(object : AbstractVariableRemapper() {

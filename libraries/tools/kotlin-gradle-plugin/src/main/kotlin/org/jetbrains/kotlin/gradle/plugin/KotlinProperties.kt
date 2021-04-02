@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.targets.js.dukat.ExternalsOutputFormat
 import org.jetbrains.kotlin.gradle.targets.js.dukat.ExternalsOutputFormat.Companion.externalsOutputFormatProperty
 import org.jetbrains.kotlin.gradle.targets.js.webpack.WebpackMajorVersion
-import org.jetbrains.kotlin.gradle.targets.js.webpack.WebpackMajorVersion.Companion.warningMessage
 import org.jetbrains.kotlin.gradle.targets.native.DisabledNativeTargetsReporter
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
@@ -36,6 +35,11 @@ internal fun PropertiesProvider.mapKotlinTaskProperties(task: AbstractKotlinComp
         incrementalJvm?.let { task.incremental = it }
         usePreciseJavaTracking?.let {
             task.usePreciseJavaTracking = it
+        }
+        useFir?.let {
+            if (it == true) {
+                task.kotlinOptions.useFir = true
+            }
         }
     }
 
@@ -90,6 +94,9 @@ internal class PropertiesProvider private constructor(private val project: Proje
     val usePreciseJavaTracking: Boolean?
         get() = booleanProperty("kotlin.incremental.usePreciseJavaTracking")
 
+    val useFir: Boolean?
+        get() = booleanProperty("kotlin.useFir")
+
     private val useFallbackCompilerSearchPropName = "kotlin.useFallbackCompilerSearch"
 
     @Deprecated("Unsupported and will be removed in next major releases")
@@ -118,6 +125,9 @@ internal class PropertiesProvider private constructor(private val project: Proje
 
     val enableCompatibilityMetadataVariant: Boolean
         get() = booleanProperty("kotlin.mpp.enableCompatibilityMetadataVariant") ?: true
+
+    val enableKotlinToolingMetadataArtifact: Boolean
+        get() = booleanProperty("kotlin.mpp.enableKotlinToolingMetadataArtifact") ?: false
 
     val mppStabilityNoWarn: Boolean?
         get() = booleanProperty(KotlinMultiplatformPlugin.STABILITY_NOWARN_FLAG)

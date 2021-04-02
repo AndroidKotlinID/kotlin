@@ -183,7 +183,7 @@ extra["versions.jflex"] = "1.7.0"
 extra["versions.markdown"] = "0.1.25"
 extra["versions.trove4j"] = "1.0.20181211"
 extra["versions.completion-ranking-kotlin"] = "0.1.3"
-extra["versions.r8"] = "2.1.75"
+extra["versions.r8"] = "2.1.96"
 val immutablesVersion = "0.3.1"
 extra["versions.kotlinx-collections-immutable"] = immutablesVersion
 extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
@@ -192,7 +192,7 @@ extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.5-dev-17775"
+    extra["versions.kotlin-native"] = "1.5.20-dev-3553"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
@@ -423,14 +423,19 @@ allprojects {
     repositories {
         kotlinBuildLocalRepo(project)
         mirrorRepo?.let(::maven)
-        jcenter()
-        maven(protobufRepo)
-        maven(intellijRepo)
-        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
-        maven("https://jetbrains.bintray.com/intellij-third-party-dependencies")
-        maven("https://dl.google.com/dl/android/maven2")
-        bootstrapKotlinRepo?.let(::maven)
+
         internalBootstrapRepo?.let(::maven)
+        bootstrapKotlinRepo?.let(::maven)
+        maven(protobufRepo)
+
+        maven(intellijRepo)
+
+        mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-dependencies")
+        maven("https://dl.google.com/dl/android/maven2")
+        maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
+
+        jcenter()
     }
 
     configureJvmProject(javaHome!!, jvmTarget!!)
@@ -809,7 +814,6 @@ tasks {
         dependsOn("dist")
         dependsOn(
             ":idea:idea-maven:test",
-            ":j2k:test",
             ":nj2k:test",
             ":idea:jvm-debugger:jvm-debugger-core:test",
             ":idea:jvm-debugger:jvm-debugger-evaluation:test",

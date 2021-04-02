@@ -16,19 +16,17 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.idea.core.withRootPrefixIfNeeded
-import org.jetbrains.kotlin.idea.frontend.api.HackToForceAllowRunningAnalyzeOnEDT
+import org.jetbrains.kotlin.idea.core.asFqNameWithRootPrefixIfNeeded
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
-import org.jetbrains.kotlin.idea.frontend.api.analyze
+import org.jetbrains.kotlin.idea.frontend.api.analyse
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.addImportToFile
-import org.jetbrains.kotlin.idea.frontend.api.hackyAllowRunningOnEdt
 import org.jetbrains.kotlin.idea.frontend.api.symbols.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtNamedSymbol
+import org.jetbrains.kotlin.idea.frontend.api.tokens.HackToForceAllowRunningAnalyzeOnEDT
+import org.jetbrains.kotlin.idea.frontend.api.tokens.hackyAllowRunningOnEdt
 import org.jetbrains.kotlin.idea.frontend.api.types.KtFunctionalType
 import org.jetbrains.kotlin.lexer.KtTokens
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.*
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtTypeArgumentList
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
@@ -57,8 +55,8 @@ internal class KotlinFirLookupElementFactory {
 
 private sealed class CallableImportStrategy {
     object DoNothing : CallableImportStrategy()
-    data class AddImport(val nameToImport: FqName) : CallableImportStrategy()
-    data class InsertFqNameAndShorten(val fqName: FqName) : CallableImportStrategy()
+    data class AddImport(val nameToImport: CallableId) : CallableImportStrategy()
+    data class InsertFqNameAndShorten(val callableId: CallableId) : CallableImportStrategy()
 }
 
 /**
@@ -94,7 +92,8 @@ private data class VariableLookupObject(
 
 private class ClassLookupElementFactory {
     fun createLookup(symbol: KtClassLikeSymbol): LookupElementBuilder {
-        return LookupElementBuilder.create(ClassifierLookupObject(symbol.name, symbol.classIdIfNonLocal), symbol.name.asString())
+        val name = symbol.nameOrAnonymous
+        return LookupElementBuilder.create(ClassifierLookupObject(name, symbol.classIdIfNonLocal), name.asString())
             .withInsertHandler(ClassifierInsertionHandler)
     }
 }
@@ -305,7 +304,7 @@ private object FunctionInsertionHandler : QuotedNamesAwareInsertionHandler() {
             context.document.replaceString(
                 context.startOffset,
                 context.tailOffset,
-                importStrategy.fqName.withRootPrefixIfNeeded().render()
+                importStrategy.callableId.asFqNameWithRootPrefixIfNeeded().render()
             )
             context.commitDocument()
 
@@ -338,7 +337,7 @@ private object VariableInsertionHandler : InsertHandler<LookupElement> {
                 context.document.replaceString(
                     context.startOffset,
                     context.tailOffset,
-                    importStrategy.fqName.withRootPrefixIfNeeded().render()
+                    importStrategy.callableId.asFqNameWithRootPrefixIfNeeded().render()
                 )
 
                 context.commitDocument()
@@ -364,22 +363,22 @@ private open class QuotedNamesAwareInsertionHandler : InsertHandler<LookupElemen
     }
 }
 
-private fun addCallableImportIfRequired(targetFile: KtFile, nameToImport: FqName) {
+private fun addCallableImportIfRequired(targetFile: KtFile, nameToImport: CallableId) {
     if (!alreadyHasImport(targetFile, nameToImport)) {
         addImportToFile(targetFile.project, targetFile, nameToImport)
     }
 }
 
-private fun alreadyHasImport(file: KtFile, nameToImport: FqName): Boolean {
-    if (file.importDirectives.any { it.importPath?.fqName == nameToImport }) return true
+private fun alreadyHasImport(file: KtFile, nameToImport: CallableId): Boolean {
+    if (file.importDirectives.any { it.importPath?.fqName == nameToImport.asSingleFqName() }) return true
 
     withAllowedResolve {
-        analyze(file) {
+        analyse(file) {
             val scopes = file.getScopeContextForFile().scopes
-            if (!scopes.containsName(nameToImport.shortName())) return false
+            if (!scopes.containsName(nameToImport.callableName)) return false
 
             return scopes
-                .getCallableSymbols { it == nameToImport.shortName() }
+                .getCallableSymbols { it == nameToImport.callableName }
                 .any {
                     it is KtKotlinPropertySymbol && it.callableIdIfNonLocal == nameToImport ||
                             it is KtFunctionSymbol && it.callableIdIfNonLocal == nameToImport
@@ -392,7 +391,7 @@ private object ShortNamesRenderer {
     fun KtAnalysisSession.renderFunctionParameters(function: KtFunctionSymbol): String =
         function.valueParameters.joinToString(", ", "(", ")") { renderFunctionParameter(it) }
 
-    private fun KtAnalysisSession.renderFunctionParameter(param: KtFunctionParameterSymbol): String =
+    private fun KtAnalysisSession.renderFunctionParameter(param: KtValueParameterSymbol): String =
         "${if (param.isVararg) "vararg " else ""}${param.name.asString()}: ${param.annotatedType.type.render()}"
 }
 
@@ -413,7 +412,7 @@ private fun CharSequence.indexOfSkippingSpace(c: Char, startIndex: Int): Int? {
 
 private fun shortenReferences(targetFile: KtFile, textRange: TextRange) {
     val shortenings = withAllowedResolve {
-        analyze(targetFile) {
+        analyse(targetFile) {
             collectPossibleReferenceShortenings(targetFile, textRange)
         }
     }

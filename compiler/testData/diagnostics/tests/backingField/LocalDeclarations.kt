@@ -1,4 +1,3 @@
-// FIR_IDENTICAL
 // !LANGUAGE: +RestrictionOfValReassignmentViaBackingField
 
 class Outer {

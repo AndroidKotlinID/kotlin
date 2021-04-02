@@ -5,9 +5,11 @@
 
 package org.jetbrains.kotlin.fir.session
 
+import com.intellij.psi.PsiFile
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.analysis.CheckersComponent
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirNameConflictsTracker
 import org.jetbrains.kotlin.fir.caches.FirCachesFactory
 import org.jetbrains.kotlin.fir.caches.FirThreadUnsafeCachesFactory
 import org.jetbrains.kotlin.fir.extensions.FirExtensionService
@@ -25,6 +27,7 @@ import org.jetbrains.kotlin.fir.resolve.providers.impl.FirTypeResolverImpl
 import org.jetbrains.kotlin.fir.resolve.transformers.plugin.GeneratedClassIndex
 import org.jetbrains.kotlin.fir.scopes.impl.FirDeclaredMemberScopeProvider
 import org.jetbrains.kotlin.fir.types.FirCorrespondingSupertypesCache
+import org.jetbrains.kotlin.incremental.components.LookupTracker
 
 // -------------------------- Required components --------------------------
 
@@ -55,10 +58,21 @@ fun FirSession.registerThreadUnsafeCaches() {
  * Resolve components which are same on all platforms
  */
 @OptIn(SessionConfiguration::class)
-fun FirSession.registerResolveComponents() {
+fun FirSession.registerResolveComponents(lookupTracker: LookupTracker? = null) {
     register(FirQualifierResolver::class, FirQualifierResolverImpl(this))
     register(FirTypeResolver::class, FirTypeResolverImpl(this))
     register(CheckersComponent::class, CheckersComponent())
+    register(FirNameConflictsTrackerComponent::class, FirNameConflictsTracker())
+    if (lookupTracker != null) {
+        val firFileToPath: (FirSourceElement) -> String = {
+            val psiSource = (it as? FirPsiSourceElement<*>) ?: TODO("Not implemented for non-FirPsiSourceElement")
+            ((psiSource.psi as? PsiFile) ?: psiSource.psi.containingFile).virtualFile.path
+        }
+        register(
+            FirLookupTrackerComponent::class,
+            IncrementalPassThroughLookupTrackerComponent(lookupTracker, firFileToPath)
+        )
+    }
 }
 
 /*

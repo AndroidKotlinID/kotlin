@@ -92,9 +92,11 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
 
     inline fun <T> withCapturedTypeParameters(block: () -> T): T {
         val previous = context.capturedTypeParameters
-        val result = block()
-        context.capturedTypeParameters = previous
-        return result
+        return try {
+            block()
+        } finally {
+            context.capturedTypeParameters = previous
+        }
     }
 
     fun addCapturedTypeParameters(typeParameters: List<FirTypeParameterRef>) {
@@ -133,8 +135,8 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
 
 
     /**** Function utils ****/
-    fun <T> MutableList<T>.removeLast() {
-        removeAt(size - 1)
+    fun <T> MutableList<T>.removeLast(): T {
+        return removeAt(size - 1)
     }
 
     fun <T> MutableList<T>.pop(): T? {
@@ -191,17 +193,17 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
     }
 
     fun T?.toDelegatedSelfType(firClass: FirRegularClassBuilder): FirResolvedTypeRef =
-        toDelegatedSelfType(firClass, firClass.symbol)
+        toDelegatedSelfType(firClass.typeParameters, firClass.symbol)
 
     fun T?.toDelegatedSelfType(firObject: FirAnonymousObjectBuilder): FirResolvedTypeRef =
-        toDelegatedSelfType(firObject, firObject.symbol)
+        toDelegatedSelfType(firObject.typeParameters, firObject.symbol)
 
-    private fun T?.toDelegatedSelfType(firClass: FirClassBuilder, symbol: FirClassLikeSymbol<*>): FirResolvedTypeRef {
+    protected fun T?.toDelegatedSelfType(typeParameters: List<FirTypeParameterRef>, symbol: FirClassLikeSymbol<*>): FirResolvedTypeRef {
         return buildResolvedTypeRef {
             source = this@toDelegatedSelfType?.toFirSourceElement(FirFakeSourceElementKind.ClassSelfTypeRef)
             type = ConeClassLikeTypeImpl(
                 symbol.toLookupTag(),
-                firClass.typeParameters.map { ConeTypeParameterTypeImpl(it.symbol.toLookupTag(), false) }.toTypedArray(),
+                typeParameters.map { ConeTypeParameterTypeImpl(it.symbol.toLookupTag(), false) }.toTypedArray(),
                 false
             )
         }
@@ -214,13 +216,20 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         }
     }
 
-    fun FirLoopBuilder.configure(generateBlock: () -> FirBlock): FirLoop {
+    fun FirLoopBuilder.prepareTarget(): FirLoopTarget {
         label = context.firLabels.pop()
         val target = FirLoopTarget(label?.name)
         context.firLoopTargets += target
+        return target
+    }
+
+    fun FirLoopBuilder.configure(target: FirLoopTarget, generateBlock: () -> FirBlock): FirLoop {
         block = generateBlock()
         val loop = build()
-        context.firLoopTargets.removeLast()
+        val stackTopTarget = context.firLoopTargets.removeLast()
+        assert(target == stackTopTarget) {
+            "Loop target preparation and loop configuration mismatch"
+        }
         target.bind(loop)
         return loop
     }
@@ -1136,6 +1145,11 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 }
             )
         }
+    }
+
+    protected fun FirCallableDeclaration<*>.initContainingClassAttr() {
+        val currentDispatchReceiverType = currentDispatchReceiverType() ?: return
+        containingClassAttr = currentDispatchReceiverType.lookupTag
     }
 
     private fun FirVariable<*>.toQualifiedAccess(): FirQualifiedAccessExpression = buildQualifiedAccessExpression {

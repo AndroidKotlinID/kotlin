@@ -2975,6 +2975,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 }
 
                 @Test
+                @TestMetadata("backingField.kt")
+                public void testBackingField() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/property/backingField.kt");
+                }
+
+                @Test
                 @TestMetadata("classFromClass.kt")
                 public void testClassFromClass() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/property/classFromClass.kt");
@@ -11766,6 +11772,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("capturedTypesInSelfType.kt")
+            public void testCapturedTypesInSelfType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/capturedTypesInSelfType.kt");
+            }
+
+            @Test
             @TestMetadata("coerceFunctionLiteralToSuspend.kt")
             public void testCoerceFunctionLiteralToSuspend() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/coerceFunctionLiteralToSuspend.kt");
@@ -12189,6 +12201,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("nullableUpperBound.kt")
             public void testNullableUpperBound() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/nullableUpperBound.kt");
+            }
+
+            @Test
+            @TestMetadata("onlyInputTypesWithMultilevelIncorporation.kt")
+            public void testOnlyInputTypesWithMultilevelIncorporation() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/onlyInputTypesWithMultilevelIncorporation.kt");
             }
 
             @Test
@@ -18287,6 +18305,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 public void testExpectActualInlineClass() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/multiplatform/inlineClasses/expectActualInlineClass.kt");
                 }
+
+                @Test
+                @TestMetadata("jvmInlineExpectValueClass.kt")
+                public void testJvmInlineExpectValueClass() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/inlineClasses/jvmInlineExpectValueClass.kt");
+                }
             }
 
             @Nested
@@ -19412,6 +19436,24 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("kt45503_1.kt")
+            public void testKt45503_1() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/operatorsOverloading/kt45503_1.kt");
+            }
+
+            @Test
+            @TestMetadata("kt45503_2.kt")
+            public void testKt45503_2() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/operatorsOverloading/kt45503_2.kt");
+            }
+
+            @Test
+            @TestMetadata("kt45503_3.kt")
+            public void testKt45503_3() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/operatorsOverloading/kt45503_3.kt");
+            }
+
+            @Test
             @TestMetadata("plusAssignOnArray.kt")
             public void testPlusAssignOnArray() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/operatorsOverloading/plusAssignOnArray.kt");
@@ -19427,6 +19469,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("plusAssignOnProperty.kt")
             public void testPlusAssignOnProperty() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/operatorsOverloading/plusAssignOnProperty.kt");
+            }
+
+            @Test
+            @TestMetadata("plusAssignOnVarAndCollections.kt")
+            public void testPlusAssignOnVarAndCollections() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/operatorsOverloading/plusAssignOnVarAndCollections.kt");
             }
         }
 
@@ -29684,12 +29732,6 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
-            @TestMetadata("unsignedLiteralsOn1_2.kt")
-            public void testUnsignedLiteralsOn1_2() throws Exception {
-                runTest("compiler/testData/diagnostics/tests/unsignedTypes/unsignedLiteralsOn1_2.kt");
-            }
-
-            @Test
             @TestMetadata("unsignedLiteralsOverflowSignedBorder.kt")
             public void testUnsignedLiteralsOverflowSignedBorder() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/unsignedTypes/unsignedLiteralsOverflowSignedBorder.kt");
@@ -33703,12 +33745,6 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("experimentalOnWholeModule.kt")
             public void testExperimentalOnWholeModule() throws Exception {
                 runTest("compiler/testData/diagnostics/testsWithStdLib/experimental/experimentalOnWholeModule.kt");
-            }
-
-            @Test
-            @TestMetadata("experimentalUnsignedLiterals.kt")
-            public void testExperimentalUnsignedLiterals() throws Exception {
-                runTest("compiler/testData/diagnostics/testsWithStdLib/experimental/experimentalUnsignedLiterals.kt");
             }
 
             @Test

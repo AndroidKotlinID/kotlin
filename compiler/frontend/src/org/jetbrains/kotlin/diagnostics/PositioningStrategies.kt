@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.cfg.UnreachableCode
 import org.jetbrains.kotlin.diagnostics.Errors.ACTUAL_WITHOUT_EXPECT
 import org.jetbrains.kotlin.diagnostics.Errors.NO_ACTUAL_FOR_EXPECT
-import org.jetbrains.kotlin.diagnostics.PositioningStrategies.INNER_MODIFIER
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.lexer.KtTokens.MODALITY_MODIFIERS
@@ -637,10 +636,10 @@ object PositioningStrategies {
     val SECONDARY_CONSTRUCTOR_DELEGATION_CALL: PositioningStrategy<PsiElement> =
         object : PositioningStrategy<PsiElement>() {
             override fun mark(element: PsiElement): List<TextRange> {
-                when (element) {
+                return when (element) {
                     is KtSecondaryConstructor -> {
                         val valueParameterList = element.valueParameterList ?: return markElement(element)
-                        return markRange(element.getConstructorKeyword(), valueParameterList.lastChild)
+                        markRange(element.getConstructorKeyword(), valueParameterList.lastChild)
                     }
                     is KtConstructorDelegationCall -> {
                         if (element.isImplicit) {
@@ -650,9 +649,9 @@ object PositioningStrategies {
                             val valueParameterList = constructor.valueParameterList ?: return markElement(constructor)
                             return markRange(constructor.getConstructorKeyword(), valueParameterList.lastChild)
                         }
-                        return markElement(element.calleeExpression ?: element)
+                        markElement(element.calleeExpression ?: element)
                     }
-                    else -> error("unexpected element $element")
+                    else -> markElement(element)
                 }
             }
         }
@@ -730,7 +729,8 @@ object PositioningStrategies {
                     return mark(element.operationTokenNode.psi)
                 }
             }
-            return super.mark(element)
+            // Fallback to mark the callee reference.
+            return REFERENCE_BY_QUALIFIED.mark(element)
         }
     }
 
@@ -745,19 +745,45 @@ object PositioningStrategies {
         }
     }
 
-    val REFERENCE_BY_QUALIFIED: PositioningStrategy<PsiElement> = object : PositioningStrategy<PsiElement>() {
+    val REFERENCE_BY_QUALIFIED: PositioningStrategy<PsiElement> = FindReferencePositioningStrategy(false)
+    val REFERENCED_NAME_BY_QUALIFIED: PositioningStrategy<PsiElement> = FindReferencePositioningStrategy(true)
+
+    /**
+     * @param locateReferencedName whether to remove any nested parentheses while locating the reference element. This is useful for
+     * diagnostics on super and unresolved references. For example, with the following, only the part inside the parentheses should be
+     * highlighted.
+     *
+     * ```
+     * fun foo() {
+     *   (super)()
+     *    ^^^^^
+     *   (random123)()
+     *    ^^^^^^^^^
+     * }
+     * ```
+     */
+    class FindReferencePositioningStrategy(val locateReferencedName: Boolean) : PositioningStrategy<PsiElement>() {
         override fun mark(element: PsiElement): List<TextRange> {
-            when (element) {
+            var result: PsiElement = when (element) {
                 is KtQualifiedExpression -> {
                     when (val selectorExpression = element.selectorExpression) {
-                        is KtCallExpression -> return mark(selectorExpression.calleeExpression ?: selectorExpression)
-                        is KtReferenceExpression -> return mark(selectorExpression)
+                        is KtCallExpression -> selectorExpression.calleeExpression ?: selectorExpression
+                        is KtReferenceExpression -> selectorExpression
+                        else -> element
                     }
                 }
-                is KtCallExpression -> return mark(element.calleeExpression ?: element)
-                is KtConstructorDelegationCall -> return mark(element.calleeExpression ?: element)
+                is KtCallableReferenceExpression -> element.callableReference
+                is KtCallExpression -> element.calleeExpression ?: element
+                is KtConstructorDelegationCall -> element.calleeExpression ?: element
+                is KtSuperTypeCallEntry -> element.calleeExpression
+                is KtOperationExpression -> element.operationReference
+                is KtWhenConditionInRange -> element.operationReference
+                else -> element
             }
-            return super.mark(element)
+            while (locateReferencedName && result is KtParenthesizedExpression) {
+                result = result.expression ?: break
+            }
+            return super.mark(result)
         }
     }
 }

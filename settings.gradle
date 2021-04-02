@@ -253,6 +253,7 @@ include ":benchmarks",
         ":kotlin-gradle-plugin-model",
         ":kotlin-gradle-plugin-test-utils-embeddable",
         ":kotlin-gradle-plugin-integration-tests",
+        ":kotlin-tooling-metadata",
         ":kotlin-allopen",
         ":kotlin-noarg",
         ":kotlin-sam-with-receiver",
@@ -301,7 +302,6 @@ include ":benchmarks",
         ":pill:generate-all-tests",
         ":libraries:kotlin-prepush-hook",
         ":libraries:tools:mutability-annotations-compat",
-        ":include:kotlin-compiler",
         ":plugins:jvm-abi-gen",
         ":plugins:jvm-abi-gen-embeddable",
         ":test-instrumenter",
@@ -418,8 +418,6 @@ if (buildProperties.inJpsBuildIdeaSync) {
             ":tools:binary-compatibility-validator",
             ":tools:kotlin-stdlib-gen",
 
-            ":include:kotlin-stdlib-common-sources",
-
             ":kotlin-test",
             ":kotlin-test:kotlin-test-js",
             ":kotlin-test:kotlin-test-js-ir",
@@ -523,6 +521,7 @@ project(':kotlin-gradle-plugin').projectDir = "$rootDir/libraries/tools/kotlin-g
 project(':kotlin-gradle-plugin-model').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin-model" as File
 project(':kotlin-gradle-plugin-test-utils-embeddable').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin-test-utils-embeddable" as File
 project(':kotlin-gradle-plugin-integration-tests').projectDir = "$rootDir/libraries/tools/kotlin-gradle-plugin-integration-tests" as File
+project(':kotlin-tooling-metadata').projectDir = "$rootDir/libraries/tools/kotlin-tooling-metadata" as File
 project(':kotlin-allopen').projectDir = "$rootDir/libraries/tools/kotlin-allopen" as File
 project(':kotlin-noarg').projectDir = "$rootDir/libraries/tools/kotlin-noarg" as File
 project(':kotlin-sam-with-receiver').projectDir = "$rootDir/libraries/tools/kotlin-sam-with-receiver" as File

@@ -14,9 +14,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.toFirDiagnostics
 import org.jetbrains.kotlin.fir.declarations.FirErrorFunction
 import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
-import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
-import org.jetbrains.kotlin.fir.expressions.FirErrorLoop
-import org.jetbrains.kotlin.fir.expressions.FirErrorResolvedQualifier
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeAmbiguityError
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeInapplicableCandidateError
@@ -35,11 +33,29 @@ class ErrorNodeDiagnosticCollectorComponent(collector: AbstractDiagnosticCollect
     }
 
     override fun visitErrorNamedReference(errorNamedReference: FirErrorNamedReference, data: CheckerContext) {
-        val source = data.qualifiedAccesses.lastOrNull()?.source?.takeIf { it.elementType == KtNodeTypes.DOT_QUALIFIED_EXPRESSION }
-            ?: errorNamedReference.source ?: return
+        val source = errorNamedReference.source ?: return
+        val qualifiedAccess = data.qualifiedAccesses.lastOrNull()?.takeIf {
+            // Use the source of the enclosing FirQualifiedAccessExpression if it is exactly the call to the erroneous callee.
+            it is FirQualifiedAccessExpression && it.calleeReference == errorNamedReference
+        }
         // Don't report duplicated unresolved reference on annotation entry (already reported on its type)
         if (source.elementType == KtNodeTypes.ANNOTATION_ENTRY && errorNamedReference.diagnostic is ConeUnresolvedNameError) return
-        reportFirDiagnostic(errorNamedReference.diagnostic, source, reporter, data)
+        // Already reported in FirConventionFunctionCallChecker
+        if (source.kind == FirFakeSourceElementKind.ArrayAccessNameReference &&
+            errorNamedReference.diagnostic is ConeUnresolvedNameError
+        ) return
+
+        // If the receiver cannot be resolved, we skip reporting any further problems for this call.
+        if (qualifiedAccess?.dispatchReceiver.hasUnresolvedNameError() || qualifiedAccess?.extensionReceiver.hasUnresolvedNameError() || qualifiedAccess?.explicitReceiver.hasUnresolvedNameError()) return
+
+        reportFirDiagnostic(errorNamedReference.diagnostic, source, reporter, data, qualifiedAccess?.source)
+    }
+
+    private fun FirExpression?.hasUnresolvedNameError(): Boolean {
+        return when ((this?.typeRef as? FirErrorTypeRef)?.diagnostic) {
+            is ConeUnresolvedNameError -> true
+            else -> false
+        }
     }
 
     override fun visitErrorExpression(errorExpression: FirErrorExpression, data: CheckerContext) {
@@ -61,7 +77,8 @@ class ErrorNodeDiagnosticCollectorComponent(collector: AbstractDiagnosticCollect
         diagnostic: ConeDiagnostic,
         source: FirSourceElement,
         reporter: DiagnosticReporter,
-        context: CheckerContext
+        context: CheckerContext,
+        qualifiedAccessSource: FirSourceElement? = null
     ) {
         // Will be handled by [FirDestructuringDeclarationChecker]
         if (source.elementType == KtNodeTypes.DESTRUCTURING_DECLARATION_ENTRY) {
@@ -77,7 +94,7 @@ class ErrorNodeDiagnosticCollectorComponent(collector: AbstractDiagnosticCollect
         if (source.kind == FirFakeSourceElementKind.ImplicitConstructor) {
             return
         }
-        for (coneDiagnostic in diagnostic.toFirDiagnostics(source)) {
+        for (coneDiagnostic in diagnostic.toFirDiagnostics(source, qualifiedAccessSource)) {
             reporter.report(coneDiagnostic, context)
         }
     }

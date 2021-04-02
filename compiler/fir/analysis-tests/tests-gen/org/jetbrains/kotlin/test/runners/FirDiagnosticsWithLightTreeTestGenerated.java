@@ -1071,6 +1071,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             public void testConstValNotTopLevelOrObject() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/constVal/constValNotTopLevelOrObject.kt");
             }
+
+            @Test
+            @TestMetadata("constValWithGetterOrDelegate.kt")
+            public void testConstValWithGetterOrDelegate() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/constVal/constValWithGetterOrDelegate.kt");
+            }
         }
 
         @Nested
@@ -3028,6 +3034,18 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             }
 
             @Test
+            @TestMetadata("doubleGenericDiamond.kt")
+            public void testDoubleGenericDiamond() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/problems/doubleGenericDiamond.kt");
+            }
+
+            @Test
+            @TestMetadata("falseIntersection.kt")
+            public void testFalseIntersection() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/problems/falseIntersection.kt");
+            }
+
+            @Test
             @TestMetadata("flexibleTypeVarAgainstNull.kt")
             public void testFlexibleTypeVarAgainstNull() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/problems/flexibleTypeVarAgainstNull.kt");
@@ -3091,6 +3109,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @TestMetadata("secondaryConstructorCfg.kt")
             public void testSecondaryConstructorCfg() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/problems/secondaryConstructorCfg.kt");
+            }
+
+            @Test
+            @TestMetadata("transform.kt")
+            public void testTransform() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/problems/transform.kt");
             }
         }
 
@@ -5217,6 +5241,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @TestMetadata("KJKComplexHierarchyNestedLoop.kt")
             public void testKJKComplexHierarchyNestedLoop() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/KJKComplexHierarchyNestedLoop.kt");
+            }
+
+            @Test
+            @TestMetadata("lightMember.kt")
+            public void testLightMember() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems/lightMember.kt");
             }
 
             @Test

@@ -68,12 +68,10 @@ internal class NativeKlibCommonize(options: Collection<Option<*>>) : Task(option
         }
 
         LibraryCommonizer(
-            konanDistribution = distribution,
+            commonTarget = outputCommonizerTarget,
             repository = repository,
-            dependencies = KonanDistributionRepository(distribution, commonizerTargets.toSet(), libraryLoader) +
+            dependencies = StdlibRepository(distribution, libraryLoader) +
                     FilesRepository(dependencyLibraries.toSet(), libraryLoader),
-            libraryLoader = libraryLoader,
-            targets = commonizerTargets,
             resultsConsumer = resultsConsumer,
             statsCollector = statsCollector,
             progressLogger = progressLogger
@@ -121,11 +119,9 @@ internal class NativeDistributionCommonize(options: Collection<Option<*>>) : Tas
         println(description)
 
         LibraryCommonizer(
+            commonTarget = SharedCommonizerTarget(commonizerTargets.toSet()),
             repository = repository,
-            konanDistribution = distribution,
-            dependencies = EmptyRepository,
-            libraryLoader = libraryLoader,
-            targets = commonizerTargets,
+            dependencies = StdlibRepository(distribution, libraryLoader),
             resultsConsumer = resultsConsumer,
             statsCollector = statsCollector,
             progressLogger = progressLogger

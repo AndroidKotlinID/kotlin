@@ -39,6 +39,8 @@ import org.jetbrains.kotlin.gradle.tasks.KOTLIN_COMPILER_EMBEDDABLE
 import org.jetbrains.kotlin.gradle.tasks.KOTLIN_KLIB_COMMONIZER_EMBEDDABLE
 import org.jetbrains.kotlin.gradle.tasks.KOTLIN_MODULE_GROUP
 import org.jetbrains.kotlin.gradle.testing.internal.KotlinTestsRegistry
+import org.jetbrains.kotlin.gradle.tooling.BuildKotlinToolingMetadataTask
+import org.jetbrains.kotlin.gradle.tooling.buildKotlinToolingMetadataTask
 import org.jetbrains.kotlin.gradle.utils.checkGradleCompatibility
 import org.jetbrains.kotlin.gradle.utils.loadPropertyFromResources
 import org.jetbrains.kotlin.statistics.metrics.StringMetrics
@@ -98,6 +100,8 @@ abstract class KotlinBasePluginWrapper : Plugin<Project> {
         plugin.apply(project)
 
         project.addNpmDependencyExtension()
+
+        project.buildKotlinToolingMetadataTask
     }
 
     private fun addKotlinCompilerConfiguration(project: Project) {
@@ -210,13 +214,9 @@ open class KotlinJsPluginWrapper @Inject constructor(
 }
 
 open class KotlinMultiplatformPluginWrapper @Inject constructor(
-    private val featurePreviews: FeaturePreviews
 ) : KotlinBasePluginWrapper() {
     override fun getPlugin(project: Project, kotlinGradleBuildServices: KotlinGradleBuildServices): Plugin<Project> =
-        KotlinMultiplatformPlugin(
-            kotlinPluginVersion,
-            featurePreviews
-        )
+        KotlinMultiplatformPlugin(kotlinPluginVersion)
 
     override val projectExtensionClass: KClass<out KotlinMultiplatformExtension>
         get() = KotlinMultiplatformExtension::class

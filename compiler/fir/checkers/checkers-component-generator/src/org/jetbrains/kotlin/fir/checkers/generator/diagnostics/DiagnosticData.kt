@@ -46,9 +46,11 @@ enum class PositioningStrategy(private val strategy: String? = null) {
     INNER_MODIFIER,
     SELECTOR_BY_QUALIFIED,
     REFERENCE_BY_QUALIFIED,
+    REFERENCED_NAME_BY_QUALIFIED,
     PRIVATE_MODIFIER,
     COMPANION_OBJECT,
     CONST_MODIFIER,
+    ARRAY_ACCESS
 
     ;
 

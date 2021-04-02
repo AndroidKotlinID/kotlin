@@ -54,10 +54,8 @@ import org.jetbrains.kotlin.idea.completion.test.weighers.AbstractBasicCompletio
 import org.jetbrains.kotlin.idea.completion.test.weighers.AbstractSmartCompletionWeigherTest
 import org.jetbrains.kotlin.idea.completion.wheigher.AbstractHighLevelWeigherTest
 import org.jetbrains.kotlin.idea.configuration.AbstractGradleConfigureProjectByChangingFileTest
-import org.jetbrains.kotlin.idea.conversion.copy.AbstractJavaToKotlinCopyPasteConversionTest
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralKotlinToKotlinCopyPasteTest
 import org.jetbrains.kotlin.idea.conversion.copy.AbstractLiteralTextToKotlinCopyPasteTest
-import org.jetbrains.kotlin.idea.conversion.copy.AbstractTextJavaToKotlinCopyPasteConversionTest
 import org.jetbrains.kotlin.idea.coverage.AbstractKotlinCoverageOutputFilesTest
 import org.jetbrains.kotlin.idea.debugger.evaluate.AbstractCodeFragmentAutoImportTest
 import org.jetbrains.kotlin.idea.debugger.evaluate.AbstractCodeFragmentCompletionHandlerTest
@@ -153,9 +151,6 @@ import org.jetbrains.kotlin.idea.stubs.AbstractMultiFileHighlightingTest
 import org.jetbrains.kotlin.idea.stubs.AbstractResolveByStubTest
 import org.jetbrains.kotlin.idea.stubs.AbstractStubBuilderTest
 import org.jetbrains.kotlin.incremental.*
-import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterForWebDemoTest
-import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterMultiFileTest
-import org.jetbrains.kotlin.j2k.AbstractJavaToKotlinConverterSingleFileTest
 import org.jetbrains.kotlin.jps.build.*
 import org.jetbrains.kotlin.jps.build.dependeciestxt.actualizeMppJpsIncTestCaseDirs
 import org.jetbrains.kotlin.jps.incremental.AbstractJsProtoComparisonTest
@@ -204,6 +199,7 @@ import org.jetbrains.kotlinx.serialization.idea.AbstractSerializationQuickFixTes
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
     generateTestGroupSuite(args) {
+        val excludedFirTestdataPattern = "^(.+)\\.fir\\.kts?\$"
         testGroup("idea/jvm-debugger/jvm-debugger-test/test", "idea/jvm-debugger/jvm-debugger-test/testData") {
             testClass<AbstractKotlinSteppingTest> {
                 model(
@@ -323,18 +319,18 @@ fun main(args: Array<String>) {
             }
 
             testClass<AbstractKotlinHighlightingPassTest> {
-                model("checker", recursive = false)
-                model("checker/regression")
-                model("checker/recovery")
-                model("checker/rendering")
-                model("checker/scripts", extension = "kts")
-                model("checker/duplicateJvmSignature")
-                model("checker/infos", testMethod = "doTestWithInfos")
-                model("checker/diagnosticsMessage")
+                model("checker", recursive = false, excludedPattern = excludedFirTestdataPattern)
+                model("checker/regression", excludedPattern = excludedFirTestdataPattern)
+                model("checker/recovery", excludedPattern = excludedFirTestdataPattern)
+                model("checker/rendering", excludedPattern = excludedFirTestdataPattern)
+                model("checker/scripts", extension = "kts", excludedPattern = excludedFirTestdataPattern)
+                model("checker/duplicateJvmSignature", excludedPattern = excludedFirTestdataPattern)
+                model("checker/infos", testMethod = "doTestWithInfos", excludedPattern = excludedFirTestdataPattern)
+                model("checker/diagnosticsMessage", excludedPattern = excludedFirTestdataPattern)
             }
 
             testClass<AbstractKotlinHighlightWolfPassTest> {
-                model("checker/wolf")
+                model("checker/wolf", excludedPattern = excludedFirTestdataPattern)
             }
 
             testClass<AbstractJavaAgainstKotlinSourceCheckerTest> {
@@ -724,13 +720,6 @@ fun main(args: Array<String>) {
                 model("dataFlowValueRendering")
             }
 
-            testClass<AbstractJavaToKotlinCopyPasteConversionTest> {
-                model("copyPaste/conversion", pattern = """^([^\.]+)\.java$""")
-            }
-
-            testClass<AbstractTextJavaToKotlinCopyPasteConversionTest> {
-                model("copyPaste/plainTextConversion", pattern = """^([^\.]+)\.txt$""")
-            }
 
             testClass<AbstractLiteralTextToKotlinCopyPasteTest> {
                 model("copyPaste/plainTextLiteral", pattern = """^([^\.]+)\.txt$""")
@@ -1014,28 +1003,24 @@ fun main(args: Array<String>) {
                 model("analysisSession/resolveCall")
             }
 
-            testClass<AbstractSymbolsByPsiBuildingTest> {
-                model("symbolsByPsi")
-            }
-
-            testClass<AbstractSymbolsByFqNameBuildingTest> {
-                model("symbolsByFqName", extension = "txt")
-            }
-
             testClass<AbstractMemberScopeByFqNameTest> {
-                model("memberScopeByFqName", extension = "txt")
+                model("memberScopeByFqName")
             }
 
             testClass<AbstractFileScopeTest> {
                 model("fileScopeTest", extension = "kt")
             }
 
-            testClass<AbstractSymbolFromSourcePointerRestoreTest> {
-                model("symbolPointer", extension = "kt")
+            testClass<AbstractSymbolByPsiTest> {
+                model("symbols/symbolByPsi")
             }
 
-            testClass<AbstractSymbolFromLibraryPointerRestoreTest> {
-                model("resoreSymbolFromLibrary", extension = "txt")
+            testClass<AbstractSymbolByFqNameTest> {
+                model("symbols/symbolByFqName")
+            }
+
+            testClass<AbstractSymbolByReferenceTest> {
+                model("symbols/symbolByReference")
             }
 
             testClass<AbstractMemoryLeakInSymbolsTest> {
@@ -1066,6 +1051,12 @@ fun main(args: Array<String>) {
 
             testClass<AbstractFirLazyResolveTest> {
                 model("fir/lazyResolve", extension = "test", singleClass = true, filenameStartsLowerCase = true)
+            }
+        }
+
+        testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "compiler/fir/raw-fir/psi2fir/testData") {
+            testClass<AbstractFirLazyBodiesCalculatorTest> {
+                model("rawBuilder", testMethod = "doTest")
             }
         }
 
@@ -1124,21 +1115,23 @@ fun main(args: Array<String>) {
             }
 
             testClass<AbstractFirKotlinHighlightingPassTest> {
-                model("checker", recursive = false)
-                model("checker/regression")
-                model("checker/recovery")
-                model("checker/rendering")
-                model("checker/infos")
-                model("checker/diagnosticsMessage")
+                model("checker", recursive = false, excludedPattern = excludedFirTestdataPattern)
+                model("checker/regression", excludedPattern = excludedFirTestdataPattern)
+                model("checker/recovery", excludedPattern = excludedFirTestdataPattern)
+                model("checker/rendering", excludedPattern = excludedFirTestdataPattern)
+                model("checker/infos", excludedPattern = excludedFirTestdataPattern)
+                model("checker/diagnosticsMessage", excludedPattern = excludedFirTestdataPattern)
             }
 
 
             testClass<AbstractHighLevelQuickFixTest> {
                 val pattern = "^([\\w\\-_]+)\\.kt$"
                 model("quickfix/abstract", pattern = pattern, filenameStartsLowerCase = true)
+                model("quickfix/expressions", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/lateinit", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/modifiers", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/override/typeMismatchOnOverride", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
+                model("quickfix/replaceWithSafeCall", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/variables/changeMutability", pattern = pattern, filenameStartsLowerCase = true)
             }
 
@@ -1465,21 +1458,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        testGroup("j2k/tests", "j2k/testData") {
-            testClass<AbstractJavaToKotlinConverterSingleFileTest> {
-                model("fileOrElement", extension = "java")
-            }
-        }
-        testGroup("j2k/tests", "j2k/testData") {
-            testClass<AbstractJavaToKotlinConverterMultiFileTest> {
-                model("multiFile", extension = null, recursive = false)
-            }
-        }
-        testGroup("j2k/tests", "j2k/testData") {
-            testClass<AbstractJavaToKotlinConverterForWebDemoTest> {
-                model("fileOrElement", extension = "java")
-            }
-        }
 
         testGroup("nj2k/tests", "nj2k/testData") {
             testClass<AbstractNewJavaToKotlinConverterSingleFileTest> {
@@ -1589,6 +1567,7 @@ fun main(args: Array<String>) {
             }
             testClass<AbstractIncrementalJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
             testClass<AbstractIncrementalJvmOldBackendCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM))
+            testClass<AbstractIncrementalFirJvmCompilerRunnerTest>(init = incrementalJvmTestData(TargetBackend.JVM_IR))
 
             testClass<AbstractIncrementalJsCompilerRunnerTest> {
                 model("incremental/pureKotlin", extension = null, recursive = false)

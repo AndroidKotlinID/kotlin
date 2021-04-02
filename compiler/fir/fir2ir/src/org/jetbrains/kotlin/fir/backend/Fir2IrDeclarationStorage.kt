@@ -95,7 +95,7 @@ class Fir2IrDeclarationStorage(
     private val fakeOverridesInClass = mutableMapOf<IrClass, MutableMap<FirCallableDeclaration<*>, FirCallableDeclaration<*>>>()
 
     // For pure fields (from Java) only
-    private val fieldToPropertyCache = ConcurrentHashMap<FirField, IrProperty>()
+    private val fieldToPropertyCache = ConcurrentHashMap<Pair<FirField, IrDeclarationParent>, IrProperty>()
 
     private val delegatedReverseCache = ConcurrentHashMap<IrDeclaration, FirDeclaration>()
 
@@ -447,6 +447,12 @@ class Fir2IrDeclarationStorage(
             isLambda -> IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
             function.symbol.callableId.isKFunctionInvoke() -> IrDeclarationOrigin.FAKE_OVERRIDE
             simpleFunction?.isStatic == true && simpleFunction.name in ENUM_SYNTHETIC_NAMES -> IrDeclarationOrigin.ENUM_CLASS_SPECIAL_MEMBER
+
+            // Kotlin built-in class and Java originated method (Collection.forEach, etc.)
+            // It's necessary to understand that such methods do not belong to DefaultImpls but actually generated as default
+            // See org.jetbrains.kotlin.backend.jvm.lower.InheritedDefaultMethodsOnClassesLoweringKt.isDefinitelyNotDefaultImplsMethod
+            (irParent as? IrClass)?.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB &&
+                    function.origin == FirDeclarationOrigin.Enhancement -> IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
             else -> origin
         }
         classifierStorage.preCacheTypeParameters(function)
@@ -719,9 +725,13 @@ class Fir2IrDeclarationStorage(
         field: FirField,
         irParent: IrDeclarationParent
     ): IrProperty {
-        fieldToPropertyCache[field]?.let { return it }
-        return createIrProperty(field.toStubProperty(), irParent).apply {
-            fieldToPropertyCache[field] = this
+        return fieldToPropertyCache.getOrPut(field to irParent) {
+            val containingClassId = (irParent as? IrClass)?.classId
+            createIrProperty(
+                field.toStubProperty(),
+                irParent,
+                containingClass = containingClassId?.let { ConeClassLikeLookupTagImpl(it) }
+            )
         }
     }
 

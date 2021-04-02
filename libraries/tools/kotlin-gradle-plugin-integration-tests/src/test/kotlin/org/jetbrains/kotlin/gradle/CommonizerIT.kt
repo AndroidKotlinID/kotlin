@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.gradle
 
 import org.gradle.internal.os.OperatingSystem
-import org.jetbrains.kotlin.gradle.internals.DISABLED_NATIVE_TARGETS_REPORTER_DISABLE_WARNING_PROPERTY_NAME
 import org.jetbrains.kotlin.gradle.internals.DISABLED_NATIVE_TARGETS_REPORTER_WARNING_PREFIX
 import org.jetbrains.kotlin.incremental.testingUtils.assertEqualDirectories
 import kotlin.test.Test
@@ -202,6 +201,27 @@ class CommonizerIT : BaseGradleIT() {
                 assertTasksUpToDate(":cinteropSqliteTargetB")
                 assertTasksUpToDate(":cinteropCurlTargetA")
                 assertTasksUpToDate(":cinteropCurlTargetB")
+                assertTasksUpToDate(":commonizeCInterop")
+            }
+        }
+    }
+
+    @Test
+    fun `test commonizeInterop using posix APIs`() {
+        with(preparedProject("commonizeInteropUsingPosixApis")) {
+            build(":commonizeCInterop") {
+                assertSuccessful()
+                assertTasksExecuted(":cinteropWithPosixTargetA")
+                assertTasksExecuted(":cinteropWithPosixTargetB")
+                assertTasksExecuted(":commonizeNativeDistribution")
+                assertTasksExecuted(":commonizeCInterop")
+            }
+
+            build(":compileNativeMainKotlinMetadata") {
+                assertSuccessful()
+                assertTasksUpToDate(":cinteropWithPosixTargetA")
+                assertTasksUpToDate(":cinteropWithPosixTargetB")
+                assertTasksUpToDate(":commonizeNativeDistribution")
                 assertTasksUpToDate(":commonizeCInterop")
             }
         }

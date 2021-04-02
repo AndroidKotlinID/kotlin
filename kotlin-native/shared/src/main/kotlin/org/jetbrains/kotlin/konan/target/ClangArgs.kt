@@ -43,7 +43,8 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
     private val binDir = when (HostManager.host) {
         KonanTarget.LINUX_X64 -> "$absoluteTargetToolchain/bin"
         KonanTarget.MINGW_X64 -> "$absoluteTargetToolchain/bin"
-        KonanTarget.MACOS_X64 -> "$absoluteTargetToolchain/usr/bin"
+        KonanTarget.MACOS_X64,
+        KonanTarget.MACOS_ARM64 -> "$absoluteTargetToolchain/usr/bin"
         else -> throw TargetSupportException("Unexpected host platform")
     }
     // TODO: Use buildList
@@ -54,6 +55,24 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
         }
         if (configurables is TargetableConfigurables) {
             add(listOf("-target", configurables.targetArg!!))
+        }
+        if (configurables is AppleConfigurables) {
+            val arch = when (target) {
+                // TODO: LLVM 8 doesn't support arm64_32.
+                //  We can use armv7k because they are compatible at bitcode level.
+                KonanTarget.WATCHOS_ARM64 -> "armv7k"
+                else -> configurables.arch
+            }
+            add(listOf("-arch", arch))
+            add(listOf("-stdlib=libc++"))
+            val osVersionMin = when (target) {
+                // Here we workaround Clang 8 limitation: macOS major version should be 10.
+                // So we compile runtime with version 10.16 and then override version in BitcodeCompiler.
+                // TODO: Fix with LLVM Update.
+                KonanTarget.MACOS_ARM64 -> "10.16"
+                else -> configurables.osVersionMin
+            }
+            add(listOf("${configurables.osVersionMinFlagClang}=$osVersionMin"))
         }
         val hasCustomSysroot = configurables is ZephyrConfigurables
                 || configurables is WasmConfigurables
@@ -75,78 +94,9 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
         }
     }.flatten()
 
-    private val osVersionMin: String
-            get() {
-                require(configurables is AppleConfigurables)
-                return configurables.osVersionMin
-            }
-
     private val specificClangArgs: List<String> = when (target) {
-        KonanTarget.LINUX_X64, 
-        KonanTarget.LINUX_MIPS32, KonanTarget.LINUX_MIPSEL32,
-        KonanTarget.LINUX_ARM64,
-        KonanTarget.MINGW_X64, KonanTarget.MINGW_X86 -> emptyList()
-
         KonanTarget.LINUX_ARM32_HFP -> listOf(
                 "-mfpu=vfp", "-mfloat-abi=hard"
-        )
-
-        KonanTarget.MACOS_X64 -> listOf(
-                "-mmacosx-version-min=$osVersionMin"
-        )
-
-        // Here we workaround Clang 8 limitation: macOS major version should be 10.
-        // So we compile runtime with version 10.16 and then override version in BitcodeCompiler.
-        // TODO: Fix with LLVM Update.
-        KonanTarget.MACOS_ARM64 -> listOf(
-                "-arch", "arm64",
-                "-mmacosx-version-min=10.16"
-        )
-
-        KonanTarget.IOS_ARM32 -> listOf(
-                "-stdlib=libc++",
-                "-arch", "armv7",
-                "-miphoneos-version-min=$osVersionMin"
-        )
-
-        KonanTarget.IOS_ARM64 -> listOf(
-                "-stdlib=libc++",
-                "-arch", "arm64",
-                "-miphoneos-version-min=$osVersionMin"
-        )
-
-        KonanTarget.IOS_X64 -> listOf(
-                "-stdlib=libc++",
-                "-miphoneos-version-min=$osVersionMin"
-        )
-
-        KonanTarget.TVOS_ARM64 -> listOf(
-                "-stdlib=libc++",
-                "-arch", "arm64",
-                "-mtvos-version-min=$osVersionMin"
-        )
-
-        KonanTarget.TVOS_X64 -> listOf(
-                "-stdlib=libc++",
-                "-mtvos-simulator-version-min=$osVersionMin"
-        )
-
-        KonanTarget.WATCHOS_ARM64,
-        KonanTarget.WATCHOS_ARM32 -> listOf(
-                "-stdlib=libc++",
-                "-arch", "armv7k",
-                "-mwatchos-version-min=$osVersionMin"
-        )
-
-        KonanTarget.WATCHOS_X86 -> listOf(
-                "-stdlib=libc++",
-                "-arch", "i386",
-                "-mwatchos-simulator-version-min=$osVersionMin"
-        )
-
-        KonanTarget.WATCHOS_X64 -> listOf(
-                "-stdlib=libc++",
-                "-mwatchos-simulator-version-min=$osVersionMin"
         )
 
         KonanTarget.ANDROID_ARM32, KonanTarget.ANDROID_ARM64,
@@ -194,6 +144,8 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
                 "-isystem$absoluteTargetSysRoot/include/libcxx",
                 "-isystem$absoluteTargetSysRoot/include/libc"
         ) + (configurables as ZephyrConfigurables).constructClangArgs()
+
+        else -> emptyList()
     }
 
     val clangPaths = listOf("$absoluteLlvmHome/bin", binDir)
@@ -235,23 +187,5 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
     fun clangCXX(vararg userArgs: String) = targetClangXXCmd + userArgs.asList()
 
     fun llvmAr(vararg userArgs: String) = targetArCmd + userArgs.asList()
-
-    companion object {
-        @JvmStatic
-        fun filterGradleNativeSoftwareFlags(args: MutableList<String>) {
-            args.remove("/usr/include") // HACK: over gradle-4.4.
-            args.remove("-nostdinc") // HACK: over gradle-5.1.
-            when (HostManager.host) {
-                KonanTarget.LINUX_X64 -> args.remove("/usr/include/x86_64-linux-gnu")  // HACK: over gradle-4.4.
-                KonanTarget.MACOS_X64 -> {
-                    val indexToRemove = args.indexOf(args.find { it.contains("MacOSX.platform")})  // HACK: over gradle-4.7.
-                    if (indexToRemove != -1) {
-                        args.removeAt(indexToRemove - 1) // drop -I.
-                        args.removeAt(indexToRemove - 1) // drop /Application/Xcode.app/...
-                    }
-                }
-            }
-        }
-    }
 }
 

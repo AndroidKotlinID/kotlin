@@ -13,10 +13,12 @@ import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
 import org.jetbrains.kotlin.backend.jvm.intrinsics.JavaClassProperty
 import org.jetbrains.kotlin.backend.jvm.ir.erasedUpperBound
 import org.jetbrains.kotlin.backend.jvm.ir.isFromJava
+import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.constantValue
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isInlineCallableReference
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isMappedToPrimitive
+import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.requiresMangling
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.backend.jvm.lower.isMultifileBridge
 import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
@@ -458,10 +460,7 @@ class ExpressionCodegen(
             addSuspendMarker(mv, isStartNotEnd = true, isSuspensionPoint == SuspensionPointKind.NOT_INLINE)
         }
 
-        val generatorForActualCall =
-            // Do not inline callee to continuation, instead, call it
-            if (irFunction.isInvokeSuspendOfContinuation()) IrCallGenerator.DefaultCallGenerator else callGenerator
-        generatorForActualCall.genCall(callable, this, expression, isInsideCondition)
+        callGenerator.genCall(callable, this, expression, isInsideCondition)
 
         val unboxedInlineClassIrType =
             callee.suspendFunctionOriginal().originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass()
@@ -469,7 +468,7 @@ class ExpressionCodegen(
         if (isSuspensionPoint != SuspensionPointKind.NEVER) {
             addSuspendMarker(mv, isStartNotEnd = false, isSuspensionPoint == SuspensionPointKind.NOT_INLINE)
             if (unboxedInlineClassIrType != null) {
-                generateResumePathUnboxing(mv, unboxedInlineClassIrType.toIrBasedKotlinType())
+                generateResumePathUnboxing(mv, unboxedInlineClassIrType, typeMapper)
             }
             addInlineMarker(mv, isStartNotEnd = false)
         }
@@ -485,7 +484,7 @@ class ExpressionCodegen(
                 mv.checkcast(unboxedInlineClassIrType.asmType)
             }
             if (irFunction.isInvokeSuspendOfContinuation()) {
-                StackValue.boxInlineClass(unboxedInlineClassIrType.toIrBasedKotlinType(), mv)
+                StackValue.boxInlineClass(unboxedInlineClassIrType, mv, typeMapper)
             }
         }
 
@@ -633,12 +632,12 @@ class ExpressionCodegen(
     // it generates them as normal functions and not objects.
     // Thus, we need to unbox inline class argument with reference underlying type.
     private fun unboxInlineClassArgumentOfInlineCallableReference(arg: IrGetValue) {
-        if (!arg.type.erasedUpperBound.isInline) return
+        if (!arg.type.isInlineClassType()) return
         if (arg.type.isMappedToPrimitive) return
         if (!irFunction.isInlineCallableReference) return
         if (irFunction.extensionReceiverParameter?.symbol == arg.symbol) return
         if (arg.type.isNullable() && arg.type.makeNotNull().unboxInlineClass().isNullable()) return
-        StackValue.unboxInlineClass(OBJECT_TYPE, arg.type.erasedUpperBound.defaultType.toIrBasedKotlinType(), mv)
+        StackValue.unboxInlineClass(OBJECT_TYPE, arg.type.erasedUpperBound.defaultType, mv, typeMapper)
     }
 
     // We do not mangle functions if Result is the only parameter of the function,
@@ -665,14 +664,12 @@ class ExpressionCodegen(
         // Result parameter of SAM-wrapper to Java SAM is already unboxed in visitGetValue, do not unbox it anymore
         if (irFunction.parentAsClass.superTypes.any { it.getClass()?.isFromJava() == true }) return
 
-        StackValue.unboxInlineClass(OBJECT_TYPE, arg.type.erasedUpperBound.defaultType.toIrBasedKotlinType(), mv)
+        StackValue.unboxInlineClass(OBJECT_TYPE, arg.type.erasedUpperBound.defaultType, mv, typeMapper)
     }
 
     private fun IrClass.isSamAdapter(): Boolean = this.superTypes.any { it.getClass()?.isFun == true }
 
-    private fun onlyResultInlineClassParameters(): Boolean = irFunction.valueParameters.all {
-        !it.type.erasedUpperBound.isInline || it.type.erasedUpperBound.fqNameWhenAvailable == StandardNames.RESULT_FQ_NAME
-    }
+    private fun onlyResultInlineClassParameters(): Boolean = irFunction.valueParameters.all { !it.type.requiresMangling }
 
     private fun hasBridge(): Boolean = irFunction.parentAsClass.declarations.any { function ->
         function is IrFunction && function != irFunction &&
@@ -699,7 +696,7 @@ class ExpressionCodegen(
             ?: receiverType ?: typeMapper.mapClass(callee.parentAsClass)
         val ownerName = ownerType.internalName
         val fieldName = callee.name.asString()
-        val calleeIrType = if (callee.isFromJava() && callee.type.isInlined()) callee.type.makeNullable() else callee.type
+        val calleeIrType = if (callee.isFromJava() && callee.type.isInlineClassType()) callee.type.makeNullable() else callee.type
         val fieldType = calleeIrType.asmType
         return if (expression is IrSetField) {
             val value = expression.value.accept(this, data)
@@ -923,7 +920,7 @@ class ExpressionCodegen(
         expression.value.accept(this, data).materializeAt(returnType, returnIrType)
         // In case of non-local return from suspend lambda 'materializeAt' does not box return value, box it manually.
         if (isNonLocalReturn && owner.isInvokeSuspendOfLambda() && expression.value.type.isKotlinResult()) {
-            StackValue.boxInlineClass(expression.value.type.toIrBasedKotlinType(), mv)
+            StackValue.boxInlineClass(expression.value.type, mv, typeMapper)
         }
         generateFinallyBlocksIfNeeded(returnType, afterReturnLabel, data, null)
         expression.markLineNumber(startOffset = true)
@@ -1351,6 +1348,7 @@ class ExpressionCodegen(
     ): IrCallGenerator {
         if (!element.symbol.owner.isInlineFunctionCall(context) ||
             classCodegen.irClass.fileParent.fileEntry is MultifileFacadeFileEntry ||
+            irFunction.origin == JvmLoweredDeclarationOrigin.JVM_STATIC_WRAPPER ||
             irFunction.isInvokeSuspendOfContinuation()
         ) {
             return IrCallGenerator.DefaultCallGenerator

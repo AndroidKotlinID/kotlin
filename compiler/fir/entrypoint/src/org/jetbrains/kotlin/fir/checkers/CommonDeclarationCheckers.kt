@@ -24,6 +24,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
         FirInfixFunctionDeclarationChecker,
         FirExposedVisibilityDeclarationChecker,
         FirSealedSupertypeChecker,
+        FirTypeAliasChecker,
     )
 
     override val functionCheckers: Set<FirFunctionChecker> = setOf(
@@ -40,6 +41,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
 
     override val classCheckers: Set<FirClassChecker> = setOf(
         FirOverrideChecker,
+        FirNotImplementedOverrideChecker,
         FirThrowableSubclassChecker,
         FirOpenMemberChecker,
     )
@@ -56,8 +58,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
         FirManyCompanionObjectsChecker,
         FirMethodOfAnyImplementedInInterfaceChecker,
         FirDataClassPrimaryConstructorChecker,
-        FirSupertypeInitializedInInterfaceChecker,
-        FirSupertypeInitializedWithoutPrimaryConstructor,
+        FirPrimaryConstructorSuperTypeChecker,
         FirTypeParametersInObjectChecker,
         FirMemberFunctionsChecker,
         FirMemberPropertiesChecker,

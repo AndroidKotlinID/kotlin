@@ -61,6 +61,7 @@ import org.jetbrains.kotlin.fir.createSessionWithDependencies
 import org.jetbrains.kotlin.ir.backend.jvm.jvmResolveLibraries
 import org.jetbrains.kotlin.javac.JavacWrapper
 import org.jetbrains.kotlin.load.kotlin.ModuleVisibilityManager
+import org.jetbrains.kotlin.load.kotlin.incremental.IncrementalPackagePartProvider
 import org.jetbrains.kotlin.modules.Module
 import org.jetbrains.kotlin.modules.TargetId
 import org.jetbrains.kotlin.name.FqName
@@ -308,12 +309,19 @@ object KotlinToJVMBytecodeCompiler {
         val projectConfiguration = environment.configuration
         val localFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL)
         val outputs = newLinkedHashMapWithExpectedSize<Module, GenerationState>(chunk.size)
+        val targetIds = environment.configuration.get(JVMConfigurationKeys.MODULES)?.map(::TargetId)
+        val incrementalComponents = environment.configuration.get(JVMConfigurationKeys.INCREMENTAL_COMPILATION_COMPONENTS)
         for (module in chunk) {
             performanceManager?.notifyAnalysisStarted()
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
 
             val ktFiles = module.getSourceFiles(environment, localFileSystem, chunk.size > 1, buildFile)
             if (!checkKotlinPackageUsage(environment, ktFiles)) return false
+
+            val syntaxErrors = ktFiles.fold(false) { errorsFound, ktFile ->
+                AnalyzerWithCompilerReport.reportSyntaxErrors(ktFile, environment.messageCollector).isHasErrors or errorsFound
+            }
+
             val moduleConfiguration = projectConfiguration.applyModuleProperties(module, buildFile)
 
             val sourceScope = GlobalSearchScope.filesScope(project, ktFiles.map { it.virtualFile })
@@ -328,7 +336,15 @@ object KotlinToJVMBytecodeCompiler {
                 languageVersionSettings,
                 sourceScope,
                 librariesScope,
-                environment::createPackagePartProvider
+                lookupTracker = environment.configuration.get(CommonConfigurationKeys.LOOKUP_TRACKER),
+                getPackagePartProvider = { environment.createPackagePartProvider(it) },
+                getAdditionalModulePackagePartProvider = {
+                    if (targetIds == null || incrementalComponents == null) null
+                    else IncrementalPackagePartProvider(
+                        environment.createPackagePartProvider(it),
+                        targetIds.map(incrementalComponents::getIncrementalCache)
+                    )
+                }
             ) {
                 if (extendedAnalysisMode) {
                     registerExtendedCommonCheckers()
@@ -345,7 +361,7 @@ object KotlinToJVMBytecodeCompiler {
             )
             performanceManager?.notifyAnalysisFinished()
 
-            if (firDiagnostics.any { it.severity == Severity.ERROR }) {
+            if (syntaxErrors || firDiagnostics.any { it.severity == Severity.ERROR }) {
                 return false
             }
 

@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.session.FirJvmModuleInfo
 import org.jetbrains.kotlin.fir.session.FirSessionFactory
+import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.load.kotlin.PackagePartProvider
 import org.jetbrains.kotlin.modules.Module
 import org.jetbrains.kotlin.name.Name
@@ -24,7 +25,9 @@ fun createSessionWithDependencies(
     languageVersionSettings: LanguageVersionSettings,
     sourceScope: GlobalSearchScope,
     librariesScope: GlobalSearchScope,
-    packagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    lookupTracker: LookupTracker?,
+    getPackagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    getAdditionalModulePackagePartProvider: (GlobalSearchScope) -> PackagePartProvider?,
     sessionConfigurator: FirSessionFactory.FirSessionConfigurator.() -> Unit = {}
 ): FirSession {
     return createSessionWithDependencies(
@@ -33,7 +36,9 @@ fun createSessionWithDependencies(
         languageVersionSettings,
         sourceScope,
         librariesScope,
-        packagePartProvider,
+        lookupTracker,
+        getPackagePartProvider,
+        getAdditionalModulePackagePartProvider,
         sessionConfigurator
     ) {
         FirJvmModuleInfo(name, it, friendPaths, outputDirectory)
@@ -46,7 +51,9 @@ fun createSessionWithDependencies(
     languageVersionSettings: LanguageVersionSettings,
     sourceScope: GlobalSearchScope,
     librariesScope: GlobalSearchScope,
-    packagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    lookupTracker: LookupTracker?,
+    getPackagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    getAdditionalModulePackagePartProvider: (GlobalSearchScope) -> PackagePartProvider?,
     sessionConfigurator: FirSessionFactory.FirSessionConfigurator.() -> Unit = {}
 ): FirSession {
     return createSessionWithDependencies(
@@ -55,7 +62,9 @@ fun createSessionWithDependencies(
         languageVersionSettings,
         sourceScope,
         librariesScope,
-        packagePartProvider,
+        lookupTracker,
+        getPackagePartProvider,
+        getAdditionalModulePackagePartProvider,
         sessionConfigurator
     ) {
         FirJvmModuleInfo(module, it)
@@ -68,7 +77,9 @@ private inline fun createSessionWithDependencies(
     languageVersionSettings: LanguageVersionSettings,
     sourceScope: GlobalSearchScope,
     librariesScope: GlobalSearchScope,
-    packagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    lookupTracker: LookupTracker?,
+    getPackagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
+    getAdditionalModulePackagePartProvider: (GlobalSearchScope) -> PackagePartProvider?,
     noinline sessionConfigurator: FirSessionFactory.FirSessionConfigurator.() -> Unit,
     moduleInfoProvider: (dependencies: List<ModuleInfo>) -> ModuleInfo,
 ): FirSession {
@@ -76,14 +87,17 @@ private inline fun createSessionWithDependencies(
     val librariesModuleInfo = FirJvmModuleInfo.createForLibraries(moduleName)
     FirSessionFactory.createLibrarySession(
         librariesModuleInfo, provider, librariesScope,
-        project, packagePartProvider(librariesScope)
+        project, getPackagePartProvider(librariesScope)
     )
     return FirSessionFactory.createJavaModuleBasedSession(
         moduleInfoProvider(listOf(librariesModuleInfo)),
         provider,
         sourceScope,
         project,
+        additionalPackagePartProvider = getAdditionalModulePackagePartProvider(sourceScope),
+        additionalScope = librariesScope,
         languageVersionSettings = languageVersionSettings,
+        lookupTracker = lookupTracker,
         init = sessionConfigurator
     )
 }

@@ -47,6 +47,12 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         return classId.isLocal
     }
 
+    override val TypeVariableTypeConstructorMarker.typeParameter: TypeParameterMarker?
+        get() {
+            require(this is ConeTypeVariableTypeConstructor)
+            return this.originalTypeParameter
+        }
+
     override fun SimpleTypeMarker.possibleIntegerTypes(): Collection<KotlinTypeMarker> {
         return (this as? ConeIntegerLiteralType)?.possibleTypes ?: emptyList()
     }
@@ -274,6 +280,14 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         return this
     }
 
+    override fun TypeParameterMarker.doesFormSelfType(selfConstructor: TypeConstructorMarker): Boolean {
+        require(this is ConeTypeParameterLookupTag)
+        return this.typeParameterSymbol.fir.bounds.any { typeRef ->
+            typeRef.coneType.contains { it.typeConstructor() == this.getTypeConstructor() }
+                    && typeRef.coneType.typeConstructor() == selfConstructor
+        }
+    }
+
     override fun areEqualTypeConstructors(c1: TypeConstructorMarker, c2: TypeConstructorMarker): Boolean {
         if (c1 is ErrorTypeConstructor || c2 is ErrorTypeConstructor) return false
         return c1 == c2
@@ -481,6 +495,11 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         require(this is ConeTypeParameterLookupTag)
         return this.symbol.fir.bounds.getOrNull(0)?.coneType
             ?: session.builtinTypes.nullableAnyType.type
+    }
+
+    override fun KotlinTypeMarker.getUnsubstitutedUnderlyingType(): KotlinTypeMarker? {
+        require(this is ConeKotlinType)
+        return unsubstitutedUnderlyingTypeForInlineClass(session)
     }
 
     override fun KotlinTypeMarker.getSubstitutedUnderlyingType(): KotlinTypeMarker? {

@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.idea.fir.findPsi
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityToken
 import org.jetbrains.kotlin.idea.frontend.api.fir.KtSymbolByFirBuilder
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.firRef
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.weakRef
@@ -34,7 +34,7 @@ internal class KtFirTypeParameterSymbol(
     override val name: Name get() = firRef.withFir { it.name }
 
     override val upperBounds: List<KtType> by firRef.withFirAndCache(FirResolvePhase.TYPES) { fir ->
-        fir.bounds.map { type -> builder.buildKtType(type) }
+        fir.bounds.map { type -> builder.typeBuilder.buildKtType(type) }
     }
 
     override val variance: Variance get() = firRef.withFir { it.variance }

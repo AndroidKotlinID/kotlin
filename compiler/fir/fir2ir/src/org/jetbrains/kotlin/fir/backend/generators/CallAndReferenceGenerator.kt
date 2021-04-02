@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.isBuiltinFunctionalType
 import org.jetbrains.kotlin.fir.resolve.inference.isKMutableProperty
+import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutorByMap
 import org.jetbrains.kotlin.fir.resolve.toSymbol
@@ -38,6 +39,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
+import org.jetbrains.kotlin.ir.symbols.impl.IrFieldSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.psi2ir.generators.hasNoSideEffects
@@ -90,7 +92,7 @@ class CallAndReferenceGenerator(
                         getter = referencedPropertyGetter?.symbol,
                         setter = referencedPropertySetterSymbol,
                         origin = origin
-                    )
+                    ).applyTypeArguments(callableReferenceAccess).applyReceivers(callableReferenceAccess, explicitReceiverExpression)
                 }
                 is IrLocalDelegatedPropertySymbol -> {
                     IrLocalDelegatedPropertyReferenceImpl(
@@ -102,7 +104,8 @@ class CallAndReferenceGenerator(
                     )
                 }
                 is IrFieldSymbol -> {
-                    val referencedField = symbol.owner
+                    val fieldSymbol = computeFieldSymbolForCallableReference(callableReferenceAccess, symbol)
+                    val referencedField = fieldSymbol.owner
                     val propertySymbol = referencedField.correspondingPropertySymbol
                         ?: run {
                             // In case of [IrField] without the corresponding property, we've created it directly from [FirField].
@@ -115,11 +118,11 @@ class CallAndReferenceGenerator(
                         startOffset, endOffset, type,
                         propertySymbol,
                         typeArgumentsCount = (type as? IrSimpleType)?.arguments?.size ?: 0,
-                        field = symbol,
+                        field = fieldSymbol,
                         getter = if (referencedField.isStatic) null else propertySymbol.owner.getter?.symbol,
                         setter = if (referencedField.isStatic) null else propertySymbol.owner.setter?.symbol,
                         origin
-                    )
+                    ).applyReceivers(callableReferenceAccess, explicitReceiverExpression)
                 }
                 is IrFunctionSymbol -> {
                     assert(type.isFunctionTypeOrSubtype()) {
@@ -128,6 +131,7 @@ class CallAndReferenceGenerator(
                     type as IrSimpleType
                     val function = symbol.owner
                     if (adapterGenerator.needToGenerateAdaptedCallableReference(callableReferenceAccess, type, function)) {
+                        // Receivers are being applied inside
                         with(adapterGenerator) {
                             val adaptedType = callableReferenceAccess.typeRef.coneType.kFunctionTypeToFunctionType()
                             generateAdaptedCallableReference(callableReferenceAccess, explicitReceiverExpression, symbol, adaptedType)
@@ -141,7 +145,8 @@ class CallAndReferenceGenerator(
                             typeArgumentsCount = typeArgumentCount,
                             valueArgumentsCount = function.valueParameters.size,
                             reflectionTarget = symbol
-                        )
+                        ).applyTypeArguments(callableReferenceAccess)
+                            .applyReceivers(callableReferenceAccess, explicitReceiverExpression)
                     }
                 }
                 else -> {
@@ -150,7 +155,34 @@ class CallAndReferenceGenerator(
                     )
                 }
             }
-        }.applyTypeArguments(callableReferenceAccess).applyReceivers(callableReferenceAccess, explicitReceiverExpression)
+        }
+    }
+
+    private fun computeFieldSymbolForCallableReference(
+        callableReferenceAccess: FirCallableReferenceAccess,
+        symbol: IrFieldSymbol
+    ): IrFieldSymbol {
+        val receiverClass = when (val receiverExpression = callableReferenceAccess.explicitReceiver) {
+            is FirResolvedQualifier -> receiverExpression.symbol
+            null -> null
+            else -> receiverExpression.typeRef.coneType.toSymbol(session)
+        } as? FirClassSymbol<*>
+        val newParent = receiverClass?.let { classifierStorage.getIrClassSymbol(it) }?.owner ?: return symbol
+        return IrFieldSymbolImpl().also { newSymbol ->
+            val field = symbol.owner
+            irFactory.createField(
+                startOffset = -1,
+                endOffset = -1,
+                field.origin,
+                newSymbol,
+                field.name,
+                field.type,
+                field.visibility,
+                field.isFinal,
+                field.isExternal,
+                field.isStatic,
+            ).also { it.parent = newParent }
+        }
     }
 
     private fun FirQualifiedAccess.tryConvertToSamConstructorCall(type: IrType): IrTypeOperatorCall? {
@@ -622,7 +654,8 @@ class CallAndReferenceGenerator(
             return this
         }
         val samFirType = parameter.returnTypeRef.coneTypeSafe<ConeKotlinType>()?.let {
-            val substituted = substitutor.substituteOrSelf(it)
+            var substituted = substitutor.substituteOrSelf(it)
+            substituted = starProjectionApproximator.substituteOrSelf(substituted)
             if (substituted is ConeRawType) substituted.lowerBound else substituted
         }
         var samType = samFirType?.toIrType(ConversionTypeContext.WITH_INVARIANT) ?: createErrorType()
@@ -632,6 +665,23 @@ class CallAndReferenceGenerator(
         // Make sure the converted IrType owner indeed has a single abstract method, since FunctionReferenceLowering relies on it.
         if (!samType.isSamType) return this
         return IrTypeOperatorCallImpl(this.startOffset, this.endOffset, samType, IrTypeOperator.SAM_CONVERSION, samType, this)
+    }
+
+    private val starProjectionApproximator = object : AbstractConeSubstitutor() {
+        override fun substituteType(type: ConeKotlinType): ConeKotlinType? {
+            if (type !is ConeClassLikeType || type.typeArguments.none { it == ConeStarProjection }) return null
+            val fir = type.lookupTag.toSymbol(session)?.fir as? FirTypeParameterRefsOwner ?: return null
+            val typeParameters = fir.typeParameters.map { it.symbol.fir }
+            if (typeParameters.size != type.typeArguments.size) return null
+            val newTypeArguments = typeParameters.zip(type.typeArguments).map { (parameter, argument) ->
+                if (argument == ConeStarProjection){
+                    parameter.bounds.first().coneType
+                } else {
+                    argument
+                }
+            }
+            return type.withArguments(newTypeArguments.toTypedArray())
+        }
     }
 
     private fun needSamConversion(argument: FirExpression, parameter: FirValueParameter): Boolean {

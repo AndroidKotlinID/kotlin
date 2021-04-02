@@ -116,6 +116,7 @@ enum class LanguageFeature(
     AllowAssigningArrayElementsToVarargsInNamedFormForFunctions(KOTLIN_1_4),
     AllowNullOperatorsForResult(KOTLIN_1_4),
     AllowResultInReturnType(KOTLIN_1_4, defaultState = State.DISABLED),
+    AllowNullOperatorsForResultAndResultReturnTypeByDefault(KOTLIN_1_5, defaultState = State.ENABLED),
     PreferJavaFieldOverload(KOTLIN_1_4),
     AllowContractsForNonOverridableMembers(KOTLIN_1_4),
     AllowReifiedGenericsInContracts(KOTLIN_1_4),
@@ -147,6 +148,7 @@ enum class LanguageFeature(
     JvmIrEnabledByDefault(KOTLIN_1_5),
     // Disabled until the breaking change is approved by the committee, see KT-10884.
     PackagePrivateFileClassesWithAllPrivateMembers(KOTLIN_1_5, defaultState = State.DISABLED),
+    StrictOnlyInputTypesChecks(sinceVersion = KOTLIN_1_5),
 
     /*
      * Improvements include the following:
@@ -160,7 +162,7 @@ enum class LanguageFeature(
      *  - preference of a type use annotation to annotation of another type: KT-24392
      *      (if @NotNull has TYPE_USE and METHOD target, then `@NotNull Integer []` -> `Array<Int>..Array<out Int>?` instead of `Array<Int>..Array<out Int>`)
      */
-    ImprovementsAroundTypeEnhancement(KOTLIN_1_6),
+    TypeEnhancementImprovementsInStrictMode(KOTLIN_1_6),
 
     // Temporarily disabled, see KT-27084/KT-22379
     SoundSmartcastFromLoopConditionForLoopAssignedVariables(sinceVersion = null, kind = BUG_FIX),
@@ -184,7 +186,6 @@ enum class LanguageFeature(
     SamConversionForKotlinFunctions(sinceVersion = KOTLIN_1_4),
     SamConversionPerArgument(sinceVersion = KOTLIN_1_4),
     FunctionReferenceWithDefaultValueAsOtherType(sinceVersion = KOTLIN_1_4),
-    NonStrictOnlyInputTypesChecks(sinceVersion = KOTLIN_1_4),
     SuspendConversion(sinceVersion = KOTLIN_1_4, defaultState = State.DISABLED),
     UnitConversion(sinceVersion = KOTLIN_1_4, defaultState = State.DISABLED),
     OverloadResolutionByLambdaReturnType(sinceVersion = KOTLIN_1_4),

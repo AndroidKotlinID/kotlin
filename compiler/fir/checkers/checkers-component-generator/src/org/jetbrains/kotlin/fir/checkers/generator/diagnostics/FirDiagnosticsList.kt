@@ -7,10 +7,11 @@ package org.jetbrains.kotlin.fir.checkers.generator.diagnostics
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiTypeElement
+import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.diagnostics.WhenMissingCase
-import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.PrivateForInline
@@ -26,11 +27,23 @@ import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
+import kotlin.properties.PropertyDelegateProvider
+import kotlin.properties.ReadOnlyProperty
 
 
 @Suppress("UNUSED_VARIABLE", "LocalVariableName", "ClassName", "unused")
 @OptIn(PrivateForInline::class)
 object DIAGNOSTICS_LIST : DiagnosticList() {
+    val MetaErrors by object : DiagnosticGroup("Meta-errors") {
+        val UNSUPPORTED by error<FirSourceElement, PsiElement> {
+            parameter<String>("unsupported")
+        }
+        val UNSUPPORTED_FEATURE by error<FirSourceElement, PsiElement> {
+            parameter<Pair<LanguageFeature, LanguageVersionSettings>>("unsupportedFeature")
+        }
+    }
+
     val Miscellaneous by object : DiagnosticGroup("Miscellaneous") {
         val SYNTAX by error<FirSourceElement, PsiElement>()
         val OTHER_ERROR by error<FirSourceElement, PsiElement>()
@@ -54,7 +67,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val HIDDEN by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<AbstractFirBasedSymbol<*>>("hidden")
         }
-        val UNRESOLVED_REFERENCE by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+        val UNRESOLVED_REFERENCE by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCED_NAME_BY_QUALIFIED) {
             parameter<String>("reference")
         }
         val UNRESOLVED_LABEL by error<FirSourceElement, PsiElement>()
@@ -66,16 +79,15 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     }
 
     val SUPER by object : DiagnosticGroup("Super") {
-        val SUPER_IS_NOT_AN_EXPRESSION by error<FirSourceElement, PsiElement>()
-        val SUPER_NOT_AVAILABLE by error<FirSourceElement, PsiElement>()
-        val ABSTRACT_SUPER_CALL by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED)
+        val SUPER_IS_NOT_AN_EXPRESSION by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCED_NAME_BY_QUALIFIED)
+        val SUPER_NOT_AVAILABLE by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCED_NAME_BY_QUALIFIED)
+        val ABSTRACT_SUPER_CALL by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCED_NAME_BY_QUALIFIED)
         val INSTANCE_ACCESS_BEFORE_SUPER_CALL by error<FirSourceElement, PsiElement> {
             parameter<String>("target")
         }
     }
 
     val SUPERTYPES by object : DiagnosticGroup("Supertypes") {
-        val TYPE_PARAMETER_AS_SUPERTYPE by error<FirSourceElement, PsiElement>()
         val ENUM_AS_SUPERTYPE by error<FirSourceElement, PsiElement>()
         val RECURSION_IN_SUPERTYPES by error<FirSourceElement, PsiElement>()
         val NOT_A_SUPERTYPE by error<FirSourceElement, PsiElement>()
@@ -100,10 +112,13 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val NON_PRIVATE_OR_PROTECTED_CONSTRUCTOR_IN_SEALED by error<FirSourceElement, PsiElement>()
         val CYCLIC_CONSTRUCTOR_DELEGATION_CALL by warning<FirSourceElement, PsiElement>()
         val PRIMARY_CONSTRUCTOR_DELEGATION_CALL_EXPECTED by warning<FirSourceElement, PsiElement>(PositioningStrategy.SECONDARY_CONSTRUCTOR_DELEGATION_CALL)
-        val SUPERTYPE_INITIALIZED_WITHOUT_PRIMARY_CONSTRUCTOR by warning<FirSourceElement, PsiElement>()
+
+        // TODO: change it to KtSuperTypeEntry when possible (after re-targeter implementation)
+        val SUPERTYPE_NOT_INITIALIZED by error<FirSourceElement, KtTypeReference>()
+        val SUPERTYPE_INITIALIZED_WITHOUT_PRIMARY_CONSTRUCTOR by error<FirSourceElement, PsiElement>()
         val DELEGATION_SUPER_CALL_IN_ENUM_CONSTRUCTOR by warning<FirSourceElement, PsiElement>()
         val PRIMARY_CONSTRUCTOR_REQUIRED_FOR_DATA_CLASS by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
-        val EXPLICIT_DELEGATION_CALL_REQUIRED by warning<FirSourceElement, PsiElement>(PositioningStrategy.SECONDARY_CONSTRUCTOR_DELEGATION_CALL)
+        val EXPLICIT_DELEGATION_CALL_REQUIRED by error<FirSourceElement, PsiElement>(PositioningStrategy.SECONDARY_CONSTRUCTOR_DELEGATION_CALL)
         val SEALED_CLASS_CONSTRUCTOR_CALL by error<FirSourceElement, PsiElement>()
 
         // TODO: Consider creating a parameter list position strategy and report on the parameter list instead
@@ -133,9 +148,9 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     val EXPOSED_VISIBILITY by object : DiagnosticGroup("Exposed visibility") {
         val EXPOSED_TYPEALIAS_EXPANDED_TYPE by exposedVisibilityError<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
         val EXPOSED_FUNCTION_RETURN_TYPE by exposedVisibilityError<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
-
         val EXPOSED_RECEIVER_TYPE by exposedVisibilityError<KtTypeReference>()
         val EXPOSED_PROPERTY_TYPE by exposedVisibilityError<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
+        val EXPOSED_PROPERTY_TYPE_IN_CONSTRUCTOR by exposedVisibilityWarning<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
         val EXPOSED_PARAMETER_TYPE by exposedVisibilityError<KtParameter>(/* // NB: for parameter FE 1.0 reports not on a name for some reason */)
         val EXPOSED_SUPER_INTERFACE by exposedVisibilityError<KtTypeReference>()
         val EXPOSED_SUPER_CLASS by exposedVisibilityError<KtTypeReference>()
@@ -235,6 +250,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<Int>("expectedCount")
             parameter<FirClassLikeSymbol<*>>("classifier")
         }
+        val NO_TYPE_ARGUMENTS_ON_RHS by error<FirSourceElement, PsiElement> {
+            parameter<Int>("expectedCount")
+            parameter<FirClassLikeSymbol<*>>("classifier")
+        }
         val TYPE_PARAMETERS_IN_OBJECT by error<FirSourceElement, PsiElement>()
         val ILLEGAL_PROJECTION_USAGE by error<FirSourceElement, PsiElement>()
         val TYPE_PARAMETERS_IN_ENUM by error<FirSourceElement, PsiElement>()
@@ -259,7 +278,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
+        val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error<FirSourceElement, KtExpression>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+            parameter<FirCallableDeclaration<*>>("referencedDeclaration")
+        }
         val CALLABLE_REFERENCE_LHS_NOT_A_CLASS by error<FirSourceElement, KtExpression>()
+        val CALLABLE_REFERENCE_TO_ANNOTATION_CONSTRUCTOR by error<FirSourceElement, KtExpression>(PositioningStrategy.REFERENCE_BY_QUALIFIED)
 
         val CLASS_LITERAL_LHS_NOT_A_CLASS by error<FirSourceElement, KtExpression>()
         val NULLABLE_TYPE_IN_CLASS_LITERAL_LHS by error<FirSourceElement, KtExpression>()
@@ -287,6 +310,39 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val OVERRIDING_FINAL_MEMBER by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.OVERRIDE_MODIFIER) {
             parameter<FirCallableDeclaration<*>>("overriddenDeclaration")
             parameter<Name>("containingClassName")
+        }
+
+        val ABSTRACT_MEMBER_NOT_IMPLEMENTED by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("missingDeclaration")
+        }
+        val ABSTRACT_CLASS_MEMBER_NOT_IMPLEMENTED by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("missingDeclaration")
+        }
+        val INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("invisibleDeclaration")
+        }
+        val INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER_WARNING by warning<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("invisibleDeclaration")
+        }
+        val MANY_IMPL_MEMBER_NOT_IMPLEMENTED by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("missingDeclaration")
+        }
+        val MANY_INTERFACES_MEMBER_NOT_IMPLEMENTED by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirClass<*>>("classOrObject")
+            parameter<FirCallableDeclaration<*>>("missingDeclaration")
+        }
+        val OVERRIDING_FINAL_MEMBER_BY_DELEGATION by error<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirCallableDeclaration<*>>("delegatedDeclaration")
+            parameter<FirCallableDeclaration<*>>("overriddenDeclaration")
+        }
+        val DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE by warning<FirSourceElement, KtClassOrObject>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirCallableDeclaration<*>>("delegatedDeclaration")
+            parameter<FirCallableDeclaration<*>>("overriddenDeclaration")
         }
 
         val RETURN_TYPE_MISMATCH_ON_OVERRIDE by error<FirSourceElement, KtNamedDeclaration>(PositioningStrategy.DECLARATION_RETURN_TYPE) {
@@ -317,7 +373,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val REDECLARATION by error<FirSourceElement, PsiElement>() {
             parameter<Collection<AbstractFirBasedSymbol<*>>>("conflictingDeclarations")
         }
-        val ANY_METHOD_IMPLEMENTED_IN_INTERFACE by error<FirSourceElement, PsiElement>()
+        val METHOD_OF_ANY_IMPLEMENTED_IN_INTERFACE by error<FirSourceElement, PsiElement>()
     }
 
     val INVALID_LOCAL_DECLARATIONS by object : DiagnosticGroup("Invalid local declarations") {
@@ -391,6 +447,8 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val EXPECTED_PRIVATE_DECLARATION by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.VISIBILITY_MODIFIER)
         val VAL_WITH_SETTER by error<FirSourceElement, KtPropertyAccessor>()
         val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER)
+        val CONST_VAL_WITH_GETTER by error<FirSourceElement, KtProperty>()
+        val CONST_VAL_WITH_DELEGATE by error<FirSourceElement, KtPropertyDelegate>()
     }
 
     val MPP_PROJECTS by object : DiagnosticGroup("Multi-platform projects") {
@@ -451,12 +509,12 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val UNSAFE_IMPLICIT_INVOKE_CALL by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<ConeKotlinType>("receiverType")
         }
-        val UNSAFE_INFIX_CALL by error<FirSourceElement, KtExpression> {
+        val UNSAFE_INFIX_CALL by error<FirSourceElement, KtExpression>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<FirExpression>("lhs")
             parameter<String>("operator")
             parameter<FirExpression>("rhs")
         }
-        val UNSAFE_OPERATOR_CALL by error<FirSourceElement, KtExpression> {
+        val UNSAFE_OPERATOR_CALL by error<FirSourceElement, KtExpression>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<FirExpression>("lhs")
             parameter<String>("operator")
             parameter<FirExpression>("rhs")
@@ -486,6 +544,15 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         }
     }
 
+    val CONVENTIONS by object : DiagnosticGroup("Conventions") {
+        val NO_GET_METHOD by error<FirSourceElement, KtArrayAccessExpression>(PositioningStrategy.ARRAY_ACCESS)
+        val NO_SET_METHOD by error<FirSourceElement, KtArrayAccessExpression>(PositioningStrategy.ARRAY_ACCESS)
+    }
+
+    val TYPE_ALIAS by object : DiagnosticGroup("Type alias") {
+        val TOPLEVEL_TYPEALIASES_ONLY by error<FirSourceElement, KtTypeAlias>()
+    }
+
     val EXTENDED_CHECKERS by object : DiagnosticGroup("Extended checkers") {
         val REDUNDANT_VISIBILITY_MODIFIER by warning<FirSourceElement, KtModifierListOwner>(PositioningStrategy.VISIBILITY_MODIFIER)
         val REDUNDANT_MODALITY_MODIFIER by warning<FirSourceElement, KtModifierListOwner>(PositioningStrategy.MODALITY_MODIFIER)
@@ -506,10 +573,20 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     }
 }
 
-private inline fun <reified P : PsiElement> DiagnosticGroup.exposedVisibilityError(
-    positioningStrategy: PositioningStrategy = PositioningStrategy.DEFAULT
-) = error<FirSourceElement, P>(positioningStrategy) {
+private val exposedVisibilityDiagnosticInit: DiagnosticBuilder.() -> Unit = {
     parameter<FirEffectiveVisibility>("elementVisibility")
     parameter<FirMemberDeclaration>("restrictingDeclaration")
     parameter<FirEffectiveVisibility>("restrictingVisibility")
+}
+
+private inline fun <reified P : PsiElement> DiagnosticGroup.exposedVisibilityError(
+    positioningStrategy: PositioningStrategy = PositioningStrategy.DEFAULT
+): PropertyDelegateProvider<Any?, ReadOnlyProperty<DiagnosticGroup, DiagnosticData>> {
+    return error<FirSourceElement, P>(positioningStrategy, exposedVisibilityDiagnosticInit)
+}
+
+private inline fun <reified P : PsiElement> DiagnosticGroup.exposedVisibilityWarning(
+    positioningStrategy: PositioningStrategy = PositioningStrategy.DEFAULT
+): PropertyDelegateProvider<Any?, ReadOnlyProperty<DiagnosticGroup, DiagnosticData>> {
+    return warning<FirSourceElement, P>(positioningStrategy, exposedVisibilityDiagnosticInit)
 }

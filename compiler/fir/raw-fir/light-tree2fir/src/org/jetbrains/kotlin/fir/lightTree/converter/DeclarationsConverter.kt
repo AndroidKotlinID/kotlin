@@ -37,6 +37,8 @@ import org.jetbrains.kotlin.fir.lightTree.fir.modifier.Modifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeModifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeParameterModifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeProjectionModifier
+import org.jetbrains.kotlin.fir.references.builder.buildExplicitSuperReference
+import org.jetbrains.kotlin.fir.references.builder.buildExplicitThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildSimpleNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolvedAnnotations
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
@@ -532,7 +534,8 @@ class DeclarationsConverter(
     fun convertObjectLiteral(objectLiteral: LighterASTNode): FirElement {
         return withChildClassName(ANONYMOUS_OBJECT_NAME) {
             buildAnonymousObject {
-                source = objectLiteral.toFirSourceElement()
+                val objectDeclaration = objectLiteral.getChildNodesByType(OBJECT_DECLARATION).first()
+                source = objectDeclaration.toFirSourceElement()
                 origin = FirDeclarationOrigin.Source
                 session = baseSession
                 classKind = ClassKind.OBJECT
@@ -551,7 +554,7 @@ class DeclarationsConverter(
                 var delegatedConstructorSource: FirLightSourceElement? = null
                 var delegateFields: List<FirField>? = null
 
-                objectLiteral.getChildNodesByType(OBJECT_DECLARATION).first().forEachChildren {
+                objectDeclaration.forEachChildren {
                     when (it.tokenType) {
                         MODIFIER_LIST -> modifiers = convertModifierList(it)
                         PRIMARY_CONSTRUCTOR -> primaryConstructor = it
@@ -636,7 +639,7 @@ class DeclarationsConverter(
             annotations += modifiers.annotations
             initializer = withChildClassName(enumEntryName) {
                 buildAnonymousObject {
-                    source = this@buildEnumEntry.source
+                    source = enumEntry.toFirSourceElement(FirFakeSourceElementKind.EnumInitializer)
                     session = baseSession
                     origin = FirDeclarationOrigin.Source
                     classKind = ClassKind.ENUM_ENTRY
@@ -668,6 +671,8 @@ class DeclarationsConverter(
                     }
                 }
             }
+        }.also {
+            it.containingClassAttr = currentDispatchReceiverType()!!.lookupTag
         }
     }
 
@@ -733,6 +738,11 @@ class DeclarationsConverter(
             source = delegatedConstructorSource ?: selfTypeSource?.fakeElement(FirFakeSourceElementKind.DelegatingConstructorCall)
             constructedTypeRef = classWrapper.delegatedSuperTypeRef.copyWithNewSourceKind(FirFakeSourceElementKind.ImplicitTypeRef)
             isThis = false
+            calleeReference = buildExplicitSuperReference {
+                source = classWrapper.delegatedSuperTypeRef.source?.fakeElement(FirFakeSourceElementKind.DelegatingConstructorCall)
+                    ?: this@buildDelegatedConstructorCall.source?.fakeElement(FirFakeSourceElementKind.DelegatingConstructorCall)
+                superTypeRef = this@buildDelegatedConstructorCall.constructedTypeRef
+            }
             extractArgumentsFrom(classWrapper.superTypeCallEntry, stubMode)
         }
 
@@ -872,6 +882,20 @@ class DeclarationsConverter(
             }
             constructedTypeRef = delegatedType.copyWithNewSourceKind(FirFakeSourceElementKind.ImplicitTypeRef)
             this.isThis = isThis
+            val calleeKind = if (isImplicit) FirFakeSourceElementKind.ImplicitConstructor else FirFakeSourceElementKind.DelegatingConstructorCall
+            val calleeSource = constructorDelegationCall.getChildNodeByType(CONSTRUCTOR_DELEGATION_REFERENCE)
+                ?.toFirSourceElement(calleeKind)
+                ?: this@buildDelegatedConstructorCall.source?.fakeElement(calleeKind)
+            calleeReference = if (isThis) {
+                buildExplicitThisReference {
+                    this.source = calleeSource
+                }
+            } else {
+                buildExplicitSuperReference {
+                    source = calleeSource
+                    superTypeRef = this@buildDelegatedConstructorCall.constructedTypeRef
+                }
+            }
             extractArgumentsFrom(firValueArguments, stubMode)
         }
     }
@@ -1017,9 +1041,7 @@ class DeclarationsConverter(
                             null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
                         ).also {
                             it.status = defaultAccessorStatus()
-                            currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
-                                it.containingClassAttr = lookupTag
-                            }
+                            it.initContainingClassAttr()
                         }
                     // NOTE: We still need the setter even for a val property so we can report errors (e.g., VAL_WITH_SETTER).
                     this.setter = convertedAccessors.find { it.isSetter }
@@ -1028,9 +1050,7 @@ class DeclarationsConverter(
                                 null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
                             ).also {
                                 it.status = defaultAccessorStatus()
-                                currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
-                                    it.containingClassAttr = lookupTag
-                                }
+                                it.initContainingClassAttr()
                             }
                         } else null
 
@@ -1171,9 +1191,10 @@ class DeclarationsConverter(
                     accessorVisibility,
                     isGetter
                 )
-                .also {
-                    it.annotations += modifiers.annotations
-                    it.status = status
+                .also { accessor ->
+                    accessor.annotations += modifiers.annotations
+                    accessor.status = status
+                    accessor.initContainingClassAttr()
                 }
         }
         val target = FirFunctionTarget(labelName = null, isLambda = false)
@@ -1202,9 +1223,7 @@ class DeclarationsConverter(
             context.firFunctionTargets.removeLast()
         }.also {
             target.bind(it)
-            currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
-                it.containingClassAttr = lookupTag
-            }
+            it.initContainingClassAttr()
         }
     }
 

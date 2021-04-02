@@ -1,36 +1,11 @@
 import kotlinx.benchmark.gradle.benchmark
 
-val benchmarks_version = "0.2.0-dev-7"
-buildscript {
-    val benchmarks_version = "0.2.0-dev-7"
-
-    repositories {
-        val cacheRedirectorEnabled = findProperty("cacheRedirectorEnabled")?.toString()?.toBoolean() == true
-        if (cacheRedirectorEnabled) {
-            maven("https://cache-redirector.jetbrains.com/dl.bintray.com/kotlin/kotlinx")
-        } else {
-            maven("https://dl.bintray.com/kotlin/kotlinx")
-        }
-    }
-    dependencies {
-        classpath("org.jetbrains.kotlinx:kotlinx.benchmark.gradle:$benchmarks_version")
-    }
-}
-
-apply(plugin = "kotlinx.benchmark")
+val benchmarks_version = "0.3.0"
 
 plugins {
     java
     kotlin("jvm")
-}
-
-repositories {
-    val cacheRedirectorEnabled = findProperty("cacheRedirectorEnabled")?.toString()?.toBoolean() == true
-    if (cacheRedirectorEnabled) {
-        maven("https://cache-redirector.jetbrains.com/dl.bintray.com/kotlin/kotlinx")
-   } else {
-        maven("https://dl.bintray.com/kotlin/kotlinx")
-    }
+    id("org.jetbrains.kotlinx.benchmark") version "0.3.0"
 }
 
 dependencies {
@@ -42,7 +17,7 @@ dependencies {
     compile(jpsStandalone()) { includeJars("jps-model") }
     compile(intellijPluginDep("java"))
     compile(intellijDep()) { includeIntellijCoreJarDependencies(project) }
-    compile("org.jetbrains.kotlinx:kotlinx.benchmark.runtime-jvm:$benchmarks_version")
+    compile("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:$benchmarks_version")
 }
 
 sourceSets {
