@@ -50,8 +50,10 @@ enum class PositioningStrategy(private val strategy: String? = null) {
     PRIVATE_MODIFIER,
     COMPANION_OBJECT,
     CONST_MODIFIER,
-    ARRAY_ACCESS
-
+    ARRAY_ACCESS,
+    NAME_OF_NAMED_ARGUMENT,
+    VALUE_ARGUMENTS,
+    SUPERTYPES_LIST,
     ;
 
     val expressionToCreate get() = "SourceElementPositioningStrategies.${strategy ?: name}"

@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.checkers.generator.diagnostics
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiTypeElement
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
@@ -18,11 +19,13 @@ import org.jetbrains.kotlin.fir.PrivateForInline
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
@@ -143,6 +146,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         }
         val NULLABLE_TYPE_OF_ANNOTATION_MEMBER by error<FirSourceElement, KtTypeReference>()
         val VAR_ANNOTATION_PARAMETER by error<FirSourceElement, KtParameter>(PositioningStrategy.VAL_OR_VAR_NODE)
+        val SUPERTYPES_FOR_ANNOTATION_CLASS by error<FirSourceElement, KtClass>(PositioningStrategy.SUPERTYPES_LIST)
     }
 
     val EXPOSED_VISIBILITY by object : DiagnosticGroup("Exposed visibility") {
@@ -218,14 +222,26 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
 
         val VARARG_OUTSIDE_PARENTHESES by error<FirSourceElement, KtExpression>()
 
-        // TODO: implement a position strategy that highlights the argument name instead of the whole named argument
-        val NAMED_ARGUMENTS_NOT_ALLOWED by error<FirSourceElement, PsiElement> {
+        val NAMED_ARGUMENTS_NOT_ALLOWED by error<FirSourceElement, KtValueArgument>(PositioningStrategy.NAME_OF_NAMED_ARGUMENT) {
             parameter<ForbiddenNamedArgumentsTarget>("forbiddenNamedArgumentsTarget")
+        }
+
+        val NON_VARARG_SPREAD by error<FirSourceElement, LeafPsiElement>()
+        val ARGUMENT_PASSED_TWICE by error<FirSourceElement, KtValueArgument>(PositioningStrategy.NAME_OF_NAMED_ARGUMENT)
+        val TOO_MANY_ARGUMENTS by error<FirSourceElement, PsiElement> {
+            parameter<FirCallableDeclaration<*>>("function")
+        }
+        val NO_VALUE_FOR_PARAMETER by error<FirSourceElement, KtElement>(PositioningStrategy.VALUE_ARGUMENTS) {
+            parameter<FirValueParameter>("violatedParameter")
+        }
+
+        val NAMED_PARAMETER_NOT_FOUND by error<FirSourceElement, KtValueArgument>(PositioningStrategy.NAME_OF_NAMED_ARGUMENT) {
+            parameter<String>("name")
         }
     }
 
     val AMBIGUITY by object : DiagnosticGroup("Ambiguity") {
-        val AMBIGUITY by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+        val OVERLOAD_RESOLUTION_AMBIGUITY by error<FirSourceElement, PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<Collection<AbstractFirBasedSymbol<*>>>("candidates")
         }
         val ASSIGN_OPERATOR_AMBIGUITY by error<FirSourceElement, PsiElement> {
@@ -242,8 +258,7 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val INFERENCE_ERROR by error<FirSourceElement, PsiElement>()
         val PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT by error<FirSourceElement, PsiElement>()
         val UPPER_BOUND_VIOLATED by error<FirSourceElement, PsiElement> {
-            parameter<FirTypeParameterSymbol>("typeParameter")
-            parameter<ConeKotlinType>("violatedType")
+            parameter<ConeKotlinType>("upperBound")
         }
         val TYPE_ARGUMENTS_NOT_ALLOWED by error<FirSourceElement, PsiElement>()
         val WRONG_NUMBER_OF_TYPE_ARGUMENTS by error<FirSourceElement, PsiElement> {
@@ -275,6 +290,12 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val TYPE_PARAMETER_AS_REIFIED by error<FirSourceElement, PsiElement> {
             parameter<FirTypeParameterSymbol>("typeParameter")
         }
+
+        val FINAL_UPPER_BOUND by warning<FirSourceElement, PsiElement> {
+            parameter<ConeKotlinType>("type")
+        }
+
+        val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error<FirSourceElement, PsiElement>()
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
@@ -449,6 +470,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER)
         val CONST_VAL_WITH_GETTER by error<FirSourceElement, KtProperty>()
         val CONST_VAL_WITH_DELEGATE by error<FirSourceElement, KtPropertyDelegate>()
+        val WRONG_SETTER_PARAMETER_TYPE by error<FirSourceElement, KtTypeReference> {
+            parameter<ConeKotlinType>("expectedType")
+            parameter<ConeKotlinType>("actualType")
+        }
     }
 
     val MPP_PROJECTS by object : DiagnosticGroup("Multi-platform projects") {
@@ -483,13 +508,13 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<FirPropertySymbol>("variable")
         }
         val VAL_REASSIGNMENT by error<FirSourceElement, KtExpression> {
-            parameter<FirPropertySymbol>("variable")
+            parameter<FirVariableSymbol<*>>("variable")
         }
         val VAL_REASSIGNMENT_VIA_BACKING_FIELD by warning<FirSourceElement, KtExpression> {
-            parameter<FirPropertySymbol>("variable")
+            parameter<FirPropertySymbol>("property")
         }
         val VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR by error<FirSourceElement, KtExpression> {
-            parameter<FirPropertySymbol>("variable")
+            parameter<FirPropertySymbol>("property")
         }
         val WRONG_INVOCATION_KIND by warning<FirSourceElement, PsiElement> {
             parameter<AbstractFirBasedSymbol<*>>("declaration")

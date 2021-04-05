@@ -426,6 +426,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         }
 
         @Test
+        @TestMetadata("settersGetters.kt")
+        public void testSettersGetters() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/settersGetters.kt");
+        }
+
+        @Test
         @TestMetadata("simpleClass.kt")
         public void testSimpleClass() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/simpleClass.kt");
@@ -447,6 +453,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("statusResolveForTypealiasAsSuperClass.kt")
         public void testStatusResolveForTypealiasAsSuperClass() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/statusResolveForTypealiasAsSuperClass.kt");
+        }
+
+        @Test
+        @TestMetadata("supertypesForAnnotationClass.kt")
+        public void testSupertypesForAnnotationClass() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/supertypesForAnnotationClass.kt");
         }
 
         @Test
@@ -673,6 +685,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @TestMetadata("namedArrayInAnnotation.kt")
             public void testNamedArrayInAnnotation() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/arguments/namedArrayInAnnotation.kt");
+            }
+
+            @Test
+            @TestMetadata("noParameterForName.kt")
+            public void testNoParameterForName() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/arguments/noParameterForName.kt");
             }
 
             @Test

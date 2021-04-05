@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -17,13 +17,12 @@ package kotlin.text
  *
  * @sample samples.text.Chars.digitToInt
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Char.digitToInt(): Int {
-    if (this in '0'..'9') {
-        return this - '0'
+    return digitOf(this, 10).also {
+        if (it < 0) throw IllegalArgumentException("Char $this is not a decimal digit")
     }
-    throw IllegalArgumentException("Char $this is not a decimal digit")
 }
 
 /**
@@ -37,8 +36,8 @@ public fun Char.digitToInt(): Int {
  *
  * @sample samples.text.Chars.digitToInt
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Char.digitToInt(radix: Int): Int {
     return digitToIntOrNull(radix) ?: throw IllegalArgumentException("Char $this is not a digit in the given radix=$radix")
 }
@@ -52,13 +51,10 @@ public fun Char.digitToInt(radix: Int): Int {
  *
  * @sample samples.text.Chars.digitToIntOrNull
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Char.digitToIntOrNull(): Int? {
-    if (this in '0'..'9') {
-        return this - '0'
-    }
-    return null
+    return digitOf(this, 10).takeIf { it >= 0 }
 }
 
 /**
@@ -72,19 +68,11 @@ public fun Char.digitToIntOrNull(): Int? {
  *
  * @sample samples.text.Chars.digitToIntOrNull
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Char.digitToIntOrNull(radix: Int): Int? {
-    if (radix !in 2..36) {
-        throw IllegalArgumentException("Invalid radix: $radix. Valid radix values are in range 2..36")
-    }
-    if (this in '0'..'9') {
-        val digit = this - '0'
-        return if (digit < radix) digit else null
-    }
-    val a = if (this <= 'Z') 'A' else 'a'
-    val digit = 10 + (this - a)
-    return if (digit in 10 until radix) digit else null
+    checkRadix(radix)
+    return digitOf(this, radix).takeIf { it >= 0 }
 }
 
 /**
@@ -95,8 +83,8 @@ public fun Char.digitToIntOrNull(radix: Int): Int? {
  *
  * @sample samples.text.Chars.digitToChar
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Int.digitToChar(): Char {
     if (this in 0..9) {
         return '0' + this
@@ -113,8 +101,8 @@ public fun Int.digitToChar(): Char {
  *
  * @sample samples.text.Chars.digitToChar
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public fun Int.digitToChar(radix: Int): Char {
     if (radix !in 2..36) {
         throw IllegalArgumentException("Invalid radix: $radix. Valid radix values are in range 2..36")
@@ -143,8 +131,8 @@ public expect fun Char.toLowerCase(): Char
  *
  * @sample samples.text.Chars.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun Char.lowercaseChar(): Char
 
 /**
@@ -157,8 +145,8 @@ public expect fun Char.lowercaseChar(): Char
  *
  * @sample samples.text.Chars.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun Char.lowercase(): String
 
 /**
@@ -175,8 +163,8 @@ public expect fun Char.toUpperCase(): Char
  *
  * @sample samples.text.Chars.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun Char.uppercaseChar(): Char
 
 /**
@@ -189,8 +177,8 @@ public expect fun Char.uppercaseChar(): Char
  *
  * @sample samples.text.Chars.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun Char.uppercase(): String
 
 /**
@@ -203,7 +191,6 @@ public expect fun Char.uppercase(): String
  * @sample samples.text.Chars.titlecase
  */
 @SinceKotlin("1.5")
-@ExperimentalStdlibApi
 public expect fun Char.titlecaseChar(): Char
 
 /**
@@ -217,7 +204,6 @@ public expect fun Char.titlecaseChar(): Char
  * @sample samples.text.Chars.titlecase
  */
 @SinceKotlin("1.5")
-@ExperimentalStdlibApi
 public fun Char.titlecase(): String = titlecaseImpl()
 
 /**
@@ -240,7 +226,6 @@ public inline operator fun Char.plus(other: String): String = this.toString() + 
  *
  * @sample samples.text.Chars.equals
  */
-@OptIn(ExperimentalStdlibApi::class)
 public fun Char.equals(other: Char, ignoreCase: Boolean = false): Boolean {
     if (this == other) return true
     if (!ignoreCase) return false

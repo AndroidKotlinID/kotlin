@@ -29,14 +29,18 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
 
     override val functionCheckers: Set<FirFunctionChecker> = setOf(
         FirContractChecker,
-        FirFunctionNameChecker,
         FirFunctionParameterChecker,
+    )
+
+    override val simpleFunctionCheckers: Set<FirSimpleFunctionChecker> = setOf(
+        FirFunctionNameChecker
     )
 
     override val propertyCheckers: Set<FirPropertyChecker> = setOf(
         FirInapplicableLateinitChecker,
         FirDestructuringDeclarationChecker,
         FirConstPropertyChecker,
+        FirPropertyAccessorChecker
     )
 
     override val classCheckers: Set<FirClassChecker> = setOf(
@@ -83,5 +87,9 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
 
     override val variableAssignmentCfaBasedCheckers: Set<AbstractFirPropertyInitializationChecker> = setOf(
         FirPropertyInitializationAnalyzer,
+    )
+
+    override val typeParameterCheckers: Set<FirTypeParameterChecker> = setOf(
+        FirTypeParameterBoundsChecker,
     )
 }

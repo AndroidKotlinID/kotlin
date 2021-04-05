@@ -359,6 +359,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         runTest("compiler/fir/analysis-tests/testData/resolve/sealedClass.kt");
     }
 
+    @TestMetadata("settersGetters.kt")
+    public void testSettersGetters() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/settersGetters.kt");
+    }
+
     @TestMetadata("simpleClass.kt")
     public void testSimpleClass() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/simpleClass.kt");
@@ -377,6 +382,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
     @TestMetadata("statusResolveForTypealiasAsSuperClass.kt")
     public void testStatusResolveForTypealiasAsSuperClass() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/statusResolveForTypealiasAsSuperClass.kt");
+    }
+
+    @TestMetadata("supertypesForAnnotationClass.kt")
+    public void testSupertypesForAnnotationClass() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/supertypesForAnnotationClass.kt");
     }
 
     @TestMetadata("syntheticsVsNormalProperties.kt")
@@ -569,6 +579,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         @TestMetadata("namedArrayInAnnotation.kt")
         public void testNamedArrayInAnnotation() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/arguments/namedArrayInAnnotation.kt");
+        }
+
+        @TestMetadata("noParameterForName.kt")
+        public void testNoParameterForName() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/arguments/noParameterForName.kt");
         }
 
         @TestMetadata("operatorsOverLiterals.kt")

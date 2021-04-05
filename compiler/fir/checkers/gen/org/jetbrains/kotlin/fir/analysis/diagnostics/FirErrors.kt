@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.analysis.diagnostics
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiTypeElement
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
@@ -18,15 +19,18 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.SourceElementPositioningStr
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtArrayAccessExpression
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
@@ -47,6 +51,7 @@ import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeParameter
 import org.jetbrains.kotlin.psi.KtTypeParameterList
 import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.KtWhenExpression
 import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 
@@ -135,6 +140,7 @@ object FirErrors {
     val NOT_AN_ANNOTATION_CLASS by error1<FirSourceElement, PsiElement, String>()
     val NULLABLE_TYPE_OF_ANNOTATION_MEMBER by error0<FirSourceElement, KtTypeReference>()
     val VAR_ANNOTATION_PARAMETER by error0<FirSourceElement, KtParameter>(SourceElementPositioningStrategies.VAL_OR_VAR_NODE)
+    val SUPERTYPES_FOR_ANNOTATION_CLASS by error0<FirSourceElement, KtClass>(SourceElementPositioningStrategies.SUPERTYPES_LIST)
 
     // Exposed visibility
     val EXPOSED_TYPEALIAS_EXPANDED_TYPE by error3<FirSourceElement, KtNamedDeclaration, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
@@ -178,10 +184,15 @@ object FirErrors {
     val INAPPLICABLE_CANDIDATE by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val INAPPLICABLE_LATEINIT_MODIFIER by error1<FirSourceElement, KtModifierListOwner, String>(SourceElementPositioningStrategies.LATEINIT_MODIFIER)
     val VARARG_OUTSIDE_PARENTHESES by error0<FirSourceElement, KtExpression>()
-    val NAMED_ARGUMENTS_NOT_ALLOWED by error1<FirSourceElement, PsiElement, ForbiddenNamedArgumentsTarget>()
+    val NAMED_ARGUMENTS_NOT_ALLOWED by error1<FirSourceElement, KtValueArgument, ForbiddenNamedArgumentsTarget>(SourceElementPositioningStrategies.NAME_OF_NAMED_ARGUMENT)
+    val NON_VARARG_SPREAD by error0<FirSourceElement, LeafPsiElement>()
+    val ARGUMENT_PASSED_TWICE by error0<FirSourceElement, KtValueArgument>(SourceElementPositioningStrategies.NAME_OF_NAMED_ARGUMENT)
+    val TOO_MANY_ARGUMENTS by error1<FirSourceElement, PsiElement, FirCallableDeclaration<*>>()
+    val NO_VALUE_FOR_PARAMETER by error1<FirSourceElement, KtElement, FirValueParameter>(SourceElementPositioningStrategies.VALUE_ARGUMENTS)
+    val NAMED_PARAMETER_NOT_FOUND by error1<FirSourceElement, KtValueArgument, String>(SourceElementPositioningStrategies.NAME_OF_NAMED_ARGUMENT)
 
     // Ambiguity
-    val AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
+    val OVERLOAD_RESOLUTION_AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val ASSIGN_OPERATOR_AMBIGUITY by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>()
 
     // Types & type parameters
@@ -189,7 +200,7 @@ object FirErrors {
     val RECURSION_IN_IMPLICIT_TYPES by error0<FirSourceElement, PsiElement>()
     val INFERENCE_ERROR by error0<FirSourceElement, PsiElement>()
     val PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT by error0<FirSourceElement, PsiElement>()
-    val UPPER_BOUND_VIOLATED by error2<FirSourceElement, PsiElement, FirTypeParameterSymbol, ConeKotlinType>()
+    val UPPER_BOUND_VIOLATED by error1<FirSourceElement, PsiElement, ConeKotlinType>()
     val TYPE_ARGUMENTS_NOT_ALLOWED by error0<FirSourceElement, PsiElement>()
     val WRONG_NUMBER_OF_TYPE_ARGUMENTS by error2<FirSourceElement, PsiElement, Int, FirClassLikeSymbol<*>>()
     val NO_TYPE_ARGUMENTS_ON_RHS by error2<FirSourceElement, PsiElement, Int, FirClassLikeSymbol<*>>()
@@ -205,6 +216,8 @@ object FirErrors {
     val INNER_CLASS_OF_GENERIC_THROWABLE_SUBCLASS by error0<FirSourceElement, KtClassOrObject>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val KCLASS_WITH_NULLABLE_TYPE_PARAMETER_IN_SIGNATURE by error1<FirSourceElement, KtNamedDeclaration, FirTypeParameterSymbol>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val TYPE_PARAMETER_AS_REIFIED by error1<FirSourceElement, PsiElement, FirTypeParameterSymbol>()
+    val FINAL_UPPER_BOUND by warning1<FirSourceElement, PsiElement, ConeKotlinType>()
+    val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error0<FirSourceElement, PsiElement>()
 
     // Reflection
     val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error1<FirSourceElement, KtExpression, FirCallableDeclaration<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -281,6 +294,7 @@ object FirErrors {
     val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.CONST_MODIFIER)
     val CONST_VAL_WITH_GETTER by error0<FirSourceElement, KtProperty>()
     val CONST_VAL_WITH_DELEGATE by error0<FirSourceElement, KtPropertyDelegate>()
+    val WRONG_SETTER_PARAMETER_TYPE by error2<FirSourceElement, KtTypeReference, ConeKotlinType, ConeKotlinType>()
 
     // Multi-platform projects
     val EXPECTED_DECLARATION_WITH_BODY by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)
@@ -296,7 +310,7 @@ object FirErrors {
 
     // Control flow diagnostics
     val UNINITIALIZED_VARIABLE by error1<FirSourceElement, KtSimpleNameExpression, FirPropertySymbol>()
-    val VAL_REASSIGNMENT by error1<FirSourceElement, KtExpression, FirPropertySymbol>()
+    val VAL_REASSIGNMENT by error1<FirSourceElement, KtExpression, FirVariableSymbol<*>>()
     val VAL_REASSIGNMENT_VIA_BACKING_FIELD by warning1<FirSourceElement, KtExpression, FirPropertySymbol>()
     val VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR by error1<FirSourceElement, KtExpression, FirPropertySymbol>()
     val WRONG_INVOCATION_KIND by warning3<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>, EventOccurrencesRange, EventOccurrencesRange>()
