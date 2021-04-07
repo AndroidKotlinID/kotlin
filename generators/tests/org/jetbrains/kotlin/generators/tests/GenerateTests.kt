@@ -95,6 +95,7 @@ import org.jetbrains.kotlin.idea.frontend.api.components.AbstractExpectedExpress
 import org.jetbrains.kotlin.idea.frontend.api.components.AbstractHLExpressionTypeTest
 import org.jetbrains.kotlin.idea.frontend.api.components.AbstractOverriddenDeclarationProviderTest
 import org.jetbrains.kotlin.idea.frontend.api.components.AbstractReturnExpressionTargetTest
+import org.jetbrains.kotlin.idea.frontend.api.components.AbstractRendererTest
 import org.jetbrains.kotlin.idea.frontend.api.fir.AbstractResolveCallTest
 import org.jetbrains.kotlin.idea.frontend.api.scopes.AbstractFileScopeTest
 import org.jetbrains.kotlin.idea.frontend.api.scopes.AbstractMemberScopeByFqNameTest
@@ -1042,6 +1043,10 @@ fun main(args: Array<String>) {
             testClass<AbstractHLExpressionTypeTest> {
                 model("components/expressionType")
             }
+
+            testClass<AbstractRendererTest> {
+                model("components/declarationRenderer")
+            }
         }
 
         testGroup("idea/idea-frontend-fir/idea-fir-low-level-api/tests", "idea/testData") {
@@ -1133,6 +1138,8 @@ fun main(args: Array<String>) {
                 model("quickfix/override/typeMismatchOnOverride", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/replaceWithSafeCall", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/variables/changeMutability", pattern = pattern, filenameStartsLowerCase = true)
+                model("quickfix/addInitializer", pattern = pattern, filenameStartsLowerCase = true)
+                model("quickfix/addPropertyAccessors", pattern = pattern, filenameStartsLowerCase = true)
             }
 
             testClass<AbstractHLInspectionTest> {

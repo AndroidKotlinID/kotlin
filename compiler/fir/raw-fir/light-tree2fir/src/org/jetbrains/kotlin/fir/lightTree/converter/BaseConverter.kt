@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.fir.types.builder.buildImplicitTypeRef
 import org.jetbrains.kotlin.lexer.KtToken
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.psi.stubs.elements.KtFunctionElementType
 import kotlin.contracts.ExperimentalContracts
 
 abstract class BaseConverter(
@@ -45,7 +46,7 @@ abstract class BaseConverter(
     override val LighterASTNode.unescapedValue: String
         get() {
             val escape = this.asText
-            return escapedStringToCharacter(escape)?.toString()
+            return escapedStringToCharacter(escape).value?.toString()
                 ?: escape.replace("\\", "").replace("u", "\\u")
         }
 
@@ -54,6 +55,9 @@ abstract class BaseConverter(
     }
 
     override fun LighterASTNode.getLabelName(): String? {
+        if (tokenType == KtNodeTypes.FUN) {
+            return getParent()?.getLabelName()
+        }
         this.forEachChildren {
             when (it.tokenType) {
                 KtNodeTypes.LABEL_QUALIFIER -> return it.asText.replaceFirst("@", "")

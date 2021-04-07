@@ -18,10 +18,12 @@ public fun Regex_1(pattern: kotlin.String): kotlin.text.Regex
 
 @kotlin.SinceKotlin(version = "1.2")
 @kotlin.Deprecated(message = "Use CharArray.concatToString() instead", replaceWith = kotlin.ReplaceWith(expression = "chars.concatToString()", imports = {}))
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun String(chars: kotlin.CharArray): kotlin.String
 
 @kotlin.SinceKotlin(version = "1.2")
 @kotlin.Deprecated(message = "Use CharArray.concatToString(startIndex, endIndex) instead", replaceWith = kotlin.ReplaceWith(expression = "chars.concatToString(offset, offset + length)", imports = {}))
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun String(chars: kotlin.CharArray, offset: kotlin.Int, length: kotlin.Int): kotlin.String
 
 @kotlin.SinceKotlin(version = "1.1")
@@ -487,11 +489,11 @@ public inline infix fun kotlin.CharSequence.matches(regex: kotlin.text.Regex): k
 public fun kotlin.String.matches(regex: kotlin.String): kotlin.Boolean
 
 @kotlin.Deprecated(message = "Use maxOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.maxOrNull()", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun kotlin.CharSequence.max(): kotlin.Char?
 
 @kotlin.Deprecated(message = "Use maxByOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.maxByOrNull(selector)", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public inline fun <R : kotlin.Comparable<R>> kotlin.CharSequence.maxBy(selector: (kotlin.Char) -> R): kotlin.Char?
 
 @kotlin.SinceKotlin(version = "1.4")
@@ -541,18 +543,18 @@ public inline fun <R> kotlin.CharSequence.maxOfWithOrNull(comparator: kotlin.Com
 public fun kotlin.CharSequence.maxOrNull(): kotlin.Char?
 
 @kotlin.Deprecated(message = "Use maxWithOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.maxWithOrNull(comparator)", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun kotlin.CharSequence.maxWith(comparator: kotlin.Comparator<in kotlin.Char>): kotlin.Char?
 
 @kotlin.SinceKotlin(version = "1.4")
 public fun kotlin.CharSequence.maxWithOrNull(comparator: kotlin.Comparator<in kotlin.Char>): kotlin.Char?
 
 @kotlin.Deprecated(message = "Use minOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.minOrNull()", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun kotlin.CharSequence.min(): kotlin.Char?
 
 @kotlin.Deprecated(message = "Use minByOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.minByOrNull(selector)", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public inline fun <R : kotlin.Comparable<R>> kotlin.CharSequence.minBy(selector: (kotlin.Char) -> R): kotlin.Char?
 
 @kotlin.SinceKotlin(version = "1.4")
@@ -602,7 +604,7 @@ public inline fun <R> kotlin.CharSequence.minOfWithOrNull(comparator: kotlin.Com
 public fun kotlin.CharSequence.minOrNull(): kotlin.Char?
 
 @kotlin.Deprecated(message = "Use minWithOrNull instead.", replaceWith = kotlin.ReplaceWith(expression = "this.minWithOrNull(comparator)", imports = {}))
-@kotlin.DeprecatedSinceKotlin(warningSince = "1.4")
+@kotlin.DeprecatedSinceKotlin(errorSince = "1.5", warningSince = "1.4")
 public fun kotlin.CharSequence.minWith(comparator: kotlin.Comparator<in kotlin.Char>): kotlin.Char?
 
 @kotlin.SinceKotlin(version = "1.4")
@@ -791,16 +793,6 @@ public inline fun <R> kotlin.CharSequence.scan(initial: R, operation: (acc: R, k
 @kotlin.SinceKotlin(version = "1.4")
 @kotlin.WasExperimental(markerClass = {kotlin.ExperimentalStdlibApi::class})
 public inline fun <R> kotlin.CharSequence.scanIndexed(initial: R, operation: (index: kotlin.Int, acc: R, kotlin.Char) -> R): kotlin.collections.List<R>
-
-@kotlin.Deprecated(level = DeprecationLevel.ERROR, message = "Use runningReduce instead.", replaceWith = kotlin.ReplaceWith(expression = "runningReduce(operation)", imports = {}))
-@kotlin.SinceKotlin(version = "1.3")
-@kotlin.ExperimentalStdlibApi
-public inline fun kotlin.CharSequence.scanReduce(operation: (acc: kotlin.Char, kotlin.Char) -> kotlin.Char): kotlin.collections.List<kotlin.Char>
-
-@kotlin.Deprecated(level = DeprecationLevel.ERROR, message = "Use runningReduceIndexed instead.", replaceWith = kotlin.ReplaceWith(expression = "runningReduceIndexed(operation)", imports = {}))
-@kotlin.SinceKotlin(version = "1.3")
-@kotlin.ExperimentalStdlibApi
-public inline fun kotlin.CharSequence.scanReduceIndexed(operation: (index: kotlin.Int, acc: kotlin.Char, kotlin.Char) -> kotlin.Char): kotlin.collections.List<kotlin.Char>
 
 @kotlin.SinceKotlin(version = "1.4")
 @kotlin.WasExperimental(markerClass = {kotlin.ExperimentalStdlibApi::class})

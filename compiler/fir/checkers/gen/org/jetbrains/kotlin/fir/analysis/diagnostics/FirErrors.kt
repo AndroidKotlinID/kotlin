@@ -11,9 +11,9 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
+import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.diagnostics.WhenMissingCase
-import org.jetbrains.kotlin.fir.FirEffectiveVisibility
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.diagnostics.SourceElementPositioningStrategies
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
@@ -46,6 +46,7 @@ import org.jetbrains.kotlin.psi.KtPrimaryConstructor
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPropertyAccessor
 import org.jetbrains.kotlin.psi.KtPropertyDelegate
+import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeParameter
@@ -76,9 +77,12 @@ object FirErrors {
     val BREAK_OR_CONTINUE_OUTSIDE_A_LOOP by error0<FirSourceElement, PsiElement>()
     val NOT_A_LOOP_LABEL by error0<FirSourceElement, PsiElement>()
     val VARIABLE_EXPECTED by error0<FirSourceElement, PsiElement>()
-    val RETURN_NOT_ALLOWED by error0<FirSourceElement, PsiElement>()
     val DELEGATION_IN_INTERFACE by error0<FirSourceElement, PsiElement>()
     val NESTED_CLASS_NOT_ALLOWED by error1<FirSourceElement, KtNamedDeclaration, String>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val INCORRECT_CHARACTER_LITERAL by error0<FirSourceElement, PsiElement>()
+    val EMPTY_CHARACTER_LITERAL by error0<FirSourceElement, PsiElement>()
+    val TOO_MANY_CHARACTERS_IN_CHARACTER_LITERAL by error0<FirSourceElement, PsiElement>()
+    val ILLEGAL_ESCAPE by error0<FirSourceElement, PsiElement>()
 
     // Unresolved
     val HIDDEN by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -143,15 +147,15 @@ object FirErrors {
     val SUPERTYPES_FOR_ANNOTATION_CLASS by error0<FirSourceElement, KtClass>(SourceElementPositioningStrategies.SUPERTYPES_LIST)
 
     // Exposed visibility
-    val EXPOSED_TYPEALIAS_EXPANDED_TYPE by error3<FirSourceElement, KtNamedDeclaration, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
-    val EXPOSED_FUNCTION_RETURN_TYPE by error3<FirSourceElement, KtNamedDeclaration, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
-    val EXPOSED_RECEIVER_TYPE by error3<FirSourceElement, KtTypeReference, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>()
-    val EXPOSED_PROPERTY_TYPE by error3<FirSourceElement, KtNamedDeclaration, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
-    val EXPOSED_PROPERTY_TYPE_IN_CONSTRUCTOR by warning3<FirSourceElement, KtNamedDeclaration, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
-    val EXPOSED_PARAMETER_TYPE by error3<FirSourceElement, KtParameter, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>()
-    val EXPOSED_SUPER_INTERFACE by error3<FirSourceElement, KtTypeReference, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>()
-    val EXPOSED_SUPER_CLASS by error3<FirSourceElement, KtTypeReference, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>()
-    val EXPOSED_TYPE_PARAMETER_BOUND by error3<FirSourceElement, KtTypeReference, FirEffectiveVisibility, FirMemberDeclaration, FirEffectiveVisibility>()
+    val EXPOSED_TYPEALIAS_EXPANDED_TYPE by error3<FirSourceElement, KtNamedDeclaration, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val EXPOSED_FUNCTION_RETURN_TYPE by error3<FirSourceElement, KtNamedDeclaration, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val EXPOSED_RECEIVER_TYPE by error3<FirSourceElement, KtTypeReference, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>()
+    val EXPOSED_PROPERTY_TYPE by error3<FirSourceElement, KtNamedDeclaration, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val EXPOSED_PROPERTY_TYPE_IN_CONSTRUCTOR by warning3<FirSourceElement, KtNamedDeclaration, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>(SourceElementPositioningStrategies.DECLARATION_NAME)
+    val EXPOSED_PARAMETER_TYPE by error3<FirSourceElement, KtParameter, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>()
+    val EXPOSED_SUPER_INTERFACE by error3<FirSourceElement, KtTypeReference, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>()
+    val EXPOSED_SUPER_CLASS by error3<FirSourceElement, KtTypeReference, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>()
+    val EXPOSED_TYPE_PARAMETER_BOUND by error3<FirSourceElement, KtTypeReference, EffectiveVisibility, FirMemberDeclaration, EffectiveVisibility>()
 
     // Modifiers
     val INAPPLICABLE_INFIX_MODIFIER by error0<FirSourceElement, PsiElement>()
@@ -218,6 +222,8 @@ object FirErrors {
     val TYPE_PARAMETER_AS_REIFIED by error1<FirSourceElement, PsiElement, FirTypeParameterSymbol>()
     val FINAL_UPPER_BOUND by warning1<FirSourceElement, PsiElement, ConeKotlinType>()
     val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error0<FirSourceElement, PsiElement>()
+    val BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER by error0<FirSourceElement, PsiElement>()
+    val ONLY_ONE_CLASS_BOUND_ALLOWED by error0<FirSourceElement, PsiElement>()
 
     // Reflection
     val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error1<FirSourceElement, KtExpression, FirCallableDeclaration<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -358,5 +364,9 @@ object FirErrors {
     val VARIABLE_INITIALIZER_IS_REDUNDANT by warning0<FirSourceElement, PsiElement>()
     val VARIABLE_NEVER_READ by warning0<FirSourceElement, KtNamedDeclaration>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val USELESS_CALL_ON_NOT_NULL by warning0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.SELECTOR_BY_QUALIFIED)
+
+    // Returns
+    val RETURN_NOT_ALLOWED by error0<FirSourceElement, KtReturnExpression>(SourceElementPositioningStrategies.RETURN_WITH_LABEL)
+    val RETURN_IN_FUNCTION_WITH_EXPRESSION_BODY by error0<FirSourceElement, KtReturnExpression>(SourceElementPositioningStrategies.RETURN_WITH_LABEL)
 
 }

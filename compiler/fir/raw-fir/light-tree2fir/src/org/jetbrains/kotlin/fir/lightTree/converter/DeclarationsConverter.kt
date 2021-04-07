@@ -524,6 +524,8 @@ class DeclarationsConverter(
                     }
                 }
             }
+        }.also {
+            it.initContainingClassForLocalAttr()
         }
     }
 
@@ -1327,7 +1329,8 @@ class DeclarationsConverter(
         val isLocal = !(parentNode?.tokenType == KT_FILE || parentNode?.tokenType == CLASS_BODY)
         val target: FirFunctionTarget
         val functionBuilder = if (identifier == null && isLocal) {
-            target = FirFunctionTarget(labelName = functionDeclaration.getLabelName(), isLambda = false)
+            val labelName = functionDeclaration.getLabelName() ?: context.calleeNamesForLambda.lastOrNull()?.identifier
+            target = FirFunctionTarget(labelName = labelName, isLambda = false)
             FirAnonymousFunctionBuilder().apply {
                 source = functionDeclaration.toFirSourceElement()
                 receiverTypeRef = receiverType

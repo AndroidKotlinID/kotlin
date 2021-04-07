@@ -29,17 +29,18 @@ abstract class KtAnalysisSession(final override val token: ValidityToken) : Vali
     KtDiagnosticProviderMixIn,
     KtScopeProviderMixIn,
     KtCompletionCandidateCheckerMixIn,
-    KtTypeRendererMixIn,
     KtSymbolDeclarationOverridesProviderMixIn,
     KtExpressionTypeProviderMixIn,
     KtTypeProviderMixIn,
+    KtTypeInfoProviderMixIn,
     KtSymbolProviderMixIn,
     KtSymbolContainingDeclarationProviderMixIn,
     KtSubtypingComponentMixIn,
     KtExpressionInfoProviderMixIn,
     KtSymbolsMixIn,
     KtReferenceResolveMixIn,
-    KtReferenceShortenerMixIn {
+    KtReferenceShortenerMixIn,
+    KtSymbolDeclarationRendererMixIn {
 
     override val analysisSession: KtAnalysisSession get() = this
 
@@ -72,16 +73,17 @@ abstract class KtAnalysisSession(final override val token: ValidityToken) : Vali
     internal val referenceShortener: KtReferenceShortener get() = referenceShortenerImpl
     protected abstract val referenceShortenerImpl: KtReferenceShortener
 
-
-    @Suppress("LeakingThis")
-    protected open val typeRendererImpl: KtTypeRenderer = KtDefaultTypeRenderer(this, token)
-    internal val typeRenderer: KtTypeRenderer get() = typeRendererImpl
+    internal val symbolDeclarationRendererProvider: KtSymbolDeclarationRendererProvider get() = symbolDeclarationRendererProviderImpl
+    protected abstract val symbolDeclarationRendererProviderImpl: KtSymbolDeclarationRendererProvider
 
     internal val expressionTypeProvider: KtExpressionTypeProvider get() = expressionTypeProviderImpl
     protected abstract val expressionTypeProviderImpl: KtExpressionTypeProvider
 
     internal val typeProvider: KtTypeProvider get() = typeProviderImpl
     protected abstract val typeProviderImpl: KtTypeProvider
+
+    internal val typeInfoProvider: KtTypeInfoProvider get() = typeInfoProviderImpl
+    protected abstract val typeInfoProviderImpl: KtTypeInfoProvider
 
     internal val subtypingComponent: KtSubtypingComponent get() = subtypingComponentImpl
     protected abstract val subtypingComponentImpl: KtSubtypingComponent

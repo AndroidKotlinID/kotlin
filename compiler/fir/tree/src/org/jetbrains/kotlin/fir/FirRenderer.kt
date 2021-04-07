@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.fir
 
-import org.jetbrains.kotlin.builtins.functions.FunctionClassKind
+import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
@@ -18,8 +18,11 @@ import org.jetbrains.kotlin.fir.expressions.impl.*
 import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.name.StandardClassIds
+import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.utils.isNotEmpty
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
@@ -249,12 +252,12 @@ class FirRenderer(builder: StringBuilder, private val mode: RenderMode = RenderM
         popIndent()
     }
 
-    private fun Visibility.asString(effectiveVisibility: FirEffectiveVisibility? = null): String {
+    private fun Visibility.asString(effectiveVisibility: EffectiveVisibility? = null): String {
         val itself = when (this) {
             Visibilities.Unknown -> return "public?"
             else -> toString()
         }
-        if (effectiveVisibility == null || effectiveVisibility == FirEffectiveVisibility.Default) return itself
+        if (effectiveVisibility == null) return itself
         val effectiveAsVisibility = effectiveVisibility.toVisibility()
         if (effectiveAsVisibility == this) return itself
         if (effectiveAsVisibility == Visibilities.Private && this == Visibilities.PrivateToThis) return itself
@@ -577,9 +580,11 @@ class FirRenderer(builder: StringBuilder, private val mode: RenderMode = RenderM
         anonymousFunction.valueParameters.renderParameters()
         print(": ")
         anonymousFunction.returnTypeRef.accept(this)
+        print(" <inline=${anonymousFunction.inlineStatus}")
         if (anonymousFunction.invocationKind != null) {
-            print(" <kind=${anonymousFunction.invocationKind}> ")
+            print(", kind=${anonymousFunction.invocationKind}")
         }
+        print("> ")
         if (mode.renderLambdaBodies) {
             anonymousFunction.body?.renderBody()
         }

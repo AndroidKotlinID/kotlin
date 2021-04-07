@@ -332,13 +332,18 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                         ConeSimpleDiagnostic("Incorrect double: $text", DiagnosticKind.IllegalConstExpression)
                     )
                 }
-            CHARACTER_CONSTANT ->
+            CHARACTER_CONSTANT -> {
+                val characterWithDiagnostic = text.parseCharacter()
                 buildConstOrErrorExpression(
                     sourceElement,
                     ConstantValueKind.Char,
-                    text.parseCharacter(),
-                    ConeSimpleDiagnostic("Incorrect character: $text", DiagnosticKind.IllegalConstExpression)
+                    characterWithDiagnostic.value,
+                    ConeSimpleDiagnostic(
+                        "Incorrect character: $text",
+                        characterWithDiagnostic.getDiagnostic() ?: DiagnosticKind.IllegalConstExpression
+                    )
                 )
+            }
             BOOLEAN_CONSTANT ->
                 buildConstExpression(
                     sourceElement,
@@ -1144,6 +1149,15 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                     // Refer to FIR backend ClassMemberGenerator for body generation.
                 }
             )
+        }
+    }
+
+    protected fun FirRegularClass.initContainingClassForLocalAttr() {
+        if (isLocal) {
+            val currentDispatchReceiverType = currentDispatchReceiverType()
+            if (currentDispatchReceiverType != null) {
+                containingClassForLocalAttr = currentDispatchReceiverType.lookupTag
+            }
         }
     }
 
