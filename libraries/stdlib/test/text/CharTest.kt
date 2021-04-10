@@ -82,7 +82,7 @@ class CharTest {
 
         for (char in 'A'..'Z') {
             val digit = 10 + (char - 'A')
-            val lower = char.toLowerCase()
+            val lower = char.lowercaseChar()
 
             for (radix in digit + 1..36) {
                 testEquals(digit, char, radix)
@@ -205,7 +205,7 @@ class CharTest {
     @Test
     fun charCategory() {
         for ((char, categoryCode) in charToCategory()) {
-            assertEquals(categoryCode, char.category.code, "char code: ${char.toInt().toString(radix = 16)}")
+            assertEquals(categoryCode, char.category.code, "char code: ${char.code.toString(radix = 16)}")
         }
     }
 

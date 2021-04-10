@@ -179,10 +179,18 @@ public final class Byte private constructor() : Number(), Comparable<Byte> {
     public inline operator fun rem(other: Double): Double =
             this.toDouble() % other
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Byte
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Byte
     /** Returns this value. */
@@ -203,6 +211,8 @@ public final class Byte private constructor() : Number(), Comparable<Byte> {
      * The least significant 8 bits of the resulting `Char` code are the same as the bits of this `Byte` value,
      * whereas the most significant 8 bits are filled with the sign bit of this value.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     @TypedIntrinsic(IntrinsicType.SIGN_EXTEND)
     external public override fun toChar(): Char
     /**
@@ -448,10 +458,18 @@ public final class Short private constructor() : Number(), Comparable<Short> {
     public inline operator fun rem(other: Double): Double =
             this.toDouble() % other
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Short
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Short
     /** Returns this value. */
@@ -494,6 +512,8 @@ public final class Short private constructor() : Number(), Comparable<Short> {
      * The resulting `Char` code is equal to this value reinterpreted as an unsigned number,
      * i.e. it has the same binary representation as this `Short`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     @TypedIntrinsic(IntrinsicType.ZERO_EXTEND)
     external public override fun toChar(): Char
 
@@ -716,10 +736,18 @@ public final class Int private constructor() : Number(), Comparable<Int> {
     public inline operator fun rem(other: Double): Double =
             this.toDouble() % other
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Int
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Int
     /** Returns this value. */
@@ -1010,10 +1038,18 @@ public final class Long private constructor() : Number(), Comparable<Long> {
     public inline operator fun rem(other: Double): Double =
             this.toDouble() % other
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Long
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Long
     /** Returns this value. */
@@ -1080,6 +1116,8 @@ public final class Long private constructor() : Number(), Comparable<Long> {
      *
      * The resulting `Char` code is represented by the least significant 16 bits of this `Long` value.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     @TypedIntrinsic(IntrinsicType.INT_TRUNCATE)
     external public override fun toChar(): Char
     /**
@@ -1328,10 +1366,18 @@ public final class Float private constructor() : Number(), Comparable<Float> {
     public inline operator fun rem(other: Double): Double =
             this.toDouble() % other
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Float
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Float
     /** Returns this value. */
@@ -1355,6 +1401,8 @@ public final class Float private constructor() : Number(), Comparable<Float> {
      *
      * The resulting `Char` value is equal to `this.toInt().toChar()`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char = this.toInt().toChar()
 
     /**
@@ -1604,10 +1652,18 @@ public final class Double private constructor() : Number(), Comparable<Double> {
     @TypedIntrinsic(IntrinsicType.SIGNED_REM)
     external public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     @TypedIntrinsic(IntrinsicType.INC)
     external public operator fun inc(): Double
-    /** Decrements this value. */
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     @TypedIntrinsic(IntrinsicType.DEC)
     external public operator fun dec(): Double
     /** Returns this value. */
@@ -1631,6 +1687,8 @@ public final class Double private constructor() : Number(), Comparable<Double> {
      *
      * The resulting `Char` value is equal to `this.toInt().toChar()`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char = this.toInt().toChar()
 
     /**

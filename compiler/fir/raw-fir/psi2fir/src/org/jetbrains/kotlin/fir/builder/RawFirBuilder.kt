@@ -1069,7 +1069,7 @@ open class RawFirBuilder(
                 symbol = FirAnonymousFunctionSymbol()
                 isLambda = true
 
-                var destructuringBlock: FirExpression? = null
+                val destructuringStatements = mutableListOf<FirStatement>()
                 for (valueParameter in literal.valueParameters) {
                     val multiDeclaration = valueParameter.destructuringDeclaration
                     valueParameters += if (multiDeclaration != null) {
@@ -1087,13 +1087,13 @@ open class RawFirBuilder(
                             isNoinline = false
                             isVararg = false
                         }
-                        destructuringBlock = generateDestructuringBlock(
+                        destructuringStatements += generateDestructuringBlock(
                             baseSession,
                             multiDeclaration,
                             multiParameter,
                             tmpVariable = false,
                             extractAnnotationsTo = { extractAnnotationsTo(it) },
-                        ) { toFirOrImplicitType() }
+                        ) { toFirOrImplicitType() }.statements
                         multiParameter
                     } else {
                         val typeRef = valueParameter.typeReference?.convertSafe() ?: buildImplicitTypeRef {
@@ -1129,11 +1129,7 @@ open class RawFirBuilder(
                                 }
                             )
                         }
-                        if (destructuringBlock is FirBlock) {
-                            for ((index, statement) in destructuringBlock.statements.withIndex()) {
-                                statements.add(index, statement)
-                            }
-                        }
+                        statements.addAll(0, destructuringStatements)
                     }.build()
                 }
                 context.firFunctionTargets.removeLast()
@@ -1334,7 +1330,12 @@ open class RawFirBuilder(
             val isNullable = typeElement is KtNullableType
 
             fun KtTypeElement?.unwrapNullable(): KtTypeElement? =
-                if (this is KtNullableType) this.innerType.unwrapNullable() else this
+                when (this) {
+                    is KtNullableType -> this.innerType.unwrapNullable()
+                    // TODO: Support explicit definitely not null type
+                    is KtDefinitelyNotNullType -> this.innerType.unwrapNullable()
+                    else -> this
+                }
 
             val firTypeBuilder = when (val unwrappedElement = typeElement.unwrapNullable()) {
                 is KtDynamicType -> FirDynamicTypeRefBuilder().apply {
@@ -1742,11 +1743,7 @@ open class RawFirBuilder(
                                 tmpVariable = true,
                                 extractAnnotationsTo = { extractAnnotationsTo(it) },
                             ) { toFirOrImplicitType() }
-                            if (destructuringBlock is FirBlock) {
-                                for ((index, statement) in destructuringBlock.statements.withIndex()) {
-                                    blockBuilder.statements.add(index, statement)
-                                }
-                            }
+                            blockBuilder.statements.addAll(0, destructuringBlock.statements)
                         } else {
                             blockBuilder.statements.add(0, firLoopParameter)
                         }
@@ -1996,7 +1993,10 @@ open class RawFirBuilder(
                 val receiver = expression.receiverExpression.toFirExpression("Incorrect receiver expression")
 
                 if (expression is KtSafeQualifiedExpression) {
-                    return firSelector.wrapWithSafeCall(receiver)
+                    return firSelector.wrapWithSafeCall(
+                        receiver,
+                        expression.toFirSourceElement(FirFakeSourceElementKind.DesugaredSafeCallExpression)
+                    )
                 }
 
                 firSelector.replaceExplicitReceiver(receiver)

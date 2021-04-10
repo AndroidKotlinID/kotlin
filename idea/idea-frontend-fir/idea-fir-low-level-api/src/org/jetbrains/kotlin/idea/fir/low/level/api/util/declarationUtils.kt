@@ -122,7 +122,6 @@ private fun KtClassOrObject.findFir(firSymbolProvider: FirSymbolProvider): FirRe
     val classId = classIdIfNonLocal() ?: return null
     return executeWithoutPCE {
         firSymbolProvider.getClassLikeSymbolByFqName(classId)?.fir as? FirRegularClass
-            ?: error("Could not find class $classId")
     }
 }
 
@@ -136,11 +135,3 @@ private fun KtTypeAlias.findFir(firSymbolProvider: FirSymbolProvider): FirTypeAl
 
 val FirDeclaration.isGeneratedDeclaration
     get() = realPsi == null
-
-internal fun FirCallableDeclaration<*>.collectDesignation(): List<FirClassLikeDeclaration<*>> {
-    return containingClass()
-        ?.toFirRegularClass(session)
-        ?.collectDesignation()
-        ?: return emptyList()
-}
-

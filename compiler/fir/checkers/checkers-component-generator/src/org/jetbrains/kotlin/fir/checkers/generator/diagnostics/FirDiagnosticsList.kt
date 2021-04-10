@@ -294,15 +294,21 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<FirTypeParameterSymbol>("typeParameter")
         }
 
-        val FINAL_UPPER_BOUND by warning<FirSourceElement, PsiElement> {
+        val FINAL_UPPER_BOUND by warning<FirSourceElement, KtTypeReference> {
             parameter<ConeKotlinType>("type")
         }
 
-        val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error<FirSourceElement, PsiElement>()
-        
-        val BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER by error<FirSourceElement, PsiElement>()
-        
-        val ONLY_ONE_CLASS_BOUND_ALLOWED by error<FirSourceElement, PsiElement>()
+        val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error<FirSourceElement, KtTypeReference>()
+
+        val BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER by error<FirSourceElement, KtElement>()
+
+        val ONLY_ONE_CLASS_BOUND_ALLOWED by error<FirSourceElement, KtTypeReference>()
+
+        val REPEATED_BOUND by error<FirSourceElement, KtTypeReference>()
+
+        val CONFLICTING_UPPER_BOUNDS by error<FirSourceElement, KtNamedDeclaration> {
+            parameter<FirTypeParameterSymbol>("typeParameter")
+        }
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
@@ -502,12 +508,14 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<Name>("functionWithAmbiguityName")
             parameter<Collection<AbstractFirBasedSymbol<*>>>("candidates")
         }
-
         val COMPONENT_FUNCTION_ON_NULLABLE by error<FirSourceElement, KtExpression> {
             parameter<Name>("componentFunctionName")
         }
-
-        // TODO: val COMPONENT_FUNCTION_RETURN_TYPE_MISMATCH by ...
+        val COMPONENT_FUNCTION_RETURN_TYPE_MISMATCH by error<FirSourceElement, KtExpression> {
+            parameter<Name>("componentFunctionName")
+            parameter<ConeKotlinType>("destructingType")
+            parameter<ConeKotlinType>("expectedType")
+        }
     }
 
     val CONTROL_FLOW by object : DiagnosticGroup("Control flow diagnostics") {
@@ -551,7 +559,15 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<String>("operator")
             parameter<FirExpression>("rhs")
         }
-        // TODO: val UNEXPECTED_SAFE_CALL by ...
+        val UNNECESSARY_SAFE_CALL by warning<FirSourceElement, PsiElement>(PositioningStrategy.SAFE_ACCESS) {
+            parameter<ConeKotlinType>("receiverType")
+        }
+        val UNEXPECTED_SAFE_CALL by error<FirSourceElement, PsiElement>(PositioningStrategy.SAFE_ACCESS)
+        val UNNECESSARY_NOT_NULL_ASSERTION by warning<FirSourceElement, KtExpression>(PositioningStrategy.OPERATOR) {
+            parameter<ConeKotlinType>("receiverType")
+        }
+        val NOT_NULL_ASSERTION_ON_LAMBDA_EXPRESSION by warning<FirSourceElement, KtExpression>(PositioningStrategy.OPERATOR)
+        val NOT_NULL_ASSERTION_ON_CALLABLE_REFERENCE by warning<FirSourceElement, KtExpression>(PositioningStrategy.OPERATOR)
     }
 
     val WHEN_EXPRESSIONS by object : DiagnosticGroup("When expressions") {

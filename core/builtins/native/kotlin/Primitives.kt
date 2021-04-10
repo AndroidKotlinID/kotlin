@@ -173,10 +173,20 @@ public class Byte private constructor() : Number(), Comparable<Byte> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Byte
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Byte
+
     /** Returns this value. */
     public operator fun unaryPlus(): Int
     /** Returns the negative of this value. */
@@ -201,6 +211,8 @@ public class Byte private constructor() : Number(), Comparable<Byte> {
      * The least significant 8 bits of the resulting `Char` code are the same as the bits of this `Byte` value,
      * whereas the most significant 8 bits are filled with the sign bit of this value.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char
     /**
      * Converts this [Byte] value to [Short].
@@ -409,10 +421,20 @@ public class Short private constructor() : Number(), Comparable<Short> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Short
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Short
+
     /** Returns this value. */
     public operator fun unaryPlus(): Int
     /** Returns the negative of this value. */
@@ -442,6 +464,8 @@ public class Short private constructor() : Number(), Comparable<Short> {
      * The resulting `Char` code is equal to this value reinterpreted as an unsigned number,
      * i.e. it has the same binary representation as this `Short`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char
     /** Returns this value. */
     public override fun toShort(): Short
@@ -643,10 +667,20 @@ public class Int private constructor() : Number(), Comparable<Int> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Int
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Int
+
     /** Returns this value. */
     public operator fun unaryPlus(): Int
     /** Returns the negative of this value. */
@@ -914,10 +948,20 @@ public class Long private constructor() : Number(), Comparable<Long> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Long
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Long
+
     /** Returns this value. */
     public operator fun unaryPlus(): Long
     /** Returns the negative of this value. */
@@ -982,6 +1026,8 @@ public class Long private constructor() : Number(), Comparable<Long> {
      *
      * The resulting `Char` code is represented by the least significant 16 bits of this `Long` value.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char
     /**
      * Converts this [Long] value to [Short].
@@ -1202,10 +1248,20 @@ public class Float private constructor() : Number(), Comparable<Float> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Float
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Float
+
     /** Returns this value. */
     public operator fun unaryPlus(): Float
     /** Returns the negative of this value. */
@@ -1225,6 +1281,8 @@ public class Float private constructor() : Number(), Comparable<Float> {
      *
      * The resulting `Char` value is equal to `this.toInt().toChar()`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char
     /**
      * Converts this [Float] value to [Short].
@@ -1441,10 +1499,20 @@ public class Double private constructor() : Number(), Comparable<Double> {
     @SinceKotlin("1.1")
     public operator fun rem(other: Double): Double
 
-    /** Increments this value. */
+    /**
+     * Returns this value incremented by one.
+     *
+     * @sample samples.misc.Builtins.inc
+     */
     public operator fun inc(): Double
-    /** Decrements this value. */
+
+    /**
+     * Returns this value decremented by one.
+     *
+     * @sample samples.misc.Builtins.dec
+     */
     public operator fun dec(): Double
+
     /** Returns this value. */
     public operator fun unaryPlus(): Double
     /** Returns the negative of this value. */
@@ -1464,6 +1532,8 @@ public class Double private constructor() : Number(), Comparable<Double> {
      *
      * The resulting `Char` value is equal to `this.toInt().toChar()`.
      */
+    @Deprecated("Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.", ReplaceWith("this.toInt().toChar()"))
+    @DeprecatedSinceKotlin(warningSince = "1.5")
     public override fun toChar(): Char
     /**
      * Converts this [Double] value to [Short].

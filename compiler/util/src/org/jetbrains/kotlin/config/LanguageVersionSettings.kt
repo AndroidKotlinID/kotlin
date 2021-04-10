@@ -164,12 +164,11 @@ enum class LanguageFeature(
      */
     TypeEnhancementImprovementsInStrictMode(KOTLIN_1_6),
     ProhibitJvmFieldOnOverrideFromInterfaceInPrimaryConstructor(KOTLIN_1_6, kind = BUG_FIX),
+    PrivateInFileEffectiveVisibility(KOTLIN_1_6, kind = BUG_FIX),
+    ForbidUsingExtensionPropertyTypeParameterInDelegate(KOTLIN_1_6, kind = BUG_FIX),
 
     // Temporarily disabled, see KT-27084/KT-22379
     SoundSmartcastFromLoopConditionForLoopAssignedVariables(sinceVersion = null, kind = BUG_FIX),
-
-    // Looks like we can't enable it until KT-26245 is fixed because otherwise some use cases become broken because of overrides
-    ProhibitUsingNullableTypeParameterAgainstNotNullAnnotated(sinceVersion = null, kind = BUG_FIX),
 
     // Experimental features
 
@@ -201,12 +200,16 @@ enum class LanguageFeature(
     InlineClasses(sinceVersion = KOTLIN_1_3, defaultState = State.ENABLED_WITH_WARNING, kind = UNSTABLE_FEATURE),
     JvmInlineValueClasses(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = OTHER),
     SuspendFunctionsInFunInterfaces(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = OTHER),
-    SamWrapperClassesAreSynthetic(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = BUG_FIX)
+    SamWrapperClassesAreSynthetic(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = BUG_FIX),
+
+    // 1.6
+    DefinitelyNotNullTypeParameters(sinceVersion = KOTLIN_1_6),
+    ProhibitUsingNullableTypeParameterAgainstNotNullAnnotated(sinceVersion = KOTLIN_1_6, kind = BUG_FIX),
     ;
 
     val presentableName: String
     // E.g. "DestructuringLambdaParameters" -> ["Destructuring", "Lambda", "Parameters"] -> "destructuring lambda parameters"
-        get() = name.split("(?<!^)(?=[A-Z])".toRegex()).joinToString(separator = " ", transform = String::toLowerCase)
+        get() = name.split("(?<!^)(?=[A-Z])".toRegex()).joinToString(separator = " ", transform = String::lowercase)
 
     val presentableText get() = if (hintUrl == null) presentableName else "$presentableName (See: $hintUrl)"
 

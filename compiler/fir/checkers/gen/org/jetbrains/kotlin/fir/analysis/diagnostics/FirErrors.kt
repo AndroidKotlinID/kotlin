@@ -220,10 +220,12 @@ object FirErrors {
     val INNER_CLASS_OF_GENERIC_THROWABLE_SUBCLASS by error0<FirSourceElement, KtClassOrObject>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val KCLASS_WITH_NULLABLE_TYPE_PARAMETER_IN_SIGNATURE by error1<FirSourceElement, KtNamedDeclaration, FirTypeParameterSymbol>(SourceElementPositioningStrategies.DECLARATION_NAME)
     val TYPE_PARAMETER_AS_REIFIED by error1<FirSourceElement, PsiElement, FirTypeParameterSymbol>()
-    val FINAL_UPPER_BOUND by warning1<FirSourceElement, PsiElement, ConeKotlinType>()
-    val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error0<FirSourceElement, PsiElement>()
-    val BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER by error0<FirSourceElement, PsiElement>()
-    val ONLY_ONE_CLASS_BOUND_ALLOWED by error0<FirSourceElement, PsiElement>()
+    val FINAL_UPPER_BOUND by warning1<FirSourceElement, KtTypeReference, ConeKotlinType>()
+    val UPPER_BOUND_IS_EXTENSION_FUNCTION_TYPE by error0<FirSourceElement, KtTypeReference>()
+    val BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER by error0<FirSourceElement, KtElement>()
+    val ONLY_ONE_CLASS_BOUND_ALLOWED by error0<FirSourceElement, KtTypeReference>()
+    val REPEATED_BOUND by error0<FirSourceElement, KtTypeReference>()
+    val CONFLICTING_UPPER_BOUNDS by error1<FirSourceElement, KtNamedDeclaration, FirTypeParameterSymbol>()
 
     // Reflection
     val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error1<FirSourceElement, KtExpression, FirCallableDeclaration<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -313,6 +315,7 @@ object FirErrors {
     val COMPONENT_FUNCTION_MISSING by error2<FirSourceElement, PsiElement, Name, ConeKotlinType>()
     val COMPONENT_FUNCTION_AMBIGUITY by error2<FirSourceElement, PsiElement, Name, Collection<AbstractFirBasedSymbol<*>>>()
     val COMPONENT_FUNCTION_ON_NULLABLE by error1<FirSourceElement, KtExpression, Name>()
+    val COMPONENT_FUNCTION_RETURN_TYPE_MISMATCH by error3<FirSourceElement, KtExpression, Name, ConeKotlinType, ConeKotlinType>()
 
     // Control flow diagnostics
     val UNINITIALIZED_VARIABLE by error1<FirSourceElement, KtSimpleNameExpression, FirPropertySymbol>()
@@ -328,6 +331,11 @@ object FirErrors {
     val UNSAFE_IMPLICIT_INVOKE_CALL by error1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val UNSAFE_INFIX_CALL by error3<FirSourceElement, KtExpression, FirExpression, String, FirExpression>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val UNSAFE_OPERATOR_CALL by error3<FirSourceElement, KtExpression, FirExpression, String, FirExpression>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
+    val UNNECESSARY_SAFE_CALL by warning1<FirSourceElement, PsiElement, ConeKotlinType>(SourceElementPositioningStrategies.SAFE_ACCESS)
+    val UNEXPECTED_SAFE_CALL by error0<FirSourceElement, PsiElement>(SourceElementPositioningStrategies.SAFE_ACCESS)
+    val UNNECESSARY_NOT_NULL_ASSERTION by warning1<FirSourceElement, KtExpression, ConeKotlinType>(SourceElementPositioningStrategies.OPERATOR)
+    val NOT_NULL_ASSERTION_ON_LAMBDA_EXPRESSION by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
+    val NOT_NULL_ASSERTION_ON_CALLABLE_REFERENCE by warning0<FirSourceElement, KtExpression>(SourceElementPositioningStrategies.OPERATOR)
 
     // When expressions
     val NO_ELSE_IN_WHEN by error1<FirSourceElement, KtWhenExpression, List<WhenMissingCase>>(SourceElementPositioningStrategies.WHEN_EXPRESSION)

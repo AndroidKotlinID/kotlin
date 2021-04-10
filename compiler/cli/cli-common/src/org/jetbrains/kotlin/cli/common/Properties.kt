@@ -36,36 +36,38 @@ enum class CompilerSystemProperties(val property: String) {
     KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY("kotlin.environment.keepalive"),
     COMPILE_DAEMON_CUSTOM_RUN_FILES_PATH_FOR_TESTS("kotlin.daemon.custom.run.files.path.for.tests"),
     KOTLIN_COLORS_ENABLED_PROPERTY("kotlin.colors.enabled"),
-    OS_NAME("os.name")
+    OS_NAME("os.name"),
+    TMP_DIR("java.io.tmpdir"),
+    USER_HOME("user.home"),
+    JAVA_VERSION("java.specification.version"),
+    JAVA_HOME("java.home"),
+    JAVA_CLASS_PATH("java.class.path"),
     ;
 
     var value
-        get() = systemPropertyGetter(property)
+        get() = (systemPropertyGetter ?: System::getProperty)(property)
         set(value) {
-            systemPropertySetter(property, value!!)
+            (systemPropertySetter ?: System::setProperty)(property, value!!)
         }
 
-    fun clear(): String? = systemPropertyCleaner(property)
+    val safeValue
+        get() = value ?: error("No value for $property system property")
+
+    fun clear(): String? = (systemPropertyCleaner ?: System::clearProperty)(property)
 
     companion object {
-        var systemPropertyGetter: (String) -> String? = {
-            System.getProperty(it)
-        }
+        var systemPropertyGetter: ((String) -> String?)? = null
 
-        var systemPropertySetter: (String, String) -> String? = { key, value ->
-            System.setProperty(key, value)
-        }
+        var systemPropertySetter: ((String, String) -> String?)? = null
 
-        var systemPropertyCleaner: (String) -> String? = { key ->
-            System.clearProperty(key)
-        }
+        var systemPropertyCleaner: ((String) -> String?)? = null
     }
 }
 
 val isWindows: Boolean
-    get() = CompilerSystemProperties.OS_NAME.value!!.toLowerCase(Locale.ENGLISH).startsWith("windows")
+    get() = CompilerSystemProperties.OS_NAME.value!!.lowercase().startsWith("windows")
 
-fun String?.toBooleanLenient(): Boolean? = when (this?.toLowerCase()) {
+fun String?.toBooleanLenient(): Boolean? = when (this?.lowercase()) {
     null -> false
     in listOf("", "yes", "true", "on", "y") -> true
     in listOf("no", "false", "off", "n") -> false

@@ -45,9 +45,9 @@ internal class KtFirNamedClassOrObjectSymbol(
             fir.symbol.classId.takeUnless { it.isLocal }
         }
 
-    override val modality: Modality get() = getModality()
-
-    override val visibility: Visibility get() = getVisibility()
+    /* FirRegularClass modality and visibility does not modified by STATUS so it can be taken from RAW */
+    override val modality: Modality get() = getModality(FirResolvePhase.RAW_FIR, Modality.FINAL)
+    override val visibility: Visibility get() = getVisibility(FirResolvePhase.RAW_FIR)
 
     override val annotations: List<KtAnnotationCall> by cached { firRef.toAnnotationsList() }
     override fun containsAnnotation(classId: ClassId): Boolean = firRef.containsAnnotation(classId)
@@ -65,7 +65,7 @@ internal class KtFirNamedClassOrObjectSymbol(
     }
 
     override val superTypes: List<KtTypeAndAnnotations> by cached {
-        firRef.superTypesAndAnnotationsList(builder)
+        firRef.superTypesAndAnnotationsListForRegularClass(builder)
     }
 
     override val typeParameters by firRef.withFirAndCache { fir ->
