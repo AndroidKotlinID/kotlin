@@ -18,12 +18,15 @@ import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.diagnostics.SourceElementPositioningStrategies
 import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirClass
+import org.jetbrains.kotlin.fir.declarations.FirDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirEnumEntry
 import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
@@ -186,6 +189,7 @@ object FirErrors {
     // Applicability
     val NONE_APPLICABLE by error1<FirSourceElement, PsiElement, Collection<AbstractFirBasedSymbol<*>>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val INAPPLICABLE_CANDIDATE by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
+    val ARGUMENT_TYPE_MISMATCH by error2<FirSourceElement, PsiElement, ConeKotlinType, ConeKotlinType>()
     val INAPPLICABLE_LATEINIT_MODIFIER by error1<FirSourceElement, KtModifierListOwner, String>(SourceElementPositioningStrategies.LATEINIT_MODIFIER)
     val VARARG_OUTSIDE_PARENTHESES by error0<FirSourceElement, KtExpression>()
     val NAMED_ARGUMENTS_NOT_ALLOWED by error1<FirSourceElement, KtValueArgument, ForbiddenNamedArgumentsTarget>(SourceElementPositioningStrategies.NAME_OF_NAMED_ARGUMENT)
@@ -226,6 +230,7 @@ object FirErrors {
     val ONLY_ONE_CLASS_BOUND_ALLOWED by error0<FirSourceElement, KtTypeReference>()
     val REPEATED_BOUND by error0<FirSourceElement, KtTypeReference>()
     val CONFLICTING_UPPER_BOUNDS by error1<FirSourceElement, KtNamedDeclaration, FirTypeParameterSymbol>()
+    val NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER by error2<FirSourceElement, KtSimpleNameExpression, Name, FirDeclaration>()
 
     // Reflection
     val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error1<FirSourceElement, KtExpression, FirCallableDeclaration<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -319,6 +324,8 @@ object FirErrors {
 
     // Control flow diagnostics
     val UNINITIALIZED_VARIABLE by error1<FirSourceElement, KtSimpleNameExpression, FirPropertySymbol>()
+    val UNINITIALIZED_ENUM_ENTRY by error1<FirSourceElement, KtSimpleNameExpression, FirVariableSymbol<FirEnumEntry>>()
+    val UNINITIALIZED_ENUM_COMPANION by error1<FirSourceElement, KtSimpleNameExpression, FirRegularClassSymbol>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
     val VAL_REASSIGNMENT by error1<FirSourceElement, KtExpression, FirVariableSymbol<*>>()
     val VAL_REASSIGNMENT_VIA_BACKING_FIELD by warning1<FirSourceElement, KtExpression, FirPropertySymbol>()
     val VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR by error1<FirSourceElement, KtExpression, FirPropertySymbol>()

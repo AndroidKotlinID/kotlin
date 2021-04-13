@@ -11914,6 +11914,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("discardInapplicableCandidateWithNotSatisfyingSelfType.kt")
+            public void testDiscardInapplicableCandidateWithNotSatisfyingSelfType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/discardInapplicableCandidateWithNotSatisfyingSelfType.kt");
+            }
+
+            @Test
             @TestMetadata("equalitySubstitutionInsideNonInvariantType.kt")
             public void testEqualitySubstitutionInsideNonInvariantType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/equalitySubstitutionInsideNonInvariantType.kt");
@@ -12385,6 +12391,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             @TestMetadata("useFunctionLiteralsToInferType.kt")
             public void testUseFunctionLiteralsToInferType() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/useFunctionLiteralsToInferType.kt");
+            }
+
+            @Test
+            @TestMetadata("violatingUpperBoundForSelfType.kt")
+            public void testViolatingUpperBoundForSelfType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/violatingUpperBoundForSelfType.kt");
             }
 
             @Nested
@@ -13404,6 +13416,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 @TestMetadata("generateConstraintWithInnerNothingType.kt")
                 public void testGenerateConstraintWithInnerNothingType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/generateConstraintWithInnerNothingType.kt");
+                }
+
+                @Test
+                @TestMetadata("genericOverride.kt")
+                public void testGenericOverride() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/nothingType/genericOverride.kt");
                 }
 
                 @Test
@@ -30880,6 +30898,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
         @TestMetadata("elvisOnUnitInLet.kt")
         public void testElvisOnUnitInLet() throws Exception {
             runTest("compiler/testData/diagnostics/testsWithStdLib/elvisOnUnitInLet.kt");
+        }
+
+        @Test
+        @TestMetadata("enumEntryInitialization.kt")
+        public void testEnumEntryInitialization() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/enumEntryInitialization.kt");
         }
 
         @Test

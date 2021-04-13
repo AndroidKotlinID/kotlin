@@ -5089,6 +5089,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/extensionFunctions/kt5467.kt");
         }
 
+        @TestMetadata("memberExtensionEqualsHashCodeToStringInInterface.kt")
+        public void testMemberExtensionEqualsHashCodeToStringInInterface() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/memberExtensionEqualsHashCodeToStringInInterface.kt");
+        }
+
         @TestMetadata("nested2.kt")
         public void testNested2() throws Exception {
             runTest("compiler/testData/codegen/box/extensionFunctions/nested2.kt");
@@ -8416,6 +8421,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
                 public void testAllFilesPresentInFunctionRefToJavaInterface() throws Exception {
                     KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+
+                @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor")
+                @TestDataPath("$PROJECT_ROOT")
+                @RunWith(JUnit3RunnerWithInners.class)
+                public static class WithAccessor extends AbstractIrCodegenBoxWasmTest {
+                    private void runTest(String testDataFilePath) throws Exception {
+                        KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                    }
+
+                    public void testAllFilesPresentInWithAccessor() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                    }
                 }
             }
 

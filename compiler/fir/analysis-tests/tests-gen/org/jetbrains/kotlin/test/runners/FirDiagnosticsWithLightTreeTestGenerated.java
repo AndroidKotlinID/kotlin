@@ -586,6 +586,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             }
 
             @Test
+            @TestMetadata("argParamTypeMismatch.kt")
+            public void testArgParamTypeMismatch() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/arguments/argParamTypeMismatch.kt");
+            }
+
+            @Test
             @TestMetadata("argumentsOfAnnotations.kt")
             public void testArgumentsOfAnnotations() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/arguments/argumentsOfAnnotations.kt");
@@ -1331,6 +1337,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @TestMetadata("methodOfAnyImplementedInInterface.kt")
             public void testMethodOfAnyImplementedInInterface() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/methodOfAnyImplementedInInterface.kt");
+            }
+
+            @Test
+            @TestMetadata("multipleBounds.kt")
+            public void testMultipleBounds() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/multipleBounds.kt");
             }
 
             @Test

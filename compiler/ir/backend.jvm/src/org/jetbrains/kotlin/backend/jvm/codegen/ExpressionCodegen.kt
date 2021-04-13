@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.ir.isFromJava
 import org.jetbrains.kotlin.backend.common.lower.BOUND_RECEIVER_PARAMETER
 import org.jetbrains.kotlin.backend.common.lower.SYNTHESIZED_INIT_BLOCK
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
@@ -12,7 +13,6 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredStatementOrigin
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
 import org.jetbrains.kotlin.backend.jvm.intrinsics.JavaClassProperty
 import org.jetbrains.kotlin.backend.jvm.ir.erasedUpperBound
-import org.jetbrains.kotlin.backend.jvm.ir.isFromJava
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.constantValue
@@ -1079,7 +1079,8 @@ class ExpressionCodegen(
         nestedTryWithoutFinally: MutableList<TryInfo> = arrayListOf(),
         stop: (LoopInfo) -> Boolean
     ): LoopInfo? {
-        return data.handleBlock {
+        @Suppress("RemoveExplicitTypeArguments")
+        return data.handleBlock<Nothing> {
             when {
                 it is TryWithFinallyInfo -> {
                     genFinallyBlock(it, null, endLabel, data, nestedTryWithoutFinally)

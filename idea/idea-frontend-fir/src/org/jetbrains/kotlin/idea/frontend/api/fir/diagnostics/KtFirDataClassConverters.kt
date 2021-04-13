@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirProperty
+import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.declarations.FirVariable
 import org.jetbrains.kotlin.fir.psi
@@ -706,6 +707,14 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
             token,
         )
     }
+    add(FirErrors.ARGUMENT_TYPE_MISMATCH) { firDiagnostic ->
+        ArgumentTypeMismatchImpl(
+            firSymbolBuilder.typeBuilder.buildKtType(firDiagnostic.a),
+            firSymbolBuilder.typeBuilder.buildKtType(firDiagnostic.b),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
     add(FirErrors.INAPPLICABLE_LATEINIT_MODIFIER) { firDiagnostic ->
         InapplicableLateinitModifierImpl(
             firDiagnostic.a,
@@ -941,6 +950,14 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     add(FirErrors.CONFLICTING_UPPER_BOUNDS) { firDiagnostic ->
         ConflictingUpperBoundsImpl(
             firSymbolBuilder.classifierBuilder.buildTypeParameterSymbol(firDiagnostic.a.fir),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER) { firDiagnostic ->
+        NameInConstraintIsNotATypeParameterImpl(
+            firDiagnostic.a,
+            firSymbolBuilder.buildSymbol(firDiagnostic.b),
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -1455,7 +1472,21 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.UNINITIALIZED_VARIABLE) { firDiagnostic ->
         UninitializedVariableImpl(
-            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir as FirProperty),
+            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.UNINITIALIZED_ENUM_ENTRY) { firDiagnostic ->
+        UninitializedEnumEntryImpl(
+            firSymbolBuilder.variableLikeBuilder.buildVariableLikeSymbol(firDiagnostic.a.fir),
+            firDiagnostic as FirPsiDiagnostic<*>,
+            token,
+        )
+    }
+    add(FirErrors.UNINITIALIZED_ENUM_COMPANION) { firDiagnostic ->
+        UninitializedEnumCompanionImpl(
+            firSymbolBuilder.classifierBuilder.buildClassLikeSymbol(firDiagnostic.a.fir),
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
@@ -1469,14 +1500,14 @@ internal val KT_DIAGNOSTIC_CONVERTER = KtDiagnosticConverterBuilder.buildConvert
     }
     add(FirErrors.VAL_REASSIGNMENT_VIA_BACKING_FIELD) { firDiagnostic ->
         ValReassignmentViaBackingFieldImpl(
-            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir as FirProperty),
+            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir),
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )
     }
     add(FirErrors.VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR) { firDiagnostic ->
         ValReassignmentViaBackingFieldErrorImpl(
-            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir as FirProperty),
+            firSymbolBuilder.variableLikeBuilder.buildVariableSymbol(firDiagnostic.a.fir),
             firDiagnostic as FirPsiDiagnostic<*>,
             token,
         )

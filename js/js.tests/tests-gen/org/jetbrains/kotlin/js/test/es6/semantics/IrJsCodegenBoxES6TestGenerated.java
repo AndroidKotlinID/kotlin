@@ -10764,6 +10764,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/extensionFunctions/kt865.kt");
         }
 
+        @TestMetadata("memberExtensionEqualsHashCodeToStringInInterface.kt")
+        public void testMemberExtensionEqualsHashCodeToStringInInterface() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/memberExtensionEqualsHashCodeToStringInInterface.kt");
+        }
+
         @TestMetadata("nested2.kt")
         public void testNested2() throws Exception {
             runTest("compiler/testData/codegen/box/extensionFunctions/nested2.kt");
@@ -12399,6 +12404,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             @TestMetadata("callableReferenceAndCoercionToUnit.kt")
             public void testCallableReferenceAndCoercionToUnit() throws Exception {
                 runTest("compiler/testData/codegen/box/inference/builderInference/callableReferenceAndCoercionToUnit.kt");
+            }
+
+            @TestMetadata("callableReferencesProperCompletion.kt")
+            public void testCallableReferencesProperCompletion() throws Exception {
+                runTest("compiler/testData/codegen/box/inference/builderInference/callableReferencesProperCompletion.kt");
             }
 
             @TestMetadata("kt41164.kt")
@@ -14979,6 +14989,19 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
 
                 public void testAllFilesPresentInFunctionRefToJavaInterface() throws Exception {
                     KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR_ES6, true);
+                }
+
+                @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor")
+                @TestDataPath("$PROJECT_ROOT")
+                @RunWith(JUnit3RunnerWithInners.class)
+                public static class WithAccessor extends AbstractIrJsCodegenBoxES6Test {
+                    private void runTest(String testDataFilePath) throws Exception {
+                        KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR_ES6, testDataFilePath);
+                    }
+
+                    public void testAllFilesPresentInWithAccessor() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR_ES6, true);
+                    }
                 }
             }
 

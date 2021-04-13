@@ -38,6 +38,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANNOTATION_CLASS_
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANNOTATION_PARAMETER_DEFAULT_VALUE_MUST_BE_CONSTANT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ANONYMOUS_FUNCTION_PARAMETER_WITH_DEFAULT_VALUE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ARGUMENT_PASSED_TWICE
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ARGUMENT_TYPE_MISMATCH
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_EQUALS
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGNED_VALUE_IS_NEVER_READ
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ASSIGN_OPERATOR_AMBIGUITY
@@ -136,6 +137,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.MUST_BE_INITIALIZ
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.MUST_BE_INITIALIZED_OR_BE_ABSTRACT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NAMED_ARGUMENTS_NOT_ALLOWED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NAMED_PARAMETER_NOT_FOUND
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NESTED_CLASS_NOT_ALLOWED
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NONE_APPLICABLE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.NON_ABSTRACT_FUNCTION_WITH_NO_BODY
@@ -218,6 +220,8 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETER_IN
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETER_IS_NOT_AN_EXPRESSION
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.TYPE_PARAMETER_ON_LHS_OF_DOT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNEXPECTED_SAFE_CALL
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNINITIALIZED_ENUM_COMPANION
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNINITIALIZED_ENUM_ENTRY
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNINITIALIZED_VARIABLE
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNNECESSARY_LATEINIT
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.UNNECESSARY_NOT_NULL_ASSERTION
@@ -412,6 +416,8 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
             map.put(NO_VALUE_FOR_PARAMETER, "No value passed for parameter ''{0}''", NAME)
             map.put(NAMED_PARAMETER_NOT_FOUND, "Cannot find a parameter with this name: {0}", TO_STRING)
 
+            map.put(ARGUMENT_TYPE_MISMATCH, "Argument type mismatch: actual type is {1} but {0} was expected", TO_STRING, TO_STRING)
+
             // Ambiguity
             map.put(OVERLOAD_RESOLUTION_AMBIGUITY, "Overload resolution ambiguity between candidates: {0}", SYMBOLS)
             map.put(ASSIGN_OPERATOR_AMBIGUITY, "Ambiguity between assign operator candidates: {0}", SYMBOLS)
@@ -472,6 +478,13 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
                 CONFLICTING_UPPER_BOUNDS,
                 "Upper bounds of {0} have empty intersection",
                 SYMBOL
+            )
+
+            map.put(
+                NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER,
+                "{0} does not refer to a type parameter of {1}",
+                TO_STRING,
+                NAME
             )
 
             // Reflection
@@ -711,6 +724,8 @@ class FirDefaultErrorMessages : DefaultErrorMessages.Extension {
 
             // Control flow diagnostics
             map.put(UNINITIALIZED_VARIABLE, "{0} must be initialized before access", VARIABLE_NAME)
+            map.put(UNINITIALIZED_ENUM_ENTRY, "Enum entry ''{0}'' is uninitialized here", VARIABLE_NAME)
+            map.put(UNINITIALIZED_ENUM_COMPANION, "Companion object of enum class ''{0}'' is uninitialized here", SYMBOL)
             map.put(VAL_REASSIGNMENT, "Val cannot be reassigned", VARIABLE_NAME)
             map.put(VAL_REASSIGNMENT_VIA_BACKING_FIELD, "Reassignment of read-only property via backing field is deprecated", VARIABLE_NAME)
             map.put(VAL_REASSIGNMENT_VIA_BACKING_FIELD_ERROR, "Reassignment of read-only property via backing field", VARIABLE_NAME)

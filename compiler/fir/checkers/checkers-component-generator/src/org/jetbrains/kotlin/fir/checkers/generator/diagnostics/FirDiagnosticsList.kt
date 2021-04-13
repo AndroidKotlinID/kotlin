@@ -16,16 +16,10 @@ import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.diagnostics.WhenMissingCase
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.PrivateForInline
-import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirValueParameter
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.name.Name
@@ -219,6 +213,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<AbstractFirBasedSymbol<*>>("candidate")
         }
 
+        val ARGUMENT_TYPE_MISMATCH by error<FirSourceElement, PsiElement> {
+            parameter<ConeKotlinType>("expectedType")
+            parameter<ConeKotlinType>("actualType")
+        }
+
         val INAPPLICABLE_LATEINIT_MODIFIER by error<FirSourceElement, KtModifierListOwner>(PositioningStrategy.LATEINIT_MODIFIER) {
             parameter<String>("reason")
         }
@@ -308,6 +307,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
 
         val CONFLICTING_UPPER_BOUNDS by error<FirSourceElement, KtNamedDeclaration> {
             parameter<FirTypeParameterSymbol>("typeParameter")
+        }
+
+        val NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER by error<FirSourceElement, KtSimpleNameExpression> {
+            parameter<Name>("typeParameterName")
+            parameter<FirDeclaration>("typeParametersOwner")
         }
     }
 
@@ -521,6 +525,12 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
     val CONTROL_FLOW by object : DiagnosticGroup("Control flow diagnostics") {
         val UNINITIALIZED_VARIABLE by error<FirSourceElement, KtSimpleNameExpression> {
             parameter<FirPropertySymbol>("variable")
+        }
+        val UNINITIALIZED_ENUM_ENTRY by error<FirSourceElement, KtSimpleNameExpression> {
+            parameter<FirVariableSymbol<FirEnumEntry>>("enumEntry")
+        }
+        val UNINITIALIZED_ENUM_COMPANION by error<FirSourceElement, KtSimpleNameExpression>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+            parameter<FirRegularClassSymbol>("enumClass")
         }
         val VAL_REASSIGNMENT by error<FirSourceElement, KtExpression> {
             parameter<FirVariableSymbol<*>>("variable")

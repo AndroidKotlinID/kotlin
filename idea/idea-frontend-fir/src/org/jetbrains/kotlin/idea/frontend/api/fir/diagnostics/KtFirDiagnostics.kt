@@ -510,6 +510,12 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         abstract val candidate: KtSymbol
     }
 
+    abstract class ArgumentTypeMismatch : KtFirDiagnostic<PsiElement>() {
+        override val diagnosticClass get() = ArgumentTypeMismatch::class
+        abstract val expectedType: KtType
+        abstract val actualType: KtType
+    }
+
     abstract class InapplicableLateinitModifier : KtFirDiagnostic<KtModifierListOwner>() {
         override val diagnosticClass get() = InapplicableLateinitModifier::class
         abstract val reason: String
@@ -671,6 +677,12 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
     abstract class ConflictingUpperBounds : KtFirDiagnostic<KtNamedDeclaration>() {
         override val diagnosticClass get() = ConflictingUpperBounds::class
         abstract val typeParameter: KtTypeParameterSymbol
+    }
+
+    abstract class NameInConstraintIsNotATypeParameter : KtFirDiagnostic<KtSimpleNameExpression>() {
+        override val diagnosticClass get() = NameInConstraintIsNotATypeParameter::class
+        abstract val typeParameterName: Name
+        abstract val typeParametersOwner: KtSymbol
     }
 
     abstract class ExtensionInClassReferenceNotAllowed : KtFirDiagnostic<KtExpression>() {
@@ -1030,6 +1042,16 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
     abstract class UninitializedVariable : KtFirDiagnostic<KtSimpleNameExpression>() {
         override val diagnosticClass get() = UninitializedVariable::class
         abstract val variable: KtVariableSymbol
+    }
+
+    abstract class UninitializedEnumEntry : KtFirDiagnostic<KtSimpleNameExpression>() {
+        override val diagnosticClass get() = UninitializedEnumEntry::class
+        abstract val enumEntry: KtVariableLikeSymbol
+    }
+
+    abstract class UninitializedEnumCompanion : KtFirDiagnostic<KtSimpleNameExpression>() {
+        override val diagnosticClass get() = UninitializedEnumCompanion::class
+        abstract val enumClass: KtClassLikeSymbol
     }
 
     abstract class ValReassignment : KtFirDiagnostic<KtExpression>() {

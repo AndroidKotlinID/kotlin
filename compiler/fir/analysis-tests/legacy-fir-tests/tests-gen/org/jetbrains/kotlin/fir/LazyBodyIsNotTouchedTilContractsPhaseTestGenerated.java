@@ -496,6 +496,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
             runTest("compiler/fir/analysis-tests/testData/resolve/arguments/ambiguityOnJavaOverride.kt");
         }
 
+        @TestMetadata("argParamTypeMismatch.kt")
+        public void testArgParamTypeMismatch() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/arguments/argParamTypeMismatch.kt");
+        }
+
         @TestMetadata("argumentsOfAnnotations.kt")
         public void testArgumentsOfAnnotations() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/arguments/argumentsOfAnnotations.kt");
@@ -1148,6 +1153,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         @TestMetadata("methodOfAnyImplementedInInterface.kt")
         public void testMethodOfAnyImplementedInInterface() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/methodOfAnyImplementedInInterface.kt");
+        }
+
+        @TestMetadata("multipleBounds.kt")
+        public void testMultipleBounds() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/diagnostics/multipleBounds.kt");
         }
 
         @TestMetadata("nonConstValInAnnotationArgument.kt")
