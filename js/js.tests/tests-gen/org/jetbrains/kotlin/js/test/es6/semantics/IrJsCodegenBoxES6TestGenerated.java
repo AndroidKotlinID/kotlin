@@ -6605,6 +6605,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/coroutines/bridges"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR_ES6, true);
             }
 
+            @TestMetadata("interfaceGenericDefault.kt")
+            public void testInterfaceGenericDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceGenericDefault.kt");
+            }
+
             @TestMetadata("interfaceSpecialization.kt")
             public void testInterfaceSpecialization() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceSpecialization.kt");
@@ -10345,6 +10350,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("enumShort.kt")
         public void testEnumShort() throws Exception {
             runTest("compiler/testData/codegen/box/enum/enumShort.kt");
+        }
+
+        @TestMetadata("enumValueOf.kt")
+        public void testEnumValueOf() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/enumValueOf.kt");
         }
 
         @TestMetadata("enumWithLambdaParameter.kt")

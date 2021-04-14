@@ -19,7 +19,7 @@ fun test() {
 
     val b: Byte = id(300)
 
-    val c: Int = id(9223372036854775807)
+    val c: Int = <!INITIALIZER_TYPE_MISMATCH!>id(9223372036854775807)<!>
 
     val d = id(22)
     checkSubtype<Int>(d)

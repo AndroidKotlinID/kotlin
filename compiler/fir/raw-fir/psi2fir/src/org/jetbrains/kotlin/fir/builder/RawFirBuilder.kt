@@ -1094,7 +1094,7 @@ open class RawFirBuilder(
                 for (valueParameter in literal.valueParameters) {
                     val multiDeclaration = valueParameter.destructuringDeclaration
                     valueParameters += if (multiDeclaration != null) {
-                        val name = Name.special("<destruct>")
+                        val name = DESTRUCTURING_NAME
                         val multiParameter = buildValueParameter {
                             source = valueParameter.toFirSourceElement()
                             session = baseSession
@@ -1217,7 +1217,8 @@ open class RawFirBuilder(
                 this.source = source
                 constructedTypeRef = delegatedType.copyWithNewSourceKind(FirFakeSourceElementKind.ImplicitTypeRef)
                 this.isThis = isThis
-                val calleeKind = if (isImplicit)FirFakeSourceElementKind.ImplicitConstructor else FirFakeSourceElementKind.DelegatingConstructorCall
+                val calleeKind =
+                    if (isImplicit) FirFakeSourceElementKind.ImplicitConstructor else FirFakeSourceElementKind.DelegatingConstructorCall
                 val calleeSource = this@convert.calleeExpression?.toFirSourceElement(calleeKind)
                     ?: source.fakeElement(calleeKind)
                 this.calleeReference = if (isThis) {
@@ -1749,7 +1750,7 @@ open class RawFirBuilder(
                         val multiDeclaration = ktParameter.destructuringDeclaration
                         val firLoopParameter = generateTemporaryVariable(
                             session = baseSession, source = expression.loopParameter?.toFirSourceElement(),
-                            name = if (multiDeclaration != null) Name.special("<destruct>") else ktParameter.nameAsSafeName,
+                            name = if (multiDeclaration != null) DESTRUCTURING_NAME else ktParameter.nameAsSafeName,
                             initializer = buildFunctionCall {
                                 source = fakeSource
                                 calleeReference = buildSimpleNamedReference {

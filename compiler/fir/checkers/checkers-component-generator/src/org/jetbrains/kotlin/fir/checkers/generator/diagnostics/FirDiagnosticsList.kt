@@ -61,6 +61,10 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val EMPTY_CHARACTER_LITERAL by error<FirSourceElement, PsiElement>()
         val TOO_MANY_CHARACTERS_IN_CHARACTER_LITERAL by error<FirSourceElement, PsiElement>()
         val ILLEGAL_ESCAPE by error<FirSourceElement, PsiElement>()
+        val INT_LITERAL_OUT_OF_RANGE by error<FirSourceElement, PsiElement>()
+        val FLOAT_LITERAL_OUT_OF_RANGE by error<FirSourceElement, PsiElement>()
+        val WRONG_LONG_SUFFIX by error<FirSourceElement, KtElement>(PositioningStrategy.LONG_LITERAL_SUFFIX)
+        val DIVISION_BY_ZERO by warning<FirSourceElement, KtExpression>()
     }
 
     val UNRESOLVED by object : DiagnosticGroup("Unresolved") {
@@ -313,6 +317,11 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
             parameter<Name>("typeParameterName")
             parameter<FirDeclaration>("typeParametersOwner")
         }
+
+        val RETURN_TYPE_MISMATCH by error<FirSourceElement, KtExpression>(PositioningStrategy.WHOLE_ELEMENT) {
+            parameter<ConeKotlinType>("expected")
+            parameter<ConeKotlinType>("actual")
+        }
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
@@ -487,9 +496,18 @@ object DIAGNOSTICS_LIST : DiagnosticList() {
         val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER)
         val CONST_VAL_WITH_GETTER by error<FirSourceElement, KtProperty>()
         val CONST_VAL_WITH_DELEGATE by error<FirSourceElement, KtPropertyDelegate>()
+        val TYPE_CANT_BE_USED_FOR_CONST_VAL by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER) {
+            parameter<ConeKotlinType>("constValType")
+        }
+        val CONST_VAL_WITHOUT_INITIALIZER by error<FirSourceElement, KtProperty>(PositioningStrategy.CONST_MODIFIER)
+        val CONST_VAL_WITH_NON_CONST_INITIALIZER by error<FirSourceElement, KtExpression>()
         val WRONG_SETTER_PARAMETER_TYPE by error<FirSourceElement, KtTypeReference> {
             parameter<ConeKotlinType>("expectedType")
             parameter<ConeKotlinType>("actualType")
+        }
+        val INITIALIZER_TYPE_MISMATCH by error<FirSourceElement, KtProperty>(PositioningStrategy.ASSIGNMENT_VALUE) {
+            parameter<ConeKotlinType>("expected")
+            parameter<ConeKotlinType>("actual")
         }
     }
 

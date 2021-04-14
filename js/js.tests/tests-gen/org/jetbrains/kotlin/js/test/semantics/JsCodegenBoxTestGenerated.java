@@ -6026,6 +6026,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/coroutines/bridges"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
             }
 
+            @TestMetadata("interfaceGenericDefault.kt")
+            public void testInterfaceGenericDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceGenericDefault.kt");
+            }
+
             @TestMetadata("interfaceSpecialization.kt")
             public void testInterfaceSpecialization() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceSpecialization.kt");
@@ -9766,6 +9771,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
         @TestMetadata("enumShort.kt")
         public void testEnumShort() throws Exception {
             runTest("compiler/testData/codegen/box/enum/enumShort.kt");
+        }
+
+        @TestMetadata("enumValueOf.kt")
+        public void testEnumValueOf() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/enumValueOf.kt");
         }
 
         @TestMetadata("enumWithLambdaParameter.kt")

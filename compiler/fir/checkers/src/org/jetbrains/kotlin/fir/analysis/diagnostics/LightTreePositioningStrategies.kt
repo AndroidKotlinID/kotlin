@@ -8,11 +8,14 @@ package org.jetbrains.kotlin.fir.analysis.diagnostics
 import com.intellij.lang.LighterASTNode
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.impl.source.tree.ElementType
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.TokenSet
 import com.intellij.util.diff.FlyweightCapableTreeStructure
+import org.jetbrains.kotlin.KtNodeType
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.fir.FirSourceElement
+import org.jetbrains.kotlin.fir.analysis.checkers.getChildren
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.lexer.KtTokens.MODALITY_MODIFIERS
 import org.jetbrains.kotlin.lexer.KtTokens.VISIBILITY_MODIFIERS
@@ -238,6 +241,18 @@ object LightTreePositioningStrategies {
             } else {
                 DEFAULT.mark(node, startOffset, endOffset, tree)
             }
+    }
+
+    val LAST_CHILD: LightTreePositioningStrategy = object : LightTreePositioningStrategy() {
+        override fun mark(
+            node: LighterASTNode,
+            startOffset: Int,
+            endOffset: Int,
+            tree: FlyweightCapableTreeStructure<LighterASTNode>
+        ): List<TextRange> {
+            val value = tree.lastChild(node) ?: node
+            return markElement(value, startOffset, endOffset, tree, node)
+        }
     }
 
     private val LighterASTNode.isDeclaration: Boolean
@@ -522,6 +537,11 @@ object LightTreePositioningStrategies {
             return markElement(tree.returnKeyword(node) ?: node, startOffset, endOffset, tree)
         }
     }
+
+    val WHOLE_ELEMENT = object : LightTreePositioningStrategy() { }
+
+    val LONG_LITERAL_SUFFIX = object : LightTreePositioningStrategy() {
+    }
 }
 
 fun FirSourceElement.hasValOrVar(): Boolean =
@@ -722,5 +742,5 @@ private fun FlyweightCapableTreeStructure<LighterASTNode>.firstChild(node: Light
 private fun FlyweightCapableTreeStructure<LighterASTNode>.lastChild(node: LighterASTNode): LighterASTNode? {
     val childrenRef = Ref<Array<LighterASTNode>>()
     getChildren(node, childrenRef)
-    return childrenRef.get()?.lastOrNull()
+    return childrenRef.get().lastOrNull()
 }

@@ -9430,6 +9430,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             }
 
             @Test
+            @TestMetadata("interfaceGenericDefault.kt")
+            public void testInterfaceGenericDefault() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceGenericDefault.kt");
+            }
+
+            @Test
             @TestMetadata("interfaceSpecialization.kt")
             public void testInterfaceSpecialization() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/bridges/interfaceSpecialization.kt");
@@ -14102,6 +14108,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("enumShort.kt")
         public void testEnumShort() throws Exception {
             runTest("compiler/testData/codegen/box/enum/enumShort.kt");
+        }
+
+        @Test
+        @TestMetadata("enumValueOf.kt")
+        public void testEnumValueOf() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/enumValueOf.kt");
         }
 
         @Test
@@ -40932,6 +40944,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("kt37779.kt")
         public void testKt37779() throws Exception {
             runTest("compiler/testData/codegen/box/vararg/kt37779.kt");
+        }
+
+        @Test
+        @TestMetadata("kt45187.kt")
+        public void testKt45187() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/kt45187.kt");
         }
 
         @Test

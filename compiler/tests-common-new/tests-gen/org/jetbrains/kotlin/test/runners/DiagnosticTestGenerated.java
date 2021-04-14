@@ -5607,6 +5607,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 runTest("compiler/testData/diagnostics/tests/coroutines/suspendInvokeInsideWhen.kt");
             }
 
+            @Test
+            @TestMetadata("suspendInvokeWithReceiver.kt")
+            public void testSuspendInvokeWithReceiver() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/coroutines/suspendInvokeWithReceiver.kt");
+            }
+
             @Nested
             @TestMetadata("compiler/testData/diagnostics/tests/coroutines/callableReference")
             @TestDataPath("$PROJECT_ROOT")
@@ -18122,6 +18128,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
                 @Test
                 public void testAllFilesPresentInExhaustiveness() throws Exception {
                     KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/exhaustiveness"), Pattern.compile("^(.*)\\.kts?$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @Test
+                @TestMetadata("commonSealedWithPlatformInheritor.kt")
+                public void testCommonSealedWithPlatformInheritor() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/exhaustiveness/commonSealedWithPlatformInheritor.kt");
                 }
 
                 @Test

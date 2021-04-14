@@ -39,8 +39,9 @@ dependencies {
     testImplementation(commonDep("org.jetbrains.intellij.deps", "trove4j"))
 
     testImplementation(gradleApi())
+    testImplementation(gradleTestKit())
     testImplementation("com.google.code.gson:gson:${rootProject.extra["versions.jar.gson"]}")
-    testApiJUnit5(vintageEngine = true)
+    testApiJUnit5(vintageEngine = true, jupiterParams = true)
 
     testRuntimeOnly(projectRuntimeJar(":kotlin-android-extensions"))
     testRuntimeOnly(project(":compiler:tests-mutes"))
@@ -59,6 +60,14 @@ val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild ||
             project.providers.gradleProperty("gradle.integration.tests.split.tasks").forUseAtConfigurationTime().orNull
                 ?.toBoolean() ?: false
         } catch (_: Exception) { false }
+
+
+val cleanTestKitCacheTask = tasks.register<Delete>("cleanTestKitCache") {
+    group = "Build"
+    description = "Deletes temporary Gradle TestKit cache"
+
+    delete(project.file(".testKitDir"))
+}
 
 fun Test.includeMppAndAndroid(include: Boolean) {
     if (isTeamcityBuild) {
@@ -94,6 +103,7 @@ projectTest(
 ) {
     includeMppAndAndroid(false)
     includeNative(false)
+    if (isTeamcityBuild) finalizedBy(cleanTestKitCacheTask)
 }
 
 projectTest(
@@ -104,6 +114,8 @@ projectTest(
     advanceGradleVersion()
     includeMppAndAndroid(false)
     includeNative(false)
+
+    if (isTeamcityBuild) finalizedBy(cleanTestKitCacheTask)
 }
 
 if (isTeamcityBuild) {
@@ -113,6 +125,7 @@ if (isTeamcityBuild) {
         jUnit5Enabled = true
     ) {
         includeNative(true)
+        finalizedBy(cleanTestKitCacheTask)
     }
 
     projectTest(
@@ -122,6 +135,7 @@ if (isTeamcityBuild) {
     ) {
         advanceGradleVersion()
         includeNative(true)
+        finalizedBy(cleanTestKitCacheTask)
     }
 
     projectTest(
@@ -130,6 +144,7 @@ if (isTeamcityBuild) {
         jUnit5Enabled = true
     ) {
         includeMppAndAndroid(true)
+        finalizedBy(cleanTestKitCacheTask)
     }
 
     projectTest(
@@ -139,6 +154,7 @@ if (isTeamcityBuild) {
     ) {
         advanceGradleVersion()
         includeMppAndAndroid(true)
+        finalizedBy(cleanTestKitCacheTask)
     }
 }
 
@@ -149,6 +165,7 @@ tasks.named<Task>("check") {
         dependsOn("testMppAndAndroid")
         dependsOn("testNative")
         dependsOn("testAdvanceGradleVersionNative")
+        finalizedBy(cleanTestKitCacheTask)
     }
 }
 
@@ -213,5 +230,16 @@ tasks.withType<Test> {
             override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) {}
             override fun beforeTest(testDescriptor: TestDescriptor) {}
         })
+    }
+}
+
+tasks.register<Test>("kgpJunit5Tests") {
+    group = "Verification"
+    description = "Run only JUnit 5 tests for Kotlin Gradle Plugin"
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 4).coerceAtLeast(1)
+
+    useJUnitPlatform {
+        includeTags("JUnit5")
+        includeEngines("junit-jupiter")
     }
 }

@@ -36,5 +36,9 @@ enum class DiagnosticKind {
     TooManyCharactersInCharacterLiteral,
     IllegalEscape,
 
+    IntLiteralOutOfRange,
+    FloatLiteralOutOfRange,
+    WrongLongSuffix,
+
     Other
 }

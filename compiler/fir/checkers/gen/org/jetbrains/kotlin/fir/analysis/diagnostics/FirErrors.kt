@@ -86,6 +86,10 @@ object FirErrors {
     val EMPTY_CHARACTER_LITERAL by error0<FirSourceElement, PsiElement>()
     val TOO_MANY_CHARACTERS_IN_CHARACTER_LITERAL by error0<FirSourceElement, PsiElement>()
     val ILLEGAL_ESCAPE by error0<FirSourceElement, PsiElement>()
+    val INT_LITERAL_OUT_OF_RANGE by error0<FirSourceElement, PsiElement>()
+    val FLOAT_LITERAL_OUT_OF_RANGE by error0<FirSourceElement, PsiElement>()
+    val WRONG_LONG_SUFFIX by error0<FirSourceElement, KtElement>(SourceElementPositioningStrategies.LONG_LITERAL_SUFFIX)
+    val DIVISION_BY_ZERO by warning0<FirSourceElement, KtExpression>()
 
     // Unresolved
     val HIDDEN by error1<FirSourceElement, PsiElement, AbstractFirBasedSymbol<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -231,6 +235,7 @@ object FirErrors {
     val REPEATED_BOUND by error0<FirSourceElement, KtTypeReference>()
     val CONFLICTING_UPPER_BOUNDS by error1<FirSourceElement, KtNamedDeclaration, FirTypeParameterSymbol>()
     val NAME_IN_CONSTRAINT_IS_NOT_A_TYPE_PARAMETER by error2<FirSourceElement, KtSimpleNameExpression, Name, FirDeclaration>()
+    val RETURN_TYPE_MISMATCH by error2<FirSourceElement, KtExpression, ConeKotlinType, ConeKotlinType>(SourceElementPositioningStrategies.WHOLE_ELEMENT)
 
     // Reflection
     val EXTENSION_IN_CLASS_REFERENCE_NOT_ALLOWED by error1<FirSourceElement, KtExpression, FirCallableDeclaration<*>>(SourceElementPositioningStrategies.REFERENCE_BY_QUALIFIED)
@@ -307,7 +312,11 @@ object FirErrors {
     val CONST_VAL_NOT_TOP_LEVEL_OR_OBJECT by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.CONST_MODIFIER)
     val CONST_VAL_WITH_GETTER by error0<FirSourceElement, KtProperty>()
     val CONST_VAL_WITH_DELEGATE by error0<FirSourceElement, KtPropertyDelegate>()
+    val TYPE_CANT_BE_USED_FOR_CONST_VAL by error1<FirSourceElement, KtProperty, ConeKotlinType>(SourceElementPositioningStrategies.CONST_MODIFIER)
+    val CONST_VAL_WITHOUT_INITIALIZER by error0<FirSourceElement, KtProperty>(SourceElementPositioningStrategies.CONST_MODIFIER)
+    val CONST_VAL_WITH_NON_CONST_INITIALIZER by error0<FirSourceElement, KtExpression>()
     val WRONG_SETTER_PARAMETER_TYPE by error2<FirSourceElement, KtTypeReference, ConeKotlinType, ConeKotlinType>()
+    val INITIALIZER_TYPE_MISMATCH by error2<FirSourceElement, KtProperty, ConeKotlinType, ConeKotlinType>(SourceElementPositioningStrategies.ASSIGNMENT_VALUE)
 
     // Multi-platform projects
     val EXPECTED_DECLARATION_WITH_BODY by error0<FirSourceElement, KtDeclaration>(SourceElementPositioningStrategies.DECLARATION_SIGNATURE)

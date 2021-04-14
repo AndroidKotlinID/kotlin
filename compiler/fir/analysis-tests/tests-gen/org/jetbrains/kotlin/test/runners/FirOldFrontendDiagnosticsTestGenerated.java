@@ -5601,6 +5601,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 runTest("compiler/testData/diagnostics/tests/coroutines/suspendInvokeInsideWhen.kt");
             }
 
+            @Test
+            @TestMetadata("suspendInvokeWithReceiver.kt")
+            public void testSuspendInvokeWithReceiver() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/coroutines/suspendInvokeWithReceiver.kt");
+            }
+
             @Nested
             @TestMetadata("compiler/testData/diagnostics/tests/coroutines/callableReference")
             @TestDataPath("$PROJECT_ROOT")
@@ -18116,6 +18122,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 @Test
                 public void testAllFilesPresentInExhaustiveness() throws Exception {
                     KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/exhaustiveness"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @Test
+                @TestMetadata("commonSealedWithPlatformInheritor.kt")
+                public void testCommonSealedWithPlatformInheritor() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/exhaustiveness/commonSealedWithPlatformInheritor.kt");
                 }
 
                 @Test

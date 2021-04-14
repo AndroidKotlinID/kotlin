@@ -147,11 +147,6 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         return result
     }
 
-    /**** Common utils ****/
-    companion object {
-        val ANONYMOUS_OBJECT_NAME = Name.special("<anonymous>")
-    }
-
     fun FirExpression.toReturn(
         baseSource: FirSourceElement? = source,
         labelName: String? = null,
@@ -291,20 +286,43 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         }
         return when (type) {
             INTEGER_CONSTANT -> {
+                var diagnostic: DiagnosticKind = DiagnosticKind.IllegalConstExpression
+                val number: Long?
+
                 val kind = when {
+                    convertedText == null -> {
+                        number = null
+                        diagnostic = DiagnosticKind.IntLiteralOutOfRange
+                        ConstantValueKind.IntegerLiteral
+                    }
+
                     convertedText !is Long -> return reportIncorrectConstant(DiagnosticKind.IllegalConstExpression)
 
                     hasUnsignedLongSuffix(text) -> {
+                        if (text.endsWith("l")) {
+                            diagnostic = DiagnosticKind.WrongLongSuffix
+                            number = null
+                        } else {
+                            number = convertedText
+                        }
                         ConstantValueKind.UnsignedLong
                     }
                     hasLongSuffix(text) -> {
+                        if (text.endsWith("l")) {
+                            diagnostic = DiagnosticKind.WrongLongSuffix
+                            number = null
+                        } else {
+                            number = convertedText
+                        }
                         ConstantValueKind.Long
                     }
                     hasUnsignedSuffix(text) -> {
+                        number = convertedText
                         ConstantValueKind.UnsignedIntegerLiteral
                     }
 
                     else -> {
+                        number = convertedText
                         ConstantValueKind.IntegerLiteral
                     }
                 }
@@ -312,8 +330,8 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 buildConstOrErrorExpression(
                     sourceElement,
                     kind,
-                    convertedText,
-                    ConeSimpleDiagnostic("Incorrect integer literal: $text", DiagnosticKind.IllegalConstExpression)
+                    number,
+                    ConeSimpleDiagnostic("Incorrect integer literal: $text", diagnostic)
                 )
             }
             FLOAT_CONSTANT ->
@@ -322,14 +340,14 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                         sourceElement,
                         ConstantValueKind.Float,
                         convertedText,
-                        ConeSimpleDiagnostic("Incorrect float: $text", DiagnosticKind.IllegalConstExpression)
+                        ConeSimpleDiagnostic("Incorrect float: $text", DiagnosticKind.FloatLiteralOutOfRange)
                     )
                 } else {
                     buildConstOrErrorExpression(
                         sourceElement,
                         ConstantValueKind.Double,
                         convertedText as? Double,
-                        ConeSimpleDiagnostic("Incorrect double: $text", DiagnosticKind.IllegalConstExpression)
+                        ConeSimpleDiagnostic("Incorrect double: $text", DiagnosticKind.FloatLiteralOutOfRange)
                     )
                 }
             CHARACTER_CONSTANT -> {
@@ -1182,5 +1200,12 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         } finally {
             context.forcedElementSourceKind = currentForced
         }
+    }
+
+    /**** Common utils ****/
+    companion object {
+        val ANONYMOUS_OBJECT_NAME = Name.special("<anonymous>")
+
+        val DESTRUCTURING_NAME = Name.special("<destruct>")
     }
 }

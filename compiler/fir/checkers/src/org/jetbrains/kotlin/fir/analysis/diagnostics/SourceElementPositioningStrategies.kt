@@ -177,4 +177,19 @@ object SourceElementPositioningStrategies {
         LightTreePositioningStrategies.RETURN_WITH_LABEL,
         PositioningStrategies.RETURN_WITH_LABEL
     )
+
+    val ASSIGNMENT_VALUE = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.LAST_CHILD,
+        PositioningStrategies.ASSIGNMENT_VALUE
+    )
+
+    val WHOLE_ELEMENT = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.WHOLE_ELEMENT,
+        PositioningStrategies.WHOLE_ELEMENT
+    )
+
+    val LONG_LITERAL_SUFFIX = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.LONG_LITERAL_SUFFIX,
+        PositioningStrategies.LONG_LITERAL_SUFFIX
+    )
 }
