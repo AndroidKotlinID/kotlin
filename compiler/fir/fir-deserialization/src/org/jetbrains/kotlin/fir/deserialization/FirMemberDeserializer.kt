@@ -175,7 +175,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
         val local = c.childContext(proto.typeParameterList)
         val classId = ClassId(c.packageFqName, name)
         return buildTypeAlias {
-            session = c.session
+            declarationSiteSession = c.session
             origin = FirDeclarationOrigin.Library
             this.name = name
             val visibility = ProtoEnumFlags.visibility(Flags.VISIBILITY.get(flags))
@@ -234,9 +234,10 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
             val getterFlags = if (proto.hasGetterFlags()) proto.getterFlags else defaultAccessorFlags
             val visibility = ProtoEnumFlags.visibility(Flags.VISIBILITY.get(getterFlags))
             val modality = ProtoEnumFlags.modality(Flags.MODALITY.get(getterFlags))
+            val effectiveVisibility = visibility.toEffectiveVisibility(classSymbol)
             if (Flags.IS_NOT_DEFAULT.get(getterFlags)) {
                 buildPropertyAccessor {
-                    session = c.session
+                    declarationSiteSession = c.session
                     origin = FirDeclarationOrigin.Library
                     this.returnTypeRef = returnTypeRef
                     resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
@@ -244,7 +245,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
                     status = FirResolvedDeclarationStatusImpl(
                         visibility,
                         modality,
-                        visibility.toEffectiveVisibility(classSymbol)
+                        effectiveVisibility
                     ).apply {
                         isInline = Flags.IS_INLINE_ACCESSOR.get(getterFlags)
                         isExternal = Flags.IS_EXTERNAL_ACCESSOR.get(getterFlags)
@@ -255,7 +256,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
                     versionRequirementsTable = c.versionRequirementTable
                 }
             } else {
-                FirDefaultPropertyGetter(null, c.session, FirDeclarationOrigin.Library, returnTypeRef, visibility)
+                FirDefaultPropertyGetter(null, c.session, FirDeclarationOrigin.Library, returnTypeRef, visibility, effectiveVisibility)
             }.apply {
                 (annotations as MutableList<FirAnnotationCall>) +=
                     c.annotationDeserializer.loadPropertyGetterAnnotations(
@@ -270,9 +271,10 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
             val setterFlags = if (proto.hasSetterFlags()) proto.setterFlags else defaultAccessorFlags
             val visibility = ProtoEnumFlags.visibility(Flags.VISIBILITY.get(setterFlags))
             val modality = ProtoEnumFlags.modality(Flags.MODALITY.get(setterFlags))
+            val effectiveVisibility = visibility.toEffectiveVisibility(classSymbol)
             if (Flags.IS_NOT_DEFAULT.get(setterFlags)) {
                 buildPropertyAccessor {
-                    session = c.session
+                    declarationSiteSession = c.session
                     origin = FirDeclarationOrigin.Library
                     this.returnTypeRef = FirImplicitUnitTypeRef(source)
                     resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
@@ -280,7 +282,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
                     status = FirResolvedDeclarationStatusImpl(
                         visibility,
                         modality,
-                        visibility.toEffectiveVisibility(classSymbol)
+                        effectiveVisibility
                     ).apply {
                         isInline = Flags.IS_INLINE_ACCESSOR.get(setterFlags)
                         isExternal = Flags.IS_EXTERNAL_ACCESSOR.get(setterFlags)
@@ -297,7 +299,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
                     versionRequirementsTable = c.versionRequirementTable
                 }
             } else {
-                FirDefaultPropertySetter(null, c.session, FirDeclarationOrigin.Library, returnTypeRef, visibility)
+                FirDefaultPropertySetter(null, c.session, FirDeclarationOrigin.Library, returnTypeRef, visibility, effectiveVisibility)
             }.apply {
                 (annotations as MutableList<FirAnnotationCall>) +=
                     c.annotationDeserializer.loadPropertySetterAnnotations(
@@ -310,7 +312,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
 
         val isVar = Flags.IS_VAR.get(flags)
         return buildProperty {
-            session = c.session
+            declarationSiteSession = c.session
             origin = FirDeclarationOrigin.Library
             this.returnTypeRef = returnTypeRef
             receiverTypeRef = proto.receiverType(c.typeTable)?.toTypeRef(local).apply {
@@ -378,7 +380,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
         val local = c.childContext(proto.typeParameterList)
 
         val simpleFunction = buildSimpleFunction {
-            session = c.session
+            declarationSiteSession = c.session
             origin = FirDeclarationOrigin.Library
             returnTypeRef = proto.returnType(local.typeTable).toTypeRef(local)
             receiverTypeRef = proto.receiverType(local.typeTable)?.toTypeRef(local).apply {
@@ -453,7 +455,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
         } else {
             FirConstructorBuilder()
         }.apply {
-            session = c.session
+            declarationSiteSession = c.session
             origin = FirDeclarationOrigin.Library
             returnTypeRef = delegatedSelfType
             val visibility = ProtoEnumFlags.visibility(Flags.VISIBILITY.get(flags))
@@ -506,7 +508,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
             val flags = if (proto.hasFlags()) proto.flags else 0
             val name = c.nameResolver.getName(proto.name)
             buildValueParameter {
-                session = c.session
+                declarationSiteSession = c.session
                 origin = FirDeclarationOrigin.Library
                 returnTypeRef = proto.type(c.typeTable).toTypeRef(c)
                 this.name = name

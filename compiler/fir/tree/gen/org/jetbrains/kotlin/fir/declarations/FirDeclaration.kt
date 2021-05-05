@@ -15,9 +15,9 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-interface FirDeclaration : FirElement {
+sealed interface FirDeclaration : FirElement {
     override val source: FirSourceElement?
-    val session: FirSession
+    val declarationSiteSession: FirSession
     val resolvePhase: FirResolvePhase
     val origin: FirDeclarationOrigin
     val attributes: FirDeclarationAttributes

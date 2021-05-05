@@ -9,27 +9,17 @@ import org.jetbrains.kotlin.commonizer.konan.NativeManifestDataProvider
 import org.jetbrains.kotlin.commonizer.mergedtree.CirFictitiousFunctionClassifiers
 import org.jetbrains.kotlin.commonizer.mergedtree.CirProvidedClassifiers
 import org.jetbrains.kotlin.commonizer.stats.StatsCollector
+import org.jetbrains.kotlin.commonizer.utils.ProgressLogger
 
-class CommonizerParameters(
+data class CommonizerParameters(
     val outputTarget: SharedCommonizerTarget,
     val manifestProvider: TargetDependent<NativeManifestDataProvider>,
     val dependenciesProvider: TargetDependent<ModulesProvider?>,
     val targetProviders: TargetDependent<TargetProvider?>,
     val resultsConsumer: ResultsConsumer,
     val statsCollector: StatsCollector? = null,
-    val progressLogger: ((String) -> Unit)? = null,
+    val logger: ProgressLogger? = null,
 )
-
-fun CommonizerParameters.getCommonModuleNames(): Set<String> {
-    val supportedTargets = targetProviders.filterNonNull()
-    if (supportedTargets.size < 2) return emptySet() // too few targets
-
-    val allModuleNames: List<Set<String>> = supportedTargets.toList().map { targetProvider ->
-        targetProvider.modulesProvider.loadModuleInfos().mapTo(HashSet()) { it.name }
-    }
-
-    return allModuleNames.reduce { a, b -> a intersect b } // there are modules that are present in every target
-}
 
 internal fun CommonizerParameters.dependencyClassifiers(target: CommonizerTarget): CirProvidedClassifiers {
     val modules = outputTarget.withAllAncestors()
@@ -41,3 +31,5 @@ internal fun CommonizerParameters.dependencyClassifiers(target: CommonizerTarget
         CirProvidedClassifiers.of(classifiers, CirProvidedClassifiers.by(module))
     }
 }
+
+internal fun CommonizerParameters.with(logger: ProgressLogger?) = copy(logger = logger)

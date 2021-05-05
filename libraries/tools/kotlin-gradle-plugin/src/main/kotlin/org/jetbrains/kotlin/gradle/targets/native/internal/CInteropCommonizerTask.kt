@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.kotlinSourceSetsIncludingDefault
 import org.jetbrains.kotlin.gradle.plugin.sources.resolveAllDependsOnSourceSets
 import org.jetbrains.kotlin.gradle.targets.native.internal.CInteropCommonizerTask.CInteropGist
 import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
-import org.jetbrains.kotlin.gradle.utils.filesProvider
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.io.File
 
@@ -49,10 +48,15 @@ internal open class CInteropCommonizerTask : AbstractCInteropCommonizerTask() {
     internal var cinterops = setOf<CInteropGist>()
         private set
 
-    @OutputDirectories
-    fun getAllOutputDirectories(): Set<File> {
-        return getCommonizationParameters().map { outputDirectory(it) }.toSet()
-    }
+    @get:OutputDirectories
+    val allOutputDirectories: Set<File>
+        get() = getCommonizationParameters().map { outputDirectory(it) }.toSet()
+
+    @Suppress("unused") // Used for UP-TO-DATE check
+    @get:InputFiles
+    @get:Classpath
+    val commonizedNativeDistributionDependencies: Set<File>
+        get() = getCommonizationParameters().flatMap { nativeDistributionDependencies(it) }.map { it.file }.toSet()
 
     fun from(vararg tasks: CInteropProcess) = from(
         tasks.toList()
@@ -96,7 +100,8 @@ internal open class CInteropCommonizerTask : AbstractCInteropCommonizerTask() {
             inputLibraries = cinteropsForTarget.map { it.libraryFile.get() }.filter { it.exists() }.toSet(),
             dependencyLibraries = cinteropsForTarget.flatMap { it.dependencies.files }.map(::NonTargetedCommonizerDependency).toSet()
                     + nativeDistributionDependencies(parameters),
-            outputDirectory = outputDirectory(parameters)
+            outputDirectory = outputDirectory(parameters),
+            logLevel = project.commonizerLogLevel
         )
     }
 
@@ -168,9 +173,16 @@ private fun CInteropProcess.toGist(): CInteropGist {
     return CInteropGist(
         identifier = settings.identifier,
         konanTarget = konanTarget,
-        sourceSets = project.provider { settings.compilation.kotlinSourceSetsIncludingDefault },
+        // FIXME support cinterop with PM20
+        sourceSets = project.provider { (settings.compilation as? KotlinCompilation<*>)?.kotlinSourceSetsIncludingDefault },
         libraryFile = outputFileProvider,
-        dependencies = project.filesProvider { settings.dependencyFiles }.filter(File::isValidDependency)
+
+        /**
+         * See: KT-46109
+         * For now, c-interop commonization is invoked for all relevant files together.
+         * Using dependencies coming e.g. from a different Gradle project requires additional design.
+         */
+        dependencies = project.files()
     )
 }
 
@@ -232,8 +244,4 @@ private fun Project.getDependingNativeCompilations(compilation: KotlinSharedNati
         .filterIsInstance<KotlinNativeCompilation>()
         .filter { nativeCompilation -> nativeCompilation.allParticipatingSourceSets().containsAll(allParticipatingSourceSetsOfCompilation) }
         .toSet()
-}
-
-private fun File.isValidDependency(): Boolean {
-    return this.exists() && (this.isDirectory || this.extension == "klib")
 }

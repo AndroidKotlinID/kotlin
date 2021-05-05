@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.formatter.AbstractFormatterTest
 import org.jetbrains.kotlin.formatter.AbstractTypingIndentationTestBase
 import org.jetbrains.kotlin.generators.TestGroup
 import org.jetbrains.kotlin.generators.impl.generateTestGroupSuite
+import org.jetbrains.kotlin.generators.util.TestGeneratorUtil
 import org.jetbrains.kotlin.generators.util.TestGeneratorUtil.KT_OR_KTS
 import org.jetbrains.kotlin.generators.util.TestGeneratorUtil.KT_OR_KTS_WITHOUT_DOTS_IN_NAME
 import org.jetbrains.kotlin.generators.util.TestGeneratorUtil.KT_WITHOUT_DOTS_IN_NAME
@@ -85,6 +86,8 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirLazyResolveTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleLazyResolveTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.AbstractFirMultiModuleResolveTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.diagnostic.AbstractDiagnosticTraversalCounterTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.diagnostic.AbstractFirContextCollectionTest
+import org.jetbrains.kotlin.idea.fir.low.level.api.diagnostic.compiler.based.AbstractDiagnosisCompilerTestDataTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.structure.AbstractFileStructureAndOutOfBlockModificationTrackerConsistencyTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.structure.AbstractFileStructureTest
 import org.jetbrains.kotlin.idea.fir.low.level.api.resolve.AbstractInnerDeclarationsResolvePhaseTest
@@ -165,6 +168,7 @@ import org.jetbrains.kotlin.kapt3.test.AbstractClassFileToSourceStubConverterTes
 import org.jetbrains.kotlin.kapt3.test.AbstractIrClassFileToSourceStubConverterTest
 import org.jetbrains.kotlin.kapt3.test.AbstractIrKotlinKaptContextTest
 import org.jetbrains.kotlin.kapt3.test.AbstractKotlinKaptContextTest
+import org.jetbrains.kotlin.lombok.AbstractLombokCompileTest
 import org.jetbrains.kotlin.nj2k.AbstractNewJavaToKotlinConverterMultiFileTest
 import org.jetbrains.kotlin.nj2k.AbstractNewJavaToKotlinConverterSingleFileTest
 import org.jetbrains.kotlin.nj2k.AbstractNewJavaToKotlinCopyPasteConversionTest
@@ -196,6 +200,10 @@ import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginBytecodeLi
 import org.jetbrains.kotlinx.serialization.AbstractSerializationPluginDiagnosticTest
 import org.jetbrains.kotlinx.serialization.idea.AbstractSerializationPluginIdeDiagnosticTest
 import org.jetbrains.kotlinx.serialization.idea.AbstractSerializationQuickFixTest
+import org.jetbrains.uast.test.kotlin.AbstractFE1LegacyUastDeclarationTest
+import org.jetbrains.uast.test.kotlin.AbstractFE1UastDeclarationTest
+import org.jetbrains.uast.test.kotlin.AbstractFirLegacyUastDeclarationTest
+import org.jetbrains.uast.test.kotlin.AbstractFirUastDeclarationTest
 
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
@@ -1084,6 +1092,9 @@ fun main(args: Array<String>) {
             testClass<AbstractFileStructureTest> {
                 model("fileStructure")
             }
+            testClass<AbstractFirContextCollectionTest> {
+                model("fileStructure")
+            }
             testClass<AbstractDiagnosticTraversalCounterTest> {
                 model("diagnosticTraversalCounter")
             }
@@ -1094,6 +1105,34 @@ fun main(args: Array<String>) {
                 model("innerDeclarationsResolve")
             }
         }
+
+        testGroup(
+            "idea/idea-frontend-fir/idea-fir-low-level-api/tests",
+            "compiler/fir/analysis-tests/testData",
+        ) {
+            testClass<AbstractDiagnosisCompilerTestDataTest>(suiteTestClassName = "DiagnosisCompilerFirTestdataTestGenerated") {
+                model("resolve", pattern = TestGeneratorUtil.KT_WITHOUT_DOTS_IN_NAME)
+                model("resolveWithStdlib", pattern = TestGeneratorUtil.KT_WITHOUT_DOTS_IN_NAME, )
+            }
+        }
+
+        testGroup(
+            "idea/idea-frontend-fir/idea-fir-low-level-api/tests",
+            "compiler/testData",
+        ) {
+            testClass<AbstractDiagnosisCompilerTestDataTest>(suiteTestClassName = "DiagnosisCompilerTestFE10TestdataTestGenerated") {
+                model(
+                    "diagnostics/tests",
+                    excludedPattern = excludedFirTestdataPattern,
+                )
+                model(
+                    "diagnostics/testsWithStdLib",
+                    excludedPattern = excludedFirTestdataPattern,
+                    excludeDirs = listOf("native")
+                )
+            }
+        }
+
 
         testGroup("idea/idea-fir/tests", "idea") {
             testClass<AbstractFirHighlightingTest> {
@@ -1136,6 +1175,7 @@ fun main(args: Array<String>) {
                 model("quickfix/lateinit", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/modifiers", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/override/typeMismatchOnOverride", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
+                model("quickfix/replaceWithDotCall", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/replaceWithSafeCall", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/variables/changeMutability", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/addInitializer", pattern = pattern, filenameStartsLowerCase = true)
@@ -1315,8 +1355,8 @@ fun main(args: Array<String>) {
             testClass<AbstractIdeCompiledLightClassTest> {
                 model(
                     "asJava/lightClasses",
-                    excludeDirs = listOf("local", "compilationErrors", "ideRegression"),
-                    pattern = KT_OR_KTS_WITHOUT_DOTS_IN_NAME
+                    excludeDirs = listOf("local", "compilationErrors", "ideRegression", "script"),
+                    pattern = KT_WITHOUT_DOTS_IN_NAME
                 )
             }
         }
@@ -1806,6 +1846,30 @@ fun main(args: Array<String>) {
             }
         }
 
+        testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin-fir/testData") {
+            testClass<AbstractFirUastDeclarationTest> {
+                model("declaration")
+            }
+        }
+
+        testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin/testData") {
+            testClass<AbstractFirLegacyUastDeclarationTest> {
+                model("")
+            }
+        }
+
+        testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin-fir/testData") {
+            testClass<AbstractFE1UastDeclarationTest> {
+                model("declaration")
+            }
+        }
+
+        testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin/testData") {
+            testClass<AbstractFE1LegacyUastDeclarationTest> {
+                model("")
+            }
+        }
+
         testGroup("idea/performanceTests/test", "idea/testData") {
             testClass<AbstractPerformanceJavaToKotlinCopyPasteConversionTest> {
                 model("copyPaste/conversion", testMethod = "doPerfTest", pattern = """^([^\.]+)\.java$""")
@@ -1851,6 +1915,12 @@ fun main(args: Array<String>) {
 
             testClass<AbstractPerformanceCompletionCharFilterTest> {
                 model("handlers/charFilter", testMethod = "doPerfTest", pattern = KT_WITHOUT_DOTS_IN_NAME)
+            }
+        }
+
+        testGroup("plugins/lombok/lombok-compiler-plugin/tests", "plugins/lombok/lombok-compiler-plugin/testData") {
+            testClass<AbstractLombokCompileTest> {
+                model("compile")
             }
         }
 /*

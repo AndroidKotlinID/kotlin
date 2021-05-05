@@ -23,9 +23,9 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-abstract class FirVariable<F : FirVariable<F>> : FirPureAbstractElement(), FirCallableDeclaration<F>, FirAnnotatedDeclaration, FirStatement {
+sealed class FirVariable<F : FirVariable<F>> : FirPureAbstractElement(), FirCallableDeclaration<F>, FirAnnotatedDeclaration, FirStatement {
     abstract override val source: FirSourceElement?
-    abstract override val session: FirSession
+    abstract override val declarationSiteSession: FirSession
     abstract override val resolvePhase: FirResolvePhase
     abstract override val origin: FirDeclarationOrigin
     abstract override val attributes: FirDeclarationAttributes

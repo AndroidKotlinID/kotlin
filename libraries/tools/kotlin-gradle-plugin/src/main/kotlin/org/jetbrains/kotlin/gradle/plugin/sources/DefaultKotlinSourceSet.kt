@@ -186,7 +186,7 @@ class DefaultKotlinSourceSet(
                     val filesBySourceSet = resolution.getMetadataFilesBySourceSet(
                         baseDir,
                         doProcessFiles = true
-                    )
+                    ).filter { it.value.any { it.exists() } }
 
                     MetadataDependencyTransformation(
                         group, name, projectPath,
@@ -201,6 +201,17 @@ class DefaultKotlinSourceSet(
 
     //endregion
 }
+
+
+internal val defaultSourceSetLanguageSettingsChecker =
+    FragmentConsistencyChecker<KotlinSourceSet>(
+        unitsName = "source sets",
+        name = { name },
+        checks = FragmentConsistencyChecks<KotlinSourceSet>(
+            unitName = "source set",
+            languageSettings = { languageSettings }
+        ).allChecks
+    )
 
 private fun KotlinSourceSet.checkForCircularDependencies() {
     // If adding an edge creates a cycle, than the source node of the edge belongs to the cycle, so run DFS from that node
@@ -235,7 +246,7 @@ internal fun KotlinSourceSet.disambiguateName(simpleName: String): String {
 }
 
 private fun createDefaultSourceDirectorySet(project: Project, name: String?): SourceDirectorySet =
-    project.objects.sourceDirectorySet(name, name)
+    project.objects.sourceDirectorySet(name!!, name)
 
 /**
  * Like [resolveAllDependsOnSourceSets] but will include the receiver source set also!

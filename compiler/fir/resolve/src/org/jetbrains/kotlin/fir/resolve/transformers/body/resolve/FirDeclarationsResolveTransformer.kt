@@ -126,6 +126,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             return property
         }
 
+        property.transformReceiverTypeRef(transformer, ResolutionMode.ContextIndependent)
         dataFlowAnalyzer.enterProperty(property)
         doTransformTypeParameters(property)
         return withFullBodyResolve {
@@ -364,6 +365,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         }
         doTransformTypeParameters(typeAlias)
         typeAlias.transformAnnotations(transformer, data)
+        transformer.onBeforeDeclarationContentResolve(typeAlias)
         typeAlias.transformExpandedTypeRef(transformer, data)
         return typeAlias
     }
@@ -632,7 +634,9 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             }
             is ResolutionMode.LambdaResolution -> {
                 context.withAnonymousFunction(anonymousFunction, components, data) {
-                    transformAnonymousFunctionWithLambdaResolution(anonymousFunction, data).addReturn()
+                    withFullBodyResolve {
+                        transformAnonymousFunctionWithLambdaResolution(anonymousFunction, data).addReturn()
+                    }
                 }
             }
             is ResolutionMode.WithExpectedType, is ResolutionMode.ContextIndependent -> {
@@ -652,7 +656,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                                 val name = Name.identifier("it")
                                 val itParam = buildValueParameter {
                                     source = lambda.source?.fakeElement(FirFakeSourceElementKind.ItLambdaParameter)
-                                    session = this@FirDeclarationsResolveTransformer.session
+                                    declarationSiteSession = session
                                     origin = FirDeclarationOrigin.Source
                                     returnTypeRef = buildResolvedTypeRef { type = singleParameterType }
                                     this.name = name
@@ -669,12 +673,9 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                                     if (param.returnTypeRef is FirResolvedTypeRef) {
                                         param
                                     } else {
-                                        param.transformReturnTypeRef(
-                                            StoreType,
-                                            param.returnTypeRef.resolvedTypeFromPrototype(
-                                                resolvedLambdaAtom.parameters[index]
-                                            )
-                                        )
+                                        val resolvedType =
+                                            param.returnTypeRef.resolvedTypeFromPrototype(resolvedLambdaAtom.parameters[index])
+                                        param.replaceReturnTypeRef(resolvedType)
                                         param
                                     }
                                 }
@@ -695,7 +696,9 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 lambda = lambda.transformValueParameters(ImplicitToErrorTypeTransformer, null)
                 val bodyExpectedType = returnTypeRefFromResolvedAtom ?: expectedTypeRef
                 context.withAnonymousFunction(lambda, components, data) {
-                    lambda = transformFunction(lambda, withExpectedType(bodyExpectedType)) as FirAnonymousFunction
+                    withFullBodyResolve {
+                        lambda = transformFunction(lambda, withExpectedType(bodyExpectedType)) as FirAnonymousFunction
+                    }
                 }
                 // To separate function and separate commit
                 val writer = FirCallCompletionResultsWriterTransformer(
@@ -803,6 +806,12 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 val expectedType = when (resultType) {
                     is FirImplicitTypeRef -> buildErrorTypeRef {
                         diagnostic = ConeSimpleDiagnostic("No result type for initializer", DiagnosticKind.InferenceError)
+                    }
+                    is FirErrorTypeRef -> buildErrorTypeRef {
+                        diagnostic = resultType.diagnostic
+                        resultType.source?.fakeElement(FirFakeSourceElementKind.ImplicitTypeRef)?.let {
+                            source = it
+                        }
                     }
                     else -> {
                         buildResolvedTypeRef {

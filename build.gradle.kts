@@ -14,8 +14,11 @@ buildscript {
 
         if (cacheRedirectorEnabled) {
             maven("https://cache-redirector.jetbrains.com/plugins.gradle.org/m2")
+            maven("https://cache-redirector.jetbrains.com/repo.maven.apache.org/maven2")
+
         } else {
             maven("https://plugins.gradle.org/m2")
+            mavenCentral()
         }
     }
 
@@ -27,7 +30,7 @@ buildscript {
     dependencies {
         bootstrapCompilerClasspath(kotlin("compiler-embeddable", bootstrapKotlinVersion))
 
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.26")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.27")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
         classpath(kotlin("serialization", bootstrapKotlinVersion))
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
@@ -192,7 +195,7 @@ extra["versions.kotlinx-collections-immutable-jvm"] = immutablesVersion
 extra["versions.ktor-network"] = "1.0.1"
 
 if (!project.hasProperty("versions.kotlin-native")) {
-    extra["versions.kotlin-native"] = "1.5.20-dev-4865"
+    extra["versions.kotlin-native"] = "1.5.20-dev-5613"
 }
 
 val intellijUltimateEnabled by extra(project.kotlinBuildProperties.intellijUltimateEnabled)
@@ -333,7 +336,9 @@ extra["tasksWithWarnings"] = listOf(
     ":kotlin-stdlib-jdk7:compileTestKotlin",
     ":kotlin-stdlib-jdk8:compileTestKotlin",
     ":plugins:uast-kotlin:compileKotlin",
-    ":plugins:uast-kotlin:compileTestKotlin"
+    ":plugins:uast-kotlin:compileTestKotlin",
+    ":plugins:uast-kotlin-fir:compileKotlin",
+    ":plugins:uast-kotlin-fir:compileTestKotlin"
 )
 
 val tasksWithWarnings: List<String> by extra
@@ -368,7 +373,8 @@ val gradlePluginProjects = listOf(
     ":kotlin-annotation-processing-gradle",
     ":kotlin-noarg",
     ":kotlin-sam-with-receiver",
-    ":kotlin-parcelize-compiler"
+    ":kotlin-parcelize-compiler",
+    ":kotlin-lombok"
 )
 
 apply {
@@ -377,7 +383,7 @@ apply {
 }
 
 apply {
-    if (extra["isSonatypeRelease"] as? Boolean == true) {
+    if (extra["isDeployStagingRepoGenerationRequired"] as? Boolean == true) {
         logger.info("Applying configuration for sonatype release")
         from("libraries/prepareSonatypeStaging.gradle")
     }
@@ -574,26 +580,6 @@ allprojects {
 
         apply(from = "$rootDir/gradle/cacheRedirector.gradle.kts")
         apply(from = "$rootDir/gradle/testRetry.gradle.kts")
-    }
-}
-
-if ((gradle.startParameter as? org.gradle.api.internal.StartParameterInternal)?.isConfigurationCache != true) {
-    // TODO: remove it once Gradle is bumped to 6.8:
-    // See https://docs.gradle.org/6.8/release-notes.html#more-cache-hits-when-empty-directories-are-present
-    gradle.buildFinished {
-        val taskGraph = gradle?.taskGraph
-        if (taskGraph != null) {
-            taskGraph.allTasks
-                .filterIsInstance<SourceTask>()
-                .filter { it.didWork }
-                .forEach {
-                    it.source.visit {
-                        if (file.isDirectory && file.listFiles()?.isEmpty() == true) {
-                            logger.warn("Empty source directories may cause build cache misses: " + file.absolutePath)
-                        }
-                    }
-                }
-        }
     }
 }
 
@@ -863,10 +849,10 @@ tasks {
             ":idea:idea-fir:test",
             ":idea:idea-frontend-api:test",
             ":idea:idea-frontend-fir:test",
-            ":idea:idea-frontend-fir:idea-fir-low-level-api:test"
+            ":idea:idea-frontend-fir:idea-fir-low-level-api:test",
+            ":plugins:uast-kotlin-fir:test"
         )
     }
-
 
     register("android-ide-tests") {
         dependsOn("dist")
@@ -912,7 +898,6 @@ tasks {
             )
         }
     }
-
 
     register("kaptIdeTest") {
         dependsOn(":kotlin-annotation-processing:test")
@@ -981,6 +966,7 @@ tasks {
                 ":prepare:ide-plugin-dependencies:sam-with-receiver-compiler-plugin-for-ide:publish",
                 ":prepare:ide-plugin-dependencies:compiler-components-for-jps:publish",
                 ":prepare:ide-plugin-dependencies:parcelize-compiler-plugin-for-ide:publish",
+                ":prepare:ide-plugin-dependencies:lombok-compiler-plugin-for-ide:publish",
                 ":kotlin-script-runtime:publish",
                 ":kotlin-script-util:publish",
                 ":kotlin-scripting-common:publish",

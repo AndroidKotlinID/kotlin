@@ -19,15 +19,15 @@ import org.jetbrains.kotlin.daemon.common.CompilerId
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtensionOrNull
 import org.jetbrains.kotlin.gradle.dsl.multiplatformExtensionOrNull
 import org.jetbrains.kotlin.gradle.logging.kotlinDebug
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.internal.state.TaskLoggers
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinWithJavaTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.isMain
-import org.jetbrains.kotlin.gradle.plugin.mpp.ownModuleName
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.tasks.GradleCompileTaskProvider
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompileTaskData
-import org.jetbrains.kotlin.gradle.tasks.locateTask
 import org.jetbrains.kotlin.gradle.utils.archivePathCompatible
 import org.jetbrains.kotlin.gradle.utils.newTmpFile
 import org.jetbrains.kotlin.gradle.utils.relativeOrCanonical
@@ -57,7 +57,11 @@ Using real taskProvider cause "field 'taskProvider' from type 'org.jetbrains.kot
 value 'fixed(class org.jetbrains.kotlin.gradle.tasks.KotlinCompile_Decorated, task ':compileKotlin')'
 is not assignable to 'org.gradle.api.tasks.TaskProvider'" exception
  */
-internal open class GradleCompilerRunner(protected val taskProvider: GradleCompileTaskProvider) {
+internal open class GradleCompilerRunner(
+    protected val taskProvider: GradleCompileTaskProvider,
+    protected val javaExecutable: File,
+    protected val jdkToolsJar: File?
+) {
 
     internal val pathProvider = taskProvider.path
     internal val loggerProvider = taskProvider.logger
@@ -152,7 +156,7 @@ internal open class GradleCompilerRunner(protected val taskProvider: GradleCompi
                 projectRootDirProvider,
                 sessionDirProvider
             ),
-            compilerFullClasspath = environment.compilerFullClasspath,
+            compilerFullClasspath = environment.compilerFullClasspath(jdkToolsJar),
             compilerClassName = compilerClassName,
             compilerArgs = argsArray,
             isVerbose = compilerArgs.verbose,
@@ -162,7 +166,8 @@ internal open class GradleCompilerRunner(protected val taskProvider: GradleCompi
             taskPath = pathProvider,
             reportingSettings = environment.reportingSettings,
             kotlinScriptExtensions = environment.kotlinScriptExtensions,
-            allWarningsAsErrors = compilerArgs.allWarningsAsErrors
+            allWarningsAsErrors = compilerArgs.allWarningsAsErrors,
+            javaExecutable = javaExecutable
         )
         TaskLoggers.put(pathProvider, loggerProvider)
         runCompilerAsync(workArgs)
@@ -179,10 +184,11 @@ internal open class GradleCompilerRunner(protected val taskProvider: GradleCompi
             clientIsAliveFlagFile: File,
             sessionIsAliveFlagFile: File,
             compilerFullClasspath: List<File>,
+            javaExecutable: File,
             messageCollector: MessageCollector,
             isDebugEnabled: Boolean
         ): CompileServiceSession? {
-            val compilerId = CompilerId.makeCompilerId(compilerFullClasspath)
+            val compilerId = CompilerId.makeCompilerId(compilerFullClasspath, javaExecutable)
             val additionalJvmParams = arrayListOf<String>()
             return KotlinCompilerRunnerUtils.newDaemonConnection(
                 compilerId, clientIsAliveFlagFile, sessionIsAliveFlagFile,
@@ -216,7 +222,7 @@ internal open class GradleCompilerRunner(protected val taskProvider: GradleCompi
 
                 KotlinCompileTaskData.getTaskDataContainer(project).forEach { taskData ->
                     val compilation = taskData.compilation
-                    val target = taskData.compilation.target
+                    val target = taskData.compilation.owner
                     val module = IncrementalModuleEntry(
                         project.path,
                         compilation.ownModuleName,
@@ -229,12 +235,12 @@ internal open class GradleCompilerRunner(protected val taskProvider: GradleCompi
                     nameToModules.getOrPut(module.name) { HashSet() }.add(module)
 
                     if (compilation.platformType == KotlinPlatformType.js) {
-                        jarForSourceSet(project, compilation.name)?.let {
+                        jarForSourceSet(project, compilation.compilationPurpose)?.let {
                             jarToModule[it] = module
                         }
                     }
 
-                    if (compilation.isMain()) {
+                    if (compilation is KotlinCompilation<*> && target is KotlinTarget && compilation.isMain()) { // FIXME support PM20
                         if (isMultiplatformProject) {
                             try {
                                 //It could cause task reconfiguration. TODO: fix it some day if need

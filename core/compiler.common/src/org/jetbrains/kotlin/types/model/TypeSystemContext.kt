@@ -303,6 +303,7 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     fun TypeConstructorMarker.supertypes(): Collection<KotlinTypeMarker>
     fun TypeConstructorMarker.isIntersection(): Boolean
     fun TypeConstructorMarker.isClassTypeConstructor(): Boolean
+    fun TypeConstructorMarker.isInterface(): Boolean
     fun TypeConstructorMarker.isIntegerLiteralTypeConstructor(): Boolean
     fun TypeConstructorMarker.isLocalType(): Boolean
 
@@ -312,7 +313,7 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     fun TypeParameterMarker.upperBoundCount(): Int
     fun TypeParameterMarker.getUpperBound(index: Int): KotlinTypeMarker
     fun TypeParameterMarker.getTypeConstructor(): TypeConstructorMarker
-    fun TypeParameterMarker.doesFormSelfType(selfConstructor: TypeConstructorMarker): Boolean
+    fun TypeParameterMarker.hasRecursiveBounds(selfConstructor: TypeConstructorMarker): Boolean
 
     fun areEqualTypeConstructors(c1: TypeConstructorMarker, c2: TypeConstructorMarker): Boolean
 

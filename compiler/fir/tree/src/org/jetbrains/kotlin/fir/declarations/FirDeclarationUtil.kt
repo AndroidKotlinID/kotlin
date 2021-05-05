@@ -24,12 +24,12 @@ import org.jetbrains.kotlin.fir.types.coneTypeSafe
 fun FirTypeParameterBuilder.addDefaultBoundIfNecessary(isFlexible: Boolean = false) {
     if (bounds.isEmpty()) {
         val type = if (isFlexible) {
-            val session = this.session
+            val session = declarationSiteSession
             buildResolvedTypeRef {
                 type = ConeFlexibleType(session.builtinTypes.anyType.type, session.builtinTypes.nullableAnyType.type)
             }
         } else {
-            session.builtinTypes.nullableAnyType
+            declarationSiteSession.builtinTypes.nullableAnyType
         }
         bounds += type
     }
@@ -81,6 +81,7 @@ inline val FirMemberDeclaration.isConst: Boolean get() = status.isConst
 inline val FirMemberDeclaration.isLateInit: Boolean get() = status.isLateInit
 inline val FirMemberDeclaration.isFromSealedClass: Boolean get() = status.isFromSealedClass
 inline val FirMemberDeclaration.isFromEnumClass: Boolean get() = status.isFromEnumClass
+inline val FirMemberDeclaration.isFun: Boolean get() = status.isFun
 
 inline val FirFunction<*>.hasBody get() = body != null
 
@@ -179,7 +180,6 @@ val FirMemberDeclaration.containerSource: SourceElement?
         is FirCallableMemberDeclaration<*> -> containerSource
         is FirRegularClass -> sourceElement
         is FirTypeAlias -> sourceElement
-        else -> null
     }
 
 private object IsFromVarargKey : FirDeclarationDataKey()

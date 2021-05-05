@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.fir.expressions.FirVarargArgumentsExpression
 import org.jetbrains.kotlin.fir.expressions.arguments
 import org.jetbrains.kotlin.fir.resolve.correspondingSupertypesCache
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
+import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.resolve.toSymbol
@@ -128,7 +129,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
 
     override fun SimpleTypeMarker.withNullability(nullable: Boolean): SimpleTypeMarker {
         require(this is ConeKotlinType)
-        return withNullability(ConeNullability.create(nullable), this as? ConeInferenceContext)
+        return withNullability(ConeNullability.create(nullable), session.inferenceComponents.ctx)
     }
 
     override fun SimpleTypeMarker.typeConstructor(): TypeConstructorMarker {
@@ -261,6 +262,10 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         return this is ConeClassLikeLookupTag
     }
 
+    override fun TypeConstructorMarker.isInterface(): Boolean {
+        return ((this as? ConeClassLikeLookupTag)?.toClassLikeSymbol()?.fir as? FirClass)?.classKind == ClassKind.INTERFACE
+    }
+
     override fun TypeParameterMarker.getVariance(): TypeVariance {
         require(this is ConeTypeParameterLookupTag)
         return this.symbol.fir.variance.convertVariance()
@@ -281,7 +286,7 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
         return this
     }
 
-    override fun TypeParameterMarker.doesFormSelfType(selfConstructor: TypeConstructorMarker): Boolean {
+    override fun TypeParameterMarker.hasRecursiveBounds(selfConstructor: TypeConstructorMarker): Boolean {
         require(this is ConeTypeParameterLookupTag)
         return this.typeParameterSymbol.fir.bounds.any { typeRef ->
             typeRef.coneType.contains { it.typeConstructor() == this.getTypeConstructor() }
@@ -565,7 +570,7 @@ class ConeTypeCheckerContext(
                     parameter.symbol to ((argument as? ConeKotlinTypeProjection)?.type
                         ?: session.builtinTypes.nullableAnyType.type)//StandardClassIds.Any(session.firSymbolProvider).constructType(emptyArray(), isNullable = true))
                 }
-            substitutorByMap(substitution)
+            substitutorByMap(substitution, session)
         } else {
             ConeSubstitutor.Empty
         }

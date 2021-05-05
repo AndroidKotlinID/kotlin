@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.backend.jvm.jvmTypeMapper
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.isPrimitiveType
+import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
@@ -60,7 +61,7 @@ internal fun KtTypeAndAnnotations.asPsiType(
     val type = this.type
     require(type is KtFirType)
     require(context is KtFirSymbol<*>)
-    val session = context.firRef.withFir(phase) { it.session }
+    val session = context.firRef.withFir(phase) { it.declarationSiteSession }
     return type.coneType.asPsiType(session, context.firRef.resolveState, TypeMappingMode.DEFAULT, parent)
 }
 
@@ -72,12 +73,17 @@ internal fun KtNamedClassOrObjectSymbol.typeForClassSymbol(psiElement: PsiElemen
     }
     require(types is KtFirType)
 
-    val session = firRef.withFir { it.session }
+    val session = firRef.withFir { it.declarationSiteSession }
     return types.coneType.asPsiType(session, firRef.resolveState, TypeMappingMode.DEFAULT, psiElement)
 }
 
-private class AnonymousTypesSubstitutor(private val session: FirSession, private val state: FirModuleResolveState) :
-    AbstractConeSubstitutor() {
+private class AnonymousTypesSubstitutor(
+    private val session: FirSession,
+    private val state: FirModuleResolveState
+) : AbstractConeSubstitutor() {
+    override val typeInferenceContext: ConeInferenceContext
+        get() = session.inferenceComponents.ctx
+
     override fun substituteType(type: ConeKotlinType): ConeKotlinType? {
 
         if (type !is ConeClassLikeType) return null
@@ -167,7 +173,7 @@ internal fun KtType.mapSupertype(
     val contextSymbol = classSymbol
     require(contextSymbol is KtFirSymbol<*>)
 
-    val session = contextSymbol.firRef.withFir { it.session }
+    val session = contextSymbol.firRef.withFir { it.declarationSiteSession }
 
     return mapSupertype(
         psiContext,
@@ -297,7 +303,7 @@ internal fun KtType.getTypeNullability(context: KtSymbol, phase: FirResolvePhase
     if (coneType.classId?.shortClassName?.asString() == SpecialNames.ANONYMOUS) return NullabilityType.NotNull
 
     val canonicalSignature = context.firRef.withFir(phase) {
-        it.session.jvmTypeMapper.mapType(coneType, TypeMappingMode.DEFAULT).descriptor
+        it.declarationSiteSession.jvmTypeMapper.mapType(coneType, TypeMappingMode.DEFAULT).descriptor
     }
 
     if (canonicalSignature == "[L<error>;") return NullabilityType.NotNull

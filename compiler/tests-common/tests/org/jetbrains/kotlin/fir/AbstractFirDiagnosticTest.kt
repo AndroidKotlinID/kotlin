@@ -221,7 +221,7 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
                 sourceElement,
                 argumentText,
                 severity,
-                FirDiagnosticFactory1<FirSourceElement, PsiElement, String>(name, severity)
+                FirDiagnosticFactory1<PsiElement, String>(name, severity)
             )
         }
     }
@@ -266,9 +266,11 @@ abstract class AbstractFirDiagnosticsTest : AbstractFirBaseDiagnosticsTest() {
         val collectors = mutableMapOf<FirSession, AbstractDiagnosticCollector>()
         val result = mutableMapOf<FirFile, List<FirDiagnostic<*>>>()
         for (firFile in firFiles) {
-            val session = firFile.session
+            val session = firFile.declarationSiteSession
             val collector = collectors.computeIfAbsent(session) { createCollector(session) }
-            result[firFile] = collector.collectDiagnostics(firFile).toList()
+            val reporter = DiagnosticReporterFactory.createReporter()
+            collector.collectDiagnostics(firFile, reporter)
+            result[firFile] = reporter.diagnostics
         }
         return result
     }

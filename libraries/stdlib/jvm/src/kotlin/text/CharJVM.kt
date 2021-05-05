@@ -67,7 +67,8 @@ public inline fun Char.isIdentifierIgnorable(): Boolean = Character.isIdentifier
 /**
  * Returns `true` if this character is an ISO control character.
  *
- * A character is considered to be an ISO control character if its [category] is [CharCategory.CONTROL].
+ * A character is considered to be an ISO control character if its [category] is [CharCategory.CONTROL],
+ * meaning the Char is in the range `'\u0000'..'\u001F'` or in the range `'\u007F'..'\u009F'`.
  *
  * @sample samples.text.Chars.isISOControl
  */
@@ -98,6 +99,9 @@ public actual fun Char.isWhitespace(): Boolean = Character.isWhitespace(this) ||
 
 /**
  * Returns `true` if this character is upper case.
+ *
+ * @see Character.isUpperCase
+ *
  * @sample samples.text.Chars.isUpperCase
  */
 @kotlin.internal.InlineOnly
@@ -105,13 +109,16 @@ public actual inline fun Char.isUpperCase(): Boolean = Character.isUpperCase(thi
 
 /**
  * Returns `true` if this character is lower case.
+ *
+ * @see Character.isLowerCase
+ *
  * @sample samples.text.Chars.isLowerCase
  */
 @kotlin.internal.InlineOnly
 public actual inline fun Char.isLowerCase(): Boolean = Character.isLowerCase(this)
 
 /**
- * Converts this character to lower case using Unicode mapping rules of the invariant locale.
+ * Converts this character to upper case using Unicode mapping rules of the invariant locale.
  */
 @Deprecated("Use uppercaseChar() instead.", ReplaceWith("uppercaseChar()"))
 @DeprecatedSinceKotlin(warningSince = "1.5")
@@ -213,7 +220,10 @@ public actual inline fun Char.lowercase(): String = toString().lowercase()
 public fun Char.lowercase(locale: Locale): String = toString().lowercase(locale)
 
 /**
- * Returns `true` if this character is a titlecase character.
+ * Returns `true` if this character is a title case letter.
+ *
+ * A character is considered to be a title case letter if its [category] is [CharCategory.TITLECASE_LETTER].
+ *
  * @sample samples.text.Chars.isTitleCase
  */
 @kotlin.internal.InlineOnly

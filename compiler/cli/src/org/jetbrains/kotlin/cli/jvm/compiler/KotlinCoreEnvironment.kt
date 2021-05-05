@@ -33,13 +33,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.ExtensionsArea
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.LanguageLevelProjectExtension
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtilRt
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.*
 import com.intellij.openapi.vfs.impl.ZipHandler
-import com.intellij.pom.java.LanguageLevel
 import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.JavaClassSupersImpl
@@ -94,6 +92,7 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.CodeAnalyzerInitializer
 import org.jetbrains.kotlin.resolve.ModuleAnnotationsResolver
 import org.jetbrains.kotlin.resolve.extensions.ExtraImportsProviderExtension
+import org.jetbrains.kotlin.resolve.jvm.extensions.SyntheticJavaResolveExtension
 import org.jetbrains.kotlin.resolve.extensions.SyntheticResolveExtension
 import org.jetbrains.kotlin.resolve.jvm.KotlinJavaPsiFacade
 import org.jetbrains.kotlin.resolve.jvm.extensions.AnalysisHandlerExtension
@@ -191,11 +190,17 @@ class KotlinCoreEnvironment private constructor(
 
         sourceFiles.sortBy { it.virtualFile.path }
 
+        val javaFileManager = ServiceManager.getService(project, CoreJavaFileManager::class.java) as KotlinCliJavaFileManagerImpl
+
         val jdkHome = configuration.get(JVMConfigurationKeys.JDK_HOME)
         val jrtFileSystem = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.JRT_PROTOCOL)
-        val javaModuleFinder = CliJavaModuleFinder(jdkHome?.path?.let { path ->
-            jrtFileSystem?.findFileByPath(path + URLUtil.JAR_SEPARATOR)
-        })
+        val javaModuleFinder = CliJavaModuleFinder(
+            jdkHome?.path?.let { path ->
+                jrtFileSystem?.findFileByPath(path + URLUtil.JAR_SEPARATOR)
+            },
+            javaFileManager,
+            project
+        )
 
         val outputDirectory =
             configuration.get(JVMConfigurationKeys.MODULES)?.singleOrNull()?.getOutputDirectory()
@@ -208,7 +213,8 @@ class KotlinCoreEnvironment private constructor(
             this::contentRootToVirtualFile,
             javaModuleFinder,
             !configuration.getBoolean(CLIConfigurationKeys.ALLOW_KOTLIN_PACKAGE),
-            outputDirectory?.let(this::findLocalFile)
+            outputDirectory?.let(this::findLocalFile),
+            javaFileManager
         )
 
         val (initialRoots, javaModules) =
@@ -232,7 +238,7 @@ class KotlinCoreEnvironment private constructor(
             updateClasspathFromRootsIndex(this)
         }
 
-        (ServiceManager.getService(project, CoreJavaFileManager::class.java) as KotlinCliJavaFileManagerImpl).initialize(
+        javaFileManager.initialize(
             rootsIndex,
             packagePartProviders,
             SingleJavaFileRootsIndex(singleJavaFileRoots),
@@ -241,7 +247,7 @@ class KotlinCoreEnvironment private constructor(
 
         project.registerService(
             JavaModuleResolver::class.java,
-            CliJavaModuleResolver(classpathRootsResolver.javaModuleGraph, javaModules, javaModuleFinder.systemModules.toList())
+            CliJavaModuleResolver(classpathRootsResolver.javaModuleGraph, javaModules, javaModuleFinder.systemModules.toList(), project)
         )
 
         val finderFactory = CliVirtualFileFinderFactory(rootsIndex)
@@ -577,6 +583,7 @@ class KotlinCoreEnvironment private constructor(
         fun registerPluginExtensionPoints(project: MockProject) {
             ExpressionCodegenExtension.registerExtensionPoint(project)
             SyntheticResolveExtension.registerExtensionPoint(project)
+            SyntheticJavaResolveExtension.registerExtensionPoint(project)
             ClassBuilderInterceptorExtension.registerExtensionPoint(project)
             AnalysisHandlerExtension.registerExtensionPoint(project)
             PackageFragmentProviderExtension.registerExtensionPoint(project)

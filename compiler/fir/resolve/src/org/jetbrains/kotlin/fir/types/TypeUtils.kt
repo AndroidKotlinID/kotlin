@@ -56,11 +56,11 @@ fun ConeDefinitelyNotNullType.Companion.create(original: ConeKotlinType): ConeDe
     }
 }
 
-fun ConeKotlinType.makeConeTypeDefinitelyNotNullOrNotNull(): ConeKotlinType {
+fun ConeKotlinType.makeConeTypeDefinitelyNotNullOrNotNull(typeContext: ConeInferenceContext): ConeKotlinType {
     if (this is ConeIntersectionType) {
-        return ConeIntersectionType(intersectedTypes.map { it.makeConeTypeDefinitelyNotNullOrNotNull() })
+        return ConeIntersectionType(intersectedTypes.map { it.makeConeTypeDefinitelyNotNullOrNotNull(typeContext) })
     }
-    return ConeDefinitelyNotNullType.create(this) ?: this.withNullability(ConeNullability.NOT_NULL)
+    return ConeDefinitelyNotNullType.create(this) ?: this.withNullability(ConeNullability.NOT_NULL, typeContext)
 }
 
 fun <T : ConeKotlinType> T.withArguments(arguments: Array<out ConeTypeProjection>): T {
@@ -95,7 +95,7 @@ fun <T : ConeKotlinType> T.withAttributes(attributes: ConeAttributes): T {
 
 fun <T : ConeKotlinType> T.withNullability(
     nullability: ConeNullability,
-    typeContext: ConeInferenceContext? = null,
+    typeContext: ConeInferenceContext,
     attributes: ConeAttributes = this.attributes,
 ): T {
     if (this.nullability == nullability && this.attributes == attributes) {
@@ -113,13 +113,17 @@ fun <T : ConeKotlinType> T.withNullability(
                     return this
                 }
             }
-            coneFlexibleOrSimpleType(typeContext, lowerBound.withNullability(nullability), upperBound.withNullability(nullability))
+            coneFlexibleOrSimpleType(
+                typeContext,
+                lowerBound.withNullability(nullability, typeContext),
+                upperBound.withNullability(nullability, typeContext)
+            )
         }
         is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag)
         is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor, attributes)
         is ConeIntersectionType -> when (nullability) {
             ConeNullability.NULLABLE -> this.mapTypes {
-                it.withNullability(nullability)
+                it.withNullability(nullability, typeContext)
             }
             ConeNullability.UNKNOWN -> this // TODO: is that correct?
             ConeNullability.NOT_NULL -> this
@@ -127,8 +131,8 @@ fun <T : ConeKotlinType> T.withNullability(
         is ConeStubType -> ConeStubType(variable, nullability)
         is ConeDefinitelyNotNullType -> when (nullability) {
             ConeNullability.NOT_NULL -> this
-            ConeNullability.NULLABLE -> original.withNullability(nullability)
-            ConeNullability.UNKNOWN -> original.withNullability(nullability)
+            ConeNullability.NULLABLE -> original.withNullability(nullability, typeContext)
+            ConeNullability.UNKNOWN -> original.withNullability(nullability, typeContext)
         }
         is ConeIntegerLiteralType -> ConeIntegerLiteralTypeImpl(value, isUnsigned, nullability)
         else -> error("sealed: ${this::class}")
@@ -136,7 +140,7 @@ fun <T : ConeKotlinType> T.withNullability(
 }
 
 fun coneFlexibleOrSimpleType(
-    typeContext: ConeInferenceContext?,
+    typeContext: ConeInferenceContext,
     lowerBound: ConeKotlinType,
     upperBound: ConeKotlinType,
 ): ConeKotlinType {
@@ -147,15 +151,8 @@ fun coneFlexibleOrSimpleType(
         return coneFlexibleOrSimpleType(typeContext, lowerBound, upperBound.upperBound)
     }
     return when {
-        typeContext != null && AbstractStrictEqualityTypeChecker.strictEqualTypes(typeContext, lowerBound, upperBound) -> {
-            lowerBound
-        }
-        typeContext == null && lowerBound == upperBound -> {
-            lowerBound
-        }
-        else -> {
-            ConeFlexibleType(lowerBound, upperBound)
-        }
+        AbstractStrictEqualityTypeChecker.strictEqualTypes(typeContext, lowerBound, upperBound) -> lowerBound
+        else -> ConeFlexibleType(lowerBound, upperBound)
     }
 }
 
@@ -204,11 +201,7 @@ fun FirTypeRef.withReplacedReturnType(newType: ConeKotlinType?): FirTypeRef {
     require(this is FirResolvedTypeRef || newType == null)
     if (newType == null) return this
 
-    return buildResolvedTypeRef {
-        source = this@withReplacedReturnType.source
-        type = newType
-        annotations += this@withReplacedReturnType.annotations
-    }
+    return resolvedTypeFromPrototype(newType)
 }
 
 fun FirTypeRef.withReplacedConeType(
@@ -218,14 +211,24 @@ fun FirTypeRef.withReplacedConeType(
     require(this is FirResolvedTypeRef)
     if (newType == null) return this
 
-    return buildResolvedTypeRef {
-        source = if (firFakeSourceElementKind != null)
-            this@withReplacedConeType.source?.fakeElement(firFakeSourceElementKind)
+    val newSource =
+        if (firFakeSourceElementKind != null)
+            this.source?.fakeElement(firFakeSourceElementKind)
         else
-            this@withReplacedConeType.source
-        type = newType
-        annotations += this@withReplacedConeType.annotations
-        delegatedTypeRef = this@withReplacedConeType.delegatedTypeRef
+            this.source
+
+    return if (newType is ConeKotlinErrorType) {
+        buildErrorTypeRef {
+            source = newSource
+            diagnostic = newType.diagnostic
+        }
+    } else {
+        buildResolvedTypeRef {
+            source = newSource
+            type = newType
+            annotations += this@withReplacedConeType.annotations
+            delegatedTypeRef = this@withReplacedConeType.delegatedTypeRef
+        }
     }
 }
 
@@ -344,9 +347,10 @@ private fun ConeTypeContext.captureArguments(type: ConeKotlinType, status: Captu
         ConeCapturedType(status, lowerType, argument, typeConstructor.getParameter(index))
     }
 
-    val substitutor = substitutorByMap((0 until argumentsCount).map { index ->
+    val substitution = (0 until argumentsCount).map { index ->
         (typeConstructor.getParameter(index) as ConeTypeParameterLookupTag).symbol to (newArguments[index] as ConeKotlinType)
-    }.toMap())
+    }.toMap()
+    val substitutor = substitutorByMap(substitution, session)
 
     for (index in 0 until argumentsCount) {
         val oldArgument = type.typeArguments[index]

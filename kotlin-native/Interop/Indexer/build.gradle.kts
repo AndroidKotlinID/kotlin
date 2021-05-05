@@ -129,14 +129,12 @@ sourceSets {
             srcDirs("prebuilt/nativeInteropStubs/kotlin")
         }
         kotlin{
-
             target {
 
             }
         }
     }
 }
-
 
 dependencies {
     compile(project(":kotlin-stdlib"))
@@ -174,6 +172,8 @@ tasks.matching { it.name == "linkClangstubsSharedLibrary" }.all {
     inputs.dir(libclangextDir)
 }
 
+// Please note that list of headers should be fixed manually.
+// See KT-46231 for details.
 tasks.create("updatePrebuilt") {
     dependsOn("genClangInteropStubs")
 

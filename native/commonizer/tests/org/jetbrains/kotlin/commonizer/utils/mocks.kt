@@ -9,8 +9,6 @@ package org.jetbrains.kotlin.commonizer.utils
 
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataMonolithicSerializer
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataVersion
-import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
-import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.commonizer.*
 import org.jetbrains.kotlin.commonizer.ModulesProvider.ModuleInfo
 import org.jetbrains.kotlin.commonizer.ResultsConsumer.ModuleResult
@@ -18,6 +16,8 @@ import org.jetbrains.kotlin.commonizer.cir.*
 import org.jetbrains.kotlin.commonizer.konan.NativeManifestDataProvider
 import org.jetbrains.kotlin.commonizer.konan.NativeSensitiveManifestData
 import org.jetbrains.kotlin.commonizer.mergedtree.*
+import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.library.KotlinLibraryVersioning
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
@@ -146,22 +146,21 @@ internal class MockResultsConsumer : ResultsConsumer {
 
     lateinit var status: ResultsConsumer.Status
 
-    override fun consume(target: CommonizerTarget, moduleResult: ModuleResult) {
+    override fun consume(parameters: CommonizerParameters, target: CommonizerTarget, moduleResult: ModuleResult) {
         check(!this::status.isInitialized)
-        check(target !in finishedTargets) { "$target already finished"}
+        check(target !in finishedTargets) { "$target already finished" }
         val moduleResults: ModuleResults = _modulesByTargets.getOrPut(target) { ModuleResults() }
         val oldResult = moduleResults.put(moduleResult.libraryName, moduleResult)
         check(oldResult == null) // to avoid accidental overwriting
     }
 
-    override fun targetConsumed(target: CommonizerTarget) {
+    override fun targetConsumed(parameters: CommonizerParameters, target: CommonizerTarget) {
         check(!this::status.isInitialized)
-        check(target in _modulesByTargets.keys)
         check(target !in finishedTargets)
         finishedTargets += target
     }
 
-    override fun allConsumed(status: ResultsConsumer.Status) {
+    override fun allConsumed(parameters: CommonizerParameters, status: ResultsConsumer.Status) {
         check(!this::status.isInitialized)
         check(finishedTargets.containsAll(_modulesByTargets.keys))
         this.status = status
@@ -169,6 +168,7 @@ internal class MockResultsConsumer : ResultsConsumer {
 }
 
 fun MockNativeManifestDataProvider(
+    target: CommonizerTarget,
     uniqueName: String = "mock",
     versions: KotlinLibraryVersioning = KotlinLibraryVersioning(null, null, null, null, null),
     dependencies: List<String> = emptyList(),
@@ -178,7 +178,7 @@ fun MockNativeManifestDataProvider(
     nativeTargets: Collection<String> = emptyList(),
     shortName: String? = "mock"
 ): NativeManifestDataProvider = object : NativeManifestDataProvider {
-    override fun getManifest(libraryName: String): NativeSensitiveManifestData {
+    override fun buildManifest(libraryName: UniqueLibraryName): NativeSensitiveManifestData {
         return NativeSensitiveManifestData(
             uniqueName = uniqueName,
             versions = versions,
@@ -187,7 +187,8 @@ fun MockNativeManifestDataProvider(
             packageFqName = packageFqName,
             exportForwardDeclarations = exportForwardDeclarations,
             nativeTargets = nativeTargets,
-            shortName = shortName
+            shortName = shortName,
+            commonizerTarget = target,
         )
     }
 }

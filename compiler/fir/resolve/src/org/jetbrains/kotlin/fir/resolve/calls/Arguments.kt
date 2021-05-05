@@ -353,6 +353,10 @@ private fun checkApplicabilityForArgumentType(
             }
         }
 
+        if (argument.isNullLiteral && actualExpectedType.nullability == ConeNullability.NOT_NULL) {
+            return NullForNotNullType(argument)
+        }
+
         fun tryGetConeTypeThatCompatibleWithKtType(type: ConeKotlinType): ConeKotlinType {
             if (type is ConeTypeVariableType) {
                 val originalTypeParameter =
@@ -373,7 +377,6 @@ private fun checkApplicabilityForArgumentType(
             argument
         )
     }
-
 
     if (isReceiver && isDispatch) {
         if (!expectedType.isNullable && argumentType.isMarkedNullable) {
@@ -397,7 +400,7 @@ private fun checkApplicabilityForArgumentType(
         val nullableExpectedType = expectedType.withNullability(ConeNullability.NULLABLE, context.session.typeContext)
 
         if (csBuilder.addSubtypeConstraintIfCompatible(argumentType, nullableExpectedType, position)) {
-            sink.reportDiagnostic(InapplicableWrongReceiver(expectedType, argumentType)) // TODO
+            sink.reportDiagnostic(UnsafeCall(argumentType)) // TODO
         } else {
             csBuilder.addSubtypeConstraint(argumentType, expectedType, position)
             sink.reportDiagnostic(InapplicableWrongReceiver(expectedType, argumentType))
@@ -491,7 +494,7 @@ fun FirExpression.isFunctional(
     scopeSession: ScopeSession,
     expectedFunctionType: ConeKotlinType?,
 ): Boolean {
-    when ((this as? FirWrappedArgumentExpression)?.expression ?: this) {
+    when (unwrapArgument()) {
         is FirAnonymousFunction, is FirCallableReferenceAccess -> return true
         else -> {
             // Either a functional type or a subtype of a class that has a contributed `invoke`.
@@ -508,7 +511,7 @@ fun FirExpression.isFunctional(
                     session, scopeSession, classLikeExpectedFunctionType, shouldCalculateReturnTypesOfFakeOverrides = false
                 ) ?: return false
             // Make sure the contributed `invoke` is indeed a wanted functional type by checking if types are compatible.
-            val expectedReturnType = classLikeExpectedFunctionType.returnType(session)!!.lowerBoundIfFlexible()
+            val expectedReturnType = classLikeExpectedFunctionType.returnType(session).lowerBoundIfFlexible()
             val returnTypeCompatible =
                 expectedReturnType is ConeTypeParameterType ||
                         AbstractTypeChecker.isSubtypeOf(
@@ -529,7 +532,7 @@ fun FirExpression.isFunctional(
             val parameterPairs =
                 invokeSymbol.fir.valueParameters.zip(classLikeExpectedFunctionType.valueParameterTypesIncludingReceiver(session))
             return parameterPairs.all { (invokeParameter, expectedParameter) ->
-                val expectedParameterType = expectedParameter!!.lowerBoundIfFlexible()
+                val expectedParameterType = expectedParameter.lowerBoundIfFlexible()
                 expectedParameterType is ConeTypeParameterType ||
                         AbstractTypeChecker.isSubtypeOf(
                             session.inferenceComponents.ctx.newBaseTypeCheckerContext(

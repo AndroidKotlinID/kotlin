@@ -50,7 +50,6 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
             add(listOf("--gcc-toolchain=${configurables.absoluteGccToolchain}"))
         }
         if (configurables is AppleConfigurables) {
-            add(listOf("-stdlib=libc++"))
             val osVersionMin = when (target) {
                 // Here we workaround Clang 8 limitation: macOS major version should be 10.
                 // So we compile runtime with version 10.16 and then override version in BitcodeCompiler.
@@ -157,23 +156,58 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
 
     val hostCompilerArgsForJni = listOf("", HostManager.jniHostPlatformIncludeDir).map { "-I$jdkDir/include/$it" }.toTypedArray()
 
-    val clangArgs = (commonClangArgs + specificClangArgs).toTypedArray()
+    /**
+     * Clang args for Objectice-C and plain C compilation.
+     */
+    val clangArgs: Array<String> = (commonClangArgs + specificClangArgs).toTypedArray()
+
+    /**
+     * Clang args for C++ compilation.
+     */
+    val clangXXArgs: Array<String> = clangArgs + when (configurables) {
+        is AppleConfigurables -> arrayOf(
+                "-stdlib=libc++",
+                // Starting from Xcode 12.5, platform SDKs contain C++ stdlib.
+                // It results in two c++ stdlib in search path (one from LLVM, another from SDK).
+                // We workaround this problem by explicitly specifying path to stdlib.
+                // TODO: Revise after LLVM update.
+                "-nostdinc++", "-isystem", "$absoluteLlvmHome/include/c++/v1"
+        )
+        else -> emptyArray()
+    }
 
     val clangArgsForKonanSources =
-            clangArgs + clangArgsSpecificForKonanSources
+            clangXXArgs + clangArgsSpecificForKonanSources
 
-    val targetLibclangArgs: List<String> =
+    private val libclangSpecificArgs =
             // libclang works not exactly the same way as the clang binary and
             // (in particular) uses different default header search path.
             // See e.g. http://lists.llvm.org/pipermail/cfe-dev/2013-November/033680.html
             // We workaround the problem with -isystem flag below.
-            listOf("-isystem", "$absoluteLlvmHome/lib/clang/$llvmVersion/include", *clangArgs)
+            // TODO: Revise after update to LLVM 10.
+            listOf("-isystem", "$absoluteLlvmHome/lib/clang/$llvmVersion/include")
+
+    /**
+     * libclang args for plain C and Objective-C.
+     *
+     * Note that it's different from [clangArgs].
+     */
+    val libclangArgs: List<String> =
+            libclangSpecificArgs + clangArgs
+
+    /**
+     * libclang args for C++.
+     *
+     * Note that it's different from [clangXXArgs].
+     */
+    val libclangXXArgs: List<String> =
+            libclangSpecificArgs + clangXXArgs
 
     private val targetClangCmd
             = listOf("${absoluteLlvmHome}/bin/clang") + clangArgs
 
     private val targetClangXXCmd
-            = listOf("${absoluteLlvmHome}/bin/clang++") + clangArgs
+            = listOf("${absoluteLlvmHome}/bin/clang++") + clangXXArgs
 
     private val targetArCmd
             = listOf("${absoluteLlvmHome}/bin/llvm-ar")

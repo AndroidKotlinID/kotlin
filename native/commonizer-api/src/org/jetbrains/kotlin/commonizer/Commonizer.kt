@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.commonizer
 
 import java.io.File
 import java.io.Serializable
-import kotlin.jvm.Throws
 
 public interface Commonizer : Serializable {
     @Throws(Throwable::class)
@@ -16,6 +15,7 @@ public interface Commonizer : Serializable {
         inputLibraries: Set<File>,
         dependencyLibraries: Set<CommonizerDependency>,
         outputCommonizerTarget: SharedCommonizerTarget,
-        outputDirectory: File
+        outputDirectory: File,
+        logLevel: CommonizerLogLevel = CommonizerLogLevel.Quiet
     )
 }

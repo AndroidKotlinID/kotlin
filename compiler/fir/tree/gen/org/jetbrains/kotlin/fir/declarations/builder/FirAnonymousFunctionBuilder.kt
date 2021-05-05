@@ -38,7 +38,7 @@ import org.jetbrains.kotlin.fir.visitors.*
 @FirBuilderDsl
 class FirAnonymousFunctionBuilder : FirFunctionBuilder, FirAnnotationContainerBuilder, FirExpressionBuilder {
     override var source: FirSourceElement? = null
-    override lateinit var session: FirSession
+    override lateinit var declarationSiteSession: FirSession
     override lateinit var origin: FirDeclarationOrigin
     override var attributes: FirDeclarationAttributes = FirDeclarationAttributes()
     override val annotations: MutableList<FirAnnotationCall> = mutableListOf()
@@ -58,7 +58,7 @@ class FirAnonymousFunctionBuilder : FirFunctionBuilder, FirAnnotationContainerBu
     override fun build(): FirAnonymousFunction {
         return FirAnonymousFunctionImpl(
             source,
-            session,
+            declarationSiteSession,
             origin,
             attributes,
             annotations,
@@ -77,6 +77,13 @@ class FirAnonymousFunctionBuilder : FirFunctionBuilder, FirAnnotationContainerBu
         )
     }
 
+
+    @Deprecated("Modification of 'resolvePhase' has no impact for FirAnonymousFunctionBuilder", level = DeprecationLevel.HIDDEN)
+    override var resolvePhase: FirResolvePhase
+        get() = throw IllegalStateException()
+        set(_) {
+            throw IllegalStateException()
+        }
 }
 
 @OptIn(ExperimentalContracts::class)

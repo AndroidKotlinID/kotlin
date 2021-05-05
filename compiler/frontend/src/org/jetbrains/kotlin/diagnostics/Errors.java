@@ -155,6 +155,7 @@ public interface Errors {
 
     DiagnosticFactory0<KtTypeProjection> PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT = DiagnosticFactory0.create(ERROR, VARIANCE_IN_PROJECTION);
     DiagnosticFactory2<KtTypeReference, KotlinType, KotlinType> UPPER_BOUND_VIOLATED = DiagnosticFactory2.create(ERROR);
+    DiagnosticFactory2<KtTypeReference, KotlinType, KotlinType> UPPER_BOUND_VIOLATED_WARNING = DiagnosticFactory2.create(WARNING);
     DiagnosticFactory0<KtNullableType> REDUNDANT_NULLABLE = DiagnosticFactory0.create(WARNING, NULLABLE_TYPE);
     DiagnosticFactory0<KtDefinitelyNotNullType> DEFINITELY_NOT_NULLABLE_NOT_APPLICABLE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtNullableType> NULLABLE_ON_DEFINITELY_NOT_NULLABLE = DiagnosticFactory0.create(ERROR);
@@ -325,6 +326,7 @@ public interface Errors {
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_EXTENSION_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_SUSPEND_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_KSUSPEND_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> MIXING_SUSPEND_AND_NON_SUSPEND_SUPERTYPES = DiagnosticFactory0.create(ERROR);
 
     DiagnosticFactory0<KtTypeReference> MANY_CLASSES_IN_SUPERTYPE_LIST = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_APPEARS_TWICE = DiagnosticFactory0.create(ERROR);
@@ -436,6 +438,8 @@ public interface Errors {
     // Companion objects
 
     DiagnosticFactory0<KtObjectDeclaration> MANY_COMPANION_OBJECTS = DiagnosticFactory0.create(ERROR, COMPANION_OBJECT);
+    DiagnosticFactory0<KtExpression> SELF_CALL_IN_NESTED_OBJECT_CONSTRUCTOR_WARNING = DiagnosticFactory0.create(WARNING);
+    DiagnosticFactory0<KtExpression> SELF_CALL_IN_NESTED_OBJECT_CONSTRUCTOR = DiagnosticFactory0.create(ERROR);
 
     // Objects
 
@@ -540,10 +544,14 @@ public interface Errors {
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> ABSTRACT_CLASS_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
+    DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> ABSTRACT_CLASS_MEMBER_NOT_IMPLEMENTED_WARNING =
+            DiagnosticFactory2.create(WARNING, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_IMPL_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_INTERFACES_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
+    DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_INTERFACES_MEMBER_NOT_IMPLEMENTED_WARNING =
+            DiagnosticFactory2.create(WARNING, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, ClassDescriptor, Collection<CallableMemberDescriptor>> INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, ClassDescriptor, Collection<CallableMemberDescriptor>> INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER_WARNING =
@@ -1015,6 +1023,7 @@ public interface Errors {
     DiagnosticFactory0<KtEscapeStringTemplateEntry> ILLEGAL_ESCAPE_SEQUENCE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtConstantExpression> UNSIGNED_LITERAL_WITHOUT_DECLARATIONS_ON_CLASSPATH = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtExpression> SIGNED_CONSTANT_CONVERTED_TO_UNSIGNED = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory1<KtExpression, KotlinType> INTEGER_OPERATOR_RESOLVE_WILL_CHANGE = DiagnosticFactory1.create(WARNING);
 
 
     // Casts and is-checks
@@ -1072,6 +1081,7 @@ public interface Errors {
     // Type mismatch
 
     DiagnosticFactory2<KtExpression, KotlinType, KotlinType> TYPE_MISMATCH = DiagnosticFactory2.create(ERROR);
+    DiagnosticFactory2<KtExpression, KotlinType, KotlinType> TYPE_MISMATCH_WARNING = DiagnosticFactory2.create(WARNING);
     DiagnosticFactory1<KtElement, KotlinType> TYPE_MISMATCH_DUE_TO_EQUALS_LAMBDA_IN_FUN = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<KtElement, TypeMismatchDueToTypeProjectionsData> TYPE_MISMATCH_DUE_TO_TYPE_PROJECTIONS = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory2<KtElement, CallableDescriptor, KotlinType> MEMBER_PROJECTED_OUT = DiagnosticFactory2.create(ERROR);
@@ -1083,6 +1093,7 @@ public interface Errors {
     DiagnosticFactory0<KtWhenConditionInRange> TYPE_MISMATCH_IN_RANGE = DiagnosticFactory0.create(ERROR, WHEN_CONDITION_IN_RANGE);
 
     DiagnosticFactory1<KtParameter, KotlinType> EXPECTED_PARAMETER_TYPE_MISMATCH = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory1<KtParameter, KotlinType> EXPECTED_PARAMETER_TYPE_MISMATCH_WARNING = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory2<KtFunction, Integer, List<KotlinType>> EXPECTED_PARAMETERS_NUMBER_MISMATCH =
             DiagnosticFactory2.create(ERROR, FUNCTION_PARAMETERS);
 

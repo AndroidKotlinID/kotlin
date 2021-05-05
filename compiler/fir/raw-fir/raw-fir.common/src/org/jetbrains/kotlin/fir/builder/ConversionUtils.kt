@@ -37,7 +37,6 @@ import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.types.ConstantValueKind
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
 import org.jetbrains.kotlin.util.OperatorNameConventions
@@ -279,7 +278,7 @@ fun generateTemporaryVariable(
 ): FirVariable<*> =
     buildProperty {
         this.source = source
-        this.session = session
+        declarationSiteSession = session
         origin = FirDeclarationOrigin.Source
         returnTypeRef = typeRef ?: buildImplicitTypeRef {
             this.source = source
@@ -314,7 +313,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         else -> null
     }
     val isMember = ownerSymbol != null
-    val fakeSource = delegateBuilder.source?.fakeElement(FirFakeSourceElementKind.DefaultAccessor)
+    val fakeSource = delegateBuilder.source?.fakeElement(FirFakeSourceElementKind.DelegatedPropertyAccessor)
 
     /*
      * If we have delegation with provide delegate then we generate call like
@@ -403,7 +402,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         val returnTarget = FirFunctionTarget(null, isLambda = false)
         getter = buildPropertyAccessor {
             this.source = fakeSource
-            this.session = session
+            declarationSiteSession = session
             origin = FirDeclarationOrigin.Source
             returnTypeRef = buildImplicitTypeRef()
             isGetter = true
@@ -435,14 +434,14 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         val annotations = setter?.annotations
         setter = buildPropertyAccessor {
             this.source = fakeSource
-            this.session = session
+            declarationSiteSession = session
             origin = FirDeclarationOrigin.Source
             returnTypeRef = session.builtinTypes.unitType
             isGetter = false
             status = FirDeclarationStatusImpl(Visibilities.Unknown, Modality.FINAL)
             val parameter = buildValueParameter {
                 source = fakeSource
-                this.session = session
+                declarationSiteSession = session
                 origin = FirDeclarationOrigin.Source
                 returnTypeRef = buildImplicitTypeRef()
                 name = DELEGATED_SETTER_PARAM
@@ -458,6 +457,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
                     source = fakeSource
                     explicitReceiver = delegateAccess()
                     calleeReference = buildSimpleNamedReference {
+                        source = fakeSource
                         name = SET_VALUE
                     }
                     argumentList = buildArgumentList {

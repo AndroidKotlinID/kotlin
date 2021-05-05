@@ -29,6 +29,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
     }
 
+    @TestMetadata("annotationUsedAsAnnotationArgument.kt")
+    public void testAnnotationUsedAsAnnotationArgument() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/annotationUsedAsAnnotationArgument.kt");
+    }
+
     @TestMetadata("asImports.kt")
     public void testAsImports() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/asImports.kt");
@@ -172,6 +177,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
     @TestMetadata("ft.kt")
     public void testFt() throws Exception {
         runTest("compiler/fir/analysis-tests/testData/resolve/ft.kt");
+    }
+
+    @TestMetadata("funInterfaceDeclaration.kt")
+    public void testFunInterfaceDeclaration() throws Exception {
+        runTest("compiler/fir/analysis-tests/testData/resolve/funInterfaceDeclaration.kt");
     }
 
     @TestMetadata("functionTypeAlias.kt")
@@ -977,6 +987,24 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
         @TestMetadata("noSuperCallInSupertypes.kt")
         public void testNoSuperCallInSupertypes() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/constructors/noSuperCallInSupertypes.kt");
+        }
+    }
+
+    @TestMetadata("compiler/fir/analysis-tests/testData/resolve/contracts")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Contracts extends AbstractLazyBodyIsNotTouchedTilContractsPhaseTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInContracts() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/contracts"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("genericContract.kt")
+        public void testGenericContract() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/contracts/genericContract.kt");
         }
     }
 
@@ -2761,6 +2789,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
             runTest("compiler/fir/analysis-tests/testData/resolve/problems/secondaryConstructorCfg.kt");
         }
 
+        @TestMetadata("symbolsAndDescriptors.kt")
+        public void testSymbolsAndDescriptors() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/problems/symbolsAndDescriptors.kt");
+        }
+
         @TestMetadata("transform.kt")
         public void testTransform() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/problems/transform.kt");
@@ -2827,9 +2860,19 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
             runTest("compiler/fir/analysis-tests/testData/resolve/references/integerLiteralInLhs.kt");
         }
 
+        @TestMetadata("leakedImplicitType.kt")
+        public void testLeakedImplicitType() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/references/leakedImplicitType.kt");
+        }
+
         @TestMetadata("referenceToExtension.kt")
         public void testReferenceToExtension() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/references/referenceToExtension.kt");
+        }
+
+        @TestMetadata("referenceToField.kt")
+        public void testReferenceToField() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/references/referenceToField.kt");
         }
 
         @TestMetadata("simple.kt")
@@ -2853,6 +2896,11 @@ public class LazyBodyIsNotTouchedTilContractsPhaseTestGenerated extends Abstract
 
         public void testAllFilesPresentInSamConstructors() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/samConstructors"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @TestMetadata("funInterfaceConstructorReference.kt")
+        public void testFunInterfaceConstructorReference() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/samConstructors/funInterfaceConstructorReference.kt");
         }
 
         @TestMetadata("genericSam.kt")

@@ -30,7 +30,7 @@ internal class FileStructure(
     private val moduleFileCache: ModuleFileCache,
     private val collector: FirTowerDataContextCollector
 ) {
-    private val firIdeProvider = firFile.session.firIdeProvider
+    private val firIdeProvider = firFile.declarationSiteSession.firIdeProvider
 
     private val structureElements = ConcurrentHashMap<KtAnnotated, FileStructureElement>()
 
@@ -44,7 +44,7 @@ internal class FileStructure(
         val structureElement = structureElements.compute(declaration) { _, structureElement ->
             when {
                 structureElement == null -> createStructureElement(declaration)
-                structureElement is ReanalyzableStructureElement<KtDeclaration> && !structureElement.isUpToDate() -> {
+                structureElement is ReanalyzableStructureElement<KtDeclaration, *> && !structureElement.isUpToDate() -> {
                     structureElement.reanalyze(
                         newKtDeclaration = declaration as KtDeclaration,
                         cache = moduleFileCache,
@@ -64,12 +64,12 @@ internal class FileStructure(
     fun getAllDiagnosticsForFile(diagnosticCheckerFilter: DiagnosticCheckerFilter): Collection<FirPsiDiagnostic<*>> {
         val structureElements = getAllStructureElements()
 
-        return buildSet {
+        return buildList {
             collectDiagnosticsFromStructureElements(structureElements, diagnosticCheckerFilter)
         }
     }
 
-    private fun MutableSet<FirPsiDiagnostic<*>>.collectDiagnosticsFromStructureElements(
+    private fun MutableCollection<FirPsiDiagnostic<*>>.collectDiagnosticsFromStructureElements(
         structureElements: Collection<FileStructureElement>,
         diagnosticCheckerFilter: DiagnosticCheckerFilter
     ) {
@@ -80,7 +80,7 @@ internal class FileStructure(
         }
     }
 
-    private fun getAllStructureElements(): Collection<FileStructureElement> {
+    fun getAllStructureElements(): Collection<FileStructureElement> {
         val structureElements = mutableSetOf(getStructureElementFor(ktFile))
         ktFile.accept(object : KtVisitorVoid() {
             override fun visitElement(element: PsiElement) {
@@ -90,7 +90,7 @@ internal class FileStructure(
             override fun visitDeclaration(dcl: KtDeclaration) {
                 val structureElement = getStructureElementFor(dcl)
                 structureElements += structureElement
-                if (structureElement !is ReanalyzableStructureElement<*>) {
+                if (structureElement !is ReanalyzableStructureElement<*, *>) {
                     dcl.acceptChildren(this)
                 }
             }
@@ -115,7 +115,7 @@ internal class FileStructure(
             towerDataContextCollector = collector
         )
         return moduleFileCache.firFileLockProvider.withReadLock(firFile) {
-            FileElementFactory.createFileStructureElement(firDeclaration, declaration, firFile)
+            FileElementFactory.createFileStructureElement(firDeclaration, declaration, firFile, moduleFileCache.firFileLockProvider)
         }
     }
 
@@ -133,6 +133,7 @@ internal class FileStructure(
             RootStructureElement(
                 firFile,
                 container,
+                moduleFileCache.firFileLockProvider,
             )
         }
         is KtDeclaration -> createDeclarationStructure(container)

@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.resolve.calls
 
+import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.renderWithType
@@ -15,6 +16,7 @@ import org.jetbrains.kotlin.fir.resolve.inference.model.ConeDeclaredUpperBoundCo
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.symbols.ConeTypeParameterLookupTag
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirTypePlaceholderProjection
@@ -31,7 +33,7 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
         }
         val csBuilder = candidate.system.getBuilder()
         val (substitutor, freshVariables) =
-            createToFreshVariableSubstitutorAndAddInitialConstraints(declaration, csBuilder)
+            createToFreshVariableSubstitutorAndAddInitialConstraints(declaration, csBuilder, context.session)
         candidate.substitutor = substitutor
         candidate.freshVariables = freshVariables
 
@@ -67,7 +69,7 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
                     getTypePreservingFlexibilityWrtTypeVariable(
                         typeArgument.typeRef.coneType,
                         typeParameter,
-                        context.session.inferenceComponents.ctx
+                        context.session
                     ).fullyExpandedType(context.session),
                     SimpleConstraintSystemConstraintPosition // TODO
                 )
@@ -87,11 +89,11 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
     private fun getTypePreservingFlexibilityWrtTypeVariable(
         type: ConeKotlinType,
         typeParameter: FirTypeParameterRef,
-        context: ConeTypeContext
+        session: FirSession,
     ): ConeKotlinType {
-        return if (typeParameter.shouldBeFlexible(context)) {
-            val notNullType = type.withNullability(ConeNullability.NOT_NULL)
-            ConeFlexibleType(notNullType, notNullType.withNullability(ConeNullability.NULLABLE))
+        return if (typeParameter.shouldBeFlexible(session.typeContext)) {
+            val notNullType = type.withNullability(ConeNullability.NOT_NULL, session.typeContext)
+            ConeFlexibleType(notNullType, notNullType.withNullability(ConeNullability.NULLABLE, session.typeContext))
         } else {
             type
         }
@@ -110,14 +112,15 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
 
 private fun createToFreshVariableSubstitutorAndAddInitialConstraints(
     declaration: FirTypeParameterRefsOwner,
-    csBuilder: ConstraintSystemOperation
+    csBuilder: ConstraintSystemOperation,
+    session: FirSession
 ): Pair<ConeSubstitutor, List<ConeTypeVariable>> {
 
     val typeParameters = declaration.typeParameters
 
     val freshTypeVariables = typeParameters.map { ConeTypeParameterBasedTypeVariable(it.symbol) }
 
-    val toFreshVariables = substitutorByMap(freshTypeVariables.associate { it.typeParameterSymbol to it.defaultType })
+    val toFreshVariables = substitutorByMap(freshTypeVariables.associate { it.typeParameterSymbol to it.defaultType }, session)
 
     for (freshVariable in freshTypeVariables) {
         csBuilder.registerVariable(freshVariable)

@@ -70,7 +70,9 @@ import org.jetbrains.org.objectweb.asm.Type
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 import java.util.*
 
-sealed class ExpressionInfo
+sealed class ExpressionInfo {
+    var blockInfo: BlockInfo? = null
+}
 
 class LoopInfo(val loop: IrLoop, val continueLabel: Label, val breakLabel: Label) : ExpressionInfo()
 
@@ -85,15 +87,34 @@ class TryWithFinallyInfo(val onExit: IrExpression) : TryInfo()
 class BlockInfo(val parent: BlockInfo? = null) {
     val variables = mutableListOf<VariableInfo>()
     val infos: Stack<ExpressionInfo> = parent?.infos ?: Stack()
+    var activeLocalGaps = 0
 
     fun hasFinallyBlocks(): Boolean = infos.firstIsInstanceOrNull<TryWithFinallyInfo>() != null
 
+    internal inline fun forEachBlockUntil(tryWithFinallyInfo: TryWithFinallyInfo, onBlock: BlockInfo.() -> Unit) {
+        var current: BlockInfo? = this
+        while (current != null && current != tryWithFinallyInfo.blockInfo) {
+            current.onBlock()
+            current = current.parent
+        }
+    }
+
+    internal inline fun localGapScope(tryWithFinallyInfo: TryWithFinallyInfo, block: () -> Unit) {
+        forEachBlockUntil(tryWithFinallyInfo) { ++activeLocalGaps }
+        try {
+            block()
+        } finally {
+            forEachBlockUntil(tryWithFinallyInfo) { --activeLocalGaps }
+        }
+    }
+
     internal inline fun <T : ExpressionInfo, R> withBlock(info: T, f: (T) -> R): R {
+        info.blockInfo = this
         infos.add(info)
         try {
             return f(info)
         } finally {
-            infos.pop()
+            infos.pop().blockInfo = null
         }
     }
 
@@ -110,7 +131,11 @@ class BlockInfo(val parent: BlockInfo? = null) {
     }
 }
 
-class VariableInfo(val declaration: IrVariable, val index: Int, val type: Type, val startLabel: Label)
+class Gap(val start: Label, val end: Label)
+
+class VariableInfo(val declaration: IrVariable, val index: Int, val type: Type, val startLabel: Label) {
+    val gaps = mutableListOf<Gap>()
+}
 
 class ExpressionCodegen(
     val irFunction: IrFunction,
@@ -229,20 +254,9 @@ class ExpressionCodegen(
             if (irFunction.origin != JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER) {
                 irFunction.markLineNumber(startOffset = irFunction is IrConstructor && irFunction.isPrimary)
             }
-            if (irFunction.isSuspend && irFunction.origin == IrDeclarationOrigin.BRIDGE) {
-                mv.areturn(OBJECT_TYPE)
-            } else {
-                var returnType = signature.returnType
-                var returnIrType = if (irFunction !is IrConstructor) irFunction.returnType else context.irBuiltIns.unitType
-                val unboxedInlineClass =
-                    irFunction.suspendFunctionOriginal().originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass()
-                if (unboxedInlineClass != null) {
-                    returnIrType = unboxedInlineClass
-                    returnType = unboxedInlineClass.asmType
-                }
-                result.materializeAt(returnType, returnIrType)
-                mv.areturn(returnType)
-            }
+            val (returnType, returnIrType) = irFunction.returnAsmAndIrTypes()
+            result.materializeAt(returnType, returnIrType)
+            mv.areturn(returnType)
         }
         val endLabel = markNewLabel()
         writeLocalVariablesInTable(info, endLabel)
@@ -395,12 +409,35 @@ class ExpressionCodegen(
     private fun writeLocalVariablesInTable(info: BlockInfo, endLabel: Label) {
         info.variables.forEach {
             if (it.declaration.isVisibleInLVT) {
-                mv.visitLocalVariable(it.declaration.name.asString(), it.type.descriptor, null, it.startLabel, endLabel, it.index)
+                var start = it.startLabel
+                for (gap in it.gaps) {
+                    mv.visitLocalVariable(it.declaration.name.asString(), it.type.descriptor, null, start, gap.start, it.index)
+                    start = gap.end
+                }
+                mv.visitLocalVariable(it.declaration.name.asString(), it.type.descriptor, null, start, endLabel, it.index)
             }
         }
 
         info.variables.reversed().forEach {
             frameMap.leave(it.declaration.symbol)
+        }
+    }
+
+    private fun splitLocalVariableRangesByFinallyBlocks(
+        info: BlockInfo,
+        tryWithFinallyInfo: TryWithFinallyInfo,
+        gapStart: Label,
+        restartLabel: Label
+    ) {
+        info.forEachBlockUntil(tryWithFinallyInfo) {
+            // If we are already in a gap do not add a new one.
+            if (activeLocalGaps == 0) {
+                for (variable in variables) {
+                    if (variable.declaration.isVisibleInLVT) {
+                        variable.gaps.add(Gap(gapStart, restartLabel))
+                    }
+                }
+            }
         }
     }
 
@@ -473,21 +510,6 @@ class ExpressionCodegen(
             addInlineMarker(mv, isStartNotEnd = false)
         }
 
-        if (unboxedInlineClassIrType != null) {
-            val isFunctionReference = irFunction.origin != IrDeclarationOrigin.BRIDGE &&
-                    irFunction.parentAsClass.origin == JvmLoweredDeclarationOrigin.FUNCTION_REFERENCE_IMPL
-
-            val isDelegateCall = irFunction.origin == IrDeclarationOrigin.DELEGATED_MEMBER
-
-            if (irFunction.isInvokeSuspendOfContinuation() || isFunctionReference || isDelegateCall) {
-                mv.generateCoroutineSuspendedCheck(state.languageVersionSettings)
-                mv.checkcast(unboxedInlineClassIrType.asmType)
-            }
-            if (irFunction.isInvokeSuspendOfContinuation()) {
-                StackValue.boxInlineClass(unboxedInlineClassIrType, mv, typeMapper)
-            }
-        }
-
         return when {
             (expression.type.isNothing() || expression.type.isUnit()) && irFunction.shouldContainSuspendMarkers() -> {
                 // NewInference allows casting `() -> T` to `() -> Unit`. A CHECKCAST here will fail.
@@ -508,18 +530,20 @@ class ExpressionCodegen(
                 wrapJavaClassesIntoKClasses(mv)
                 MaterialValue(this, AsmTypes.K_CLASS_ARRAY_TYPE, expression.type)
             }
-            unboxedInlineClassIrType != null && !irFunction.isInvokeSuspendOfContinuation() ->
-                object : PromisedValue(this, unboxedInlineClassIrType.asmType, unboxedInlineClassIrType) {
-                    override fun materializeAt(target: Type, irTarget: IrType, castForReified: Boolean) {
-                        mv.checkcast(unboxedInlineClassIrType.asmType)
-                        MaterialValue(this@ExpressionCodegen, unboxedInlineClassIrType.asmType, unboxedInlineClassIrType)
-                            .materializeAt(target, irTarget, castForReified)
-                    }
-
-                    override fun discard() {
-                        pop(mv, OBJECT_TYPE)
-                    }
+            unboxedInlineClassIrType != null && !irFunction.isNonBoxingSuspendDelegation() -> {
+                if (!irFunction.shouldContainSuspendMarkers()) {
+                    // Since the coroutine transformer won't run, we need to do this manually.
+                    mv.generateCoroutineSuspendedCheck(state.languageVersionSettings)
                 }
+                mv.checkcast(unboxedInlineClassIrType.asmType)
+                if (irFunction.isInvokeSuspendOfContinuation()) {
+                    // TODO: why is simply materializing the value with type `Object` not enough? This branch shouldn't be needed.
+                    StackValue.boxInlineClass(unboxedInlineClassIrType, mv, typeMapper)
+                    MaterialValue(this, callable.asmMethod.returnType, callable.returnType)
+                } else {
+                    MaterialValue(this, unboxedInlineClassIrType.asmType, unboxedInlineClassIrType)
+                }
+            }
             else ->
                 MaterialValue(this, callable.asmMethod.returnType, callable.returnType)
         }
@@ -902,20 +926,25 @@ class ExpressionCodegen(
         }
     }
 
+    private fun IrFunction.returnAsmAndIrTypes(): Pair<Type, IrType> {
+        val unboxedInlineClass = suspendFunctionOriginal().originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass()
+        // In case of non-boxing delegation, the return type of the tail call was considered to be `Object`,
+        // so that's also what we'll return here to avoid casts/unboxings/etc.
+        if (unboxedInlineClass != null && !isNonBoxingSuspendDelegation()) {
+            return unboxedInlineClass.asmType to unboxedInlineClass
+        }
+        val asmType = if (this == irFunction) signature.returnType else methodSignatureMapper.mapReturnType(this)
+        val irType = if (this is IrConstructor) context.irBuiltIns.unitType else returnType
+        return asmType to irType
+    }
+
     override fun visitReturn(expression: IrReturn, data: BlockInfo): PromisedValue {
         val returnTarget = expression.returnTargetSymbol.owner
         val owner = returnTarget as? IrFunction ?: error("Unsupported IrReturnTarget: $returnTarget")
         // TODO: should be owner != irFunction
         val isNonLocalReturn = methodSignatureMapper.mapFunctionName(owner) != methodSignatureMapper.mapFunctionName(irFunction)
 
-        var returnType = if (owner == irFunction) signature.returnType else methodSignatureMapper.mapReturnType(owner)
-        var returnIrType = owner.returnType
-        val unboxedInlineClass = owner.suspendFunctionOriginal().originalReturnTypeOfSuspendFunctionReturningUnboxedInlineClass()
-        if (unboxedInlineClass != null) {
-            returnIrType = unboxedInlineClass
-            returnType = unboxedInlineClass.asmType
-        }
-
+        val (returnType, returnIrType) = owner.returnAsmAndIrTypes()
         val afterReturnLabel = Label()
         expression.value.accept(this, data).materializeAt(returnType, returnIrType)
         // In case of non-local return from suspend lambda 'materializeAt' does not box return value, box it manually.
@@ -1229,20 +1258,27 @@ class ExpressionCodegen(
         nestedTryWithoutFinally: MutableList<TryInfo> = arrayListOf()
     ) {
         val gapStart = markNewLinkedLabel()
-        finallyDepth++
-        if (isFinallyMarkerRequired()) {
-            generateFinallyMarker(mv, finallyDepth, true)
+        data.localGapScope(tryWithFinallyInfo) {
+            finallyDepth++
+            if (isFinallyMarkerRequired()) {
+                generateFinallyMarker(mv, finallyDepth, true)
+            }
+            tryWithFinallyInfo.onExit.accept(this, data).discard()
+            if (isFinallyMarkerRequired()) {
+                generateFinallyMarker(mv, finallyDepth, false)
+            }
+            finallyDepth--
+            if (tryCatchBlockEnd != null) {
+                tryWithFinallyInfo.onExit.markLineNumber(startOffset = false)
+                mv.goTo(tryCatchBlockEnd)
+            }
         }
-        tryWithFinallyInfo.onExit.accept(this, data).discard()
-        if (isFinallyMarkerRequired()) {
-            generateFinallyMarker(mv, finallyDepth, false)
-        }
-        finallyDepth--
-        if (tryCatchBlockEnd != null) {
-            tryWithFinallyInfo.onExit.markLineNumber(startOffset = false)
-            mv.goTo(tryCatchBlockEnd)
-        }
-        val gapEnd = afterJumpLabel ?: markNewLabel()
+        // Split the local variables for the blocks on the way to the finally. Variables introduced in these blocks do not
+        // cover the finally block code.
+        val endOfFinallyCode = markNewLinkedLabel()
+        splitLocalVariableRangesByFinallyBlocks(data, tryWithFinallyInfo, gapStart, endOfFinallyCode)
+
+        val gapEnd = afterJumpLabel ?: endOfFinallyCode
         tryWithFinallyInfo.gaps.add(gapStart to gapEnd)
         if (state.languageVersionSettings.supportsFeature(LanguageFeature.ProperFinally)) {
             for (it in nestedTryWithoutFinally) {

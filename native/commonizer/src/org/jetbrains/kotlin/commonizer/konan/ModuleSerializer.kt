@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.commonizer.konan
 
 import org.jetbrains.kotlin.commonizer.CommonizerOutputLayout
+import org.jetbrains.kotlin.commonizer.CommonizerParameters
 import org.jetbrains.kotlin.commonizer.CommonizerTarget
 import org.jetbrains.kotlin.commonizer.ResultsConsumer
 import org.jetbrains.kotlin.library.SerializedMetadata
@@ -19,7 +20,7 @@ internal class ModuleSerializer(
     private val destination: File,
     private val outputLayout: CommonizerOutputLayout,
 ) : ResultsConsumer {
-    override fun consume(target: CommonizerTarget, moduleResult: ResultsConsumer.ModuleResult) {
+    override fun consume(parameters: CommonizerParameters, target: CommonizerTarget, moduleResult: ResultsConsumer.ModuleResult) {
         val librariesDestination = outputLayout.getTargetDirectory(destination, target)
         when (moduleResult) {
             is ResultsConsumer.ModuleResult.Commonized -> {
@@ -47,13 +48,13 @@ private fun writeLibrary(
         moduleName = manifestData.uniqueName,
         versions = manifestData.versions,
         builtInsPlatform = BuiltInsPlatform.NATIVE,
-        nativeTargets = emptyList(), // will be overwritten with NativeSensitiveManifestData.applyTo() below
+        nativeTargets = emptyList(), // will be overwritten with addManifest(manifestData) below
         nopack = true,
         shortName = manifestData.shortName,
         layout = layout
     )
     library.addMetadata(metadata)
-    manifestData.applyTo(library.base as BaseWriterImpl)
+    (library.base as BaseWriterImpl).addManifest(manifestData)
     library.commit()
 }
 

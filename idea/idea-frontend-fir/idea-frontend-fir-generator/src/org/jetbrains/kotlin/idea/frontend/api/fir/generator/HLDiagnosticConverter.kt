@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.fir.checkers.generator.diagnostics.DiagnosticList
 import org.jetbrains.kotlin.fir.checkers.generator.diagnostics.DiagnosticParameter
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
@@ -58,10 +59,10 @@ object HLDiagnosticConverter {
     }
 
     private fun DiagnosticData.getHLDiagnosticClassName() =
-        name.toLowerCase()
+        name.lowercase()
             .split('_')
             .joinToString(separator = "") {
-                it.capitalize()
+                it.replaceFirstChar(Char::uppercaseChar)
             }
 
     private fun DiagnosticData.getHLDiagnosticImplClassName() =
@@ -133,6 +134,14 @@ private object FirToKtConversionCreator {
                 "org.jetbrains.kotlin.fir.psi"
             )
         ),
+        FirQualifiedAccess::class to HLFunctionCallConversion(
+            "{0}.source!!.psi as KtExpression",
+            KtExpression::class.createType(),
+            importsToAdd = listOf(
+                "org.jetbrains.kotlin.psi.KtExpression",
+                "org.jetbrains.kotlin.fir.psi"
+            )
+        ),
         FirValueParameter::class to HLFunctionCallConversion(
             "firSymbolBuilder.buildSymbol({0})",
             KtSymbol::class.createType(),
@@ -186,9 +195,15 @@ private object FirToKtConversionCreator {
             KtSymbol::class.createType(),
             importsToAdd = listOf("org.jetbrains.kotlin.fir.declarations.FirDeclaration")
         ),
+        FirNamedFunctionSymbol::class to HLFunctionCallConversion(
+            "firSymbolBuilder.functionLikeBuilder.buildFunctionSymbol({0}.fir)",
+            KtFunctionLikeSymbol::class.createType(),
+            importsToAdd = listOf("org.jetbrains.kotlin.fir.declarations.FirSimpleFunction")
+        ),
     )
 
     private val allowedTypesWithoutTypeParams = setOf(
+        Boolean::class,
         String::class,
         Int::class,
         Name::class,

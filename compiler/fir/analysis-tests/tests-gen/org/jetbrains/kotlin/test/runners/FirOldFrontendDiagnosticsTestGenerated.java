@@ -1814,6 +1814,46 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Nested
+            @TestMetadata("compiler/testData/diagnostics/tests/annotations/typeUse")
+            @TestDataPath("$PROJECT_ROOT")
+            public class TypeUse {
+                @Test
+                public void testAllFilesPresentInTypeUse() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/annotations/typeUse"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @Test
+                @TestMetadata("kt19455.kt")
+                public void testKt19455() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt19455.kt");
+                }
+
+                @Test
+                @TestMetadata("kt25876.kt")
+                public void testKt25876() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt25876.kt");
+                }
+
+                @Test
+                @TestMetadata("kt46173.kt")
+                public void testKt46173() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt46173.kt");
+                }
+
+                @Test
+                @TestMetadata("kt8325.kt")
+                public void testKt8325() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt8325.kt");
+                }
+
+                @Test
+                @TestMetadata("nonTypeUseAnnotationOnType.kt")
+                public void testNonTypeUseAnnotationOnType() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/nonTypeUseAnnotationOnType.kt");
+                }
+            }
+
+            @Nested
             @TestMetadata("compiler/testData/diagnostics/tests/annotations/withUseSiteTarget")
             @TestDataPath("$PROJECT_ROOT")
             public class WithUseSiteTarget {
@@ -4244,6 +4284,18 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("selfCallsInCompanionSuperConstructor_error.kt")
+            public void testSelfCallsInCompanionSuperConstructor_error() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/classObjects/selfCallsInCompanionSuperConstructor_error.kt");
+            }
+
+            @Test
+            @TestMetadata("selfCallsInCompanionSuperConstructor_warning.kt")
+            public void testSelfCallsInCompanionSuperConstructor_warning() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/classObjects/selfCallsInCompanionSuperConstructor_warning.kt");
+            }
+
+            @Test
             @TestMetadata("typeParametersInAnnonymousObject.kt")
             public void testTypeParametersInAnnonymousObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/classObjects/typeParametersInAnnonymousObject.kt");
@@ -5626,6 +5678,136 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 @TestMetadata("outsideSuspend.kt")
                 public void testOutsideSuspend() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/coroutines/callableReference/outsideSuspend.kt");
+                }
+            }
+
+            @Nested
+            @TestMetadata("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype")
+            @TestDataPath("$PROJECT_ROOT")
+            public class SuspendFunctionAsSupertype {
+                @Test
+                public void testAllFilesPresentInSuspendFunctionAsSupertype() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @Nested
+                @TestMetadata("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN")
+                @TestDataPath("$PROJECT_ROOT")
+                public class KSuspendFunctionN {
+                    @Test
+                    public void testAllFilesPresentInKSuspendFunctionN() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypes.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypes() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN/mixingSuspendAndNonSuspendSupertypes.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperClass() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperFunInterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperinterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("simple.kt")
+                    public void testSimple() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/kSuspendFunctionN/simple.kt");
+                    }
+                }
+
+                @Nested
+                @TestMetadata("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple")
+                @TestDataPath("$PROJECT_ROOT")
+                public class Simple {
+                    @Test
+                    public void testAllFilesPresentInSimple() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypes.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypes() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple/mixingSuspendAndNonSuspendSupertypes.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperClass() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple/mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperFunInterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple/mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperinterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple/mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("simple.kt")
+                    public void testSimple() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/simple/simple.kt");
+                    }
+                }
+
+                @Nested
+                @TestMetadata("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN")
+                @TestDataPath("$PROJECT_ROOT")
+                public class SuspendFunctionN {
+                    @Test
+                    public void testAllFilesPresentInSuspendFunctionN() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypes.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypes() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN/mixingSuspendAndNonSuspendSupertypes.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperClass() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperClass.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperFunInterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperFunInterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt")
+                    public void testMixingSuspendAndNonSuspendSupertypesThruSuperinterface() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN/mixingSuspendAndNonSuspendSupertypesThruSuperinterface.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("simple.kt")
+                    public void testSimple() throws Exception {
+                        runTest("compiler/testData/diagnostics/tests/coroutines/suspendFunctionAsSupertype/suspendFunctionN/simple.kt");
+                    }
                 }
             }
         }
@@ -12405,6 +12587,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 runTest("compiler/testData/diagnostics/tests/inference/violatingUpperBoundForSelfType.kt");
             }
 
+            @Test
+            @TestMetadata("violatingUpperBoundForSelfTypeError.kt")
+            public void testViolatingUpperBoundForSelfTypeError() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/violatingUpperBoundForSelfTypeError.kt");
+            }
+
             @Nested
             @TestMetadata("compiler/testData/diagnostics/tests/inference/builderInference")
             @TestDataPath("$PROJECT_ROOT")
@@ -16659,6 +16847,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("abstractBaseClassMemberNotImplemented_15.kt")
+            public void testAbstractBaseClassMemberNotImplemented_15() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/java8Overrides/abstractBaseClassMemberNotImplemented_15.kt");
+            }
+
+            @Test
             @TestMetadata("abstractVsAbstract.kt")
             public void testAbstractVsAbstract() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/java8Overrides/abstractVsAbstract.kt");
@@ -16685,6 +16879,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             @TestMetadata("implementingMethodOfAny.kt")
             public void testImplementingMethodOfAny() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/java8Overrides/implementingMethodOfAny.kt");
+            }
+
+            @Test
+            @TestMetadata("kt45508.kt")
+            public void testKt45508() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/java8Overrides/kt45508.kt");
             }
 
             @Test
@@ -19076,6 +19276,18 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("newLiteralOperatorsResolution_newResolve.kt")
+            public void testNewLiteralOperatorsResolution_newResolve() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/numbers/newLiteralOperatorsResolution_newResolve.kt");
+            }
+
+            @Test
+            @TestMetadata("newLiteralOperatorsResolution_warning.kt")
+            public void testNewLiteralOperatorsResolution_warning() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/numbers/newLiteralOperatorsResolution_warning.kt");
+            }
+
+            @Test
             @TestMetadata("numberAsUnionAndIntersection.kt")
             public void testNumberAsUnionAndIntersection() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/numbers/numberAsUnionAndIntersection.kt");
@@ -20937,6 +21149,18 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 }
 
                 @Test
+                @TestMetadata("dontSubstituteAnotherErasedRecursiveTypeArgumentAndNonRecursive.kt")
+                public void testDontSubstituteAnotherErasedRecursiveTypeArgumentAndNonRecursive() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/dontSubstituteAnotherErasedRecursiveTypeArgumentAndNonRecursive.kt");
+                }
+
+                @Test
+                @TestMetadata("dontSubstituteAnotherErasedTypeArgumentIfRecursive.kt")
+                public void testDontSubstituteAnotherErasedTypeArgumentIfRecursive() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/dontSubstituteAnotherErasedTypeArgumentIfRecursive.kt");
+                }
+
+                @Test
                 @TestMetadata("errorType.kt")
                 public void testErrorType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/errorType.kt");
@@ -21024,6 +21248,30 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 @TestMetadata("starProjectionToRaw.kt")
                 public void testStarProjectionToRaw() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/starProjectionToRaw.kt");
+                }
+
+                @Test
+                @TestMetadata("substituteAnotherErasedTypeArgument.kt")
+                public void testSubstituteAnotherErasedTypeArgument() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteAnotherErasedTypeArgument.kt");
+                }
+
+                @Test
+                @TestMetadata("substituteOtherErasedDeepTypeArguments.kt")
+                public void testSubstituteOtherErasedDeepTypeArguments() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteOtherErasedDeepTypeArguments.kt");
+                }
+
+                @Test
+                @TestMetadata("substituteSeveralOtherErasedDependentTypeArguments.kt")
+                public void testSubstituteSeveralOtherErasedDependentTypeArguments() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteSeveralOtherErasedDependentTypeArguments.kt");
+                }
+
+                @Test
+                @TestMetadata("substituteSeveralOtherErasedTypeArguments.kt")
+                public void testSubstituteSeveralOtherErasedTypeArguments() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteSeveralOtherErasedTypeArguments.kt");
                 }
 
                 @Test
@@ -28954,6 +29202,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             }
 
             @Test
+            @TestMetadata("kt42042Error.kt")
+            public void testKt42042Error() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/kt42042Error.kt");
+            }
+
+            @Test
             @TestMetadata("kt42396.kt")
             public void testKt42396() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/kt42396.kt");
@@ -28963,6 +29217,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
             @TestMetadata("kt42472.kt")
             public void testKt42472() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/typeParameters/kt42472.kt");
+            }
+
+            @Test
+            @TestMetadata("kt46186.kt")
+            public void testKt46186() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/typeParameters/kt46186.kt");
             }
 
             @Test
@@ -30943,6 +31203,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
         }
 
         @Test
+        @TestMetadata("implicitNothingInDelegate.kt")
+        public void testImplicitNothingInDelegate() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/implicitNothingInDelegate.kt");
+        }
+
+        @Test
         @TestMetadata("InaccessibleInternalClass.kt")
         public void testInaccessibleInternalClass() throws Exception {
             runTest("compiler/testData/diagnostics/testsWithStdLib/InaccessibleInternalClass.kt");
@@ -32443,6 +32709,12 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 }
 
                 @Test
+                @TestMetadata("contractWithDeepGenerics.kt")
+                public void testContractWithDeepGenerics() throws Exception {
+                    runTest("compiler/testData/diagnostics/testsWithStdLib/contracts/smartcasts/contractWithDeepGenerics.kt");
+                }
+
+                @Test
                 @TestMetadata("contractsOnMembers.kt")
                 public void testContractsOnMembers() throws Exception {
                     runTest("compiler/testData/diagnostics/testsWithStdLib/contracts/smartcasts/contractsOnMembers.kt");
@@ -33721,6 +33993,22 @@ public class FirOldFrontendDiagnosticsTestGenerated extends AbstractFirDiagnosti
                 public void testKotlinMembersVsJavaNonVisibleStatics() throws Exception {
                     runTest("compiler/testData/diagnostics/testsWithStdLib/duplicateJvmSignature/statics/kotlinMembersVsJavaNonVisibleStatics.kt");
                 }
+            }
+        }
+
+        @Nested
+        @TestMetadata("compiler/testData/diagnostics/testsWithStdLib/evaluate")
+        @TestDataPath("$PROJECT_ROOT")
+        public class Evaluate {
+            @Test
+            public void testAllFilesPresentInEvaluate() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/testsWithStdLib/evaluate"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+            }
+
+            @Test
+            @TestMetadata("charCodeExpType.kt")
+            public void testCharCodeExpType() throws Exception {
+                runTest("compiler/testData/diagnostics/testsWithStdLib/evaluate/charCodeExpType.kt");
             }
         }
 

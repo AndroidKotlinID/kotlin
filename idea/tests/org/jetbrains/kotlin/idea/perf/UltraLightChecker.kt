@@ -71,9 +71,9 @@ object UltraLightChecker {
 
         val oldForceFlag = KtUltraLightSupport.forceUsingOldLightClasses
         KtUltraLightSupport.forceUsingOldLightClasses = true
-        val gold = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project)
+        val gold = KtLightClassForFacadeImpl.createForFacadeNoCache(fqName, searchScope, project)
         KtUltraLightSupport.forceUsingOldLightClasses = false
-        val ultraLightClass = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project) ?: return null
+        val ultraLightClass = KtLightClassForFacadeImpl.createForFacadeNoCache(fqName, searchScope, project) ?: return null
         KtUltraLightSupport.forceUsingOldLightClasses = oldForceFlag
 
         checkClassEquivalenceByRendering(gold, ultraLightClass)

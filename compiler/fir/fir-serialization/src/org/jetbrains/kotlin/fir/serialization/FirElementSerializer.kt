@@ -607,7 +607,7 @@ class FirElementSerializer private constructor(
         val builder = ProtoBuf.Type.newBuilder()
 
         when (type) {
-            is ConeDefinitelyNotNullType -> return typeProto(type, toSuper, correspondingTypeRef, isDefinitelyNotNullType = true)
+            is ConeDefinitelyNotNullType -> return typeProto(type.original, toSuper, correspondingTypeRef, isDefinitelyNotNullType = true)
             is ConeKotlinErrorType -> {
                 extension.serializeErrorType(type, builder)
                 return builder
@@ -938,6 +938,7 @@ class FirElementSerializer private constructor(
 
         @JvmStatic
         fun create(
+            session: FirSession,
             scopeSession: ScopeSession,
             klass: FirClass<*>,
             extension: FirSerializerExtension,
@@ -946,17 +947,17 @@ class FirElementSerializer private constructor(
         ): FirElementSerializer {
             val parentClassId = klass.symbol.classId.outerClassId
             val parent = if (parentClassId != null && !parentClassId.isLocal) {
-                val parentClass = klass.session.symbolProvider.getClassLikeSymbolByFqName(parentClassId)!!.fir as FirRegularClass
-                parentSerializer ?: create(scopeSession, parentClass, extension, null, typeApproximator)
+                val parentClass = session.symbolProvider.getClassLikeSymbolByFqName(parentClassId)!!.fir as FirRegularClass
+                parentSerializer ?: create(session, scopeSession, parentClass, extension, null, typeApproximator)
             } else {
-                createTopLevel(klass.session, scopeSession, extension, typeApproximator)
+                createTopLevel(session, scopeSession, extension, typeApproximator)
             }
 
             // Calculate type parameter ids for the outer class beforehand, as it would've had happened if we were always
             // serializing outer classes before nested classes.
             // Otherwise our interner can get wrong ids because we may serialize classes in any order.
             val serializer = FirElementSerializer(
-                klass.session,
+                session,
                 scopeSession,
                 klass,
                 Interner(parent.typeParameters),

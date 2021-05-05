@@ -28,8 +28,8 @@ fun <T> fooT2() : (t : T) -> T {
 
 fun main(args : Array<String>) {
     args.foo()()
-    args.foo1(<!NO_VALUE_FOR_PARAMETER!>)<!>()
-    <!UNRESOLVED_REFERENCE!>a<!>.foo1(<!NO_VALUE_FOR_PARAMETER!>)<!>()
+    args.foo1(<!NO_VALUE_FOR_PARAMETER{PSI}!>)<!>(<!NO_VALUE_FOR_PARAMETER{LT}!>)<!>
+    <!UNRESOLVED_REFERENCE!>a<!>.foo1(<!NO_VALUE_FOR_PARAMETER{PSI}!>)<!>(<!NO_VALUE_FOR_PARAMETER{LT}!>)<!>
     <!UNRESOLVED_REFERENCE!>a<!>.foo1()(<!UNRESOLVED_REFERENCE!>a<!>)
 
     args.foo1()(1)
@@ -40,8 +40,8 @@ fun main(args : Array<String>) {
     foo2()({})
     foo2()<!TOO_MANY_ARGUMENTS!>{}<!>
     (foo2()){}
-    <!INAPPLICABLE_CANDIDATE!>(foo2())<!>{x -> }
-    <!INAPPLICABLE_CANDIDATE!>foo2()<!>({x -> })
+    <!INAPPLICABLE_CANDIDATE!>(foo2())<!>{<!CANNOT_INFER_PARAMETER_TYPE!>x<!> -> }
+    <!INAPPLICABLE_CANDIDATE!>foo2()<!>({<!CANNOT_INFER_PARAMETER_TYPE!>x<!> -> })
 
     val a = fooT1(1)()
     checkSubtype<Int>(a)

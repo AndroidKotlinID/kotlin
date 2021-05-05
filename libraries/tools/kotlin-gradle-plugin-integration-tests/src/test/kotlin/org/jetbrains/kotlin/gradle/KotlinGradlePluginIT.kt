@@ -182,7 +182,7 @@ class KotlinGradleIT : BaseGradleIT() {
 
         project.build("build", options = options) {
             assertSuccessful()
-            assertNoWarnings()
+            assertNoWarnings { removeFirWarning(it) }
         }
 
         val greeterKt = project.projectDir.getFileByName("Greeter.kt")
@@ -192,13 +192,23 @@ class KotlinGradleIT : BaseGradleIT() {
 
         project.build("build", options = options) {
             assertSuccessful()
-            assertNoWarnings()
+            assertNoWarnings { removeFirWarning(it) }
             val affectedSources = project.projectDir.getFilesByNames(
                 "Greeter.kt", "KotlinGreetingJoiner.kt",
                 "TestGreeter.kt", "TestKotlinGreetingJoiner.kt"
             )
             assertCompiledKotlinSources(project.relativize(affectedSources))
         }
+    }
+
+    private fun removeFirWarning(output: String): String {
+        return output.replace(
+            """
+               |w: ATTENTION!
+               | This build uses in-dev FIR: 
+               |  -Xuse-fir
+            """.trimMargin().replace("\n", SYSTEM_LINE_SEPARATOR), ""
+        )
     }
 
     @Test
@@ -1230,6 +1240,47 @@ class KotlinGradleIT : BaseGradleIT() {
             ) {
                 assertSuccessful()
             }
+        }
+    }
+
+    @Test
+    fun testEarlyConfigurationsResolutionKotlin() = testEarlyConfigurationsResolution("kotlinProject", kts = false)
+
+    @Test
+    fun testEarlyConfigurationsResolutionKotlinJs() = testEarlyConfigurationsResolution("kotlin-js-browser-project", kts = true)
+
+    private fun testEarlyConfigurationsResolution(projectName: String, kts: Boolean) = with(Project(projectName = projectName)) {
+        setupWorkingDir()
+        gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+        //language=Gradle
+        gradleBuildScript().appendText(
+            """${'\n'}
+            // KT-45834 start
+            ${if (kts) "var" else "def"} ready = false
+            gradle.taskGraph.whenReady {
+                println("Task Graph Ready")
+                ready = true
+            }
+            
+            allprojects {
+                configurations.forEach { configuration ->
+                    configuration.incoming.beforeResolve {
+                        println("Resolving ${'$'}configuration")
+                        if (!ready) {
+                            throw ${if (kts) "" else "new"} GradleException("${'$'}configuration is being resolved at configuration time")
+                        }
+                    }
+                }
+            }
+            // KT-45834 end
+            """.trimIndent()
+        )
+
+        build(
+            "assemble",
+            options = defaultBuildOptions().copy(dryRun = true)
+        ) {
+            assertSuccessful()
         }
     }
 }

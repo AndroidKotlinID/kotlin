@@ -29,7 +29,7 @@ internal class LibraryCommonizer internal constructor(
 
     private fun loadLibraries(): TargetDependent<NativeLibrariesToCommonize?> {
         val libraries = EagerTargetDependent(outputTarget.allLeaves()) { target ->
-            repository.getLibraries(target).toList().ifNotEmpty(::NativeLibrariesToCommonize)
+            repository.getLibraries(target).toList().ifNotEmpty { NativeLibrariesToCommonize(target, this) }
         }
 
         libraries.forEachWithTarget { target, librariesOrNull ->
@@ -39,7 +39,7 @@ internal class LibraryCommonizer internal constructor(
                 )
         }
 
-        progressLogger.log("Resolved libraries to be commonized")
+        progressLogger.progress("Resolved libraries to be commonized")
         return libraries
     }
 
@@ -51,7 +51,7 @@ internal class LibraryCommonizer internal constructor(
             dependenciesProvider = createDependenciesProvider(),
             resultsConsumer = resultsConsumer,
             statsCollector = statsCollector,
-            progressLogger = progressLogger::log
+            logger = progressLogger
         )
         runCommonization(parameters)
     }
@@ -76,8 +76,8 @@ internal class LibraryCommonizer internal constructor(
         return TargetDependent(outputTarget.withAllAncestors()) { target ->
             when (target) {
                 is LeafCommonizerTarget -> libraries[target] ?: error("Can't provide manifest for missing target $target")
-                is SharedCommonizerTarget -> CommonNativeManifestDataProvider(
-                    target.allLeaves().mapNotNull { leafTarget -> libraries.getOrNull(leafTarget) }
+                is SharedCommonizerTarget -> NativeManifestDataProvider(
+                    target, target.allLeaves().mapNotNull { leafTarget -> libraries.getOrNull(leafTarget) }
                 )
             }
         }

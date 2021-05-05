@@ -85,7 +85,7 @@ public actual fun CharSequence.regionMatches(thisOffset: Int, other: CharSequenc
 @Deprecated("Use replaceFirstChar instead.", ReplaceWith("replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }"))
 @DeprecatedSinceKotlin(warningSince = "1.5")
 public actual fun String.capitalize(): String {
-    return if (isNotEmpty()) substring(0, 1).toUpperCase() + substring(1) else this
+    return if (isNotEmpty()) substring(0, 1).uppercase() + substring(1) else this
 }
 
 /**
@@ -97,12 +97,13 @@ public actual fun String.capitalize(): String {
 @Deprecated("Use replaceFirstChar instead.", ReplaceWith("replaceFirstChar { it.lowercase() }"))
 @DeprecatedSinceKotlin(warningSince = "1.5")
 public actual fun String.decapitalize(): String {
-    return if (isNotEmpty()) substring(0, 1).toLowerCase() + substring(1) else this
+    return if (isNotEmpty()) substring(0, 1).lowercase() + substring(1) else this
 }
 
 /**
  * Returns a string containing this char sequence repeated [n] times.
  * @throws [IllegalArgumentException] when n < 0.
+ * @sample samples.text.Strings.repeat
  */
 public actual fun CharSequence.repeat(n: Int): String {
     require(n >= 0) { "Count 'n' must be non-negative, but was $n." }
@@ -130,10 +131,21 @@ public actual fun CharSequence.repeat(n: Int): String {
     }
 }
 
+/**
+ * Returns a new string obtained by replacing all occurrences of the [oldValue] substring in this string
+ * with the specified [newValue] string.
+ *
+ * @sample samples.text.Strings.replace
+ */
 @Suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
 public actual fun String.replace(oldValue: String, newValue: String, ignoreCase: Boolean = false): String =
     nativeReplace(RegExp(Regex.escape(oldValue), if (ignoreCase) "gui" else "gu"), Regex.escapeReplacement(newValue))
 
+/**
+ * Returns a new string with all occurrences of [oldChar] replaced with [newChar].
+ *
+ * @sample samples.text.Strings.replace
+ */
 @Suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
 public actual fun String.replace(oldChar: Char, newChar: Char, ignoreCase: Boolean = false): String =
     nativeReplace(RegExp(Regex.escape(oldChar.toString()), if (ignoreCase) "gui" else "gu"), newChar.toString())

@@ -61,7 +61,7 @@ fun FirFunctionCall.copy(
 fun FirAnonymousFunction.copy(
     receiverTypeRef: FirTypeRef? = this.receiverTypeRef,
     source: FirSourceElement? = this.source,
-    session: FirSession = this.session,
+    session: FirSession = this.declarationSiteSession,
     origin: FirDeclarationOrigin = this.origin,
     returnTypeRef: FirTypeRef = this.returnTypeRef,
     valueParameters: List<FirValueParameter> = this.valueParameters,
@@ -74,7 +74,7 @@ fun FirAnonymousFunction.copy(
 ): FirAnonymousFunction {
     return buildAnonymousFunction {
         this.source = source
-        this.session = session
+        declarationSiteSession = session
         this.origin = origin
         this.returnTypeRef = returnTypeRef
         this.receiverTypeRef = receiverTypeRef
@@ -90,14 +90,20 @@ fun FirAnonymousFunction.copy(
     }
 }
 
-
 fun FirTypeRef.resolvedTypeFromPrototype(
     type: ConeKotlinType
 ): FirResolvedTypeRef {
-    return buildResolvedTypeRef {
-        source = this@resolvedTypeFromPrototype.source
-        this.type = type
-        annotations += this@resolvedTypeFromPrototype.annotations
+    return if (type is ConeKotlinErrorType) {
+        buildErrorTypeRef {
+            source = this@resolvedTypeFromPrototype.source
+            diagnostic = type.diagnostic
+        }
+    } else {
+        buildResolvedTypeRef {
+            source = this@resolvedTypeFromPrototype.source
+            this.type = type
+            annotations += this@resolvedTypeFromPrototype.annotations
+        }
     }
 }
 
@@ -116,7 +122,7 @@ fun FirTypeParameter.copy(
 ): FirTypeParameter {
     return buildTypeParameter {
         source = this@copy.source
-        session = this@copy.session
+        declarationSiteSession = this@copy.declarationSiteSession
         name = this@copy.name
         symbol = this@copy.symbol
         variance = this@copy.variance

@@ -158,6 +158,10 @@ interface IrTypeSystemContext : TypeSystemContext, TypeSystemCommonSuperTypesCon
 
     override fun TypeConstructorMarker.isClassTypeConstructor() = this is IrClassSymbol
 
+    override fun TypeConstructorMarker.isInterface(): Boolean {
+        return (this as? IrClassSymbol)?.owner?.isInterface == true
+    }
+
     override fun TypeParameterMarker.getVariance() = (this as IrTypeParameterSymbol).owner.variance.convertVariance()
 
     private fun getSuperTypes(typeParameterMarker: TypeParameterMarker) = (typeParameterMarker as IrTypeParameterSymbol).owner.superTypes
@@ -179,7 +183,7 @@ interface IrTypeSystemContext : TypeSystemContext, TypeSystemCommonSuperTypesCon
         return false
     }
 
-    override fun TypeParameterMarker.doesFormSelfType(selfConstructor: TypeConstructorMarker): Boolean {
+    override fun TypeParameterMarker.hasRecursiveBounds(selfConstructor: TypeConstructorMarker): Boolean {
         for (i in 0 until this.upperBoundCount()) {
             val upperBound = this.getUpperBound(i)
             if (upperBound.containsTypeConstructor(selfConstructor) && upperBound.typeConstructor() == selfConstructor) {

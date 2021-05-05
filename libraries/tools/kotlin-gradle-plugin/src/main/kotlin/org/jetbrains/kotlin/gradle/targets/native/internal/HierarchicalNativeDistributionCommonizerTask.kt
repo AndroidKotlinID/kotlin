@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.gradle.targets.native.internal
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.*
+import org.jetbrains.kotlin.commonizer.CommonizerLogLevel
 import org.jetbrains.kotlin.commonizer.SharedCommonizerTarget
 import org.jetbrains.kotlin.commonizer.identityString
 import org.jetbrains.kotlin.commonizer.isAncestorOf
@@ -75,7 +76,7 @@ internal open class HierarchicalNativeDistributionCommonizerTask : DefaultTask()
         get() = commonizerRunner.getCustomJvmArgs()
 
     internal fun getRootOutputDirectory(target: SharedCommonizerTarget): File {
-        val kotlinVersion = checkNotNull(project.getKotlinPluginVersion()) { "Missing Kotlin Plugin version" }
+        val kotlinVersion = project.getKotlinPluginVersion()
 
         val discriminator = buildString {
             append(target.identityString)
@@ -106,6 +107,8 @@ internal open class HierarchicalNativeDistributionCommonizerTask : DefaultTask()
             this += getRootOutputDirectory(target).absolutePath
             this += "-output-commonizer-target"
             this += target.identityString
+            this += "-log-level"
+            this += project.commonizerLogLevel.name
         }
     }
 }

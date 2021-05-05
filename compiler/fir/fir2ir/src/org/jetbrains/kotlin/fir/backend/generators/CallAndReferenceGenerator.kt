@@ -68,7 +68,7 @@ class CallAndReferenceGenerator(
         //   val `x$delegate` = y
         //   val x get() = `x$delegate`.getValue(this, ::x)
         // The reference here (like the rest of the accessor) has DefaultAccessor source kind.
-        val isForDelegate = callableReferenceAccess.source?.kind == FirFakeSourceElementKind.DefaultAccessor
+        val isForDelegate = callableReferenceAccess.source?.kind == FirFakeSourceElementKind.DelegatedPropertyAccessor
         val origin = if (isForDelegate) IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE else null
         return callableReferenceAccess.convertWithOffsets { startOffset, endOffset ->
             when (symbol) {
@@ -470,7 +470,7 @@ class CallAndReferenceGenerator(
             val type = typeProjection.typeRef.coneTypeSafe<ConeKotlinType>() ?: continue
             map[typeParameter.symbol] = type
         }
-        return ConeSubstitutorByMap(map)
+        return ConeSubstitutorByMap(map, session)
     }
 
     internal fun IrExpression.applyCallArguments(call: FirCall?, annotationMode: Boolean): IrExpression {
@@ -529,7 +529,7 @@ class CallAndReferenceGenerator(
     }
 
     private fun IrMemberAccessExpression<*>.applyArgumentsWithReorderingIfNeeded(
-        argumentMapping: LinkedHashMap<FirExpression, FirValueParameter>,
+        argumentMapping: Map<FirExpression, FirValueParameter>,
         valueParameters: List<FirValueParameter>,
         substitutor: ConeSubstitutor,
         annotationMode: Boolean
@@ -665,13 +665,16 @@ class CallAndReferenceGenerator(
     }
 
     private val starProjectionApproximator = object : AbstractConeSubstitutor() {
+        override val typeInferenceContext: ConeInferenceContext
+            get() = session.inferenceComponents.ctx
+
         override fun substituteType(type: ConeKotlinType): ConeKotlinType? {
             if (type !is ConeClassLikeType || type.typeArguments.none { it == ConeStarProjection }) return null
             val fir = type.lookupTag.toSymbol(session)?.fir as? FirTypeParameterRefsOwner ?: return null
             val typeParameters = fir.typeParameters.map { it.symbol.fir }
             if (typeParameters.size != type.typeArguments.size) return null
             val newTypeArguments = typeParameters.zip(type.typeArguments).map { (parameter, argument) ->
-                if (argument == ConeStarProjection){
+                if (argument == ConeStarProjection) {
                     parameter.bounds.first().coneType
                 } else {
                     argument
@@ -685,7 +688,9 @@ class CallAndReferenceGenerator(
         // If the type of the argument is already an explicitly subtype of the type of the parameter, we don't need SAM conversion.
         if (argument.typeRef !is FirResolvedTypeRef ||
             AbstractTypeChecker.isSubtypeOf(
-                session.inferenceComponents.ctx.newBaseTypeCheckerContext(errorTypesEqualToAnything = false, stubTypesEqualToAnything = true),
+                session.inferenceComponents.ctx.newBaseTypeCheckerContext(
+                    errorTypesEqualToAnything = false, stubTypesEqualToAnything = true
+                ),
                 argument.typeRef.coneType,
                 parameter.returnTypeRef.coneType,
                 isFromNullabilityConstraint = true

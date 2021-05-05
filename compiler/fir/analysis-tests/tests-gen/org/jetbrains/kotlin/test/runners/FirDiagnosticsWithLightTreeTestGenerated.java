@@ -7,8 +7,6 @@ package org.jetbrains.kotlin.test.runners;
 
 import com.intellij.testFramework.TestDataPath;
 import org.jetbrains.kotlin.test.util.KtTestUtil;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.jetbrains.kotlin.test.TestMetadata;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,11 +20,16 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
     @Nested
     @TestMetadata("compiler/fir/analysis-tests/testData/resolve")
     @TestDataPath("$PROJECT_ROOT")
-    @Execution(ExecutionMode.SAME_THREAD)
     public class Resolve {
         @Test
         public void testAllFilesPresentInResolve() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+        }
+
+        @Test
+        @TestMetadata("annotationUsedAsAnnotationArgument.kt")
+        public void testAnnotationUsedAsAnnotationArgument() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/annotationUsedAsAnnotationArgument.kt");
         }
 
         @Test
@@ -201,6 +204,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @TestMetadata("ft.kt")
         public void testFt() throws Exception {
             runTest("compiler/fir/analysis-tests/testData/resolve/ft.kt");
+        }
+
+        @Test
+        @TestMetadata("funInterfaceDeclaration.kt")
+        public void testFunInterfaceDeclaration() throws Exception {
+            runTest("compiler/fir/analysis-tests/testData/resolve/funInterfaceDeclaration.kt");
         }
 
         @Test
@@ -572,7 +581,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/arguments")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Arguments {
             @Test
             public void testAllFilesPresentInArguments() throws Exception {
@@ -781,7 +789,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/arrays")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Arrays {
             @Test
             public void testAllFilesPresentInArrays() throws Exception {
@@ -804,7 +811,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/builtins")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Builtins {
             @Test
             public void testAllFilesPresentInBuiltins() throws Exception {
@@ -821,7 +827,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/callResolution")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class CallResolution {
             @Test
             public void testAllFilesPresentInCallResolution() throws Exception {
@@ -934,7 +939,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/cfg")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Cfg {
             @Test
             public void testAllFilesPresentInCfg() throws Exception {
@@ -1095,7 +1099,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constVal")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class ConstVal {
             @Test
             public void testAllFilesPresentInConstVal() throws Exception {
@@ -1124,7 +1127,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/constructors")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Constructors {
             @Test
             public void testAllFilesPresentInConstructors() throws Exception {
@@ -1139,9 +1141,24 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         }
 
         @Nested
+        @TestMetadata("compiler/fir/analysis-tests/testData/resolve/contracts")
+        @TestDataPath("$PROJECT_ROOT")
+        public class Contracts {
+            @Test
+            public void testAllFilesPresentInContracts() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/contracts"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+            }
+
+            @Test
+            @TestMetadata("genericContract.kt")
+            public void testGenericContract() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/contracts/genericContract.kt");
+            }
+        }
+
+        @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/delegates")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Delegates {
             @Test
             public void testAllFilesPresentInDelegates() throws Exception {
@@ -1188,7 +1205,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/diagnostics")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Diagnostics {
             @Test
             @TestMetadata("abstractSuperCall.kt")
@@ -1504,7 +1520,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/diagnostics/functionAsExpression")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class FunctionAsExpression {
                 @Test
                 public void testAllFilesPresentInFunctionAsExpression() throws Exception {
@@ -1522,7 +1537,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/exhaustiveness")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Exhaustiveness {
             @Test
             public void testAllFilesPresentInExhaustiveness() throws Exception {
@@ -1532,7 +1546,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/exhaustiveness/negative")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Negative {
                 @Test
                 public void testAllFilesPresentInNegative() throws Exception {
@@ -1573,7 +1586,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/exhaustiveness/positive")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Positive {
                 @Test
                 public void testAllFilesPresentInPositive() throws Exception {
@@ -1645,7 +1657,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/expresssions")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Expresssions {
             @Test
             @TestMetadata("access.kt")
@@ -2021,7 +2032,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/expresssions/inference")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Inference {
                 @Test
                 public void testAllFilesPresentInInference() throws Exception {
@@ -2050,7 +2060,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/expresssions/invoke")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Invoke {
                 @Test
                 public void testAllFilesPresentInInvoke() throws Exception {
@@ -2151,7 +2160,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/expresssions/operators")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Operators {
                 @Test
                 public void testAllFilesPresentInOperators() throws Exception {
@@ -2181,7 +2189,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class ExtendedCheckers {
             @Test
             public void testAllFilesPresentInExtendedCheckers() throws Exception {
@@ -2239,7 +2246,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers/canBeReplacedWithOperatorAssignment")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class CanBeReplacedWithOperatorAssignment {
                 @Test
                 public void testAllFilesPresentInCanBeReplacedWithOperatorAssignment() throws Exception {
@@ -2364,7 +2370,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers/emptyRangeChecker")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class EmptyRangeChecker {
                 @Test
                 public void testAllFilesPresentInEmptyRangeChecker() throws Exception {
@@ -2387,7 +2392,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers/RedundantCallOfConversionMethod")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class RedundantCallOfConversionMethod {
                 @Test
                 public void testAllFilesPresentInRedundantCallOfConversionMethod() throws Exception {
@@ -2518,7 +2522,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers/unused")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Unused {
                 @Test
                 public void testAllFilesPresentInUnused() throws Exception {
@@ -2571,7 +2574,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/extendedCheckers/UselessCallOnNotNullChecker")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class UselessCallOnNotNullChecker {
                 @Test
                 public void testAllFilesPresentInUselessCallOnNotNullChecker() throws Exception {
@@ -2649,7 +2651,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/fromBuilder")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class FromBuilder {
             @Test
             public void testAllFilesPresentInFromBuilder() throws Exception {
@@ -2690,7 +2691,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/inference")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Inference {
             @Test
             public void testAllFilesPresentInInference() throws Exception {
@@ -2821,7 +2821,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/inlineClasses")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class InlineClasses {
             @Test
             public void testAllFilesPresentInInlineClasses() throws Exception {
@@ -2850,7 +2849,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/innerClasses")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class InnerClasses {
             @Test
             public void testAllFilesPresentInInnerClasses() throws Exception {
@@ -2885,7 +2883,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/localClasses")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class LocalClasses {
             @Test
             public void testAllFilesPresentInLocalClasses() throws Exception {
@@ -2914,7 +2911,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/multifile")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Multifile {
             @Test
             public void testAllFilesPresentInMultifile() throws Exception {
@@ -2991,7 +2987,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/overrides")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Overrides {
             @Test
             public void testAllFilesPresentInOverrides() throws Exception {
@@ -3050,7 +3045,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/problems")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Problems {
             @Test
             public void testAllFilesPresentInProblems() throws Exception {
@@ -3166,6 +3160,12 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             }
 
             @Test
+            @TestMetadata("symbolsAndDescriptors.kt")
+            public void testSymbolsAndDescriptors() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/problems/symbolsAndDescriptors.kt");
+            }
+
+            @Test
             @TestMetadata("transform.kt")
             public void testTransform() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/problems/transform.kt");
@@ -3175,7 +3175,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/properties")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Properties {
             @Test
             public void testAllFilesPresentInProperties() throws Exception {
@@ -3222,7 +3221,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/references")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class References {
             @Test
             public void testAllFilesPresentInReferences() throws Exception {
@@ -3236,9 +3234,21 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             }
 
             @Test
+            @TestMetadata("leakedImplicitType.kt")
+            public void testLeakedImplicitType() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/references/leakedImplicitType.kt");
+            }
+
+            @Test
             @TestMetadata("referenceToExtension.kt")
             public void testReferenceToExtension() throws Exception {
                 runTest("compiler/fir/analysis-tests/testData/resolve/references/referenceToExtension.kt");
+            }
+
+            @Test
+            @TestMetadata("referenceToField.kt")
+            public void testReferenceToField() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/references/referenceToField.kt");
             }
 
             @Test
@@ -3257,11 +3267,16 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/samConstructors")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class SamConstructors {
             @Test
             public void testAllFilesPresentInSamConstructors() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolve/samConstructors"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
+            }
+
+            @Test
+            @TestMetadata("funInterfaceConstructorReference.kt")
+            public void testFunInterfaceConstructorReference() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolve/samConstructors/funInterfaceConstructorReference.kt");
             }
 
             @Test
@@ -3304,7 +3319,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/samConversions")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class SamConversions {
             @Test
             public void testAllFilesPresentInSamConversions() throws Exception {
@@ -3369,7 +3383,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Smartcasts {
             @Test
             public void testAllFilesPresentInSmartcasts() throws Exception {
@@ -3451,7 +3464,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/booleans")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Booleans {
                 @Test
                 public void testAllFilesPresentInBooleans() throws Exception {
@@ -3486,7 +3498,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/boundSmartcasts")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class BoundSmartcasts {
                 @Test
                 public void testAllFilesPresentInBoundSmartcasts() throws Exception {
@@ -3521,7 +3532,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/controlStructures")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class ControlStructures {
                 @Test
                 public void testAllFilesPresentInControlStructures() throws Exception {
@@ -3562,7 +3572,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/lambdas")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Lambdas {
                 @Test
                 public void testAllFilesPresentInLambdas() throws Exception {
@@ -3591,7 +3600,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/loops")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Loops {
                 @Test
                 public void testAllFilesPresentInLoops() throws Exception {
@@ -3614,7 +3622,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/problems")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Problems {
                 @Test
                 public void testAllFilesPresentInProblems() throws Exception {
@@ -3631,7 +3638,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/receivers")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Receivers {
                 @Test
                 public void testAllFilesPresentInReceivers() throws Exception {
@@ -3666,7 +3672,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/safeCalls")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class SafeCalls {
                 @Test
                 public void testAllFilesPresentInSafeCalls() throws Exception {
@@ -3707,7 +3712,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/stability")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Stability {
                 @Test
                 public void testAllFilesPresentInStability() throws Exception {
@@ -3724,7 +3728,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/smartcasts/variables")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class Variables {
                 @Test
                 public void testAllFilesPresentInVariables() throws Exception {
@@ -3748,7 +3751,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/stdlib")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Stdlib {
             @Test
             public void testAllFilesPresentInStdlib() throws Exception {
@@ -3758,7 +3760,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolve/stdlib/j+k")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class J_k {
                 @Test
                 public void testAllFilesPresentInJ_k() throws Exception {
@@ -3782,7 +3783,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/suppress")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Suppress {
             @Test
             public void testAllFilesPresentInSuppress() throws Exception {
@@ -3817,7 +3817,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/types")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Types {
             @Test
             public void testAllFilesPresentInTypes() throws Exception {
@@ -3846,7 +3845,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolve/visibility")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Visibility {
             @Test
             public void testAllFilesPresentInVisibility() throws Exception {
@@ -3924,7 +3922,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
     @Nested
     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib")
     @TestDataPath("$PROJECT_ROOT")
-    @Execution(ExecutionMode.SAME_THREAD)
     public class ResolveWithStdlib {
         @Test
         @TestMetadata("addAllOnJavaCollection.kt")
@@ -4264,7 +4261,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/callableReferences")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class CallableReferences {
             @Test
             public void testAllFilesPresentInCallableReferences() throws Exception {
@@ -4418,7 +4414,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/callableReferences/fromBasicDiagnosticTests")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class FromBasicDiagnosticTests {
                 @Test
                 public void testAllFilesPresentInFromBasicDiagnosticTests() throws Exception {
@@ -4508,7 +4503,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Contracts {
             @Test
             public void testAllFilesPresentInContracts() throws Exception {
@@ -4518,7 +4512,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromLibrary")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class FromLibrary {
                 @Test
                 public void testAllFilesPresentInFromLibrary() throws Exception {
@@ -4547,7 +4540,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class FromSource {
                 @Test
                 public void testAllFilesPresentInFromSource() throws Exception {
@@ -4557,7 +4549,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                 @Nested
                 @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/bad")
                 @TestDataPath("$PROJECT_ROOT")
-                @Execution(ExecutionMode.SAME_THREAD)
                 public class Bad {
                     @Test
                     public void testAllFilesPresentInBad() throws Exception {
@@ -4567,7 +4558,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                     @Nested
                     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/bad/callsInPlace")
                     @TestDataPath("$PROJECT_ROOT")
-                    @Execution(ExecutionMode.SAME_THREAD)
                     public class CallsInPlace {
                         @Test
                         public void testAllFilesPresentInCallsInPlace() throws Exception {
@@ -4602,7 +4592,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                     @Nested
                     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/bad/returnsImplies")
                     @TestDataPath("$PROJECT_ROOT")
-                    @Execution(ExecutionMode.SAME_THREAD)
                     public class ReturnsImplies {
                         @Test
                         public void testAllFilesPresentInReturnsImplies() throws Exception {
@@ -4626,7 +4615,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                 @Nested
                 @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/good")
                 @TestDataPath("$PROJECT_ROOT")
-                @Execution(ExecutionMode.SAME_THREAD)
                 public class Good {
                     @Test
                     public void testAllFilesPresentInGood() throws Exception {
@@ -4636,7 +4624,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                     @Nested
                     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/good/callsInPlace")
                     @TestDataPath("$PROJECT_ROOT")
-                    @Execution(ExecutionMode.SAME_THREAD)
                     public class CallsInPlace {
                         @Test
                         public void testAllFilesPresentInCallsInPlace() throws Exception {
@@ -4695,7 +4682,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                     @Nested
                     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/good/returnsImplies")
                     @TestDataPath("$PROJECT_ROOT")
-                    @Execution(ExecutionMode.SAME_THREAD)
                     public class ReturnsImplies {
                         @Test
                         public void testAllFilesPresentInReturnsImplies() throws Exception {
@@ -4772,7 +4758,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                     @Nested
                     @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/good/variousContracts")
                     @TestDataPath("$PROJECT_ROOT")
-                    @Execution(ExecutionMode.SAME_THREAD)
                     public class VariousContracts {
                         @Test
                         public void testAllFilesPresentInVariousContracts() throws Exception {
@@ -4782,7 +4767,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
                         @Nested
                         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/contracts/fromSource/good/variousContracts/newSyntax")
                         @TestDataPath("$PROJECT_ROOT")
-                        @Execution(ExecutionMode.SAME_THREAD)
                         public class NewSyntax {
                             @Test
                             public void testAllFilesPresentInNewSyntax() throws Exception {
@@ -4803,7 +4787,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/delegates")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Delegates {
             @Test
             public void testAllFilesPresentInDelegates() throws Exception {
@@ -4856,17 +4839,21 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/diagnostics")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Diagnostics {
             @Test
             public void testAllFilesPresentInDiagnostics() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/fir/analysis-tests/testData/resolveWithStdlib/diagnostics"), Pattern.compile("^([^.]+)\\.kt$"), null, true);
             }
 
+            @Test
+            @TestMetadata("forLoopChecker.kt")
+            public void testForLoopChecker() throws Exception {
+                runTest("compiler/fir/analysis-tests/testData/resolveWithStdlib/diagnostics/forLoopChecker.kt");
+            }
+
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/diagnostics/functionReturnTypeMismatchChecker")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class FunctionReturnTypeMismatchChecker {
                 @Test
                 public void testAllFilesPresentInFunctionReturnTypeMismatchChecker() throws Exception {
@@ -4883,7 +4870,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             @Nested
             @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/diagnostics/initializerTypeMismatchChecker")
             @TestDataPath("$PROJECT_ROOT")
-            @Execution(ExecutionMode.SAME_THREAD)
             public class InitializerTypeMismatchChecker {
                 @Test
                 public void testAllFilesPresentInInitializerTypeMismatchChecker() throws Exception {
@@ -4901,7 +4887,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/inference")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Inference {
             @Test
             public void testAllFilesPresentInInference() throws Exception {
@@ -4954,7 +4939,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/initialization")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Initialization {
             @Test
             public void testAllFilesPresentInInitialization() throws Exception {
@@ -4971,7 +4955,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/j+k")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class J_k {
             @Test
             public void testAllFilesPresentInJ_k() throws Exception {
@@ -5264,7 +5247,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/multiModule")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class MultiModule {
             @Test
             public void testAllFilesPresentInMultiModule() throws Exception {
@@ -5305,7 +5287,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/problems")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Problems {
             @Test
             public void testAllFilesPresentInProblems() throws Exception {
@@ -5400,7 +5381,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/reinitializations")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Reinitializations {
             @Test
             public void testAllFilesPresentInReinitializations() throws Exception {
@@ -5417,7 +5397,6 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
         @Nested
         @TestMetadata("compiler/fir/analysis-tests/testData/resolveWithStdlib/smartcasts")
         @TestDataPath("$PROJECT_ROOT")
-        @Execution(ExecutionMode.SAME_THREAD)
         public class Smartcasts {
             @Test
             public void testAllFilesPresentInSmartcasts() throws Exception {

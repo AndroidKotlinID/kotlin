@@ -25,13 +25,6 @@ class CommonizerFacadeTest {
     )
 
     @Test
-    fun nothingToCommonize1() = doTestNothingToCommonize(
-        mapOf(
-            "target1" to listOf("foo")
-        )
-    )
-
-    @Test
     fun commonized1() = doTestSuccessfulCommonization(
         mapOf(
             "target1" to listOf("foo"),
@@ -44,6 +37,13 @@ class CommonizerFacadeTest {
         mapOf(
             "target1" to listOf("foo", "bar"),
             "target2" to listOf("bar", "foo")
+        )
+    )
+
+    @Test
+    fun commonized3() = doTestSuccessfulCommonization(
+        mapOf(
+            "target1" to listOf("foo")
         )
     )
 
@@ -67,7 +67,7 @@ class CommonizerFacadeTest {
 
         private fun Map<String, List<String>>.toCommonizerParameters(
             resultsConsumer: ResultsConsumer,
-            manifestDataProvider: NativeManifestDataProvider = MockNativeManifestDataProvider()
+            manifestDataProvider: (CommonizerTarget) -> NativeManifestDataProvider = { MockNativeManifestDataProvider(it) }
         ): CommonizerParameters {
             val targetDependentModuleNames = mapKeys { (targetName, _) -> LeafCommonizerTarget(targetName) }.toTargetDependent()
             val sharedTarget = SharedCommonizerTarget(targetDependentModuleNames.targets.toSet())
@@ -75,7 +75,7 @@ class CommonizerFacadeTest {
             return CommonizerParameters(
                 outputTarget = sharedTarget,
                 dependenciesProvider = TargetDependent(sharedTarget.withAllAncestors()) { null },
-                manifestProvider = TargetDependent(sharedTarget.withAllAncestors()) { manifestDataProvider },
+                manifestProvider = TargetDependent(sharedTarget.withAllAncestors(), manifestDataProvider),
                 targetProviders = targetDependentModuleNames.map { target, moduleNames ->
                     TargetProvider(
                         target = target,
@@ -89,14 +89,14 @@ class CommonizerFacadeTest {
         private fun doTestNothingToCommonize(originalModules: Map<String, List<String>>) {
             val results = MockResultsConsumer()
             runCommonization(originalModules.toCommonizerParameters(results))
-            assertEquals(results.status, Status.NOTHING_TO_DO)
+            assertEquals(Status.NOTHING_TO_DO, results.status)
             assertTrue(results.modulesByTargets.isEmpty())
         }
 
         private fun doTestSuccessfulCommonization(originalModules: Map<String, List<String>>) {
             val results = MockResultsConsumer()
             runCommonization(originalModules.toCommonizerParameters(results))
-            assertEquals(results.status, Status.DONE)
+            assertEquals(Status.DONE, results.status)
 
             val expectedCommonModuleNames = mutableSetOf<String>()
             originalModules.values.forEachIndexed { index, moduleNames ->
@@ -128,7 +128,6 @@ class CommonizerFacadeTest {
             expectedMissingModuleNames: Set<String>,
             actualModuleResults: Collection<ModuleResult>
         ) {
-            assertEquals(expectedCommonizedModuleNames.size + expectedMissingModuleNames.size, actualModuleResults.size)
 
             val actualCommonizedModuleNames = mutableSetOf<String>()
             val actualMissingModuleNames = mutableSetOf<String>()
@@ -140,6 +139,7 @@ class CommonizerFacadeTest {
                 }
             }
 
+            assertEquals(expectedCommonizedModuleNames.size + expectedMissingModuleNames.size, actualModuleResults.size)
             assertEquals(expectedCommonizedModuleNames, actualCommonizedModuleNames)
             assertEquals(expectedMissingModuleNames, actualMissingModuleNames)
         }
