@@ -621,6 +621,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
         }
 
         @Test
+        @TestMetadata("RecursiveTypeParameterEqualityCheck.kt")
+        public void testRecursiveTypeParameterEqualityCheck() throws Exception {
+            runTest("compiler/testData/diagnostics/tests/RecursiveTypeParameterEqualityCheck.kt");
+        }
+
+        @Test
         @TestMetadata("ReserveYield.kt")
         public void testReserveYield() throws Exception {
             runTest("compiler/testData/diagnostics/tests/ReserveYield.kt");
@@ -9075,6 +9081,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             @TestMetadata("starImportNestedClassAndEntries.kt")
             public void testStarImportNestedClassAndEntries() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/enum/starImportNestedClassAndEntries.kt");
+            }
+
+            @Test
+            @TestMetadata("typeCompatibility.kt")
+            public void testTypeCompatibility() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/enum/typeCompatibility.kt");
             }
 
             @Test

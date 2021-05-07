@@ -2411,6 +2411,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @Test
+        @TestMetadata("arrayConstructorArgument.kt")
+        public void testArrayConstructorArgument() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/arrayConstructorArgument.kt");
+        }
+
+        @Test
         @TestMetadata("builtinFunctionReferenceOwner.kt")
         public void testBuiltinFunctionReferenceOwner() throws Exception {
             runTest("compiler/testData/codegen/box/callableReference/builtinFunctionReferenceOwner.kt");
@@ -2438,6 +2444,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("genericLocalClassConstructorReference.kt")
         public void testGenericLocalClassConstructorReference() throws Exception {
             runTest("compiler/testData/codegen/box/callableReference/genericLocalClassConstructorReference.kt");
+        }
+
+        @Test
+        @TestMetadata("inlineArrayConstructors.kt")
+        public void testInlineArrayConstructors() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/inlineArrayConstructors.kt");
         }
 
         @Test
@@ -2833,6 +2845,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
             @TestMetadata("array.kt")
             public void testArray() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/bound/array.kt");
+            }
+
+            @Test
+            @TestMetadata("arrayConstructorArgument.kt")
+            public void testArrayConstructorArgument() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/bound/arrayConstructorArgument.kt");
             }
 
             @Test
@@ -15669,6 +15687,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         }
 
         @Test
+        @TestMetadata("kt46512_indyFunInterfaceOverCallableReference.kt")
+        public void testKt46512_indyFunInterfaceOverCallableReference() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/kt46512_indyFunInterfaceOverCallableReference.kt");
+        }
+
+        @Test
         @TestMetadata("multimodule.kt")
         public void testMultimodule() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/multimodule.kt");
@@ -18252,6 +18276,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
         @TestMetadata("kt44978.kt")
         public void testKt44978() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/kt44978.kt");
+        }
+
+        @Test
+        @TestMetadata("kt45084.kt")
+        public void testKt45084() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt45084.kt");
         }
 
         @Test

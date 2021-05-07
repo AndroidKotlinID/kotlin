@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.quickfix
 
+import org.jetbrains.kotlin.idea.core.overrideImplement.MemberNotImplementedQuickfixFactories
 import org.jetbrains.kotlin.idea.fir.api.fixes.KtQuickFixRegistrar
 import org.jetbrains.kotlin.idea.fir.api.fixes.KtQuickFixesList
 import org.jetbrains.kotlin.idea.fir.api.fixes.KtQuickFixesListBuilder
@@ -54,6 +55,14 @@ class MainKtQuickFixRegistrar : KtQuickFixRegistrar() {
             RemoveModifierFix.removeNonRedundantModifier,
             ChangeVariableMutabilityFix.CONST_VAL_FACTORY
         )
+        registerPsiQuickFixes(
+            KtFirDiagnostic.AbstractMemberNotImplemented::class,
+            AddModifierFix.addAbstractModifier
+        )
+        registerPsiQuickFixes(
+            KtFirDiagnostic.AbstractClassMemberNotImplemented::class,
+            AddModifierFix.addAbstractModifier
+        )
     }
 
     private val propertyInitialization = KtQuickFixesListBuilder.registerPsiQuickFix {
@@ -70,6 +79,10 @@ class MainKtQuickFixRegistrar : KtQuickFixRegistrar() {
         registerApplicator(ChangeTypeQuickFix.changeFunctionReturnTypeOnOverride)
         registerApplicator(ChangeTypeQuickFix.changePropertyReturnTypeOnOverride)
         registerApplicator(ChangeTypeQuickFix.changeVariableReturnTypeOnOverride)
+        registerApplicator(MemberNotImplementedQuickfixFactories.abstractMemberNotImplemented)
+        registerApplicator(MemberNotImplementedQuickfixFactories.abstractClassMemberNotImplemented)
+        registerApplicator(MemberNotImplementedQuickfixFactories.manyInterfacesMemberNotImplemented)
+        registerApplicator(MemberNotImplementedQuickfixFactories.manyImplMemberNotImplemented)
     }
 
     private val mutability = KtQuickFixesListBuilder.registerPsiQuickFix {

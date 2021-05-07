@@ -35,10 +35,10 @@ fun FirTypeParameterBuilder.addDefaultBoundIfNecessary(isFlexible: Boolean = fal
     }
 }
 
-inline val FirRegularClass.isInterface: Boolean
+inline val FirClass<*>.isInterface: Boolean
     get() = classKind == ClassKind.INTERFACE
 
-inline val FirRegularClass.isEnumClass: Boolean
+inline val FirClass<*>.isEnumClass: Boolean
     get() = classKind == ClassKind.ENUM_CLASS
 
 inline val FirRegularClass.modality get() = status.modality
@@ -57,6 +57,12 @@ inline val FirRegularClass.isFun get() = status.isFun
 inline val FirMemberDeclaration.modality get() = status.modality
 inline val FirMemberDeclaration.isAbstract get() = status.modality == Modality.ABSTRACT
 inline val FirMemberDeclaration.isOpen get() = status.modality == Modality.OPEN
+inline val FirMemberDeclaration.isFinal: Boolean
+    get() {
+        // member with unspecified modality is final
+        val modality = status.modality ?: return true
+        return modality == Modality.FINAL
+    }
 
 inline val FirMemberDeclaration.visibility: Visibility get() = status.visibility
 inline val FirMemberDeclaration.effectiveVisibility: EffectiveVisibility

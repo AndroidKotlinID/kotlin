@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.gradle.internal
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
 import org.gradle.process.CommandLineArgumentProvider
@@ -21,8 +22,8 @@ import org.jetbrains.kotlin.gradle.internal.kapt.classloaders.rootOrSelf
 import org.jetbrains.kotlin.gradle.internal.kapt.incremental.KaptIncrementalChanges
 import org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper
 import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.findKotlinStdlibClasspath
-import org.jetbrains.kotlin.gradle.tasks.findToolsJar
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 import org.jetbrains.kotlin.utils.PathUtil
 import org.slf4j.LoggerFactory
@@ -34,14 +35,24 @@ import javax.inject.Inject
 
 abstract class KaptWithoutKotlincTask @Inject constructor(
     objectFactory: ObjectFactory,
+    private val providerFactory: ProviderFactory,
     private val workerExecutor: WorkerExecutor
 ) : KaptTask(objectFactory) {
+
+    class Configurator(kotlinCompileTask: KotlinCompile): KaptTask.Configurator<KaptWithoutKotlincTask>(kotlinCompileTask) {
+        override fun configure(task: KaptWithoutKotlincTask) {
+            super.configure(task)
+            task.addJdkClassesToClasspath.value(
+                task.project.providers.provider { task.project.plugins.none { it is KotlinAndroidPluginWrapper } }
+            ).disallowChanges()
+            task.kaptJars.from(task.project.configurations.getByName(KAPT_WORKER_DEPENDENCIES_CONFIGURATION_NAME)).disallowChanges()
+        }
+    }
+
     @get:InputFiles
     @get:Classpath
     @Suppress("unused")
-    val kaptJars: Collection<File> by lazy {
-        project.configurations.getByName(KAPT_WORKER_DEPENDENCIES_CONFIGURATION_NAME).resolve()
-    }
+    abstract val kaptJars: ConfigurableFileCollection
 
     @get:Input
     var isVerbose: Boolean = false
@@ -65,16 +76,13 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
     lateinit var javacOptions: Map<String, String>
 
     @get:Input
-    internal val kotlinAndroidPluginWrapperPluginDoesNotExist = project.plugins.none { it is KotlinAndroidPluginWrapper }
+    internal abstract val addJdkClassesToClasspath: Property<Boolean>
 
     @get:Classpath
     internal val kotlinStdlibClasspath = findKotlinStdlibClasspath(project)
 
     @get:Internal
     internal val projectDir = project.projectDir
-
-    @get:Internal
-    internal val providers = project.providers
 
     private fun getAnnotationProcessorOptions(): Map<String, String> {
         val options = processorOptions.subpluginOptionsByPluginId[Kapt3GradleSubplugin.KAPT_SUBPLUGIN_ID] ?: return emptyMap()
@@ -106,7 +114,7 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
         }
 
         val compileClasspath = classpath.files.toMutableList()
-        if (kotlinAndroidPluginWrapperPluginDoesNotExist) {
+        if (addJdkClassesToClasspath.get()) {
             compileClasspath.addAll(0, PathUtil.getJdkClassesRootsFromCurrentJre())
         }
 
@@ -123,7 +131,7 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
             source.files.toList(),
 
             changedFiles,
-            compiledSources,
+            compiledSources.toList(),
             incAptCache.orNull?.asFile,
             classpathChanges.toList(),
 
@@ -149,16 +157,10 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
             return
         }
 
-        val kaptClasspath = kaptJars + kotlinStdlibClasspath
-
-        //TODO for gradle < 6.5
-        val isolationModeStr = getValue("kapt.workers.isolation") ?: "none"
-        val isolationMode = when (isolationModeStr.toLowerCase()) {
-            "process" -> IsolationMode.PROCESS
-            "none" -> IsolationMode.NONE
-            else -> IsolationMode.NONE
-        }
-        val toolsJarURLSpec = findToolsJar()?.toURI()?.toURL()?.toString().orEmpty()
+        val kaptClasspath = kaptJars.toList() + kotlinStdlibClasspath
+        val isolationMode = getWorkerIsolationMode()
+        logger.info("Using workers $isolationMode isolation mode to run kapt")
+        val toolsJarURLSpec = kotlinJavaToolchainProvider.get().jdkToolsJar.orNull?.toURI()?.toURL()?.toString().orEmpty()
 
         submitWork(
             isolationMode,
@@ -166,6 +168,25 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
             toolsJarURLSpec,
             kaptClasspath
         )
+    }
+
+    private fun getWorkerIsolationMode(): IsolationMode {
+        val kotlinJavaToolchain = kotlinJavaToolchainProvider.get()
+        val gradleJvm = kotlinJavaToolchain.currentJvm.get()
+        // Ensuring Gradle build JDK is set to kotlin toolchain by also comparing javaExecutable paths,
+        // as user may set JDK with same major Java version, but from different vendor
+        val isRunningOnGradleJvm = gradleJvm.javaVersion == kotlinJavaToolchain.javaVersion.get() &&
+                gradleJvm.javaExecutable.absolutePath == kotlinJavaToolchain.javaExecutable.get().asFile.absolutePath
+        val isolationModeStr = getValue("kapt.workers.isolation")?.toLowerCase()
+        return when {
+            (isolationModeStr == null || isolationModeStr == "none") && isRunningOnGradleJvm -> IsolationMode.NONE
+            else -> {
+                if (isolationModeStr == "none") {
+                    logger.warn("Using non-default Kotlin java toolchain - 'kapt.workers.isolation == none' property is ignored!")
+                }
+                IsolationMode.PROCESS
+            }
+        }
     }
 
     private fun submitWork(
@@ -180,14 +201,13 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
                     // for tests
                     it.forkOptions.jvmArgs("-verbose:class")
                 }
-                logger.info("Kapt worker classpath: ${it.classpath}")
-            }
-            IsolationMode.CLASSLOADER -> workerExecutor.classLoaderIsolation() {
+                it.forkOptions.executable = kotlinJavaToolchainProvider.get().javaExecutable.asFile.get().absolutePath
                 logger.info("Kapt worker classpath: ${it.classpath}")
             }
             IsolationMode.NONE -> workerExecutor.noIsolation()
-            IsolationMode.AUTO -> throw UnsupportedOperationException(
-                "Kapt worker compilation does not support $isolationMode"
+            IsolationMode.AUTO, IsolationMode.CLASSLOADER -> throw UnsupportedOperationException(
+                "Kapt worker compilation does not support class loader isolation. " +
+                        "Please use either \"none\" or \"process\" in gradle.properties."
             )
         }
 
@@ -201,7 +221,7 @@ abstract class KaptWithoutKotlincTask @Inject constructor(
 
     internal fun getValue(propertyName: String): String? =
         if (isGradleVersionAtLeast(6, 5)) {
-            providers.gradleProperty(propertyName).forUseAtConfigurationTime().orNull
+            providerFactory.gradleProperty(propertyName).forUseAtConfigurationTime().orNull
         } else {
             project.findProperty(propertyName) as String?
         }

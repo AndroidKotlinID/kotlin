@@ -63,6 +63,19 @@ data class KtDeclarationRendererOptions(
      * Approximate Kotlin not-denotable types into denotable for declarations return type
      */
     val approximateTypes: Boolean = false,
+
+    /**
+     * Declaration header is something like `abstract class`, `fun`, or `private interface` in a declaration.
+     */
+    val renderDeclarationHeader: Boolean = true,
+
+    /**
+     * Whether to forcefully add `override` modifier when rendering functions or properties. Note that the [modifiers] option still
+     * controls whether `override` is rendered. That is, if [modifiers] don't contain `override`, then this flag does not have any effect.
+     */
+    val forceRenderingOverrideModifier: Boolean = false,
+
+    val renderDefaultParameterValue: Boolean = true,
 ) {
     companion object {
         val DEFAULT = KtDeclarationRendererOptions()
@@ -82,7 +95,8 @@ enum class RendererModifier(val includeByDefault: Boolean) {
     CONST(true),
     LATEINIT(true),
     FUN(true),
-    VALUE(true)
+    VALUE(true),
+    OPERATOR(true)
     ;
 
     companion object {

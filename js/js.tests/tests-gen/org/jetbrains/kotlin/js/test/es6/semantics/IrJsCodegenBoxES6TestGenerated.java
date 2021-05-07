@@ -1455,6 +1455,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS_IR_ES6, true);
         }
 
+        @TestMetadata("arrayConstructorArgument.kt")
+        public void testArrayConstructorArgument() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/arrayConstructorArgument.kt");
+        }
+
         @TestMetadata("genericConstructorReference.kt")
         public void testGenericConstructorReference() throws Exception {
             runTest("compiler/testData/codegen/box/callableReference/genericConstructorReference.kt");
@@ -1463,6 +1468,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("genericLocalClassConstructorReference.kt")
         public void testGenericLocalClassConstructorReference() throws Exception {
             runTest("compiler/testData/codegen/box/callableReference/genericLocalClassConstructorReference.kt");
+        }
+
+        @TestMetadata("inlineArrayConstructors.kt")
+        public void testInlineArrayConstructors() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/inlineArrayConstructors.kt");
         }
 
         @TestMetadata("kt21014.kt")
@@ -1731,6 +1741,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             @TestMetadata("array.kt")
             public void testArray() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/bound/array.kt");
+            }
+
+            @TestMetadata("arrayConstructorArgument.kt")
+            public void testArrayConstructorArgument() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/bound/arrayConstructorArgument.kt");
             }
 
             @TestMetadata("arrayGetIntrinsic.kt")
@@ -11385,6 +11400,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/funInterface/kt45444_privateFunInterface.kt");
         }
 
+        @TestMetadata("kt46512_indyFunInterfaceOverCallableReference.kt")
+        public void testKt46512_indyFunInterfaceOverCallableReference() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/kt46512_indyFunInterfaceOverCallableReference.kt");
+        }
+
         @TestMetadata("multimodule.kt")
         public void testMultimodule() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/multimodule.kt");
@@ -13259,6 +13279,11 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
         @TestMetadata("kt44978.kt")
         public void testKt44978() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/kt44978.kt");
+        }
+
+        @TestMetadata("kt45084.kt")
+        public void testKt45084() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt45084.kt");
         }
 
         @TestMetadata("kt45991.kt")

@@ -6,10 +6,12 @@
 package org.jetbrains.kotlin.fir.checkers
 
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.*
+import org.jetbrains.kotlin.fir.analysis.checkers.syntax.FirAnonymousFunctionSyntaxChecker
 
 object CommonExpressionCheckers : ExpressionCheckers() {
     override val annotationCallCheckers: Set<FirAnnotationCallChecker>
         get() = setOf(
+            FirAnnotationArgumentChecker,
             FirAnnotationUsedAsAnnotationArgumentChecker,
         )
 
@@ -92,6 +94,7 @@ object CommonExpressionCheckers : ExpressionCheckers() {
     override val anonymousFunctionAsExpressionCheckers: Set<FirAnonymousFunctionAsExpressionChecker>
         get() = setOf(
             FirAnonymousFunctionChecker,
+            FirAnonymousFunctionSyntaxChecker,
         )
 
     override val typeOperatorCallCheckers: Set<FirTypeOperatorCallChecker>
@@ -102,5 +105,10 @@ object CommonExpressionCheckers : ExpressionCheckers() {
     override val resolvedQualifierCheckers: Set<FirResolvedQualifierChecker>
         get() = setOf(
             FirStandaloneQualifierChecker,
+        )
+
+    override val equalityOperatorCallCheckers: Set<FirEqualityOperatorCallChecker>
+        get() = setOf(
+            FirEqualityCompatibilityChecker,
         )
 }

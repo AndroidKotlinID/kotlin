@@ -18,6 +18,7 @@
 #include "StableRefRegistry.hpp"
 #include "ThreadData.hpp"
 #include "ThreadRegistry.hpp"
+#include "ThreadState.hpp"
 #include "Utils.hpp"
 
 using namespace kotlin;
@@ -135,6 +136,7 @@ extern "C" ALWAYS_INLINE OBJ_GETTER(InitSingleton, ObjHeader** location, const T
 
 extern "C" RUNTIME_NOTHROW void InitAndRegisterGlobal(ObjHeader** location, const ObjHeader* initialValue) {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     mm::GlobalsRegistry::Instance().RegisterStorageForGlobal(threadData, location);
     // Null `initialValue` means that the appropriate value was already set by static initialization.
     if (initialValue != nullptr) {
@@ -211,11 +213,13 @@ extern "C" OBJ_GETTER(ReadHeapRefNoLock, ObjHeader* object, int32_t index) {
 
 extern "C" RUNTIME_NOTHROW void EnterFrame(ObjHeader** start, int parameters, int count) {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     threadData->shadowStack().EnterFrame(start, parameters, count);
 }
 
 extern "C" RUNTIME_NOTHROW void LeaveFrame(ObjHeader** start, int parameters, int count) {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     threadData->shadowStack().LeaveFrame(start, parameters, count);
 }
 
@@ -351,12 +355,15 @@ extern "C" RUNTIME_NOTHROW void* CreateStablePointer(ObjHeader* object) {
 }
 
 extern "C" RUNTIME_NOTHROW void DisposeStablePointer(void* pointer) {
+    DisposeStablePointerFor(kotlin::mm::GetMemoryState(), pointer);
+}
+
+extern "C" RUNTIME_NOTHROW void DisposeStablePointerFor(MemoryState* memoryState, void* pointer) {
     if (!pointer)
         return;
 
-    auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
     auto* node = static_cast<mm::StableRefRegistry::Node*>(pointer);
-    mm::StableRefRegistry::Instance().UnregisterStableRef(threadData, node);
+    mm::StableRefRegistry::Instance().UnregisterStableRef(memoryState->GetThreadData(), node);
 }
 
 extern "C" RUNTIME_NOTHROW OBJ_GETTER(DerefStablePointer, void* pointer) {
@@ -440,16 +447,19 @@ extern "C" void CheckGlobalsAccessible() {
 
 extern "C" RUNTIME_NOTHROW void Kotlin_mm_safePointFunctionEpilogue() {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     threadData->gc().SafePointFunctionEpilogue();
 }
 
 extern "C" RUNTIME_NOTHROW void Kotlin_mm_safePointWhileLoopBody() {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     threadData->gc().SafePointLoopBody();
 }
 
 extern "C" RUNTIME_NOTHROW void Kotlin_mm_safePointExceptionUnwind() {
     auto* threadData = mm::ThreadRegistry::Instance().CurrentThreadData();
+    AssertThreadState(threadData, ThreadState::kRunnable);
     threadData->gc().SafePointExceptionUnwind();
 }
 

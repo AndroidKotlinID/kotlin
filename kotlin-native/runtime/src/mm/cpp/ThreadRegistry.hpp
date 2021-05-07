@@ -8,6 +8,7 @@
 
 #include <pthread.h>
 
+#include "Common.h"
 #include "SingleLockList.hpp"
 #include "Utils.hpp"
 
@@ -37,13 +38,18 @@ public:
     ALWAYS_INLINE ThreadData* CurrentThreadData() const noexcept;
     Node* CurrentThreadDataNode() const noexcept { return currentThreadDataNode_; }
 
+    class TestSupport {
+    public:
+        static void ClearCurrentThreadData() { currentThreadDataNode_ = nullptr; }
+    };
+
 private:
     friend class GlobalData;
 
     ThreadRegistry();
     ~ThreadRegistry();
 
-    static thread_local Node* currentThreadDataNode_;
+    static THREAD_LOCAL_VARIABLE Node* currentThreadDataNode_;
 
     SingleLockList<ThreadData> list_;
 };

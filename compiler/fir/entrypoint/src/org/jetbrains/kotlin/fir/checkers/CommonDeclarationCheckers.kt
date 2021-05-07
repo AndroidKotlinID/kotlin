@@ -11,12 +11,14 @@ import org.jetbrains.kotlin.fir.analysis.cfa.FirPropertyInitializationAnalyzer
 import org.jetbrains.kotlin.fir.analysis.cfa.FirReturnsImpliesAnalyzer
 import org.jetbrains.kotlin.fir.analysis.checkers.cfa.FirControlFlowChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.*
+import org.jetbrains.kotlin.fir.analysis.checkers.syntax.FirDelegationInInterfaceSyntaxChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.syntax.FirFunctionTypeParametersSyntaxChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.syntax.FirTypeParameterSyntaxChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirReservedUnderscoreDeclarationChecker
 
 object CommonDeclarationCheckers : DeclarationCheckers() {
     override val basicDeclarationCheckers: Set<FirBasicDeclarationChecker>
         get() = setOf(
-            FirAnnotationArgumentChecker,
             FirModifierChecker,
             FirConflictsChecker,
             FirConflictingProjectionChecker,
@@ -43,7 +45,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
     override val simpleFunctionCheckers: Set<FirSimpleFunctionChecker>
         get() = setOf(
             FirFunctionNameChecker,
-            FirFunctionTypeParametersChecker,
+            FirFunctionTypeParametersSyntaxChecker,
         )
 
     override val propertyCheckers: Set<FirPropertyChecker>
@@ -72,7 +74,7 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
             FirCommonConstructorDelegationIssuesChecker,
             FirConstructorInInterfaceChecker,
             FirDelegationSuperCallInEnumConstructorChecker,
-            FirDelegationInInterfaceChecker,
+            FirDelegationInInterfaceSyntaxChecker,
             FirEnumClassSimpleChecker,
             FirInterfaceWithSuperclassChecker,
             FirLocalEntityNotAllowedChecker,
@@ -82,11 +84,11 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
             FirPrimaryConstructorSuperTypeChecker,
             FirTypeParametersInObjectChecker,
             FirFunInterfaceDeclarationChecker,
-        FirMemberFunctionsChecker,
-        FirMemberPropertiesChecker,
-        FirNestedClassChecker,
-        FirInlineClassDeclarationChecker,
-    )
+            FirMemberFunctionsChecker,
+            FirMemberPropertiesChecker,
+            FirNestedClassChecker,
+            FirInlineClassDeclarationChecker,
+        )
 
     override val constructorCheckers: Set<FirConstructorChecker>
         get() = setOf(
@@ -116,5 +118,6 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
             FirTypeParameterBoundsChecker,
             FirTypeParameterVarianceChecker,
             FirReifiedTypeParameterChecker,
+            FirTypeParameterSyntaxChecker,
         )
 }
