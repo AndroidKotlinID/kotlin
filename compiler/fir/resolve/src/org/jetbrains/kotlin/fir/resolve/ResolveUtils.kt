@@ -34,12 +34,8 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
-import org.jetbrains.kotlin.name.CallableId
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 import org.jetbrains.kotlin.name.*
+import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
 
 fun List<FirQualifierPart>.toTypeProjections(): Array<ConeTypeProjection> =
     asReversed().flatMap { it.typeArgumentList.typeArguments.map { typeArgument -> typeArgument.toConeTypeProjection() } }.toTypedArray()
@@ -247,9 +243,35 @@ private fun BodyResolveComponents.typeFromSymbol(symbol: AbstractFirBasedSymbol<
     }
 }
 
-fun BodyResolveComponents.transformQualifiedAccessUsingSmartcastInfo(qualifiedAccessExpression: FirQualifiedAccessExpression): FirQualifiedAccessExpression {
+fun BodyResolveComponents.transformQualifiedAccessUsingSmartcastInfo(
+    qualifiedAccessExpression: FirQualifiedAccessExpression
+): FirQualifiedAccessExpression {
     val typesFromSmartCast = dataFlowAnalyzer.getTypeUsingSmartcastInfo(qualifiedAccessExpression) ?: return qualifiedAccessExpression
     val originalType = qualifiedAccessExpression.resultType.coneType
+    // For example, if (x == null) { ... },
+    //   we don't want to smartcast to Nothing?, but we want to record the nullability to its own kind of node.
+    // TODO: should we differentiate x == null v.s. x is Nothing?
+    if (typesFromSmartCast.any { it.isNullableNothing }) {
+        val typesFromSmartcastWithoutNullableNothing =
+            typesFromSmartCast.filterTo(mutableListOf()) { !it.isNullableNothing }.also {
+                it += originalType
+            }
+        val intersectedTypeWithoutNullableNothing =
+            ConeTypeIntersector.intersectTypes(session.inferenceComponents.ctx, typesFromSmartcastWithoutNullableNothing)
+        val intersectedTypeRefWithoutNullableNothing = buildResolvedTypeRef {
+            source = qualifiedAccessExpression.resultType.source?.fakeElement(FirFakeSourceElementKind.SmartCastedTypeRef)
+            type = intersectedTypeWithoutNullableNothing
+            annotations += qualifiedAccessExpression.resultType.annotations
+            delegatedTypeRef = qualifiedAccessExpression.resultType
+        }
+        return buildExpressionWithSmartcastToNull {
+            originalExpression = qualifiedAccessExpression
+            // TODO: Use Nothing? during resolution?
+            typeRef = intersectedTypeRefWithoutNullableNothing
+            // NB: Nothing? in types from smartcast in DFA is recorded here (and the expression kind itself).
+            this.typesFromSmartCast = typesFromSmartCast
+        }
+    }
     val allTypes = typesFromSmartCast.also {
         it += originalType
     }
@@ -259,6 +281,7 @@ fun BodyResolveComponents.transformQualifiedAccessUsingSmartcastInfo(qualifiedAc
         source = qualifiedAccessExpression.resultType.source?.fakeElement(FirFakeSourceElementKind.SmartCastedTypeRef)
         type = intersectedType
         annotations += qualifiedAccessExpression.resultType.annotations
+        delegatedTypeRef = qualifiedAccessExpression.resultType
     }
     return buildExpressionWithSmartcast {
         originalExpression = qualifiedAccessExpression
@@ -299,9 +322,8 @@ fun FirCheckedSafeCallSubject.propagateTypeFromOriginalReceiver(nullableReceiver
 
     val expandedReceiverType = if (receiverType is ConeClassLikeType) receiverType.fullyExpandedType(session) else receiverType
 
-    val resolvedTypeRef = typeRef.resolvedTypeFromPrototype(
-        expandedReceiverType.makeConeTypeDefinitelyNotNullOrNotNull(session.inferenceComponents.ctx)
-    )
+    val resolvedTypeRef =
+        typeRef.resolvedTypeFromPrototype(expandedReceiverType.makeConeTypeDefinitelyNotNullOrNotNull(session.typeContext))
     replaceTypeRef(resolvedTypeRef)
     session.lookupTracker?.recordTypeResolveAsLookup(resolvedTypeRef, source, null)
 }

@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.types.Variance
-import org.jetbrains.kotlin.utils.addToStdlib.min
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 object FirConflictingProjectionChecker : FirBasicDeclarationChecker() {
@@ -48,7 +47,7 @@ object FirConflictingProjectionChecker : FirBasicDeclarationChecker() {
             ?.fir.safeAs<FirRegularClass>()
             ?: return
 
-        val size = min(declaration.typeParameters.size, typeRef.coneType.typeArguments.size)
+        val size = minOf(declaration.typeParameters.size, typeRef.coneType.typeArguments.size)
 
         for (it in 0 until size) {
             val proto = declaration.typeParameters[it]
@@ -67,7 +66,7 @@ object FirConflictingProjectionChecker : FirBasicDeclarationChecker() {
                 actual is ConeKotlinTypeProjectionIn && protoVariance == Variance.OUT_VARIANCE ||
                 actual is ConeKotlinTypeProjectionOut && protoVariance == Variance.IN_VARIANCE
             ) {
-                reporter.reportOn(typeRef.source, FirErrors.CONFLICTING_PROJECTION, typeRef.coneType.toString(), context)
+                reporter.reportOn(typeRef.source, FirErrors.CONFLICTING_PROJECTION, typeRef.coneType, context)
                 return
             }
         }

@@ -31,10 +31,8 @@ import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.load.kotlin.KotlinJvmBinarySourceElement
 import org.jetbrains.kotlin.metadata.ProtoBuf
-import org.jetbrains.kotlin.metadata.deserialization.Flags
-import org.jetbrains.kotlin.metadata.deserialization.NameResolver
-import org.jetbrains.kotlin.metadata.deserialization.TypeTable
-import org.jetbrains.kotlin.metadata.deserialization.supertypes
+import org.jetbrains.kotlin.metadata.deserialization.*
+import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -49,6 +47,7 @@ fun deserializeClassToSymbol(
     symbol: FirRegularClassSymbol,
     nameResolver: NameResolver,
     session: FirSession,
+    moduleData: FirModuleData,
     defaultAnnotationDeserializer: AbstractAnnotationDeserializer?,
     scopeProvider: FirScopeProvider,
     parentContext: FirDeserializationContext? = null,
@@ -90,7 +89,7 @@ fun deserializeClassToSymbol(
             classId,
             classProto,
             nameResolver,
-            session,
+            moduleData,
             annotationDeserializer,
             FirConstDeserializer(session, (containerSource as? KotlinJvmBinarySourceElement)?.binaryClass),
             containerSource,
@@ -102,7 +101,7 @@ fun deserializeClassToSymbol(
         }
     }
     buildRegularClass {
-        declarationSiteSession = session
+        this.moduleData = moduleData
         this.origin = origin
         name = classId.shortClassName
         this.status = status
@@ -159,7 +158,7 @@ fun deserializeClassToSymbol(
 
                 val enumType = ConeClassLikeTypeImpl(symbol.toLookupTag(), emptyArray(), false)
                 val property = buildEnumEntry {
-                    declarationSiteSession = session
+                    this.moduleData = moduleData
                     this.origin = FirDeclarationOrigin.Library
                     returnTypeRef = buildResolvedTypeRef { type = enumType }
                     name = enumEntryName
@@ -182,11 +181,11 @@ fun deserializeClassToSymbol(
 
         if (classKind == ClassKind.ENUM_CLASS) {
             generateValuesFunction(
-                session,
+                moduleData,
                 classId.packageFqName,
                 classId.relativeClassName
             )
-            generateValueOfFunction(session, classId.packageFqName, classId.relativeClassName)
+            generateValueOfFunction(moduleData, classId.packageFqName, classId.relativeClassName)
         }
 
         addCloneForArrayIfNeeded(classId, context.dispatchReceiver)
@@ -215,6 +214,10 @@ fun deserializeClassToSymbol(
         it.versionRequirementsTable = context.versionRequirementTable
 
         it.sourceElement = containerSource
+
+        classProto.getExtensionOrNull(JvmProtoBuf.classModuleName)?.let { idx ->
+            it.moduleName = nameResolver.getString(idx)
+        }
     }
 }
 
@@ -255,7 +258,7 @@ private fun FirRegularClassBuilder.addCloneForArrayIfNeeded(classId: ClassId, di
         )
     }
     declarations += buildSimpleFunction {
-        declarationSiteSession = this@addCloneForArrayIfNeeded.declarationSiteSession
+        moduleData = this@addCloneForArrayIfNeeded.moduleData
         origin = FirDeclarationOrigin.Library
         resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
         returnTypeRef = buildResolvedTypeRef {

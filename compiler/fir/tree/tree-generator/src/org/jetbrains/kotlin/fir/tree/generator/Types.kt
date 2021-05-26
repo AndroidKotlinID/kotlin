@@ -45,7 +45,7 @@ val whenRefType = generatedType("", "FirExpressionRef<FirWhenExpression>")
 val safeCallOriginalReceiverReferenceType = generatedType("", "FirExpressionRef<FirExpression>")
 val safeCallCheckedSubjectReferenceType = generatedType("", "FirExpressionRef<FirCheckedSafeCallSubject>")
 
-val firSessionType = type("fir", "FirSession")
+val firModuleDataType = type("fir", "FirModuleData")
 val emptyCfgReferenceType = generatedType("references.impl", "FirEmptyControlFlowGraphReference")
 val noReceiverExpressionType = generatedType("expressions.impl", "FirNoReceiverExpression")
 val implicitTypeRefType = generatedType("types.impl", "FirImplicitTypeRefImpl")
@@ -86,3 +86,5 @@ val annotationResolveStatusType = generatedType("expressions", "FirAnnotationRes
 val exhaustivenessStatusType = generatedType("expressions", "ExhaustivenessStatus")
 
 val callableReferenceMappedArgumentsType = type("fir.resolve.calls", "CallableReferenceMappedArguments")
+
+val functionCallOrigin = type("fir.expressions", "FirFunctionCallOrigin")

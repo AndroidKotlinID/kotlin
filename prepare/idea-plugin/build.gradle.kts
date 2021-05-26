@@ -8,6 +8,7 @@ plugins {
 
 // PILL: used in pill importer
 val projectsToShadow by extra(listOf(
+        ":plugins:base-compiler-plugins-ide-support",
         ":plugins:annotation-based-compiler-plugins-ide-support",
         ":compiler:backend",
         ":compiler:resolution.common.jvm",
@@ -45,6 +46,7 @@ val projectsToShadow by extra(listOf(
         ":compiler:psi",
         ":compiler:fir:cones",
         ":compiler:fir:checkers",
+        ":compiler:fir:checkers:checkers.jvm",
         ":compiler:fir:entrypoint",
         ":compiler:fir:resolve",
         ":compiler:fir:fir-serialization",
@@ -91,6 +93,8 @@ val projectsToShadow by extra(listOf(
         ":plugins:lint",
         ":plugins:uast-kotlin",
         ":plugins:uast-kotlin-idea",
+        ":plugins:uast-kotlin-idea-fir",
+        ":plugins:uast-kotlin-idea-base",
         ":j2k",
         ":nj2k",
         ":nj2k:nj2k-services",

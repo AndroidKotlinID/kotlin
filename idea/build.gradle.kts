@@ -69,6 +69,7 @@ dependencies {
     compile(project(":compiler:fir:fir2ir"))
     compile(project(":compiler:fir:resolve"))
     compile(project(":compiler:fir:checkers"))
+    compile(project(":compiler:fir:checkers:checkers.jvm"))
     compile(project(":compiler:fir:java"))
     compile(project(":compiler:fir:jvm"))
     compile(project(":idea:idea-core"))
@@ -77,8 +78,10 @@ dependencies {
     compile(project(":idea:idea-jps-common"))
     compile(project(":idea:kotlin-gradle-tooling"))
     compile(project(":idea:line-indent-provider"))
+    compile(project(":plugins:uast-kotlin-base"))
     compile(project(":plugins:uast-kotlin"))
     compile(project(":plugins:uast-kotlin-idea"))
+    compile(project(":plugins:uast-kotlin-idea-base"))
     compile(project(":kotlin-script-util")) { isTransitive = false }
     compile(project(":kotlin-scripting-intellij"))
     compile(project(":compiler:backend.jvm")) // Do not delete, for Pill
@@ -137,6 +140,7 @@ dependencies {
     testRuntime(project(":noarg-ide-plugin")) { isTransitive = false }
     testRuntime(project(":kotlin-noarg-compiler-plugin"))
     testRuntime(project(":plugins:annotation-based-compiler-plugins-ide-support")) { isTransitive = false }
+    testRuntime(project(":plugins:base-compiler-plugins-ide-support")) { isTransitive = false }
     testRuntime(project(":plugins:parcelize:parcelize-compiler"))
     testRuntime(project(":plugins:parcelize:parcelize-ide")) { isTransitive = false }
     testRuntime(project(":plugins:base-compiler-plugins-ide-support")) { isTransitive = false }

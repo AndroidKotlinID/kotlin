@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
+import org.jetbrains.kotlin.fir.diagnostics.ConeStubDiagnostic
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.buildResolvedReifiedParameterReference
 import org.jetbrains.kotlin.fir.references.*
@@ -152,13 +153,24 @@ class FirCallResolver(
         towerResolver.reset()
         val result = towerResolver.runResolver(info, transformer.resolutionContext)
         val bestCandidates = result.bestCandidates()
-        var reducedCandidates = if (!result.currentApplicability.isSuccess) {
-            bestCandidates.toSet()
-        } else {
+
+        fun chooseMostSpecific(): Set<Candidate> {
             val onSuperReference = (explicitReceiver as? FirQualifiedAccessExpression)?.calleeReference is FirSuperReference
-            conflictResolver.chooseMaximallySpecificCandidates(
+            return conflictResolver.chooseMaximallySpecificCandidates(
                 bestCandidates, discriminateGenerics = true, discriminateAbstracts = onSuperReference
             )
+        }
+
+        var reducedCandidates = if (!result.currentApplicability.isSuccess) {
+            val distinctApplicabilities = bestCandidates.mapTo(mutableSetOf()) { it.currentApplicability }
+            //if all candidates have the same kind on inApplicability - try to choose the most specific one
+            if (distinctApplicabilities.size == 1 && distinctApplicabilities.single() > CandidateApplicability.INAPPLICABLE) {
+                chooseMostSpecific()
+            } else {
+                bestCandidates.toSet()
+            }
+        } else {
+            chooseMostSpecific()
         }
 
         reducedCandidates = overloadByLambdaReturnTypeResolver.reduceCandidates(qualifiedAccess, bestCandidates, reducedCandidates)
@@ -410,7 +422,8 @@ class FirCallResolver(
             buildErrorReference(
                 callInfo,
                 if (annotationClassSymbol != null) ConeIllegalAnnotationError(reference.name)
-                else ConeUnresolvedNameError(reference.name),
+                //calleeReference and annotationTypeRef are both error nodes so we need to avoid doubling of the diagnostic report
+                else ConeStubDiagnostic(ConeUnresolvedNameError(reference.name)),
                 reference.source
             )
         }

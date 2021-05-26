@@ -16,9 +16,12 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.idea.completion.handlers.isTextAt
+import com.intellij.psi.util.PsiUtil
 import org.jetbrains.kotlin.idea.core.asFqNameWithRootPrefixIfNeeded
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.analyse
+import org.jetbrains.kotlin.idea.frontend.api.analyseInDependedAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.addImportToFile
 import org.jetbrains.kotlin.idea.frontend.api.symbols.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtNamedSymbol
@@ -375,7 +378,7 @@ private fun alreadyHasImport(file: KtFile, nameToImport: CallableId): Boolean {
     withAllowedResolve {
         analyse(file) {
             val scopes = file.getScopeContextForFile().scopes
-            if (!scopes.containsName(nameToImport.callableName)) return false
+            if (!scopes.mayContainName(nameToImport.callableName)) return false
 
             return scopes
                 .getCallableSymbols { it == nameToImport.callableName }
@@ -395,8 +398,6 @@ private object ShortNamesRenderer {
         "${if (param.isVararg) "vararg " else ""}${param.name.asString()}: ${param.annotatedType.type.render()}"
 }
 
-private fun Document.isTextAt(offset: Int, text: String) =
-    offset + text.length <= textLength && getText(TextRange(offset, offset + text.length)) == text
 
 private fun CharSequence.skipSpaces(index: Int): Int =
     (index until length).firstOrNull { val c = this[it]; c != ' ' && c != '\t' } ?: this.length
@@ -416,7 +417,6 @@ private fun shortenReferences(targetFile: KtFile, textRange: TextRange) {
             collectPossibleReferenceShortenings(targetFile, textRange)
         }
     }
-
     shortenings.invokeShortening()
 }
 

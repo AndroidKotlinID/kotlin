@@ -1841,6 +1841,12 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
                 }
 
                 @Test
+                @TestMetadata("kt45905.kt")
+                public void testKt45905() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt45905.kt");
+                }
+
+                @Test
                 @TestMetadata("kt46173.kt")
                 public void testKt46173() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt46173.kt");
@@ -2343,6 +2349,12 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
             @TestMetadata("noExceptionOnRedCodeWithArrayLikeCall.kt")
             public void testNoExceptionOnRedCodeWithArrayLikeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/noExceptionOnRedCodeWithArrayLikeCall.kt");
+            }
+
+            @Test
+            @TestMetadata("overloadResolutionWithDefaults.kt")
+            public void testOverloadResolutionWithDefaults() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/overloadResolutionWithDefaults.kt");
             }
 
             @Test
@@ -12396,6 +12408,12 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
             }
 
             @Test
+            @TestMetadata("kt46515.kt")
+            public void testKt46515() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt46515.kt");
+            }
+
+            @Test
             @TestMetadata("kt6175.kt")
             public void testKt6175() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt6175.kt");
@@ -13180,6 +13198,12 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
                 @TestMetadata("equalityConstraintUpstairs.kt")
                 public void testEqualityConstraintUpstairs() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/completion/equalityConstraintUpstairs.kt");
+                }
+
+                @Test
+                @TestMetadata("errorAfterCompletion.kt")
+                public void testErrorAfterCompletion() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/errorAfterCompletion.kt");
                 }
 
                 @Test
@@ -18616,6 +18640,28 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
             }
 
             @Nested
+            @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/hmpp")
+            @TestDataPath("$PROJECT_ROOT")
+            public class Hmpp {
+                @Test
+                public void testAllFilesPresentInHmpp() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/hmpp"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @Test
+                @TestMetadata("sealedInheritorsInComplexModuleStructure.kt")
+                public void testSealedInheritorsInComplexModuleStructure() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/hmpp/sealedInheritorsInComplexModuleStructure.kt");
+                }
+
+                @Test
+                @TestMetadata("simple.kt")
+                public void testSimple() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/hmpp/simple.kt");
+                }
+            }
+
+            @Nested
             @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/inlineClasses")
             @TestDataPath("$PROJECT_ROOT")
             public class InlineClasses {
@@ -21284,6 +21330,12 @@ public class FirOldFrontendDiagnosticsWithLightTreeTestGenerated extends Abstrac
                 @TestMetadata("substituteSeveralOtherErasedTypeArguments.kt")
                 public void testSubstituteSeveralOtherErasedTypeArguments() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteSeveralOtherErasedTypeArguments.kt");
+                }
+
+                @Test
+                @TestMetadata("superTypeErasion.kt")
+                public void testSuperTypeErasion() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/superTypeErasion.kt");
                 }
 
                 @Test

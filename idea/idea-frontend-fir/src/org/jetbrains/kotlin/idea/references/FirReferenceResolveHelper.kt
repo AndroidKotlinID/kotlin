@@ -6,13 +6,10 @@
 package org.jetbrains.kotlin.idea.references
 
 import com.intellij.psi.tree.TokenSet
-import org.jetbrains.kotlin.fir.FirFakeSourceElementKind
-import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.ROOT_PREFIX_FOR_IDE_RESOLUTION_MODE
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
 import org.jetbrains.kotlin.fir.expressions.*
-import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.fir.references.*
 import org.jetbrains.kotlin.fir.resolve.calls.FirSyntheticPropertySymbol
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeAmbiguityError
@@ -41,7 +38,7 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getNonStrictParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.getQualifiedExpressionForSelector
-import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
+import org.jetbrains.kotlin.psi.psiUtil.unwrapNullability
 
 internal object FirReferenceResolveHelper {
     fun FirResolvedTypeRef.toTargetSymbol(session: FirSession, symbolBuilder: KtSymbolByFirBuilder): KtSymbol? {
@@ -219,7 +216,7 @@ internal object FirReferenceResolveHelper {
     }
 
     private fun FirCall.findCorrespondingParameter(ktValueArgument: KtValueArgument): FirValueParameter? =
-        argumentMapping?.entries?.firstNotNullResult { (firArgument, firParameter) ->
+        argumentMapping?.entries?.firstNotNullOfOrNull { (firArgument, firParameter) ->
             if (firArgument.psi == ktValueArgument) firParameter
             else null
         }
@@ -349,16 +346,16 @@ internal object FirReferenceResolveHelper {
         fir: FirResolvedTypeRef,
         expression: KtSimpleNameExpression,
         session: FirSession,
-        symbolBuilder: KtSymbolByFirBuilder
+        symbolBuilder: KtSymbolByFirBuilder,
     ): Collection<KtSymbol> {
-        if (expression.isPartOfUserTypeRefQualifier()) {
-            val typeQualifier = findPossibleTypeQualifier(expression, fir)?.toTargetPsi(session, symbolBuilder)
-            val typeOrPackageQualifier =
-                typeQualifier ?: getPackageSymbolFor(expression, symbolBuilder, forQualifiedType = true)
 
-            return listOfNotNull(typeOrPackageQualifier)
-        }
-        return listOfNotNull(fir.toTargetSymbol(session, symbolBuilder))
+        val isPossiblyPackage = fir is FirErrorTypeRef && expression.isPartOfUserTypeRefQualifier()
+
+        val resultSymbol =
+            if (isPossiblyPackage) getPackageSymbolFor(expression, symbolBuilder, forQualifiedType = true)
+            else fir.toTargetSymbol(session, symbolBuilder)
+
+        return listOfNotNull(resultSymbol)
     }
 
     private fun getSymbolsForResolvedQualifier(
@@ -420,7 +417,7 @@ internal object FirReferenceResolveHelper {
         // FIXME make it work with generics in functional types (like () -> AA.BB<CC, AA.DD>)
         val wholeType = when (val psi = wholeTypeFir.psi) {
             is KtUserType -> psi
-            is KtTypeReference -> psi.typeElement?.unwrapNullable() as? KtUserType
+            is KtTypeReference -> psi.typeElement?.unwrapNullability() as? KtUserType
             else -> null
         } ?: return null
 
@@ -445,10 +442,6 @@ internal object FirReferenceResolveHelper {
         val qualifierIndex = generateSequence(wholeType) { it.qualifier }.indexOf(nestedType)
         require(qualifierIndex != -1) { "Whole type $wholeType should contain $nestedType, but it didn't" }
         return qualifierIndex
-    }
-
-    private tailrec fun KtTypeElement.unwrapNullable(): KtTypeElement? {
-        return if (this is KtNullableType) innerType?.unwrapNullable() else this
     }
 
     private val syntheticTokenTypes = TokenSet.create(KtTokens.ELVIS, KtTokens.EXCLEXCL)

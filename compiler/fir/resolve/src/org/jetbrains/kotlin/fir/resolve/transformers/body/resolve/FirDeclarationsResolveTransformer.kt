@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.dfa.FirControlFlowGraphReferenceImpl
+import org.jetbrains.kotlin.fir.resolve.dfa.unwrapSmartcastExpression
 import org.jetbrains.kotlin.fir.resolve.inference.extractLambdaInfoFromFunctionalType
 import org.jetbrains.kotlin.fir.resolve.inference.isSuspendFunctionType
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
@@ -36,7 +37,6 @@ import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitUnitTypeRef
 import org.jetbrains.kotlin.fir.visitors.*
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 
 open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) : FirPartialBodyResolveTransformer(transformer) {
     private val statusResolver: FirStatusResolver = FirStatusResolver(session, scopeSession)
@@ -64,7 +64,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
     private fun transformDeclarationContent(
         declaration: FirDeclaration, data: ResolutionMode
     ): FirDeclaration {
-        transformer.onBeforeDeclarationContentResolve(declaration)
+        transformer.firTowerDataContextCollector?.addDeclarationContext(declaration, context.towerDataContext)
         transformer.replaceDeclarationResolvePhaseIfNeeded(declaration, transformerPhase)
         return transformer.transformDeclarationContent(declaration, data)
     }
@@ -351,7 +351,13 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
 
     override fun transformRegularClass(regularClass: FirRegularClass, data: ResolutionMode): FirStatement {
         if (regularClass.isLocal && regularClass !in context.targetedLocalClasses) {
-            return regularClass.runAllPhasesForLocalClass(transformer, components, data)
+            return regularClass.runAllPhasesForLocalClass(
+                transformer,
+                components,
+                data,
+                transformer.firTowerDataContextCollector,
+                transformer.firProviderInterceptor
+            )
         }
 
         doTransformTypeParameters(regularClass)
@@ -360,11 +366,17 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
 
     override fun transformTypeAlias(typeAlias: FirTypeAlias, data: ResolutionMode): FirDeclaration {
         if (typeAlias.isLocal && typeAlias !in context.targetedLocalClasses) {
-            return typeAlias.runAllPhasesForLocalClass(transformer, components, data)
+            return typeAlias.runAllPhasesForLocalClass(
+                transformer,
+                components,
+                data,
+                transformer.firTowerDataContextCollector,
+                transformer.firProviderInterceptor
+            )
         }
         doTransformTypeParameters(typeAlias)
         typeAlias.transformAnnotations(transformer, data)
-        transformer.onBeforeDeclarationContentResolve(typeAlias)
+        transformer.firTowerDataContextCollector?.addDeclarationContext(typeAlias, context.towerDataContext)
         typeAlias.transformExpandedTypeRef(transformer, data)
         return typeAlias
     }
@@ -400,7 +412,13 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         data: ResolutionMode
     ): FirStatement {
         if (anonymousObject !in context.targetedLocalClasses) {
-            return anonymousObject.runAllPhasesForLocalClass(transformer, components, data)
+            return anonymousObject.runAllPhasesForLocalClass(
+                transformer,
+                components,
+                data,
+                transformer.firTowerDataContextCollector,
+                transformer.firProviderInterceptor
+            )
         }
         dataFlowAnalyzer.enterClass()
         if (anonymousObject.typeRef !is FirResolvedTypeRef) {
@@ -433,7 +451,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
             //  should be replaced there properly
             val returnType =
                 dataFlowAnalyzer.returnExpressionsOfAnonymousFunction(result)
-                    .firstNotNullResult { (it as? FirExpression)?.resultType?.coneTypeSafe() }
+                    .firstNotNullOfOrNull { (it as? FirExpression)?.resultType?.coneTypeSafe() }
 
             if (returnType != null) {
                 result.transformReturnTypeRef(transformer, withExpectedType(returnType))
@@ -499,6 +517,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                         returnExpression.resultType.approximatedIfNeededOrSelf(
                             inferenceComponents.approximator,
                             simpleFunction?.visibilityForApproximation(),
+                            transformer.session.typeContext,
                             simpleFunction?.isInline == true
                         )
                     )
@@ -594,9 +613,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                     ConeSimpleDiagnostic("No type for parameter", DiagnosticKind.ValueParameterWithNoTypeAnnotation)
                 )
             )
-            return context.withValueParameter(valueParameter) {
-                valueParameter
-            }
+            return valueParameter
         }
 
         dataFlowAnalyzer.enterValueParameter(valueParameter)
@@ -655,7 +672,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                                 val name = Name.identifier("it")
                                 val itParam = buildValueParameter {
                                     source = lambda.source?.fakeElement(FirFakeSourceElementKind.ItLambdaParameter)
-                                    declarationSiteSession = session
+                                    moduleData = session.moduleData
                                     origin = FirDeclarationOrigin.Source
                                     returnTypeRef = singleParameterType.toFirResolvedTypeRef()
                                     this.name = name
@@ -795,7 +812,7 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
         if (variable.returnTypeRef is FirImplicitTypeRef) {
             val resultType = when {
                 initializer != null -> {
-                    val unwrappedInitializer = (initializer as? FirExpressionWithSmartcast)?.originalExpression ?: initializer
+                    val unwrappedInitializer = initializer.unwrapSmartcastExpression()
                     unwrappedInitializer.resultType
                 }
                 variable.getter != null && variable.getter !is FirDefaultPropertyAccessor -> variable.getter?.returnTypeRef
@@ -827,7 +844,8 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                     withExpectedType(
                         expectedType.approximatedIfNeededOrSelf(
                             inferenceComponents.approximator,
-                            variable.visibilityForApproximation()
+                            variable.visibilityForApproximation(),
+                            inferenceComponents.session.typeContext,
                         )
                     )
                 )
@@ -860,7 +878,12 @@ open class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransfor
                 valueParameter.transformReturnTypeRef(
                     StoreType,
                     valueParameter.returnTypeRef.resolvedTypeFromPrototype(
-                        ConeKotlinErrorType(ConeSimpleDiagnostic("No type for parameter", DiagnosticKind.ValueParameterWithNoTypeAnnotation))
+                        ConeKotlinErrorType(
+                            ConeSimpleDiagnostic(
+                                "No type for parameter",
+                                DiagnosticKind.ValueParameterWithNoTypeAnnotation
+                            )
+                        )
                     )
                 )
             }

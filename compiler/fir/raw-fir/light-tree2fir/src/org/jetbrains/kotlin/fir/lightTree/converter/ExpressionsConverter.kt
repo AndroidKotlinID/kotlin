@@ -86,7 +86,7 @@ class ExpressionsConverter(
                 ANNOTATED_EXPRESSION -> convertAnnotatedExpression(expression)
                 CLASS_LITERAL_EXPRESSION -> convertClassLiteralExpression(expression)
                 CALLABLE_REFERENCE_EXPRESSION -> convertCallableReferenceExpression(expression)
-                in qualifiedAccessTokens -> convertQualifiedExpression(expression)
+                in QUALIFIED_ACCESS -> convertQualifiedExpression(expression)
                 CALL_EXPRESSION -> convertCallExpression(expression)
                 WHEN -> convertWhenExpression(expression)
                 ARRAY_ACCESS_EXPRESSION -> convertArrayAccessExpression(expression)
@@ -135,7 +135,7 @@ class ExpressionsConverter(
         val target: FirFunctionTarget
         return buildAnonymousFunction {
             source = expressionSource
-            declarationSiteSession = baseSession
+            moduleData = baseModuleData
             origin = FirDeclarationOrigin.Source
             returnTypeRef = implicitType
             receiverTypeRef = implicitType
@@ -153,7 +153,7 @@ class ExpressionsConverter(
                     val name = DESTRUCTURING_NAME
                     val multiParameter = buildValueParameter {
                         source = valueParameter.firValueParameter.source
-                        declarationSiteSession = baseSession
+                        moduleData = baseModuleData
                         origin = FirDeclarationOrigin.Source
                         returnTypeRef = valueParameter.firValueParameter.returnTypeRef
                         this.name = name
@@ -164,7 +164,7 @@ class ExpressionsConverter(
                         isVararg = false
                     }
                     destructuringStatements += generateDestructuringBlock(
-                        this@ExpressionsConverter.baseSession,
+                        baseModuleData,
                         multiDeclaration,
                         multiParameter,
                         tmpVariable = false
@@ -267,6 +267,7 @@ class ExpressionsConverter(
                 }
                 explicitReceiver = leftArgAsFir
                 argumentList = buildUnaryArgumentList(rightArgAsFir)
+                origin = if (conventionCallName != null) FirFunctionCallOrigin.Operator else FirFunctionCallOrigin.Infix
             }
         } else {
             val firOperation = operationToken.toFirOperation()
@@ -387,10 +388,11 @@ class ExpressionsConverter(
                 buildFunctionCall {
                     source = unaryExpression.toFirSourceElement()
                     calleeReference = buildSimpleNamedReference {
-                        source = this@buildFunctionCall.source
+                        source = operationReference?.toFirSourceElement() ?: this@buildFunctionCall.source
                         name = conventionCallName
                     }
                     explicitReceiver = receiver
+                    origin = FirFunctionCallOrigin.Operator
                 }
             }
             else -> throw IllegalStateException("Unexpected expression: ${unaryExpression.asText}")
@@ -642,7 +644,7 @@ class ExpressionsConverter(
                     buildProperty {
                         source = it.toFirSourceElement()
                         origin = FirDeclarationOrigin.Source
-                        declarationSiteSession = baseSession
+                        moduleData = baseModuleData
                         returnTypeRef = variable.returnTypeRef
                         name = variable.name
                         initializer = variable.initializer
@@ -842,6 +844,7 @@ class ExpressionsConverter(
                 arguments += indices
                 getArgument?.let { arguments += it }
             }
+            origin = FirFunctionCallOrigin.Operator
         }
     }
 
@@ -958,7 +961,7 @@ class ExpressionsConverter(
         return buildBlock {
             source = fakeSource
             val iteratorVal = generateTemporaryVariable(
-                this@ExpressionsConverter.baseSession,
+                baseModuleData,
                 rangeExpression.source?.fakeElement(FirFakeSourceElementKind.DesugaredForLoop),
                 ITERATOR_NAME,
                 buildFunctionCall {
@@ -992,7 +995,7 @@ class ExpressionsConverter(
                     val valueParameter = parameter ?: return@block
                     val multiDeclaration = valueParameter.destructuringDeclaration
                     val firLoopParameter = generateTemporaryVariable(
-                        this@ExpressionsConverter.baseSession,
+                        baseModuleData,
                         valueParameter.firValueParameter.source,
                         if (multiDeclaration != null) DESTRUCTURING_NAME else valueParameter.firValueParameter.name,
                         buildFunctionCall {
@@ -1007,7 +1010,7 @@ class ExpressionsConverter(
                     )
                     if (multiDeclaration != null) {
                         val destructuringBlock = generateDestructuringBlock(
-                            this@ExpressionsConverter.baseSession,
+                            baseModuleData,
                             multiDeclaration,
                             firLoopParameter,
                             tmpVariable = true

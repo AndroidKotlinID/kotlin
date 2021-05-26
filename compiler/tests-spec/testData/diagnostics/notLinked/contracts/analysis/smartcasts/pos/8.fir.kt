@@ -1,5 +1,4 @@
 // !USE_EXPERIMENTAL: kotlin.contracts.ExperimentalContracts
-// !WITH_NEW_INFERENCE
 
 // FILE: contracts.kt
 
@@ -20,11 +19,11 @@ fun <T> T?.case_3(value_1: Int?, value_2: Boolean): Boolean {
 
 // TESTCASE NUMBER: 4
 fun case_4(value_1: Number, block: (() -> Unit)?): Boolean? {
-    <!WRONG_IMPLIES_CONDITION!>contract {
+    contract {
         returns(true) implies (value_1 is Int)
         returns(false) implies (block == null)
         returns(null) implies (block != null)
-    }<!>
+    }
 
     return value_1 == null
 }

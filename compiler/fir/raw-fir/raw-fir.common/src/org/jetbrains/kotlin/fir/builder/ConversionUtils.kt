@@ -28,10 +28,7 @@ import org.jetbrains.kotlin.fir.references.builder.buildImplicitThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildSimpleNamedReference
 import org.jetbrains.kotlin.fir.symbols.constructStarProjectedType
-import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertyAccessorSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.*
 import org.jetbrains.kotlin.fir.types.impl.*
@@ -196,6 +193,7 @@ fun FirExpression.generateContainsOperation(
             name = OperatorNameConventions.NOT
         }
         explicitReceiver = containsCall
+        origin = FirFunctionCallOrigin.Operator
     }
 }
 
@@ -245,6 +243,7 @@ private fun FirExpression.createConventionCall(
         }
         explicitReceiver = this@createConventionCall
         argumentList = buildUnaryArgumentList(argument)
+        origin = FirFunctionCallOrigin.Operator
     }
 }
 
@@ -271,14 +270,12 @@ fun generateResolvedAccessExpression(source: FirSourceElement?, variable: FirVar
         }
     }
 
-
-
 fun generateTemporaryVariable(
-    session: FirSession, source: FirSourceElement?, name: Name, initializer: FirExpression, typeRef: FirTypeRef? = null,
+    moduleData: FirModuleData, source: FirSourceElement?, name: Name, initializer: FirExpression, typeRef: FirTypeRef? = null,
 ): FirVariable<*> =
     buildProperty {
         this.source = source
-        declarationSiteSession = session
+        this.moduleData = moduleData
         origin = FirDeclarationOrigin.Source
         returnTypeRef = typeRef ?: buildImplicitTypeRef {
             this.source = source
@@ -292,13 +289,24 @@ fun generateTemporaryVariable(
     }
 
 fun generateTemporaryVariable(
-    session: FirSession, source: FirSourceElement?, specialName: String, initializer: FirExpression,
-): FirVariable<*> = generateTemporaryVariable(session, source, Name.special("<$specialName>"), initializer)
+    moduleData: FirModuleData, source: FirSourceElement?, specialName: String, initializer: FirExpression,
+): FirVariable<*> = generateTemporaryVariable(moduleData, source, Name.special("<$specialName>"), initializer)
+
+val FirClassBuilder.ownerRegularOrAnonymousObjectSymbol
+    get() = when (this) {
+        is FirAnonymousObjectBuilder -> symbol
+        is FirRegularClassBuilder -> symbol
+        else -> null
+    }
+
+val FirClassBuilder.ownerRegularClassTypeParametersCount
+    get() = if (this is FirRegularClassBuilder) typeParameters.size else null
 
 fun FirPropertyBuilder.generateAccessorsByDelegate(
     delegateBuilder: FirWrappedDelegateExpressionBuilder?,
-    ownerClassBuilder: FirClassBuilder?,
-    session: FirSession,
+    moduleData: FirModuleData,
+    ownerRegularOrAnonymousObjectSymbol: FirClassSymbol<*>?,
+    ownerRegularClassTypeParametersCount: Int?,
     isExtension: Boolean,
     stubMode: Boolean,
     receiver: FirExpression?
@@ -307,12 +315,8 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
     val delegateFieldSymbol = FirDelegateFieldSymbol<FirProperty>(symbol.callableId).also {
         this.delegateFieldSymbol = it
     }
-    val ownerSymbol = when (ownerClassBuilder) {
-        is FirAnonymousObjectBuilder -> ownerClassBuilder.symbol
-        is FirRegularClassBuilder -> ownerClassBuilder.symbol
-        else -> null
-    }
-    val isMember = ownerSymbol != null
+
+    val isMember = ownerRegularOrAnonymousObjectSymbol != null
     val fakeSource = delegateBuilder.source?.fakeElement(FirFakeSourceElementKind.DelegatedPropertyAccessor)
 
     /*
@@ -337,14 +341,14 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
                     boundSymbol = this@generateAccessorsByDelegate.symbol
                 }
             }
-            ownerSymbol != null -> buildThisReceiverExpression {
+            ownerRegularOrAnonymousObjectSymbol != null -> buildThisReceiverExpression {
                 source = fakeSource
                 calleeReference = buildImplicitThisReference {
-                    boundSymbol = ownerSymbol
+                    boundSymbol = ownerRegularOrAnonymousObjectSymbol
                 }
                 typeRef = buildResolvedTypeRef {
-                    val typeParameterNumber = (ownerClassBuilder as? FirRegularClassBuilder)?.typeParameters?.size ?: 0
-                    type = ownerSymbol.constructStarProjectedType(typeParameterNumber)
+                    val typeParameterNumber = ownerRegularClassTypeParametersCount ?: 0
+                    type = ownerRegularOrAnonymousObjectSymbol.constructStarProjectedType(typeParameterNumber)
                 }
             }
             else -> buildConstExpression(null, ConstantValueKind.Null, null)
@@ -355,7 +359,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         calleeReference = buildDelegateFieldReference {
             resolvedSymbol = delegateFieldSymbol
         }
-        if (ownerSymbol != null) {
+        if (ownerRegularOrAnonymousObjectSymbol != null) {
             dispatchReceiver = thisRef(forDispatchReceiver = true)
         }
     }
@@ -394,6 +398,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
             name = PROVIDE_DELEGATE
         }
         argumentList = buildBinaryArgumentList(thisRef(forDispatchReceiver = true), propertyRef())
+        origin = FirFunctionCallOrigin.Operator
     }
     delegate = delegateBuilder.build()
     if (stubMode) return
@@ -402,7 +407,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         val returnTarget = FirFunctionTarget(null, isLambda = false)
         getter = buildPropertyAccessor {
             this.source = fakeSource
-            declarationSiteSession = session
+            this.moduleData = moduleData
             origin = FirDeclarationOrigin.Source
             returnTypeRef = buildImplicitTypeRef()
             isGetter = true
@@ -419,6 +424,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
                             name = GET_VALUE
                         }
                         argumentList = buildBinaryArgumentList(thisRef(), propertyRef())
+                        origin = FirFunctionCallOrigin.Operator
                     }
                     target = returnTarget
                 }
@@ -434,14 +440,14 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
         val annotations = setter?.annotations
         setter = buildPropertyAccessor {
             this.source = fakeSource
-            declarationSiteSession = session
+            this.moduleData = moduleData
             origin = FirDeclarationOrigin.Source
-            returnTypeRef = session.builtinTypes.unitType
+            returnTypeRef = moduleData.session.builtinTypes.unitType
             isGetter = false
             status = FirDeclarationStatusImpl(Visibilities.Unknown, Modality.FINAL)
             val parameter = buildValueParameter {
                 source = fakeSource
-                declarationSiteSession = session
+                this.moduleData = moduleData
                 origin = FirDeclarationOrigin.Source
                 returnTypeRef = buildImplicitTypeRef()
                 name = DELEGATED_SETTER_PARAM
@@ -471,6 +477,7 @@ fun FirPropertyBuilder.generateAccessorsByDelegate(
                             }
                         }
                     }
+                    origin = FirFunctionCallOrigin.Operator
                 }
             )
             if (annotations != null) {

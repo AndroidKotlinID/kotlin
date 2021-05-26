@@ -82,9 +82,11 @@ object FirInlineDeclarationChecker : FirMemberDeclarationChecker() {
 
         override fun visitFunctionCall(functionCall: FirFunctionCall, data: CheckerContext) {
             val targetSymbol = functionCall.toResolvedCallableSymbol()
-            checkReceiversOfQualifiedAccessExpression(functionCall, targetSymbol, data)
-            checkArgumentsOfCall(functionCall, targetSymbol, data)
-            checkQualifiedAccess(functionCall, targetSymbol, data)
+            if (targetSymbol != null) {
+                checkReceiversOfQualifiedAccessExpression(functionCall, targetSymbol, data)
+                checkArgumentsOfCall(functionCall, targetSymbol, data)
+                checkQualifiedAccess(functionCall, targetSymbol, data)
+            }
         }
 
         override fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: CheckerContext) {
@@ -184,8 +186,8 @@ object FirInlineDeclarationChecker : FirMemberDeclarationChecker() {
 
         private fun FirQualifiedAccess.partOfCall(context: CheckerContext): Boolean {
             if (this !is FirExpression) return false
-            val containingQualifiedAccess = context.qualifiedAccesses.getOrNull(context.qualifiedAccesses.size - 2) ?: return false
-            if (this == containingQualifiedAccess.explicitReceiver) return true
+            val containingQualifiedAccess = context.qualifiedAccessOrAnnotationCalls.getOrNull(context.qualifiedAccessOrAnnotationCalls.size - 2) ?: return false
+            if (this == (containingQualifiedAccess as? FirQualifiedAccess)?.explicitReceiver) return true
             val call = containingQualifiedAccess as? FirCall ?: return false
             return call.arguments.any { it.unwrapArgument() == this }
         }

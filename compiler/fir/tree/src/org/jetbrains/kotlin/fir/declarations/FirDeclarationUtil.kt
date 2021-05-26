@@ -11,25 +11,30 @@ import org.jetbrains.kotlin.fir.declarations.builder.FirRegularClassBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
 import org.jetbrains.kotlin.fir.declarations.impl.FirFileImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirRegularClassImpl
+import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
+import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousObjectSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.ConeFlexibleType
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.coneTypeSafe
+import org.jetbrains.kotlin.metadata.ProtoBuf
+import org.jetbrains.kotlin.metadata.deserialization.NameResolver
 
 fun FirTypeParameterBuilder.addDefaultBoundIfNecessary(isFlexible: Boolean = false) {
     if (bounds.isEmpty()) {
+        val builtinTypes = moduleData.session.builtinTypes
         val type = if (isFlexible) {
-            val session = declarationSiteSession
             buildResolvedTypeRef {
-                type = ConeFlexibleType(session.builtinTypes.anyType.type, session.builtinTypes.nullableAnyType.type)
+                type = ConeFlexibleType(builtinTypes.anyType.type, builtinTypes.nullableAnyType.type)
             }
         } else {
-            declarationSiteSession.builtinTypes.nullableAnyType
+            builtinTypes.nullableAnyType
         }
         bounds += type
     }
@@ -155,7 +160,7 @@ val FirClass<*>.constructorsSortedByDelegation: List<FirConstructor>
     get() = constructors.sortedWith(ConstructorDelegationComparator)
 
 val FirClass<*>.primaryConstructor: FirConstructor?
-    get() = constructors.firstOrNull()?.takeIf { it.isPrimary }
+    get() = constructors.find(FirConstructor::isPrimary)
 
 fun FirRegularClass.collectEnumEntries(): Collection<FirEnumEntry> {
     assert(classKind == ClassKind.ENUM_CLASS)
@@ -178,6 +183,10 @@ fun FirRegularClass.addDeclaration(declaration: FirDeclaration) {
 private object SourceElementKey : FirDeclarationDataKey()
 
 var FirRegularClass.sourceElement: SourceElement? by FirDeclarationDataRegistry.data(SourceElementKey)
+
+private object ModuleNameKey : FirDeclarationDataKey()
+
+var FirRegularClass.moduleName: String? by FirDeclarationDataRegistry.data(ModuleNameKey)
 
 var FirTypeAlias.sourceElement: SourceElement? by FirDeclarationDataRegistry.data(SourceElementKey)
 
@@ -214,6 +223,12 @@ val FirProperty.hasBackingField: Boolean
                 return isReferredViaField == true
             }
         }
+    }
+
+val FirQualifiedAccess.referredPropertySymbol: FirPropertySymbol?
+    get() {
+        val reference = calleeReference as? FirResolvedNamedReference ?: return null
+        return reference.resolvedSymbol as? FirPropertySymbol
     }
 
 inline val FirDeclaration.isFromLibrary: Boolean

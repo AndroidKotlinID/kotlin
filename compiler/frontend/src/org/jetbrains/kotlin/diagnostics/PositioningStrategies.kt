@@ -591,6 +591,17 @@ object PositioningStrategies {
     }
 
     @JvmField
+    val QUESTION_MARK_BY_TYPE: PositioningStrategy<KtTypeReference> = object : PositioningStrategy<KtTypeReference>() {
+        override fun mark(element: KtTypeReference): List<TextRange> {
+            val typeElement = element.typeElement
+            if (typeElement is KtNullableType) {
+                return markNode(typeElement.questionMarkNode)
+            }
+            return super.mark(element)
+        }
+    }
+
+    @JvmField
     val CALL_EXPRESSION: PositioningStrategy<PsiElement> = object : PositioningStrategy<PsiElement>() {
         override fun mark(element: PsiElement): List<TextRange> {
             if (element is KtCallExpression) {
@@ -603,7 +614,11 @@ object PositioningStrategies {
     @JvmField
     val VALUE_ARGUMENTS: PositioningStrategy<KtElement> = object : PositioningStrategy<KtElement>() {
         override fun mark(element: KtElement): List<TextRange> {
-            return markElement(element.findDescendantOfType<KtValueArgumentList>()?.rightParenthesis ?: element)
+            val qualifiedAccess = when (element) {
+                is KtQualifiedExpression -> element.selectorExpression ?: element
+                else -> element
+            }
+            return markElement(qualifiedAccess.findDescendantOfType<KtValueArgumentList>()?.rightParenthesis ?: qualifiedAccess)
         }
     }
 
@@ -764,10 +779,13 @@ object PositioningStrategies {
 
     val DOT_BY_QUALIFIED: PositioningStrategy<PsiElement> = object : PositioningStrategy<PsiElement>() {
         override fun mark(element: PsiElement): List<TextRange> {
-            when (element) {
-                is KtDotQualifiedExpression -> {
-                    return mark(element.operationTokenNode.psi)
+            if (element is KtBinaryExpression && element.operationToken in KtTokens.ALL_ASSIGNMENTS) {
+                element.left?.let { left ->
+                    left.findDescendantOfType<KtDotQualifiedExpression>()?.let { return mark(it) }
                 }
+            }
+            if (element is KtDotQualifiedExpression) {
+                return mark(element.operationTokenNode.psi)
             }
             // Fallback to mark the callee reference.
             return REFERENCE_BY_QUALIFIED.mark(element)
@@ -837,9 +855,9 @@ object PositioningStrategies {
 
     val REIFIED_MODIFIER: PositioningStrategy<KtModifierListOwner> = modifierSetPosition(KtTokens.REIFIED_KEYWORD)
 
-    val ASSIGNMENT_VALUE: PositioningStrategy<KtProperty> = object : PositioningStrategy<PsiElement>() {
-        override fun mark(element: PsiElement): List<TextRange> {
-            return markElement(if (element is KtProperty) element.initializer ?: element else element)
+    val PROPERTY_INITIALIZER: PositioningStrategy<KtProperty> = object : PositioningStrategy<KtProperty>() {
+        override fun mark(element: KtProperty): List<TextRange> {
+            return markElement(element.initializer ?: element)
         }
     }
 
@@ -854,6 +872,23 @@ object PositioningStrategies {
         }
     }
 
+    val ANNOTATION_USE_SITE: PositioningStrategy<KtAnnotationEntry> = object : PositioningStrategy<KtAnnotationEntry>() {
+        override fun mark(element: KtAnnotationEntry): List<TextRange> {
+            return markElement(element.useSiteTarget ?: element)
+        }
+    }
+
+    val ASSIGNMENT_LHS: PositioningStrategy<PsiElement> = object : PositioningStrategy<PsiElement>() {
+        override fun mark(element: PsiElement): List<TextRange> {
+            if (element is KtBinaryExpression && element.operationToken in KtTokens.ALL_ASSIGNMENTS) {
+                element.left.let { left -> left.unwrapParenthesesLabelsAndAnnotations()?.let { return markElement(it) } }
+            }
+            if (element is KtUnaryExpression && element.operationToken in KtTokens.INCREMENT_AND_DECREMENT) {
+                element.baseExpression.let { arg -> arg.unwrapParenthesesLabelsAndAnnotations()?.let { return markElement(it) } }
+            }
+            return super.mark(element)
+        }
+    }
 
     /**
      * @param locateReferencedName whether to remove any nested parentheses while locating the reference element. This is useful for
@@ -885,6 +920,7 @@ object PositioningStrategies {
                 is KtSuperTypeCallEntry -> element.calleeExpression
                 is KtOperationExpression -> element.operationReference
                 is KtWhenConditionInRange -> element.operationReference
+                is KtAnnotationEntry -> element.calleeExpression ?: element
                 else -> element
             }
             while (locateReferencedName && result is KtParenthesizedExpression) {

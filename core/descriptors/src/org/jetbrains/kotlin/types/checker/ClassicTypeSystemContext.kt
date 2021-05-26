@@ -507,11 +507,6 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext, TypeSy
         return this.replace(newArguments as List<TypeProjection>)
     }
 
-    override fun prepareType(type: KotlinTypeMarker): KotlinTypeMarker {
-        require(type is KotlinType, type::errorMessage)
-        return NewKotlinTypeChecker.Default.transformToNewType(type.unwrap())
-    }
-
     override fun DefinitelyNotNullTypeMarker.original(): SimpleTypeMarker {
         require(this is DefinitelyNotNullType, this::errorMessage)
         return this.original
@@ -610,7 +605,7 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext, TypeSy
     }
 
     override fun TypeConstructorMarker.isTypeParameterTypeConstructor(): Boolean {
-        return this is AbstractTypeConstructor && this.declarationDescriptor is AbstractTypeParameterDescriptor
+        return this is ClassifierBasedTypeConstructor && this.declarationDescriptor is AbstractTypeParameterDescriptor
     }
 
     override fun arrayType(componentType: KotlinTypeMarker): SimpleTypeMarker {
@@ -746,6 +741,13 @@ interface ClassicTypeSystemContext : TypeSystemInferenceExtensionContext, TypeSy
     override fun getKFunctionTypeConstructor(parametersNumber: Int, isSuspend: Boolean): TypeConstructorMarker {
         return getKFunctionDescriptor(builtIns, parametersNumber, isSuspend).typeConstructor
     }
+
+    override fun SimpleTypeMarker.createConstraintPartForLowerBoundAndFlexibleTypeVariable(): KotlinTypeMarker =
+        if (this.isMarkedNullable()) {
+            this
+        } else {
+            createFlexibleType(this, this.withNullability(true))
+        }
 }
 
 fun TypeVariance.convertVariance(): Variance {

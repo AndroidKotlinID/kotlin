@@ -11,9 +11,9 @@ import com.intellij.psi.tree.TokenSet
 import org.jetbrains.kotlin.KtNodeType
 import org.jetbrains.kotlin.KtNodeTypes.*
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirFakeSourceElementKind
+import org.jetbrains.kotlin.fir.FirModuleData
 import org.jetbrains.kotlin.fir.builder.generateResolvedAccessExpression
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirVariable
@@ -39,8 +39,6 @@ private val expressionSet = listOf(
     LAMBDA_EXPRESSION,
     FUN
 )
-
-val qualifiedAccessTokens = TokenSet.create(DOT_QUALIFIED_EXPRESSION, SAFE_ACCESS_EXPRESSION)
 
 fun String?.nameAsSafeName(defaultName: String = ""): Name {
     return when {
@@ -107,7 +105,7 @@ inline fun isClassLocal(classNode: LighterASTNode, getParent: LighterASTNode.() 
 }
 
 fun generateDestructuringBlock(
-    session: FirSession,
+    moduleData: FirModuleData,
     multiDeclaration: DestructuringDeclaration,
     container: FirVariable<*>,
     tmpVariable: Boolean
@@ -120,7 +118,7 @@ fun generateDestructuringBlock(
         for ((index, entry) in multiDeclaration.entries.withIndex()) {
             if (entry == null) continue
             statements += buildProperty {
-                declarationSiteSession = session
+                this.moduleData = moduleData
                 origin = FirDeclarationOrigin.Source
                 returnTypeRef = entry.returnTypeRef
                 name = entry.name

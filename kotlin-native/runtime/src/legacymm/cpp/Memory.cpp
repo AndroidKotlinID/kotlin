@@ -3537,7 +3537,7 @@ KLong Kotlin_native_internal_GC_getThresholdAllocations(KRef) {
 #endif
 }
 
-void Kotlin_native_internal_GC_setTuneThreshold(KRef, KInt value) {
+void Kotlin_native_internal_GC_setTuneThreshold(KRef, KBoolean value) {
 #if USE_GC
   setTuneGCThreshold(value);
 #endif
@@ -3737,3 +3737,5 @@ kotlin::ThreadState kotlin::GetThreadState(MemoryState* thread) noexcept {
     // Assume that we are always in the Runnable thread state.
     return ThreadState::kRunnable;
 }
+
+const bool kotlin::kSupportsMultipleMutators = true;

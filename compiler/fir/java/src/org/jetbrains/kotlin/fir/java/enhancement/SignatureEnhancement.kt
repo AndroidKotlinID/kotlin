@@ -37,6 +37,13 @@ class FirSignatureEnhancement(
     private val session: FirSession,
     private val overridden: FirSimpleFunction.() -> List<FirCallableMemberDeclaration<*>>
 ) {
+    /*
+     * FirSignatureEnhancement may be created with library session which doesn't have single module data,
+     *   so owner is a only place where module data can be obtained. However it's guaranteed that `owner`
+     *   was created for same session as one passed to constructor, so it's safe to use owners module data
+     */
+    private val moduleData = owner.moduleData
+
     private val javaTypeParameterStack: JavaTypeParameterStack =
         if (owner is FirJavaClass) owner.javaTypeParameterStack else JavaTypeParameterStack.EMPTY
 
@@ -94,7 +101,7 @@ class FirSignatureEnhancement(
                 val symbol = FirFieldSymbol(original.callableId)
                 buildJavaField {
                     source = firElement.source
-                    declarationSiteSession = session
+                    moduleData = this@FirSignatureEnhancement.moduleData
                     this.symbol = symbol
                     this.name = name
                     returnTypeRef = newReturnTypeRef
@@ -131,7 +138,7 @@ class FirSignatureEnhancement(
                     setterDelegate?.symbol
                 }
                 return buildSyntheticProperty {
-                    declarationSiteSession = session
+                    moduleData = this@FirSignatureEnhancement.moduleData
                     this.name = name
                     symbol = FirAccessorSymbol(accessorSymbol.callableId, accessorSymbol.accessorId)
                     delegateGetter = enhancedGetterSymbol.fir as FirSimpleFunction
@@ -207,7 +214,7 @@ class FirSignatureEnhancement(
 
             buildValueParameter {
                 source = valueParameter.source
-                declarationSiteSession = session
+                moduleData = this@FirSignatureEnhancement.moduleData
                 origin = FirDeclarationOrigin.Enhancement
                 returnTypeRef = enhancedReturnType
                 this.name = valueParameter.name
@@ -255,7 +262,7 @@ class FirSignatureEnhancement(
                     }
                 }.apply {
                     source = firMethod.source
-                    declarationSiteSession = session
+                    moduleData = this@FirSignatureEnhancement.moduleData
                     resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
                     origin = FirDeclarationOrigin.Enhancement
                     this.valueParameters += newValueParameters
@@ -265,7 +272,7 @@ class FirSignatureEnhancement(
             is FirJavaMethod -> {
                 FirSimpleFunctionBuilder().apply {
                     source = firMethod.source
-                    declarationSiteSession = session
+                    moduleData = this@FirSignatureEnhancement.moduleData
                     origin = FirDeclarationOrigin.Enhancement
                     returnTypeRef = newReturnTypeRef
                     receiverTypeRef = newReceiverTypeRef

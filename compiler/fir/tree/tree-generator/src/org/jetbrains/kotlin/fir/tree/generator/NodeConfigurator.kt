@@ -75,7 +75,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
         }
 
         declaration.configure {
-            +field("declarationSiteSession", firSessionType)
+            +field("moduleData", firModuleDataType)
             +field("resolvePhase", resolvePhaseType, withReplace = true).apply { isMutable = true }
             +field("origin", declarationOriginType)
             +field("attributes", declarationAttributesType)
@@ -207,6 +207,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         functionCall.configure {
             +field("calleeReference", namedReference)
+            +field("origin", functionCallOrigin)
         }
 
         comparisonExpression.configure {
@@ -459,6 +460,12 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
             +field("originalType", typeRef)
         }
 
+        expressionWithSmartcastToNull.configure {
+            +field("originalExpression", qualifiedAccessExpression)
+            +field("typesFromSmartCast", "Collection<ConeKotlinType>", null, customType = coneKotlinTypeType)
+            +field("originalType", typeRef)
+        }
+
         safeCallExpression.configure {
             +field("receiver", expression).withTransform()
             // Special node that might be used as a reference to receiver of a safe call after null check
@@ -515,6 +522,7 @@ object NodeConfigurator : AbstractFieldConfigurator<FirTreeBuilder>(FirTreeBuild
 
         variableAssignment.configure {
             +field("lValue", reference)
+            +field("lValueTypeRef", typeRef).withReplace()
             +field("rValue", expression).withTransform()
         }
 

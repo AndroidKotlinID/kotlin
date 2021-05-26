@@ -1575,6 +1575,11 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
                     runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt25876.kt");
                 }
 
+                @TestMetadata("kt45905.kt")
+                public void testKt45905() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt45905.kt");
+                }
+
                 @TestMetadata("kt46173.kt")
                 public void testKt46173() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/annotations/typeUse/kt46173.kt");
@@ -2008,6 +2013,11 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
             @TestMetadata("noExceptionOnRedCodeWithArrayLikeCall.kt")
             public void testNoExceptionOnRedCodeWithArrayLikeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/noExceptionOnRedCodeWithArrayLikeCall.kt");
+            }
+
+            @TestMetadata("overloadResolutionWithDefaults.kt")
+            public void testOverloadResolutionWithDefaults() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/overloadResolutionWithDefaults.kt");
             }
 
             @TestMetadata("packageInLhs.kt")
@@ -10791,6 +10801,11 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
                 runTest("compiler/testData/diagnostics/tests/inference/kt40396.kt");
             }
 
+            @TestMetadata("kt46515.kt")
+            public void testKt46515() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/kt46515.kt");
+            }
+
             @TestMetadata("kt6175.kt")
             public void testKt6175() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/kt6175.kt");
@@ -11468,6 +11483,11 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
                 @TestMetadata("equalityConstraintUpstairs.kt")
                 public void testEqualityConstraintUpstairs() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/completion/equalityConstraintUpstairs.kt");
+                }
+
+                @TestMetadata("errorAfterCompletion.kt")
+                public void testErrorAfterCompletion() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/completion/errorAfterCompletion.kt");
                 }
 
                 @TestMetadata("flexibleType.kt")
@@ -16301,6 +16321,29 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
                 }
             }
 
+            @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/hmpp")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Hmpp extends AbstractDiagnosisCompilerTestDataTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInHmpp() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/multiplatform/hmpp"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("sealedInheritorsInComplexModuleStructure.kt")
+                public void testSealedInheritorsInComplexModuleStructure() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/hmpp/sealedInheritorsInComplexModuleStructure.kt");
+                }
+
+                @TestMetadata("simple.kt")
+                public void testSimple() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/multiplatform/hmpp/simple.kt");
+                }
+            }
+
             @TestMetadata("compiler/testData/diagnostics/tests/multiplatform/inlineClasses")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
@@ -18646,6 +18689,11 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
                 @TestMetadata("substituteSeveralOtherErasedTypeArguments.kt")
                 public void testSubstituteSeveralOtherErasedTypeArguments() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/substituteSeveralOtherErasedTypeArguments.kt");
+                }
+
+                @TestMetadata("superTypeErasion.kt")
+                public void testSuperTypeErasion() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/platformTypes/rawTypes/superTypeErasion.kt");
                 }
 
                 @TestMetadata("typeEnhancement.kt")

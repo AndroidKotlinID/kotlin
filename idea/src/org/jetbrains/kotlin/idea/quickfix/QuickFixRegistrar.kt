@@ -25,7 +25,10 @@ import org.jetbrains.kotlin.idea.inspections.AddModifierFixFactory
 import org.jetbrains.kotlin.idea.inspections.InfixCallFixActionFactory
 import org.jetbrains.kotlin.idea.inspections.PlatformUnresolvedProvider
 import org.jetbrains.kotlin.idea.inspections.RemoveAnnotationFix
-import org.jetbrains.kotlin.idea.intentions.*
+import org.jetbrains.kotlin.idea.intentions.AddAccessorsIntention
+import org.jetbrains.kotlin.idea.intentions.AddValVarToConstructorParameterAction
+import org.jetbrains.kotlin.idea.intentions.ConvertPropertyInitializerToGetterIntention
+import org.jetbrains.kotlin.idea.intentions.MoveMemberToCompanionObjectIntention
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createCallable.*
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createClass.CreateClassFromCallWithConstructorCalleeActionFactory
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.createClass.CreateClassFromConstructorCallActionFactory
@@ -259,9 +262,9 @@ class QuickFixRegistrar : QuickFixContributor {
         UNSAFE_OPERATOR_CALL.registerFactory(WrapWithSafeLetCallFix.UnsafeFactory)
         TYPE_MISMATCH.registerFactory(WrapWithSafeLetCallFix.TypeMismatchFactory)
 
-        UNSAFE_CALL.registerFactory(AddExclExclCallFix)
-        UNSAFE_INFIX_CALL.registerFactory(AddExclExclCallFix)
-        UNSAFE_OPERATOR_CALL.registerFactory(AddExclExclCallFix)
+        UNSAFE_CALL.registerFactory(UnsafeCallExclExclFixFactory)
+        UNSAFE_INFIX_CALL.registerFactory(UnsafeCallExclExclFixFactory)
+        UNSAFE_OPERATOR_CALL.registerFactory(UnsafeCallExclExclFixFactory)
         UNNECESSARY_NOT_NULL_ASSERTION.registerFactory(RemoveExclExclCallFix)
         UNSAFE_INFIX_CALL.registerFactory(ReplaceInfixOrOperatorCallFix)
         UNSAFE_OPERATOR_CALL.registerFactory(ReplaceInfixOrOperatorCallFix)

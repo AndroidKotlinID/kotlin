@@ -171,19 +171,24 @@ abstract class AbstractDiagnosticCollectorVisitor(
         if (resolvedTypeRef.type is ConeClassErrorType) {
             super.visitResolvedTypeRef(resolvedTypeRef, data)
         }
+        if (resolvedTypeRef.source?.kind is FirFakeSourceElementKind) return
         resolvedTypeRef.delegatedTypeRef?.accept(this, data)
     }
 
     override fun visitFunctionCall(functionCall: FirFunctionCall, data: Nothing?) {
-        visitWithQualifiedAccess(functionCall)
+        visitWithQualifiedAccessOrAnnotationCall(functionCall)
     }
 
     override fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: Nothing?) {
-        visitWithQualifiedAccess(qualifiedAccessExpression)
+        visitWithQualifiedAccessOrAnnotationCall(qualifiedAccessExpression)
+    }
+
+    override fun visitAnnotationCall(annotationCall: FirAnnotationCall, data: Nothing?) {
+        visitWithQualifiedAccessOrAnnotationCall(annotationCall)
     }
 
     override fun visitVariableAssignment(variableAssignment: FirVariableAssignment, data: Nothing?) {
-        visitWithQualifiedAccess(variableAssignment)
+        visitWithQualifiedAccessOrAnnotationCall(variableAssignment)
     }
 
     override fun visitGetClassCall(getClassCall: FirGetClassCall, data: Nothing?) {
@@ -215,9 +220,9 @@ abstract class AbstractDiagnosticCollectorVisitor(
         }
     }
 
-    private fun visitWithQualifiedAccess(qualifiedAccess: FirQualifiedAccess) {
-        return withQualifiedAccess(qualifiedAccess) {
-            visitElement(qualifiedAccess, null)
+    private fun visitWithQualifiedAccessOrAnnotationCall(qualifiedAccessOrAnnotationCall: FirStatement) {
+        return withQualifiedAccessOrAnnotationCall(qualifiedAccessOrAnnotationCall) {
+            visitElement(qualifiedAccessOrAnnotationCall, null)
         }
     }
 
@@ -228,9 +233,9 @@ abstract class AbstractDiagnosticCollectorVisitor(
     }
 
     @OptIn(PrivateForInline::class)
-    inline fun <R> withQualifiedAccess(qualifiedAccess: FirQualifiedAccess, block: () -> R): R {
+    inline fun <R> withQualifiedAccessOrAnnotationCall(qualifiedAccessOrAnnotationCall: FirStatement, block: () -> R): R {
         val existingContext = context
-        context = context.addQualifiedAccess(qualifiedAccess)
+        context = context.addQualifiedAccessOrAnnotationCall(qualifiedAccessOrAnnotationCall)
         try {
             return block()
         } finally {

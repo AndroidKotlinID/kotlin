@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.backend
 import com.intellij.psi.PsiCompiledElement
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.descriptors.InlineClassRepresentation
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.*
@@ -352,6 +353,33 @@ private fun FirClass<*>.getSuperTypesAsIrClasses(
     return irClass.superTypes.mapNotNull { it.classifierOrNull?.owner as? IrClass }.toSet()
 }
 
+internal fun FirProperty.generateOverriddenPropertySymbols(
+    containingClass: FirClass<*>,
+    session: FirSession,
+    scopeSession: ScopeSession,
+    declarationStorage: Fir2IrDeclarationStorage,
+    fakeOverrideGenerator: FakeOverrideGenerator,
+): List<IrPropertySymbol> {
+    val superClasses = containingClass.getSuperTypesAsIrClasses(declarationStorage) ?: return emptyList()
+
+    val scope = containingClass.unsubstitutedScope(session, scopeSession, withForcedTypeCalculator = true)
+    scope.processPropertiesByName(name) {}
+    val overriddenSet = mutableSetOf<IrPropertySymbol>()
+    scope.processOverriddenPropertiesFromSuperClasses(symbol, containingClass) {
+        if (it.fir.visibility == Visibilities.Private) {
+            return@processOverriddenPropertiesFromSuperClasses ProcessorAction.NEXT
+        }
+
+        for (overridden in fakeOverrideGenerator.getOverriddenSymbolsInSupertypes(it, superClasses)) {
+            overriddenSet += overridden
+        }
+
+        ProcessorAction.NEXT
+    }
+
+    return overriddenSet.toList()
+}
+
 internal fun FirProperty.generateOverriddenAccessorSymbols(
     containingClass: FirClass<*>,
     isGetter: Boolean,
@@ -497,3 +525,14 @@ fun Fir2IrComponents.createTemporaryVariableForSafeCallConstruction(
     conversionScope: Fir2IrConversionScope
 ): Pair<IrVariable, IrValueSymbol> =
     createTemporaryVariable(receiverExpression, conversionScope, "safe_receiver")
+
+// TODO: implement inlineClassRepresentation in FirRegularClass instead.
+fun Fir2IrComponents.computeInlineClassRepresentation(klass: FirRegularClass): InlineClassRepresentation<IrSimpleType>? {
+    if (!klass.isInline) return null
+    val parameter = klass.getInlineClassUnderlyingParameter() ?: error("Inline class has no underlying parameter: ${klass.render()}")
+    val underlyingType = parameter.returnTypeRef.toIrType(typeConverter)
+    return InlineClassRepresentation(
+        parameter.name,
+        underlyingType as? IrSimpleType ?: error("Inline class underlying type is not a simple type: ${klass.render()}")
+    )
+}

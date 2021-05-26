@@ -20,8 +20,6 @@ import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.references.builder.*
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
-import org.jetbrains.kotlin.name.CallableId
-import org.jetbrains.kotlin.name.LocalCallableIdConstructor
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
@@ -31,7 +29,9 @@ import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.lexer.KtTokens.CLOSING_QUOTE
 import org.jetbrains.kotlin.lexer.KtTokens.OPEN_QUOTE
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.LocalCallableIdConstructor
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.parsing.*
 import org.jetbrains.kotlin.types.ConstantValueKind
@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.util.OperatorNameConventions
 
 //T can be either PsiElement, or LighterASTNode
 abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Context<T> = Context()) {
+    val baseModuleData: FirModuleData = baseSession.moduleData
 
     abstract fun T.toFirSourceElement(kind: FirFakeSourceElementKind? = null): FirSourceElement
 
@@ -157,7 +158,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 bind(
                     buildErrorFunction {
                         source = baseSource
-                        declarationSiteSession = baseSession
+                        moduleData = baseModuleData
                         origin = FirDeclarationOrigin.Source
                         diagnostic = ConeSimpleDiagnostic(message, kind)
                         symbol = FirErrorFunctionSymbol()
@@ -444,9 +445,8 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
      */
 
     // TODO:
-    // 1. Support receiver capturing for `array.b++` (elementType == ARRAY_ACCESS_EXPRESSION).
-    // 2. Support receiver capturing for `a?.b++` (elementType == SAFE_ACCESS_EXPRESSION).
-    // 3. Add box test cases for #1 and #2 where receiver expression has side effects.
+    // 1. Support receiver capturing for `a?.b++` (elementType == SAFE_ACCESS_EXPRESSION).
+    // 2. Add box test cases for #1 where receiver expression has side effects.
     fun generateIncrementOrDecrementBlock(
         baseExpression: T,
         operationReference: T?,
@@ -455,22 +455,8 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         prefix: Boolean,
         convert: T.() -> FirExpression
     ): FirExpression {
-        // NOTE: By removing surrounding parentheses and labels, FirLabels will NOT be created for those labels.
-        // This should be fine since the label is meaningless and unusable for a ++/-- argument.
-        var unwrappedArgument = argument
-        while (true) {
-            unwrappedArgument = when (unwrappedArgument?.elementType) {
-                PARENTHESIZED -> unwrappedArgument?.getExpressionInParentheses()
-                LABELED_EXPRESSION -> unwrappedArgument?.getLabeledExpression()
-                else -> break
-            }
-        }
-
-        if (unwrappedArgument == null) {
-            return buildErrorExpression {
-                source = unwrappedArgument
-                diagnostic = ConeSimpleDiagnostic("Inc/dec without operand", DiagnosticKind.Syntax)
-            }
+        val unwrappedArgument = argument.unwrap() ?: return buildErrorExpression {
+            diagnostic = ConeSimpleDiagnostic("Inc/dec without operand", DiagnosticKind.Syntax)
         }
 
         if (unwrappedArgument.elementType == DOT_QUALIFIED_EXPRESSION) {
@@ -502,7 +488,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
 
             // initialValueVar is only used for postfix increment/decrement (stores the argument value before increment/decrement).
             val initialValueVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary>"),
                 unwrappedArgument.convert()
@@ -520,11 +506,12 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 } else {
                     generateResolvedAccessExpression(desugaredSource, initialValueVar)
                 }
+                origin = FirFunctionCallOrigin.Operator
             }
 
             // resultVar is only used for prefix increment/decrement.
             val resultVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary-result>"),
                 resultInitializer
@@ -561,6 +548,20 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 statements += initialValueVar
                 appendAssignment()
                 statements += generateResolvedAccessExpression(desugaredSource, initialValueVar)
+            }
+        }
+    }
+
+    private fun T?.unwrap(): T? {
+        // NOTE: By removing surrounding parentheses and labels, FirLabels will NOT be created for those labels.
+        // This should be fine since the label is meaningless and unusable for a ++/-- argument or assignment LHS.
+        var unwrapped = this
+        while (true) {
+            unwrapped = when (unwrapped?.elementType) {
+                PARENTHESIZED -> unwrapped?.getExpressionInParentheses()
+                LABELED_EXPRESSION -> unwrapped?.getLabeledExpression()
+                ANNOTATED_EXPRESSION -> unwrapped?.getAnnotatedExpression()
+                else -> return unwrapped
             }
         }
     }
@@ -606,7 +607,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
             val argumentSelector = argument.selectorExpression
 
             val argumentReceiverVariable = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 argumentReceiver?.toFirSourceElement(),
                 Name.special("<receiver>"),
                 argumentReceiver?.convert() ?: buildErrorExpression {
@@ -625,7 +626,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
 
             // initialValueVar is only used for postfix increment/decrement (stores the argument value before increment/decrement).
             val initialValueVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary>"),
                 firArgument
@@ -643,11 +644,12 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 } else {
                     generateResolvedAccessExpression(desugaredSource, initialValueVar)
                 }
+                origin = FirFunctionCallOrigin.Operator
             }
 
             // resultVar is only used for prefix increment/decrement.
             val resultVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary-result>"),
                 resultInitializer
@@ -729,7 +731,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
             requireNotNull(indices) { "No indices in ${baseExpression.asText}" }
 
             val arrayVariable = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 array?.toFirSourceElement(),
                 Name.special("<array>"),
                 array?.convert() ?: buildErrorExpression {
@@ -740,7 +742,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
 
             val indexVariables = indices.mapIndexed { i, index ->
                 generateTemporaryVariable(
-                    this@BaseFirBuilder.baseSession,
+                    baseModuleData,
                     index.toFirSourceElement(),
                     Name.special("<index$i>"),
                     index.convert()
@@ -759,11 +761,12 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                         arguments += generateResolvedAccessExpression(indexVar.source, indexVar)
                     }
                 }
+                origin = FirFunctionCallOrigin.Operator
             }
 
             // initialValueVar is only used for postfix increment/decrement (stores the argument value before increment/decrement).
             val initialValueVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary>"),
                 firArgument
@@ -781,11 +784,12 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 } else {
                     generateResolvedAccessExpression(desugaredSource, initialValueVar)
                 }
+                origin = FirFunctionCallOrigin.Operator
             }
 
             // resultVar is only used for prefix increment/decrement.
             val resultVar = generateTemporaryVariable(
-                this@BaseFirBuilder.baseSession,
+                baseModuleData,
                 desugaredSource,
                 Name.special("<unary-result>"),
                 resultInitializer
@@ -809,6 +813,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                             resultInitializer
                         }
                     }
+                    origin = FirFunctionCallOrigin.Operator
                 }
             }
 
@@ -855,12 +860,6 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                         }
                     }
                 }
-                PARENTHESIZED -> {
-                    return initializeLValue(left.getExpressionInParentheses(), convertQualified)
-                }
-                ANNOTATED_EXPRESSION -> {
-                    return initializeLValue(left.getAnnotatedExpression(), convertQualified)
-                }
             }
         }
         return buildErrorNamedReference {
@@ -876,19 +875,19 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         operation: FirOperation,
         convert: T.() -> FirExpression
     ): FirStatement {
-        val tokenType = this?.elementType
-        if (tokenType == PARENTHESIZED) {
-            return this!!.getExpressionInParentheses().generateAssignment(baseSource, rhs, value, operation, convert)
+        val unwrappedLhs = this.unwrap() ?: return buildErrorExpression {
+            diagnostic = ConeSimpleDiagnostic("Inc/dec without operand", DiagnosticKind.Syntax)
         }
+
+        val tokenType = unwrappedLhs.elementType
         if (tokenType == ARRAY_ACCESS_EXPRESSION) {
-            require(this != null)
             if (operation == FirOperation.ASSIGN) {
-                context.arraySetArgument[this] = value
+                context.arraySetArgument[unwrappedLhs] = value
             }
             return if (operation == FirOperation.ASSIGN) {
-                this.convert()
+                unwrappedLhs.convert()
             } else {
-                generateAugmentedArraySetCall(baseSource, operation, rhs, convert)
+                generateAugmentedArraySetCall(unwrappedLhs, baseSource, operation, rhs, convert)
             }
         }
 
@@ -919,7 +918,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         return buildVariableAssignment {
             source = baseSource
             rValue = value
-            calleeReference = initializeLValue(this@generateAssignment) { convert() as? FirQualifiedAccess }
+            calleeReference = initializeLValue(unwrappedLhs) { convert() as? FirQualifiedAccess }
         }
     }
 
@@ -945,7 +944,8 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         return safeCallNonAssignment
     }
 
-    private fun T.generateAugmentedArraySetCall(
+    private fun generateAugmentedArraySetCall(
+        unwrappedReceiver: T,
         baseSource: FirSourceElement?,
         operation: FirOperation,
         rhs: T?,
@@ -954,12 +954,13 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
         return buildAugmentedArraySetCall {
             source = baseSource
             this.operation = operation
-            assignCall = generateAugmentedCallForAugmentedArraySetCall(operation, rhs, convert)
-            setGetBlock = generateSetGetBlockForAugmentedArraySetCall(baseSource, operation, rhs, convert)
+            assignCall = generateAugmentedCallForAugmentedArraySetCall(unwrappedReceiver, operation, rhs, convert)
+            setGetBlock = generateSetGetBlockForAugmentedArraySetCall(unwrappedReceiver, baseSource, operation, rhs, convert)
         }
     }
 
-    private fun T.generateAugmentedCallForAugmentedArraySetCall(
+    private fun generateAugmentedCallForAugmentedArraySetCall(
+        unwrappedReceiver: T,
         operation: FirOperation,
         rhs: T?,
         convert: T.() -> FirExpression
@@ -972,18 +973,20 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
             calleeReference = buildSimpleNamedReference {
                 name = FirOperationNameConventions.ASSIGNMENTS.getValue(operation)
             }
-            explicitReceiver = convert()
+            explicitReceiver = unwrappedReceiver.convert()
             argumentList = buildArgumentList {
                 arguments += rhs?.convert() ?: buildErrorExpression(
                     null,
                     ConeSimpleDiagnostic("No value for array set", DiagnosticKind.Syntax)
                 )
             }
+            origin = FirFunctionCallOrigin.Operator
         }
     }
 
 
-    private fun T.generateSetGetBlockForAugmentedArraySetCall(
+    private fun generateSetGetBlockForAugmentedArraySetCall(
+        unwrappedReceiver: T,
         baseSource: FirSourceElement?,
         operation: FirOperation,
         rhs: T?,
@@ -999,20 +1002,20 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
          * }
          */
         return buildBlock {
-            val baseCall = convert() as FirFunctionCall
+            val baseCall = unwrappedReceiver.convert() as FirFunctionCall
 
             val arrayVariable = generateTemporaryVariable(
-                baseSession,
+                baseModuleData,
                 source = null,
-                "<array>",
-                baseCall.explicitReceiver ?: buildErrorExpression {
+                specialName = "<array>",
+                initializer = baseCall.explicitReceiver ?: buildErrorExpression {
                     source = baseSource
                     diagnostic = ConeSimpleDiagnostic("No receiver for array access", DiagnosticKind.Syntax)
                 }
             )
             statements += arrayVariable
             val indexVariables = baseCall.arguments.mapIndexed { i, index ->
-                generateTemporaryVariable(baseSession, source = null, "<index_$i>", index)
+                generateTemporaryVariable(baseModuleData, source = null, specialName = "<index_$i>", initializer = index)
             }
             statements += indexVariables
             statements += buildFunctionCall {
@@ -1021,6 +1024,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 calleeReference = buildSimpleNamedReference {
                     name = OperatorNameConventions.SET
                 }
+                origin = FirFunctionCallOrigin.Operator
                 argumentList = buildArgumentList {
                     for (indexVariable in indexVariables) {
                         arguments += indexVariable.toQualifiedAccess()
@@ -1036,6 +1040,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                                 arguments += indexVariable.toQualifiedAccess()
                             }
                         }
+                        origin = FirFunctionCallOrigin.Operator
                     }
 
                     val operatorCall = buildFunctionCall {
@@ -1052,6 +1057,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                                 )
                             )
                         }
+                        origin = FirFunctionCallOrigin.Operator
                     }
                     arguments += operatorCall
                 }
@@ -1060,7 +1066,6 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
     }
 
     inner class DataClassMembersGenerator(
-        private val session: FirSession,
         private val source: T,
         private val classBuilder: FirRegularClassBuilder,
         private val zippedParameters: List<Pair<T, FirProperty>>,
@@ -1107,7 +1112,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 val parameterSource = sourceNode?.toFirSourceElement()
                 val componentFunction = buildSimpleFunction {
                     source = parameterSource?.fakeElement(FirFakeSourceElementKind.DataClassGeneratedMembers)
-                    declarationSiteSession = session
+                    moduleData = baseModuleData
                     origin = FirDeclarationOrigin.Source
                     returnTypeRef = firProperty.returnTypeRef
                     receiverTypeRef = null
@@ -1130,7 +1135,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                 buildSimpleFunction {
                     val classTypeRef = createClassTypeRefWithSourceKind(FirFakeSourceElementKind.DataClassGeneratedMembers)
                     source = this@DataClassMembersGenerator.source.toFirSourceElement(FirFakeSourceElementKind.DataClassGeneratedMembers)
-                    declarationSiteSession = session
+                    moduleData = baseModuleData
                     origin = FirDeclarationOrigin.Source
                     returnTypeRef = classTypeRef
                     name = copyName
@@ -1144,7 +1149,7 @@ abstract class BaseFirBuilder<T>(val baseSession: FirSession, val context: Conte
                             createParameterTypeRefWithSourceKind(firProperty, FirFakeSourceElementKind.DataClassGeneratedMembers)
                         valueParameters += buildValueParameter {
                             source = parameterSource
-                            declarationSiteSession = session
+                            moduleData = baseModuleData
                             origin = FirDeclarationOrigin.Source
                             returnTypeRef = propertyReturnTypeRef
                             name = propertyName

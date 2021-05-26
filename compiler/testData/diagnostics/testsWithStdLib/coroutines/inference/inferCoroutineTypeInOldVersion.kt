@@ -1,6 +1,5 @@
 // !LANGUAGE: -ExperimentalBuilderInference
 // !DIAGNOSTICS: -UNUSED_PARAMETER
-// !WITH_NEW_INFERENCE
 
 class Builder<T> {
     suspend fun add(t: T) {}
@@ -17,11 +16,11 @@ val member = build {
     add(42)
 }
 
-val memberWithoutAnn = <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER{NI}, TYPE_INFERENCE_NO_INFORMATION_FOR_PARAMETER{OI}!>wrongBuild<!> {
+val memberWithoutAnn = <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER!>wrongBuild<!> {
     <!ILLEGAL_SUSPEND_FUNCTION_CALL!>add<!>(42)
 }
 
-val extension = <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER{NI}, TYPE_INFERENCE_NO_INFORMATION_FOR_PARAMETER{OI}!>build<!> {
+val extension = <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER!>build<!> {
     extensionAdd("foo")
 }
 

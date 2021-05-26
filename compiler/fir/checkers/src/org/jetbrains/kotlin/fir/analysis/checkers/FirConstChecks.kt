@@ -21,15 +21,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
-fun ConeKotlinType.canBeUsedForConstVal(): Boolean {
-    val classId = if (this is ConeFlexibleType) {
-        val lb = this.lowerBoundIfFlexible()
-        if (lb is ConeClassLikeType) lb.lookupTag.classId
-        else this.classId
-    } else this.classId
-    return (classId in StandardClassIds.primitiveTypes || classId in StandardClassIds.unsignedTypes) && !this.isNullable ||
-            classId == StandardClassIds.String
-}
+fun ConeKotlinType.canBeUsedForConstVal(): Boolean = with(lowerBoundIfFlexible()) { isPrimitive || isString || isUnsignedType }
 
 internal fun checkConstantArguments(
     expression: FirExpression,
@@ -97,6 +89,15 @@ internal fun checkConstantArguments(
             )
                 return ConstantArgumentKind.NOT_CONST
         }
+        expressionSymbol is FirConstructor -> {
+            if (expression.typeRef.coneType.isUnsignedType) {
+                (expression as FirFunctionCall).arguments.forEach { argumentExpression ->
+                    checkConstantArguments(argumentExpression, session)?.let { return it }
+                }
+            } else {
+                return ConstantArgumentKind.NOT_CONST
+            }
+        }
         expression is FirFunctionCall -> {
             val calleeReference = expression.calleeReference
             if (calleeReference is FirErrorNamedReference) {
@@ -110,6 +111,7 @@ internal fun checkConstantArguments(
             if (expression.dispatchReceiver is FirThisReceiverExpression) {
                 return null
             }
+
 
             when (calleeReference.name) {
                 in OperatorNameConventions.BINARY_OPERATION_NAMES, in OperatorNameConventions.UNARY_OPERATION_NAMES,
@@ -134,7 +136,7 @@ internal fun checkConstantArguments(
 
                         if (calleeReference.name == OperatorNameConventions.PLUS
                             && expClassId != receiverClassId
-                            && (expClassId !in StandardClassIds.primitiveTypesAndString || receiverClassId !in StandardClassIds.primitiveTypesAndString)
+                            && (expClassId !in StandardClassIds.constantAllowedTypes || receiverClassId !in StandardClassIds.constantAllowedTypes)
                         ) {
                             return ConstantArgumentKind.NOT_CONST
                         }
