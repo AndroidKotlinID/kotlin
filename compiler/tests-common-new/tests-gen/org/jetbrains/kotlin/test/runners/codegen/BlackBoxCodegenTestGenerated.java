@@ -53,6 +53,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         }
 
         @Test
+        @TestMetadata("annotationOnWhen.kt")
+        public void testAnnotationOnWhen() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/annotationOnWhen.kt");
+        }
+
+        @Test
         @TestMetadata("annotationProperty.kt")
         public void testAnnotationProperty() throws Exception {
             runTest("compiler/testData/codegen/box/annotations/annotationProperty.kt");
@@ -27234,6 +27240,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("kt20844.kt")
         public void testKt20844() throws Exception {
             runTest("compiler/testData/codegen/box/optimizations/kt20844.kt");
+        }
+
+        @Test
+        @TestMetadata("kt46921.kt")
+        public void testKt46921() throws Exception {
+            runTest("compiler/testData/codegen/box/optimizations/kt46921.kt");
         }
     }
 
