@@ -461,6 +461,17 @@ object AbstractTypeChecker {
         return null
     }
 
+    private fun TypeSystemContext.isStubTypeSubtypeOfAnother(a: SimpleTypeMarker, b: SimpleTypeMarker): Boolean {
+        val originalA = a.asDefinitelyNotNullType()?.original() ?: a
+        val originalB = b.asDefinitelyNotNullType()?.original() ?: b
+
+        if (originalA.typeConstructor() !== originalB.typeConstructor()) return false
+        if (!a.isDefinitelyNotNullType() && b.isDefinitelyNotNullType()) return false
+        if (a.isMarkedNullable() && !b.isMarkedNullable()) return false
+
+        return true // A!! == B!!, A? == B? or A == B
+    }
+
     private fun checkSubtypeForSpecialCases(
         context: AbstractTypeCheckerContext,
         subType: SimpleTypeMarker,
@@ -478,7 +489,11 @@ object AbstractTypeChecker {
             )
         }
 
-        if (subType.isStubType() || superType.isStubType()) return context.isStubTypeEqualsToAnything
+        if (subType.isStubTypeForBuilderInference() && superType.isStubTypeForBuilderInference())
+            return isStubTypeSubtypeOfAnother(subType, superType) || context.isStubTypeEqualsToAnything
+
+        if (subType.isStubType() || superType.isStubType())
+            return context.isStubTypeEqualsToAnything
 
         // superType might be a definitely notNull type (see KT-42824)
         val superOriginalType = superType.asDefinitelyNotNullType()?.original() ?: superType

@@ -21,5 +21,5 @@ val foofoo: Foo = run {
 val bar: Bar = <!TYPE_MISMATCH!>run {
     val x = foo()
     if (x == null) throw Exception()
-    <!DEBUG_INFO_SMARTCAST, TYPE_MISMATCH, TYPE_MISMATCH!>x<!>
+    <!DEBUG_INFO_SMARTCAST, TYPE_MISMATCH!>x<!>
 }<!>

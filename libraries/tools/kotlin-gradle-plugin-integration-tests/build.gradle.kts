@@ -60,7 +60,9 @@ val isTeamcityBuild = project.kotlinBuildProperties.isTeamcityBuild ||
         try {
             project.providers.gradleProperty("gradle.integration.tests.split.tasks").forUseAtConfigurationTime().orNull
                 ?.toBoolean() ?: false
-        } catch (_: Exception) { false }
+        } catch (_: Exception) {
+            false
+        }
 
 
 val cleanTestKitCacheTask = tasks.register<Delete>("cleanTestKitCache") {
@@ -70,24 +72,21 @@ val cleanTestKitCacheTask = tasks.register<Delete>("cleanTestKitCache") {
     delete(project.file(".testKitDir"))
 }
 
-fun Test.includeMppAndAndroid(include: Boolean) {
-    if (isTeamcityBuild) {
-        val mppAndAndroidTestPatterns = listOf("*Multiplatform*", "*Mpp*", "*Android*")
-        val filter = if (include)
-            filter.includePatterns
-        else
-            filter.excludePatterns
-        filter.addAll(mppAndAndroidTestPatterns)
-    }
+fun Test.includeMppAndAndroid(include: Boolean) = includeTestsWithPattern(include) {
+    addAll(listOf("*Multiplatform*", "*Mpp*", "*Android*"))
 }
 
-fun Test.includeNative(include: Boolean) {
+fun Test.includeNative(include: Boolean) = includeTestsWithPattern(include) {
+    addAll(listOf("org.jetbrains.kotlin.gradle.native.*", "*Commonizer*"))
+}
+
+fun Test.includeTestsWithPattern(include: Boolean, patterns: (MutableSet<String>).() -> Unit) {
     if (isTeamcityBuild) {
         val filter = if (include)
             filter.includePatterns
         else
             filter.excludePatterns
-        filter.add("org.jetbrains.kotlin.gradle.native.*")
+        filter.patterns()
     }
 }
 
@@ -252,7 +251,8 @@ tasks.withType<Test> {
         addTestListener(object : TestListener {
             override fun afterSuite(desc: TestDescriptor, result: TestResult) {
                 if (desc.parent == null) { // will match the outermost suite
-                    val output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+                    val output =
+                        "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
                     val startItem = "|  "
                     val endItem = "  |"
                     val repeatLength = startItem.length + output.length + endItem.length

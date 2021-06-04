@@ -41,6 +41,7 @@ private val intellijModulesForWhichGenerateBuildGradle = listOf(
 val jsonUrlPrefixes = mapOf(
     "202" to "https://buildserver.labs.intellij.net/guestAuth/repository/download/ijplatform_IjPlatform202_IntellijArtifactMappings/113235432:id",
     "203" to "https://buildserver.labs.intellij.net/guestAuth/repository/download/ijplatform_IjPlatform203_IntellijArtifactMappings/117989041:id",
+    "211" to "https://buildserver.labs.intellij.net/guestAuth/repository/download/ijplatform_IjPlatform211_IntellijArtifactMappings/121258191:id",
 )
 
 fun main() {
@@ -161,9 +162,7 @@ fun convertJpsModuleDependency(dep: JpsModuleDependency): List<JpsLikeDependency
                 .map { it.copy(scope = it.scope intersectCompileClasspath dep.scope) }
                 .filter { it.scope != JpsJavaDependencyScope.RUNTIME } // We are interested only in transitive dependencies which affect compilation
                 .flatMap { convertIntellijDependencyNotFollowingTransitive(it, dep.isExported).asSequence() }
-                .mapIndexed { index, jpsLikeDependency ->
-                    if (index != 0) JpsLikeDependencyWithComment(jpsLikeDependency, "Exported transitive dependency") else jpsLikeDependency
-                }
+                .map { JpsLikeDependencyWithComment(it, "'$moduleName' dependency") }
                 .toList()
         }
         else -> error("Cannot convert module dependency to Gradle $dep")

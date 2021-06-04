@@ -85,7 +85,8 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
 
     override fun KotlinTypeMarker.isError(): Boolean {
         assert(this is ConeKotlinType)
-        return this is ConeClassErrorType || this is ConeKotlinErrorType || this.typeConstructor().isError()
+        return this is ConeClassErrorType || this is ConeKotlinErrorType || this.typeConstructor().isError() ||
+                (this is ConeClassLikeType && this.lookupTag is ConeClassLikeErrorLookupTag)
     }
 
     override fun KotlinTypeMarker.isUninferredParameter(): Boolean {
@@ -380,7 +381,15 @@ interface ConeTypeContext : TypeSystemContext, TypeSystemOptimizationContext, Ty
     }
 
     override fun SimpleTypeMarker.isStubType(): Boolean {
-        return this is StubTypeMarker
+        return this is ConeStubType // TODO: distinguish stub types for builder inference and for subtyping
+    }
+
+    override fun SimpleTypeMarker.isStubTypeForVariableInSubtyping(): Boolean {
+        return this is ConeStubType // TODO: distinguish stub types for builder inference and for subtyping
+    }
+
+    override fun SimpleTypeMarker.isStubTypeForBuilderInference(): Boolean {
+        return this is ConeStubType // TODO: distinguish stub types for builder inference and for subtyping
     }
 
     override fun intersectTypes(types: List<SimpleTypeMarker>): SimpleTypeMarker {

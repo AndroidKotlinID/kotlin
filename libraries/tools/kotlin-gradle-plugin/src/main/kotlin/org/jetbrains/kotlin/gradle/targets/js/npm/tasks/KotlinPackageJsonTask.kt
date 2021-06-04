@@ -63,12 +63,13 @@ open class KotlinPackageJsonTask : DefaultTask() {
             npmResolutionManager.resolver[dependency.projectPath][dependency.compilationName].npmProject.packageJsonTaskPath
         } + producer.internalCompositeDependencies.map { dependency ->
             dependency.includedBuild?.task(":$PACKAGE_JSON_UMBRELLA_TASK_NAME") ?: error("includedBuild instance is not available")
+            dependency.includedBuild.task(":${RootPackageJsonTask.NAME}")
         }
 
     @get:Input
     internal val toolsNpmDependencies: List<String> by lazy {
         nodeJs.taskRequirements
-            .getCompilationNpmRequirements(compilationDisambiguatedName)
+            .getCompilationNpmRequirements(projectPath, compilationDisambiguatedName)
             .map { it.toString() }
     }
 

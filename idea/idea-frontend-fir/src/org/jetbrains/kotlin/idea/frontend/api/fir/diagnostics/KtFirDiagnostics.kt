@@ -303,6 +303,10 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         abstract val reason: String
     }
 
+    abstract class CyclicInheritanceHierarchy : KtFirDiagnostic<PsiElement>() {
+        override val diagnosticClass get() = CyclicInheritanceHierarchy::class
+    }
+
     abstract class ConstructorInObject : KtFirDiagnostic<KtDeclaration>() {
         override val diagnosticClass get() = ConstructorInObject::class
     }
@@ -840,8 +844,18 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
         override val diagnosticClass get() = TypeParametersInEnum::class
     }
 
-    abstract class ConflictingProjection : KtFirDiagnostic<PsiElement>() {
+    abstract class ConflictingProjection : KtFirDiagnostic<KtTypeParameter>() {
         override val diagnosticClass get() = ConflictingProjection::class
+        abstract val type: KtType
+    }
+
+    abstract class ConflictingProjectionInTypealiasExpansion : KtFirDiagnostic<KtTypeParameter>() {
+        override val diagnosticClass get() = ConflictingProjectionInTypealiasExpansion::class
+        abstract val type: KtType
+    }
+
+    abstract class RedundantProjection : KtFirDiagnostic<KtTypeParameter>() {
+        override val diagnosticClass get() = RedundantProjection::class
         abstract val type: KtType
     }
 
@@ -1658,6 +1672,10 @@ sealed class KtFirDiagnostic<PSI: PsiElement> : KtDiagnosticWithPsi<PSI> {
 
     abstract class ToplevelTypealiasesOnly : KtFirDiagnostic<KtTypeAlias>() {
         override val diagnosticClass get() = ToplevelTypealiasesOnly::class
+    }
+
+    abstract class RecursiveTypealiasExpansion : KtFirDiagnostic<KtTypeAlias>() {
+        override val diagnosticClass get() = RecursiveTypealiasExpansion::class
     }
 
     abstract class RedundantVisibilityModifier : KtFirDiagnostic<KtModifierListOwner>() {

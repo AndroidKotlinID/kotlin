@@ -34,7 +34,7 @@ fun <T> bar(o: Out<T>, i: In<T>): Two<T, T> = throw Exception("$o $i")
 fun test2(outA: Out<A>, inC: In<C>) {
     bar(outA, <!TYPE_MISMATCH!>inC<!>)
 
-    val b: Two<A, B> = <!TYPE_MISMATCH, TYPE_MISMATCH, TYPE_MISMATCH, TYPE_MISMATCH, TYPE_MISMATCH!>bar(outA, <!TYPE_MISMATCH!>inC<!>)<!>
+    val b: Two<A, B> = <!TYPE_MISMATCH, TYPE_MISMATCH, TYPE_MISMATCH, TYPE_MISMATCH!>bar(outA, <!TYPE_MISMATCH!>inC<!>)<!>
     use(b)
 }
 

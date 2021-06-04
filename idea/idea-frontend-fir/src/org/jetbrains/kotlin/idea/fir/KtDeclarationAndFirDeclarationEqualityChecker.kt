@@ -101,7 +101,7 @@ object KtDeclarationAndFirDeclarationEqualityChecker {
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private val classIdToName: Map<String, String> = buildList {
+    private val classIdToName: Map<String, String> = buildList<Pair<String, String>> {
         StandardClassIds.primitiveArrayTypeByElementType.mapTo(this) { (classId, arrayClassId) ->
             classId.asString().replace('/', '.') to arrayClassId.asString().replace('/', '.')
         }
@@ -162,6 +162,7 @@ object KtDeclarationAndFirDeclarationEqualityChecker {
         ConeStarProjection -> "*"
         is ConeKotlinTypeProjectionIn -> "in ${type.renderTypeAsKotlinType()}"
         is ConeKotlinTypeProjectionOut -> "out ${type.renderTypeAsKotlinType()}"
+        is ConeKotlinTypeConflictingProjection -> "CONFLICTING-PROJECTION ${type.renderTypeAsKotlinType()}"
         is ConeKotlinType -> renderTypeAsKotlinType()
     }
 

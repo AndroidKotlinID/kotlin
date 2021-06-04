@@ -19,5 +19,5 @@ val test1 = <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER!>generate<!> {
 }
 
 val test2: Int = <!TYPE_MISMATCH!>generate {
-    yield(<!TYPE_MISMATCH, TYPE_MISMATCH!>A()<!>)
+    yield(<!TYPE_MISMATCH!>A()<!>)
 }<!>

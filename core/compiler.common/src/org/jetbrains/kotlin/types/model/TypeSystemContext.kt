@@ -73,7 +73,7 @@ interface TypeSystemBuiltInsContext {
 /**
  * Context that allow construction of types
  */
-interface TypeSystemTypeFactoryContext {
+interface TypeSystemTypeFactoryContext: TypeSystemBuiltInsContext {
     fun createFlexibleType(lowerBound: SimpleTypeMarker, upperBound: SimpleTypeMarker): KotlinTypeMarker
     fun createSimpleType(
         constructor: TypeConstructorMarker,
@@ -168,8 +168,8 @@ interface TypeSystemInferenceExtensionContext : TypeSystemContext, TypeSystemBui
         captureStatus: CaptureStatus
     ): CapturedTypeMarker
 
-    fun createStubType(typeVariable: TypeVariableMarker): StubTypeMarker
-
+    fun createStubTypeForBuilderInference(typeVariable: TypeVariableMarker): StubTypeMarker
+    fun createStubTypeForTypeVariablesInSubtyping(typeVariable: TypeVariableMarker): StubTypeMarker
 
     fun KotlinTypeMarker.removeAnnotations(): KotlinTypeMarker
     fun KotlinTypeMarker.removeExactAnnotation(): KotlinTypeMarker
@@ -299,6 +299,8 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     }
 
     fun SimpleTypeMarker.isStubType(): Boolean
+    fun SimpleTypeMarker.isStubTypeForVariableInSubtyping(): Boolean
+    fun SimpleTypeMarker.isStubTypeForBuilderInference(): Boolean
 
     fun KotlinTypeMarker.asTypeArgument(): TypeArgumentMarker
 

@@ -3733,6 +3733,10 @@ ALWAYS_INLINE void kotlin::AssertThreadState(MemoryState* thread, ThreadState ex
     // no-op, used by the new MM only.
 }
 
+ALWAYS_INLINE void kotlin::AssertThreadState(MemoryState* thread, std::initializer_list<ThreadState> expected) noexcept {
+    // no-op, used by the new MM only.
+}
+
 MemoryState* kotlin::mm::GetMemoryState() {
     return ::memoryState;
 }
@@ -3740,6 +3744,10 @@ MemoryState* kotlin::mm::GetMemoryState() {
 kotlin::ThreadState kotlin::GetThreadState(MemoryState* thread) noexcept {
     // Assume that we are always in the Runnable thread state.
     return ThreadState::kRunnable;
+}
+
+ALWAYS_INLINE kotlin::CalledFromNativeGuard::CalledFromNativeGuard() noexcept {
+    // no-op, used by the new MM only.
 }
 
 const bool kotlin::kSupportsMultipleMutators = true;

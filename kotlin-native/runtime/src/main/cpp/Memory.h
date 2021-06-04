@@ -410,9 +410,14 @@ ALWAYS_INLINE ThreadState SwitchThreadState(MemoryState* thread, ThreadState new
 
 // Asserts that the given thread is in the given state.
 ALWAYS_INLINE void AssertThreadState(MemoryState* thread, ThreadState expected) noexcept;
+ALWAYS_INLINE void AssertThreadState(MemoryState* thread, std::initializer_list<ThreadState> expected) noexcept;
 
 // Asserts that the current thread is in the the given state.
 ALWAYS_INLINE inline void AssertThreadState(ThreadState expected) noexcept {
+    AssertThreadState(mm::GetMemoryState(), expected);
+}
+
+ALWAYS_INLINE inline void AssertThreadState(std::initializer_list<ThreadState> expected) noexcept {
     AssertThreadState(mm::GetMemoryState(), expected);
 }
 
@@ -435,6 +440,20 @@ private:
     MemoryState* thread_;
     ThreadState oldState_;
     bool reentrant_;
+};
+
+// Scopely sets the kRunnable thread state for the current thread,
+// and initializes runtime if needed for new MM.
+// No-op for old GC.
+class CalledFromNativeGuard final : private Pinned {
+public:
+    ALWAYS_INLINE CalledFromNativeGuard() noexcept;
+
+    ~CalledFromNativeGuard() noexcept {
+        SwitchThreadState(thread_, ThreadState::kNative);
+    }
+private:
+    MemoryState* thread_;
 };
 
 template <ThreadState state, typename R, typename... Args>

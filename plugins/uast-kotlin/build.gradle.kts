@@ -18,7 +18,11 @@ dependencies {
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.java"))
     compile(project(":compiler:light-classes"))
-    shadows(project(":plugins:uast-kotlin-base"))
+    if (kotlinBuildProperties.isJpsBuildEnabled) {
+        compile(project(":plugins:uast-kotlin-base"))
+    } else {
+        shadows(project(":plugins:uast-kotlin-base"))
+    }
 
     // BEWARE: UAST should not depend on IJ platform so that it can work in Android Lint CLI mode (where IDE is not available)
     compileOnly(intellijCoreDep()) { includeJars("intellij-core", "asm-all", rootProject = rootProject) }
@@ -40,6 +44,7 @@ dependencies {
     testCompile(project(":compiler:util"))
     testCompile(project(":compiler:cli"))
     testCompile(projectTests(":idea:idea-test-framework"))
+    testCompile(projectTests(":plugins:uast-kotlin-base"))
 
     testCompile(project(":idea:idea-native")) { isTransitive = false }
     testCompile(project(":idea:idea-gradle-native")) { isTransitive = false }
