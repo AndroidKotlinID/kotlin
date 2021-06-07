@@ -68,7 +68,7 @@ abstract class LambdaArgumentConstraintPosition<T>(val lambda: T) : ConstraintPo
     }
 }
 
-abstract class DelegatedPropertyConstraintPosition<T>(val topLevelCall: T) : ConstraintPosition() {
+open class DelegatedPropertyConstraintPosition<T>(val topLevelCall: T) : ConstraintPosition() {
     override fun toString(): String = "Constraint from call $topLevelCall for delegated property"
 }
 
@@ -104,7 +104,7 @@ class CapturedTypeFromSubtyping(
     val position: ConstraintPosition
 ) : ConstraintSystemError(INAPPLICABLE)
 
-abstract class NotEnoughInformationForTypeParameter<T>(
+open class NotEnoughInformationForTypeParameter<T>(
     val typeVariable: TypeVariableMarker,
     val resolvedAtom: T
 ) : ConstraintSystemError(INAPPLICABLE)

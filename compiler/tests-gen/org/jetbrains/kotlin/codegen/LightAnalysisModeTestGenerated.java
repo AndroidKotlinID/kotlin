@@ -8109,6 +8109,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
                 runTest("compiler/testData/codegen/box/coroutines/inlineClasses/genericParameterResult.kt");
             }
 
+            @TestMetadata("kt47129.kt")
+            public void testKt47129() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/inlineClasses/kt47129.kt");
+            }
+
             @TestMetadata("nonLocalReturn.kt")
             public void testNonLocalReturn() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/inlineClasses/nonLocalReturn.kt");
@@ -24790,6 +24795,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             @TestMetadata("exceptionGetter.kt")
             public void testExceptionGetter() throws Exception {
                 runTest("compiler/testData/codegen/box/properties/lateinit/exceptionGetter.kt");
+            }
+
+            @TestMetadata("kt46267.kt")
+            public void testKt46267() throws Exception {
+                runTest("compiler/testData/codegen/box/properties/lateinit/kt46267.kt");
             }
 
             @TestMetadata("localClass.kt")

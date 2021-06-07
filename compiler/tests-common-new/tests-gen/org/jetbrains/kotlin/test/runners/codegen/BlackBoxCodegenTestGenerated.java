@@ -10260,6 +10260,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             }
 
             @Test
+            @TestMetadata("kt47129.kt")
+            public void testKt47129() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/inlineClasses/kt47129.kt");
+            }
+
+            @Test
             @TestMetadata("nonLocalReturn.kt")
             public void testNonLocalReturn() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/inlineClasses/nonLocalReturn.kt");
@@ -29173,6 +29179,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("kt30548.kt")
             public void testKt30548() throws Exception {
                 runTest("compiler/testData/codegen/box/properties/lateinit/kt30548.kt");
+            }
+
+            @Test
+            @TestMetadata("kt46267.kt")
+            public void testKt46267() throws Exception {
+                runTest("compiler/testData/codegen/box/properties/lateinit/kt46267.kt");
             }
 
             @Test
