@@ -15,17 +15,18 @@ import org.jetbrains.kotlin.idea.quickfix.AddExclExclCallFix
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.unwrapParenthesesLabelsAndAnnotations
 import org.jetbrains.kotlin.util.OperatorNameConventions
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 object AddExclExclCallFixFactories {
-    val unsafeCallFactory = diagnosticFixFactory<KtFirDiagnostic.UnsafeCall> { diagnostic ->
+    val unsafeCallFactory = diagnosticFixFactory(KtFirDiagnostic.UnsafeCall::class) { diagnostic ->
         getFixForUnsafeCall(diagnostic.psi)
     }
 
-    val unsafeInfixCallFactory = diagnosticFixFactory<KtFirDiagnostic.UnsafeInfixCall> { diagnostic ->
+    val unsafeInfixCallFactory = diagnosticFixFactory(KtFirDiagnostic.UnsafeInfixCall::class) { diagnostic ->
         getFixForUnsafeCall(diagnostic.psi)
     }
 
-    val unsafeOperatorCallFactory = diagnosticFixFactory<KtFirDiagnostic.UnsafeOperatorCall> { diagnostic ->
+    val unsafeOperatorCallFactory = diagnosticFixFactory(KtFirDiagnostic.UnsafeOperatorCall::class) { diagnostic ->
         getFixForUnsafeCall(diagnostic.psi)
     }
 
@@ -79,10 +80,19 @@ object AddExclExclCallFixFactories {
             else -> return emptyList()
         }
 
+        // We don't want to offer AddExclExclCallFix if we know the expression is definitely null, e.g.:
+        //
+        //   if (nullableInt == null) {
+        //     val x = nullableInt.length  // No AddExclExclCallFix here
+        //   }
+        if (target?.safeAs<KtExpression>()?.isDefinitelyNull() == true) {
+            return emptyList()
+        }
+
         return listOfNotNull(target.asAddExclExclCallFix(hasImplicitReceiver = hasImplicitReceiver))
     }
 
-    val iteratorOnNullableFactory = diagnosticFixFactory<KtFirDiagnostic.IteratorOnNullable> { diagnostic ->
+    val iteratorOnNullableFactory = diagnosticFixFactory(KtFirDiagnostic.IteratorOnNullable::class) { diagnostic ->
         val expression = diagnostic.psi as? KtExpression ?: return@diagnosticFixFactory emptyList()
         val type = expression.getKtType()
         if (!type.canBeNull) return@diagnosticFixFactory emptyList()

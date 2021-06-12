@@ -35,7 +35,6 @@ import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.config.languageVersionSettings
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.ir.IrElement
@@ -588,7 +587,7 @@ class ExpressionCodegen(
 
         closureReifiedMarkers[expression.symbol.owner.parentAsClass]?.let {
             if (it.wereUsedReifiedParameters()) {
-                putNeedClassReificationMarker(v)
+                putNeedClassReificationMarker(mv)
                 propagateChildReifiedTypeParametersUsages(it)
             }
         }
@@ -1018,7 +1017,7 @@ class ExpressionCodegen(
                 if (typeOperand.isReifiedTypeParameter) {
                     val operationKind = if (expression.operator == IrTypeOperator.CAST) AS else SAFE_AS
                     putReifiedOperationMarkerIfTypeIsReifiedParameter(typeOperand, operationKind)
-                    v.checkcast(boxedRightType)
+                    mv.checkcast(boxedRightType)
                 } else {
                     assert(expression.operator == IrTypeOperator.CAST) { "IrTypeOperator.SAFE_CAST should have been lowered." }
                     TypeIntrinsics.checkcast(mv, kotlinType, boxedRightType, false)
@@ -1031,7 +1030,7 @@ class ExpressionCodegen(
                 val type = typeMapper.boxType(typeOperand)
                 if (typeOperand.isReifiedTypeParameter) {
                     putReifiedOperationMarkerIfTypeIsReifiedParameter(typeOperand, ReifiedTypeInliner.OperationKind.IS)
-                    v.instanceOf(type)
+                    mv.instanceOf(type)
                 } else {
                     TypeIntrinsics.instanceOf(mv, kotlinType, type, state.languageVersionSettings.isReleaseCoroutines())
                 }
@@ -1241,11 +1240,11 @@ class ExpressionCodegen(
         val gapStart = markNewLinkedLabel()
         data.localGapScope(tryWithFinallyInfo) {
             finallyDepth++
-            if (isFinallyMarkerRequired()) {
+            if (isFinallyMarkerRequired) {
                 generateFinallyMarker(mv, finallyDepth, true)
             }
             tryWithFinallyInfo.onExit.accept(this, data).discard()
-            if (isFinallyMarkerRequired()) {
+            if (isFinallyMarkerRequired) {
                 generateFinallyMarker(mv, finallyDepth, false)
             }
             finallyDepth--
@@ -1404,7 +1403,6 @@ class ExpressionCodegen(
             }
         }
 
-        val methodOwner = typeMapper.mapClass(callee.parentAsClass)
         val sourceCompiler = IrSourceCompilerForInline(state, element, callee, this, data)
 
         val reifiedTypeInliner = ReifiedTypeInliner(
@@ -1415,7 +1413,7 @@ class ExpressionCodegen(
             state.unifiedNullChecks,
         )
 
-        return IrInlineCodegen(this, state, callee, methodOwner, signature, mappings, sourceCompiler, reifiedTypeInliner)
+        return IrInlineCodegen(this, state, callee, signature, mappings, sourceCompiler, reifiedTypeInliner)
     }
 
     override fun consumeReifiedOperationMarker(typeParameter: TypeParameterMarker) {
@@ -1431,21 +1429,12 @@ class ExpressionCodegen(
         }
     }
 
-    override fun pushClosureOnStack(
-        classDescriptor: ClassDescriptor,
-        putThis: Boolean,
-        callGenerator: CallGenerator,
-        functionReferenceReceiver: StackValue?
-    ) {
-        //TODO
-    }
-
     override fun markLineNumberAfterInlineIfNeeded(registerLineNumberAfterwards: Boolean) {
         if (noLineNumberScope || registerLineNumberAfterwards) {
             if (lastLineNumber > -1) {
                 val label = Label()
-                v.visitLabel(label)
-                v.visitLineNumber(lastLineNumber, label)
+                mv.visitLabel(label)
+                mv.visitLineNumber(lastLineNumber, label)
             }
         } else {
             // Inline function has its own line number which is in a separate instance of codegen,
@@ -1454,9 +1443,8 @@ class ExpressionCodegen(
         }
     }
 
-    fun isFinallyMarkerRequired(): Boolean {
-        return irFunction.isInline || inlinedInto != null
-    }
+    val isFinallyMarkerRequired: Boolean
+        get() = irFunction.isInline || inlinedInto != null
 
     val IrType.isReifiedTypeParameter: Boolean
         get() = this.classifierOrNull?.safeAs<IrTypeParameterSymbol>()?.owner?.isReified == true

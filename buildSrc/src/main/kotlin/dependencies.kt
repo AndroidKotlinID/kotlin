@@ -36,7 +36,7 @@ val Project.internalBootstrapRepo: String? get() =
     when {
         bootstrapKotlinRepo?.startsWith("https://buildserver.labs.intellij.net") == true ->
             bootstrapKotlinRepo!!.replace("artifacts/content/maven", "artifacts/content/internal/repo")
-        else -> "https://teamcity.jetbrains.com/guestAuth/app/rest/builds/buildType:(id:Kotlin_KotlinPublic_Compiler),number:$bootstrapKotlinVersion," +
+        else -> "https://teamcity.jetbrains.com/guestAuth/app/rest/builds/buildType:(id:Kotlin_KotlinPublic_Aggregate),number:$bootstrapKotlinVersion," +
                 "branch:default:any/artifacts/content/internal/repo/"
     }
 
@@ -89,12 +89,6 @@ fun Project.preloadedDeps(
         )
     }
     return files(*matchingFiles.map { it.canonicalPath }.toTypedArray())
-}
-
-fun Project.ideaUltimatePreloadedDeps(vararg artifactBaseNames: String, subdir: String? = null): ConfigurableFileCollection {
-    val ultimateDepsDir = fileFrom(rootDir, "ultimate", "dependencies")
-    return if (ultimateDepsDir.isDirectory) preloadedDeps(*artifactBaseNames, baseDir = ultimateDepsDir, subdir = subdir)
-    else files()
 }
 
 fun Project.kotlinDep(artifactBaseName: String, version: String, classifier: String? = null): String =

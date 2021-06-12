@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.lexer.KtKeywordToken
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.ForbiddenNamedArgumentsTarget
@@ -212,6 +213,36 @@ object DIAGNOSTICS_LIST : DiagnosticList("FirErrors") {
         val INAPPLICABLE_FILE_TARGET by error<KtAnnotationEntry>(PositioningStrategy.ANNOTATION_USE_SITE)
     }
 
+    val EXPERIMENTAL by object : DiagnosticGroup("OptIn-related") {
+        val EXPERIMENTAL_API_USAGE by warning<PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+            parameter<FqName>("optInMarkerFqName")
+            parameter<String>("message")
+        }
+        val EXPERIMENTAL_API_USAGE_ERROR by error<PsiElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
+            parameter<FqName>("optInMarkerFqName")
+            parameter<String>("message")
+        }
+        val EXPERIMENTAL_OVERRIDE by warning<PsiElement> {
+            parameter<FqName>("optInMarkerFqName")
+            parameter<String>("message")
+        }
+        val EXPERIMENTAL_OVERRIDE_ERROR by error<PsiElement> {
+            parameter<FqName>("optInMarkerFqName")
+            parameter<String>("message")
+        }
+        val EXPERIMENTAL_IS_NOT_ENABLED by warning<KtAnnotationEntry>(PositioningStrategy.REFERENCED_NAME_BY_QUALIFIED)
+        val EXPERIMENTAL_CAN_ONLY_BE_USED_AS_ANNOTATION by error<PsiElement>()
+        val EXPERIMENTAL_MARKER_CAN_ONLY_BE_USED_AS_ANNOTATION_OR_ARGUMENT_IN_USE_EXPERIMENTAL by error<PsiElement>()
+        val USE_EXPERIMENTAL_WITHOUT_ARGUMENTS by warning<KtAnnotationEntry>()
+        val USE_EXPERIMENTAL_ARGUMENT_IS_NOT_MARKER by warning<KtAnnotationEntry> {
+            parameter<FqName>("notMarkerFqName")
+        }
+        val EXPERIMENTAL_ANNOTATION_WITH_WRONG_TARGET by error<KtAnnotationEntry> {
+            parameter<String>("target")
+        }
+        val EXPERIMENTAL_ANNOTATION_WITH_WRONG_RETENTION by error<KtAnnotationEntry>()
+    }
+
     val EXPOSED_VISIBILITY by object : DiagnosticGroup("Exposed visibility") {
         val EXPOSED_TYPEALIAS_EXPANDED_TYPE by exposedVisibilityError<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
         val EXPOSED_FUNCTION_RETURN_TYPE by exposedVisibilityError<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME)
@@ -331,13 +362,13 @@ object DIAGNOSTICS_LIST : DiagnosticList("FirErrors") {
         }
 
         val ASSIGNMENT_TYPE_MISMATCH by error<KtExpression> {
-            parameter<ConeKotlinType>("expected")
-            parameter<ConeKotlinType>("actual")
+            parameter<ConeKotlinType>("expectedType")
+            parameter<ConeKotlinType>("actualType")
         }
 
         val RESULT_TYPE_MISMATCH by error<KtExpression> {
-            parameter<ConeKotlinType>("expected")
-            parameter<ConeKotlinType>("actual")
+            parameter<ConeKotlinType>("expectedType")
+            parameter<ConeKotlinType>("actualType")
         }
 
         val MANY_LAMBDA_EXPRESSION_ARGUMENTS by error<KtValueArgument>()
@@ -475,6 +506,12 @@ object DIAGNOSTICS_LIST : DiagnosticList("FirErrors") {
             parameter<Variance>("variance")
             parameter<ConeKotlinType>("containingType")
         }
+
+        val SMARTCAST_IMPOSSIBLE by error<KtExpression> {
+            parameter<ConeKotlinType>("desiredType")
+            parameter<FirExpression>("subject")
+            parameter<String>("description")
+        }
     }
 
     val REFLECTION by object : DiagnosticGroup("Reflection") {
@@ -563,6 +600,10 @@ object DIAGNOSTICS_LIST : DiagnosticList("FirErrors") {
         }
         val NON_FINAL_MEMBER_IN_FINAL_CLASS by warning<KtNamedDeclaration>(PositioningStrategy.OPEN_MODIFIER)
         val NON_FINAL_MEMBER_IN_OBJECT by warning<KtNamedDeclaration>(PositioningStrategy.OPEN_MODIFIER)
+        val VIRTUAL_MEMBER_HIDDEN by error<KtNamedDeclaration>(PositioningStrategy.DECLARATION_NAME) {
+            parameter<FirMemberDeclaration>("declared")
+            parameter<FirRegularClass>("overriddenContainer")
+        }
     }
 
     val REDECLARATIONS by object : DiagnosticGroup("Redeclarations") {
@@ -939,6 +980,24 @@ object DIAGNOSTICS_LIST : DiagnosticList("FirErrors") {
         val SUPER_CALL_FROM_PUBLIC_INLINE by warning<KtElement>(PositioningStrategy.REFERENCE_BY_QUALIFIED) {
             parameter<Symbol>("symbol")
         }
+    }
+
+    val IMPORTS by object : DiagnosticGroup("Imports") {
+        val CANNOT_ALL_UNDER_IMPORT_FROM_SINGLETON by error<KtSimpleNameExpression>(PositioningStrategy.IMPORT_LAST_NAME) {
+            parameter<Name>("objectName")
+        }
+
+        val PACKAGE_CANNOT_BE_IMPORTED by error<KtSimpleNameExpression>(PositioningStrategy.IMPORT_LAST_NAME)
+
+        val CANNOT_BE_IMPORTED by error<KtSimpleNameExpression>(PositioningStrategy.IMPORT_LAST_NAME) {
+            parameter<Name>("name")
+        }
+
+        val CONFLICTING_IMPORT by error<KtImportDirective>(PositioningStrategy.IMPORT_LAST_NAME) {
+            parameter<Name>("name")
+        }
+
+        val OPERATOR_RENAMED_ON_IMPORT by error<KtSimpleNameExpression>(PositioningStrategy.IMPORT_LAST_NAME)
     }
 }
 

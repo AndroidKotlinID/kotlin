@@ -22,13 +22,13 @@ import org.jetbrains.kotlin.incremental.components.LookupLocation
 import org.jetbrains.kotlin.incremental.components.Position
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.descriptors.IrBasedSimpleFunctionDescriptor
 import org.jetbrains.kotlin.ir.descriptors.toIrBasedDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrLoop
 import org.jetbrains.kotlin.ir.util.isSuspend
 import org.jetbrains.kotlin.ir.util.module
 import org.jetbrains.kotlin.ir.util.parentAsClass
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.doNotAnalyze
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.ErrorsJvm.SUSPENSION_POINT_INSIDE_MONITOR
@@ -92,7 +92,7 @@ class IrSourceCompilerForInline(
             )
         }
 
-    override val lazySourceMapper: SourceMapper
+    override val sourceMapper: SourceMapper
         get() = codegen.smap
 
     override fun generateLambdaBody(lambdaInfo: ExpressionLambda, reifiedTypeParameters: ReifiedTypeParametersUsages): SMAPAndMethodNode {
@@ -105,12 +105,10 @@ class IrSourceCompilerForInline(
         return FunctionCodegen(lambdaInfo.function, codegen.classCodegen).generate(codegen, reifiedTypeParameters)
     }
 
-    override fun doCreateMethodNodeFromSource(
-        callableDescriptor: FunctionDescriptor,
-        jvmSignature: JvmMethodSignature,
-        callDefault: Boolean,
-        asmMethod: Method
-    ): SMAPAndMethodNode =
+    override fun inlineFunctionSignature(jvmSignature: JvmMethodSignature, callDefault: Boolean): Pair<ClassId, Method>? =
+        callee.parentClassId?.let { it to jvmSignature.asmMethod }
+
+    override fun compileInlineFunction(jvmSignature: JvmMethodSignature, callDefault: Boolean): SMAPAndMethodNode =
         ClassCodegen.getOrCreate(callee.parentAsClass, codegen.context).generateMethodNode(callee)
 
     override fun hasFinallyBlocks() = data.hasFinallyBlocks()
@@ -128,18 +126,12 @@ class IrSourceCompilerForInline(
             it.finallyDepth = curFinallyDepth
         }
 
-    @ObsoleteDescriptorBasedAPI
-    override fun isCallInsideSameModuleAsDeclared(functionDescriptor: FunctionDescriptor): Boolean {
-        require(functionDescriptor is IrBasedSimpleFunctionDescriptor) {
-            "expected an IrBasedSimpleFunctionDescriptor, got $functionDescriptor"
-        }
-        val function = functionDescriptor.owner
-        return function.module == codegen.irFunction.module
-    }
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
+    override val isCallInsideSameModuleAsCallee: Boolean
+        get() = callee.module == codegen.irFunction.module
 
-    override fun isFinallyMarkerRequired(): Boolean {
-        return codegen.isFinallyMarkerRequired()
-    }
+    override val isFinallyMarkerRequired: Boolean
+        get() = codegen.isFinallyMarkerRequired
 
     override val compilationContextDescriptor: DeclarationDescriptor
         get() = compilationContextFunctionDescriptor

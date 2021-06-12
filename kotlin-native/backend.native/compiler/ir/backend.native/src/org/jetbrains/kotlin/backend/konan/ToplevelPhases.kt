@@ -192,6 +192,7 @@ internal val allLoweringsPhase = NamedCompilerPhase(
                 arrayConstructorPhase then
                 lateinitPhase then
                 sharedVariablesPhase then
+                inventNamesForLocalClasses then
                 extractLocalClassesFromInlineBodies then
                 inlinePhase then
                 provisionalFunctionExpressionPhase then
@@ -390,6 +391,7 @@ private val backendCodegen = namedUnitPhase(
         name = "Backend codegen",
         description = "Backend code generation",
         lower = takeFromContext<Context, Unit, IrModuleFragment> { it.irModule!! } then
+                functionsWithoutBC then
                 allLoweringsPhase then // Lower current module first.
                 dependenciesLowerPhase then // Then lower all libraries in topological order.
                                             // With that we guarantee that inline functions are unlowered while being inlined.

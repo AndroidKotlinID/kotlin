@@ -16,6 +16,8 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.JavaCompile
@@ -57,6 +59,7 @@ import org.jetbrains.kotlin.incremental.ChangedFiles
 import org.jetbrains.kotlin.library.impl.isKotlinLibrary
 import org.jetbrains.kotlin.utils.JsLibraryUtils
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 const val KOTLIN_BUILD_DIR_NAME = "kotlin"
@@ -220,6 +223,14 @@ abstract class AbstractKotlinCompile<T : CommonCompilerArguments> : AbstractKotl
     @get:Input
     val sourceFilesExtensions: ListProperty<String> = objects.listProperty(String::class.java).value(DEFAULT_KOTLIN_SOURCE_FILES_EXTENSIONS)
 
+    /**
+     * Plugin Data provided by [KpmCompilerPlugin]
+     */
+    @get:Optional
+    @get:Nested
+    // TODO: replace with objects.property and introduce task configurator
+    internal var kotlinPluginData: Provider<KotlinCompilerPluginData>? = null
+
     // Input is needed to force rebuild even if source files are not changed
     @get:Input
     internal val coroutines: Property<Coroutines> = objects.property(Coroutines::class.java)
@@ -369,8 +380,9 @@ open class KotlinCompileArgumentsProvider<T : AbstractKotlinCompile<out CommonCo
     val coroutines: Provider<Coroutines> = taskProvider.coroutines
     val logger: Logger = taskProvider.logger
     val isMultiplatform: Boolean = taskProvider.multiPlatformEnabled.get()
-    val pluginClasspath: FileCollection = taskProvider.pluginClasspath
-    val pluginOptions: CompilerPluginOptions = taskProvider.pluginOptions
+    private val pluginData = taskProvider.kotlinPluginData?.orNull
+    val pluginClasspath: FileCollection = listOfNotNull(taskProvider.pluginClasspath, pluginData?.classpath).reduce(FileCollection::plus)
+    val pluginOptions: CompilerPluginOptions = listOfNotNull(taskProvider.pluginOptions, pluginData?.options).reduce(CompilerPluginOptions::plus)
 }
 
 class KotlinJvmCompilerArgumentsProvider
@@ -478,7 +490,7 @@ abstract class KotlinCompile @Inject constructor(
             kotlinScriptExtensions = sourceFilesExtensions.get().toTypedArray()
         )
         compilerRunner.runJvmCompilerAsync(
-            sourceRoots.kotlinSourceFiles,
+            sourceRoots.kotlinSourceFiles.files.toList(),
             commonSourceSet.toList(),
             sourceRoots.javaSourceRoots,
             javaPackagePrefix,
@@ -607,6 +619,21 @@ abstract class Kotlin2JsCompile @Inject constructor(
                     }
                 }
             ).disallowChanges()
+            val libraryCacheService = task.project.rootProject.gradle.sharedServices.registerIfAbsent(
+                "${LibraryFilterCachingService::class.java.canonicalName}_${LibraryFilterCachingService::class.java.classLoader.hashCode()}",
+                LibraryFilterCachingService::class.java
+            ) {}
+            task.libraryCache.set(libraryCacheService).also { task.libraryCache.disallowChanges() }
+        }
+    }
+
+    internal abstract class LibraryFilterCachingService : BuildService<BuildServiceParameters.None>, AutoCloseable {
+        private val cache = ConcurrentHashMap<File, Boolean>()
+
+        fun getOrCompute(key: File, compute: (File) -> Boolean) = cache.computeIfAbsent(key, compute)
+
+        override fun close() {
+            cache.clear()
         }
     }
 
@@ -702,8 +729,7 @@ abstract class Kotlin2JsCompile @Inject constructor(
     //  1) purely pre-IR backend
     //  2) purely IR backend
     //  3) hybrid pre-IR and IR backend. Can only accept libraries with both JS and IR parts.
-    @get:Internal
-    protected val libraryFilter: (File) -> Boolean
+    private val libraryFilterBody: (File) -> Boolean
         get() = if (kotlinOptions.isIrBackendEnabled()) {
             if (kotlinOptions.isPreIrBackendDisabled()) {
                 ::isKotlinLibrary
@@ -712,6 +738,15 @@ abstract class Kotlin2JsCompile @Inject constructor(
             }
         } else {
             JsLibraryUtils::isKotlinJavascriptLibrary
+        }
+
+    @get:Internal
+    internal abstract val libraryCache: Property<LibraryFilterCachingService>
+
+    @get:Internal
+    protected val libraryFilter: (File) -> Boolean
+        get() = { file ->
+            libraryCache.get().getOrCompute(file, libraryFilterBody)
         }
 
     @get:Internal
@@ -764,6 +799,39 @@ abstract class Kotlin2JsCompile @Inject constructor(
             reportingSettings = reportingSettings,
             incrementalCompilationEnvironment = icEnv
         )
-        compilerRunner.runJsCompilerAsync(sourceRoots.kotlinSourceFiles, commonSourceSet.toList(), args, environment)
+        compilerRunner.runJsCompilerAsync(
+            sourceRoots.kotlinSourceFiles.files.toList(),
+            commonSourceSet.toList(),
+            args,
+            environment
+        )
     }
 }
+
+data class KotlinCompilerPluginData(
+    @get:InputFiles
+    @get:Classpath
+    val classpath: FileCollection,
+
+    @get:Internal
+    val options: CompilerPluginOptions,
+
+    /**
+     * Used only for Up-to-date checks
+     */
+    @get:Nested
+    val inputsOutputsState: InputsOutputsState
+) {
+    data class InputsOutputsState(
+        @get:Input
+        val inputs: Map<String, String>,
+
+        @get:InputFiles
+        @get:PathSensitive(PathSensitivity.RELATIVE)
+        val inputFiles: Set<File>,
+
+        @get:OutputFiles
+        val outputFiles: Set<File>
+    )
+}
+

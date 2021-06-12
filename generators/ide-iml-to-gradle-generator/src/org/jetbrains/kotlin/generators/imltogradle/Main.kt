@@ -128,7 +128,9 @@ fun convertJpsLibrary(lib: JpsLibrary, scope: JpsJavaDependencyScope, exported: 
         }
         else -> {
             val dependencyNotation = "\"${mavenRepositoryLibraryDescriptor.mavenId}\""
-            listOf(JpsLikeJarDependency(dependencyNotation, scope, dependencyConfiguration = null, exported = exported))
+            val dependencyConfiguration =
+                "{ isTransitive = false }".takeIf { !mavenRepositoryLibraryDescriptor.isIncludeTransitiveDependencies }
+            listOf(JpsLikeJarDependency(dependencyNotation, scope, dependencyConfiguration, exported = exported))
         }
     }
 }
@@ -211,6 +213,13 @@ fun convertJpsModule(imlFile: File, jpsModule: JpsModule): String {
         ?.joinToString { "\"$it\"" }
         ?: ""
 
+    val testsJar =
+        if (jpsModule.sourceRoots.any { it.rootType.isForTests }) "testsJar()"
+        else """
+            // Fake empty configuration in order to make `DependencyHandler.projectTests(name: String)` work
+            configurations.getOrCreate("tests-jar")
+        """.trimIndent()
+
     val deps = jpsModule.dependencies.flatMap { convertJpsDependencyElement(it) }
         .distinctBy { it.normalizedForComparison() }
         .joinToString("\n") { it.convertToGradleCall() }
@@ -258,6 +267,6 @@ fun convertJpsModule(imlFile: File, jpsModule: JpsModule): String {
         |    kotlinOptions.useOldBackend = true // KT-45697
         |}
         |
-        |testsJar()
+        |$testsJar
     """.trimMarginWithInterpolations()
 }

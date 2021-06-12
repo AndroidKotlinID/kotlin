@@ -28,13 +28,13 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.29")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.30")
     }
 }
 
 plugins {
-    id "com.gradle.enterprise" version "3.5"
-    id "com.gradle.common-custom-user-data-gradle-plugin" version "1.2.1" apply false
+    id "com.gradle.enterprise" version "3.6.2"
+    id "com.gradle.common-custom-user-data-gradle-plugin" version "1.4" apply false
 }
 
 def buildProperties = BuildPropertiesKt.getKotlinBuildPropertiesForSettings(settings)
@@ -329,7 +329,10 @@ if (buildProperties.getOrNull("attachedIntellijVersion") != null) {
             project(projectName).projectDir = it.parentFile
         }
     }
-} else {
+}
+
+if (!buildProperties.getBoolean("disableKotlinPluginModules", false) && buildProperties.getOrNull("attachedIntellijVersion") == null) {
+    logger.info("Old Kotlin plugin modules are enabled")
     include ":idea:idea-jvm",
             ":idea:idea-maven",
             ":idea:idea-gradle",
@@ -413,43 +416,8 @@ if (buildProperties.getOrNull("attachedIntellijVersion") != null) {
     project(':sam-with-receiver-ide-plugin').projectDir = "$rootDir/plugins/sam-with-receiver/sam-with-receiver-ide" as File
     project(':kotlin-scripting-idea').projectDir = "$rootDir/plugins/scripting/scripting-idea" as File
     project(':plugins:android-extensions-ide').projectDir = "$rootDir/plugins/android-extensions/android-extensions-idea" as File
-}
-
-if (buildProperties.includeCidrPlugins) {
-    logger.info("Including CIDR modules in settings.gradle")
-    include ":kotlin-ultimate:ide:cidr-gradle-tooling",
-            ":kotlin-ultimate:ide:common-native",
-            ":kotlin-ultimate:ide:common-cidr-mobile",
-            ":kotlin-ultimate:ide:common-cidr-native",
-            ":kotlin-ultimate:ide:common-cidr-swift-native",
-            ":kotlin-ultimate:ide:common-noncidr-native",
-            ":kotlin-ultimate:ide:appcode-native",
-            ":kotlin-ultimate:ide:mobile-native",
-            ":kotlin-ultimate:prepare:cidr-plugin",
-            ":kotlin-ultimate:prepare:appcode-plugin",
-            ":kotlin-ultimate:prepare:mobile-plugin",
-            ":kotlin-ultimate:libraries:tools:apple-gradle-plugin-api"
-
-    if (projectVersions.contains("versions.androidStudioRelease")) {
-        logger.info("Including KMM modules in settings.gradle")
-        include ":kotlin-ultimate:ide:android-studio-native",
-                ":kotlin-ultimate:prepare:kmm-plugin"
-    } else {
-        logger.info("NOT including KMM modules in settings.gradle")
-    }
 } else {
-    logger.info("NOT including CIDR modules in settings.gradle")
-}
-
-if (buildProperties.includeUltimate) {
-    include ":kotlin-ultimate:ultimate",
-            ":kotlin-ultimate:ultimate:ultimate-runner",
-            ":kotlin-ultimate:ide:common-native",
-            ":kotlin-ultimate:ide:common-noncidr-native",
-            ":kotlin-ultimate:ide:ultimate-native"
-    logger.info("Including extension for IJ Ultimate in settings.gradle")
-} else {
-    logger.info("NOT including extension for IJ Ultimate in settings.gradle")
+    logger.info("Old Kotlin plugin modules are disabled")
 }
 
 if (buildProperties.inJpsBuildIdeaSync) {
@@ -468,7 +436,7 @@ if (buildProperties.inJpsBuildIdeaSync) {
             ":kotlin-stdlib-jdk7",
             ":kotlin-stdlib-jdk8",
             ":kotlin-stdlib:samples",
-            ":kotlin-stdlib:jvm-minimal-for-test",
+            ":kotlin-stdlib-jvm-minimal-for-test",
             ":tools:binary-compatibility-validator",
             ":tools:kotlin-stdlib-gen",
 
@@ -486,7 +454,7 @@ if (buildProperties.inJpsBuildIdeaSync) {
     project(':kotlin-stdlib-jdk7').projectDir = "$rootDir/libraries/stdlib/jdk7" as File
     project(':kotlin-stdlib-jdk8').projectDir = "$rootDir/libraries/stdlib/jdk8" as File
     project(':kotlin-stdlib:samples').projectDir = "$rootDir/libraries/stdlib/samples" as File
-    project(":kotlin-stdlib:jvm-minimal-for-test").projectDir = "$rootDir/libraries/stdlib/jvm-minimal-for-test" as File
+    project(":kotlin-stdlib-jvm-minimal-for-test").projectDir = "$rootDir/libraries/stdlib/jvm-minimal-for-test" as File
 
     project(':tools:binary-compatibility-validator').projectDir = "$rootDir/libraries/tools/binary-compatibility-validator" as File
     project(':tools:kotlin-stdlib-gen').projectDir = "$rootDir/libraries/tools/kotlin-stdlib-gen" as File
