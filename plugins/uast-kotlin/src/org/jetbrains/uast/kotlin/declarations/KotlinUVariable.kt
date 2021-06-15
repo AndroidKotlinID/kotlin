@@ -91,11 +91,10 @@ abstract class AbstractKotlinUVariable(givenParent: UElement?) : KotlinAbstractU
         annotations
     }
 
-
     protected abstract fun acceptsAnnotationTarget(target: AnnotationUseSiteTarget?): Boolean
 
     override val typeReference: UTypeReferenceExpression? by lz {
-        KotlinUTypeReferenceExpression(type, (sourcePsi as? KtCallableDeclaration)?.typeReference, this)
+        KotlinUTypeReferenceExpression((sourcePsi as? KtCallableDeclaration)?.typeReference, this) { type }
     }
 
     override val uastAnchor: UIdentifier?

@@ -21,6 +21,7 @@ import java.util.*
 private lateinit var intellijModuleNameToGradleDependencyNotationsMapping: Map<String, List<GradleDependencyNotation>>
 private val KOTLIN_REPO_ROOT = File(".").canonicalFile
 private val INTELLIJ_REPO_ROOT = KOTLIN_REPO_ROOT.resolve("kotlin-ide")
+private val INTELLIJ_COMMUNITY_REPO_ROOT = INTELLIJ_REPO_ROOT.resolve("kotlin").takeIf { it.exists() } ?: INTELLIJ_REPO_ROOT
 
 private val intellijModuleNameToGradleDependencyNotationsMappingManual: List<Pair<String, GradleDependencyNotation>> = listOf(
     "intellij.platform.jps.build" to GradleDependencyNotation("jpsBuildTest()"),
@@ -35,7 +36,8 @@ private val intellijModulesForWhichGenerateBuildGradle = listOf(
     "intellij.platform.lang.tests",
     "intellij.platform.testExtensions",
     "intellij.java.compiler.tests",
-    "intellij.gradle.toolingExtension.tests"
+    "intellij.gradle.toolingExtension.tests",
+    "intellij.maven",
 )
 
 val jsonUrlPrefixes = mapOf(
@@ -195,7 +197,7 @@ fun convertJpsModule(imlFile: File, jpsModule: JpsModule): String {
         .mapValues { entry -> entry.value.joinToString("\n") { convertJpsModuleSourceRoot(imlFile, it) } }
         .let { Pair(it[false] ?: "", it[true] ?: "") }
 
-    val mavenRepos = INTELLIJ_REPO_ROOT.resolve(".idea/jarRepositories.xml").readXml().traverseChildren()
+    val mavenRepos = INTELLIJ_COMMUNITY_REPO_ROOT.resolve(".idea/jarRepositories.xml").readXml().traverseChildren()
         .filter { it.getAttributeValue("name") == "url" }
         .map { it.getAttributeValue("value")!! }
         .map { "maven { setUrl(\"$it\") }" }
@@ -230,6 +232,7 @@ fun convertJpsModule(imlFile: File, jpsModule: JpsModule): String {
         |
         |plugins {
         |    kotlin("jvm")
+        |    `java-library` // Add `compileOnlyApi` configuration
         |    id("jps-compatible")
         |}
         |

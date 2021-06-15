@@ -40,6 +40,7 @@ class LldbTests {
         Process [..] stopped
         [..] stop reason = step over
         [..] at main.kt:5[..]
+        > q
     """)
 
     @Test
@@ -61,6 +62,7 @@ class LldbTests {
             (long) c = -3
             (short) d = 99
             (bool) e = true
+            > q
     """)
 
     @Test
@@ -82,6 +84,7 @@ class LldbTests {
         (ObjHeader *) args = []
         (ObjHeader *) point = [x: ..., y: ...]
         (ObjHeader *) person = []
+        > q
     """)
 
     @Test
@@ -104,6 +107,7 @@ class LldbTests {
         (ObjHeader *) args = []
         (ObjHeader *) xs = [..., ..., ...]
         (ObjHeader *) ys = [..., ...]
+        > q
     """)
 
     @Test
@@ -119,6 +123,7 @@ class LldbTests {
         > ${lldbCommandRunOrContinue()}
         > fr var xs
         (ObjHeader *) xs = [..., ..., ...]
+        > q
     """)
 
     @Test
@@ -142,10 +147,10 @@ class LldbTests {
         val application = swiftc("application", swiftSrc, "-F", root.toString())
         """
             > b kfun:#b(){}kotlin.String
-            Breakpoint 1: where = [..]`kfun:#b(){}kotlin.String [..] at b.kt:1:1, [..]
+            Breakpoint 1: where = [..]`kfun:#b(){}kotlin.String [..] at b.kt:1:12, [..]
 
             > b kfun:#a(){}kotlin.String
-            Breakpoint 2: where = [..]`kfun:#a(){}kotlin.String [..] at a.kt:1:1, [..]
+            Breakpoint 2: where = [..]`kfun:#a(){}kotlin.String [..] at a.kt:1:12, [..]
             > q
         """.trimIndent().lldb(application)
     }
@@ -229,6 +234,7 @@ class LldbTests {
               frame #5: [..] kt42208.kexe`Konan_start(args=[..]) at kt42208-1.kt:1:1
               frame #6: [..]
               frame #7: [..]
+            > q
         """.trimIndent().lldb(binary)
     }
 
@@ -278,6 +284,7 @@ class LldbTests {
               frame #2: [..] kt42208.kexe`kfun:${'$'}main${'$'}<anonymous>_1${'$'}FUNCTION_REFERENCE${'$'}0.${'$'}<bridge-BNN>invoke(_this=[..]){}kotlin.Boolean#internal at kt42208-1.kt:2:5
               frame #3: [..] kt42208.kexe`kfun:#main(){} at kt42208-1.kt:5:5
               frame #4: [..] kt42208.kexe`Konan_start(args=[..]) at kt42208-1.kt:1:1
+            > q
         """.trimIndent().lldb(binary)
     }
 
@@ -321,4 +328,47 @@ class LldbTests {
         """.trimIndent().lldb(binary)
     }
 
+    @Test
+    fun `kt47198`() = lldbComplexTest {
+        val kt47198 = """
+            fun foo(a:Int) = print("a: ${'$'}a")
+
+            fun main() {
+                foo(33)
+            }
+        """.feedOutput("kt47198.kt")
+
+        val binary = arrayOf(kt47198).binary("kt47198", "-g")
+        """
+            > b 1
+            Breakpoint 1: where = kt47198.kexe`kfun:#foo(kotlin.Int){} [..] at kt47198.kt:1:29, [..]
+            > ${lldbCommandRunOrContinue()}
+            > fr v
+            (int) a = 33
+            > q
+        """.trimIndent().lldb(binary)
+    }
+
+    @Test
+    fun `kt47198 with body`() = lldbComplexTest {
+        val kt47198 = """
+            fun foo(a:Int){
+              print("a: ${'$'}a")
+            }
+
+            fun main() {
+                foo(33)
+            }
+        """.feedOutput("kt47198.kt")
+
+        val binary = arrayOf(kt47198).binary("kt47198", "-g")
+        """
+            > b 1
+            Breakpoint 1: where = kt47198.kexe`kfun:#foo(kotlin.Int){} [..] at kt47198.kt:2:[..]
+            > ${lldbCommandRunOrContinue()}
+            > fr v
+            (int) a = 33
+            > q
+        """.trimIndent().lldb(binary)
+    }
 }

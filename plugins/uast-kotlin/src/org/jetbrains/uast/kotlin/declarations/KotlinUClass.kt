@@ -49,7 +49,7 @@ abstract class AbstractKotlinUClass(givenParent: UElement?) : KotlinAbstractUEle
 
     override val uastSuperTypes: List<UTypeReferenceExpression>
         get() = ktClass?.superTypeListEntries.orEmpty().mapNotNull { it.typeReference }.map {
-            LazyKotlinUTypeReferenceExpression(it, this)
+            KotlinUTypeReferenceExpression(it, this)
         }
 
     val delegateExpressions: List<UExpression>
@@ -80,7 +80,7 @@ class KotlinSupertypeDelegationUExpression(override val sourcePsi: KtDelegatedSu
     override val psi: PsiElement? get() = sourcePsi
 
     val typeReference: UTypeReferenceExpression? by lazy {
-        sourcePsi.typeReference?.let { KotlinUTypeReferenceExpression(it.toPsiType(this), it, this) }
+        sourcePsi.typeReference?.let { KotlinUTypeReferenceExpression(it, this) { it.toPsiType(this) } }
     }
 
     val delegateExpression: UExpression? by lazy {
@@ -221,7 +221,7 @@ open class KotlinConstructorUMethod(
         }
         val bodyExpressions = getBodyExpressions()
         if (delegationCall == null && bodyExpressions.isEmpty()) return@lz null
-        KotlinUBlockExpression.KotlinLazyUBlockExpression(this) { uastParent ->
+        KotlinLazyUBlockExpression(this) { uastParent ->
             SmartList<UExpression>().apply {
                 delegationCall?.let {
                     add(KotlinUFunctionCallExpression(it, uastParent))
@@ -338,7 +338,7 @@ class KotlinScriptUClass(
     ) : KotlinUMethod(psi, psi.kotlinOrigin, givenParent) {
         override val uastBody: UExpression? by lz {
             val initializers = script.declarations.filterIsInstance<KtScriptInitializer>()
-            KotlinUBlockExpression.create(initializers, this)
+            KotlinLazyUBlockExpression.create(initializers, this)
         }
         override val javaPsi = psi
     }

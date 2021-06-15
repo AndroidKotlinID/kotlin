@@ -1197,6 +1197,7 @@ fun main(args: Array<String>) {
 
             testClass<AbstractHLIntentionTest> {
                 val pattern = "^([\\w\\-_]+)\\.(kt|kts)$"
+                model("intentions/addPropertyAccessors", pattern = pattern)
                 model("intentions/specifyTypeExplicitly", pattern = pattern)
             }
 
@@ -1659,6 +1660,10 @@ fun main(args: Array<String>) {
             testClass<AbstractFirUastDeclarationTest> {
                 model("declaration")
             }
+
+            testClass<AbstractFirUastTypesTest> {
+                model("type")
+            }
         }
 
         testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin/testData") {
@@ -1669,11 +1674,23 @@ fun main(args: Array<String>) {
             testClass<AbstractFirLegacyUastIdentifiersTest> {
                 model("")
             }
+
+            testClass<AbstractFirLegacyUastTypesTest> {
+                model("")
+            }
+
+            testClass<AbstractFirLegacyUastValuesTest> {
+                model("")
+            }
         }
 
         testGroup("plugins/uast-kotlin-fir/tests", "plugins/uast-kotlin-fir/testData") {
             testClass<AbstractFE1UastDeclarationTest> {
                 model("declaration")
+            }
+
+            testClass<AbstractFE1UastTypesTest> {
+                model("type")
             }
         }
 
@@ -1683,6 +1700,14 @@ fun main(args: Array<String>) {
             }
 
             testClass<AbstractFE1LegacyUastIdentifiersTest> {
+                model("")
+            }
+
+            testClass<AbstractFE1LegacyUastTypesTest> {
+                model("")
+            }
+
+            testClass<AbstractFE1LegacyUastValuesTest> {
                 model("")
             }
         }
