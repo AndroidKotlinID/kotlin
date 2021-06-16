@@ -316,10 +316,11 @@ internal class KtSymbolByFirBuilder private constructor(
                         else KtFirUsualClassType(coneType, token, this@KtSymbolByFirBuilder)
                     }
                     is ConeTypeParameterType -> KtFirTypeParameterType(coneType, token, this@KtSymbolByFirBuilder)
-                    is ConeClassErrorType -> KtFirErrorType(coneType, token)
+                    is ConeClassErrorType -> KtFirClassErrorType(coneType, token)
                     is ConeFlexibleType -> KtFirFlexibleType(coneType, token, this@KtSymbolByFirBuilder)
                     is ConeIntersectionType -> KtFirIntersectionType(coneType, token, this@KtSymbolByFirBuilder)
-                    is ConeDefinitelyNotNullType -> buildKtType(coneType.original)
+                    is ConeDefinitelyNotNullType -> KtFirDefinitelyNotNullType(coneType, token, this@KtSymbolByFirBuilder)
+                    is ConeCapturedType -> KtFirCapturedType(coneType, token)
                     else -> throwUnexpectedElementError(coneType)
                 }
             }
@@ -335,10 +336,11 @@ internal class KtSymbolByFirBuilder private constructor(
         }
 
         fun buildTypeArgument(coneType: ConeTypeProjection): KtTypeArgument = when (coneType) {
-            is ConeStarProjection -> KtStarProjectionTypeArgument
-            is ConeKotlinTypeProjection -> KtFirTypeArgumentWithVariance(
+            is ConeStarProjection -> KtStarProjectionTypeArgument(token)
+            is ConeKotlinTypeProjection -> KtTypeArgumentWithVariance(
                 buildKtType(coneType.type),
-                coneType.kind.toVariance()
+                coneType.kind.toVariance(),
+                token,
             )
         }
 

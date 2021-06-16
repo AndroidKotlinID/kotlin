@@ -91,6 +91,7 @@ fun main() {
 
     imlFiles.mapNotNull { imlFile -> ijCommunityModuleNameToJpsModuleMapping[imlFile.nameWithoutExtension]?.let { imlFile to it } }
         .forEach { (imlFile, jpsModule) ->
+            println("Processing iml ${imlFile}")
             imlFile.parentFile.resolve("build.gradle.kts").writeText(convertJpsModule(imlFile, jpsModule))
         }
 }
@@ -102,10 +103,12 @@ fun convertJpsLibrary(lib: JpsLibrary, scope: JpsJavaDependencyScope, exported: 
     return when {
         mavenRepositoryLibraryDescriptor == null -> {
             lib.getRootUrls(JpsOrderRootType.COMPILED)
-                .map { File(it.removePrefix("jar://").removeSuffix("!/")).relativeTo(KOTLIN_REPO_ROOT) }
+                .map { it.removePrefix("jar://").removeSuffix("!/").removePrefix(KOTLIN_REPO_ROOT.canonicalPath) }
                 .map {
+                    check(it.startsWith("/kotlin-ide/intellij/")) { "Only jars from Community repo are accepted $it" }
+                    val relativeToCommunity = it.removePrefix("/kotlin-ide/intellij/").removePrefix("community/")
                     JpsLikeJarDependency(
-                        "files(rootDir.resolve(\"$it\").canonicalPath)",
+                        "files(intellijCommunityDir.resolve(\"$relativeToCommunity\").canonicalPath)",
                         scope,
                         dependencyConfiguration = null,
                         exported = exported

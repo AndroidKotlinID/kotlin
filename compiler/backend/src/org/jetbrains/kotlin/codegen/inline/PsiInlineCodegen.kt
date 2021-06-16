@@ -13,11 +13,9 @@ import org.jetbrains.kotlin.codegen.binding.CalculatedClosure
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
 import org.jetbrains.kotlin.codegen.coroutines.getOrCreateJvmSuspendFunctionView
 import org.jetbrains.kotlin.codegen.state.GenerationState
-import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
-import org.jetbrains.kotlin.config.LanguageVersionSettings
-import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
+import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.psi.psiUtil.isAncestor
@@ -26,6 +24,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCallWithAssert
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
 import org.jetbrains.kotlin.resolve.inline.InlineUtil.isInlinableParameterExpression
+import org.jetbrains.kotlin.resolve.inline.isInlineOnly
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodParameterKind
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
 import org.jetbrains.kotlin.types.KotlinType
@@ -39,14 +38,14 @@ import org.jetbrains.org.objectweb.asm.tree.MethodNode
 class PsiInlineCodegen(
     codegen: ExpressionCodegen,
     state: GenerationState,
-    function: FunctionDescriptor,
+    private val functionDescriptor: FunctionDescriptor,
     signature: JvmMethodSignature,
     typeParameterMappings: TypeParameterMappings<KotlinType>,
     sourceCompiler: SourceCompilerForInline,
     private val methodOwner: Type,
     private val actualDispatchReceiver: Type
 ) : InlineCodegen<ExpressionCodegen>(
-    codegen, state, function, signature, typeParameterMappings, sourceCompiler,
+    codegen, state, signature, typeParameterMappings, sourceCompiler,
     ReifiedTypeInliner(
         typeParameterMappings, PsiInlineIntrinsicsSupport(state), codegen.typeSystem,
         state.languageVersionSettings, state.unifiedNullChecks
@@ -64,6 +63,7 @@ class PsiInlineCodegen(
         callDefault: Boolean,
         codegen: ExpressionCodegen
     ) {
+        (sourceCompiler as PsiSourceCompilerForInline).callDefault = callDefault
         assert(hiddenParameters.isEmpty()) { "putHiddenParamsIntoLocals() should be called after processHiddenParameters()" }
         if (!state.globalInlineContext.enterIntoInlining(functionDescriptor, resolvedCall?.call?.callElement)) {
             generateStub(resolvedCall?.call?.callElement?.text ?: "<no source>", codegen)
@@ -74,7 +74,7 @@ class PsiInlineCodegen(
             for (info in expressionMap.values) {
                 if (info is PsiExpressionLambda) {
                     // Can't be done immediately in `rememberClosure` for some reason:
-                    info.generateLambdaBody(sourceCompiler, reifiedTypeInliner)
+                    info.generateLambdaBody(sourceCompiler)
                     // Requires `generateLambdaBody` first if the closure is non-empty (for bound callable references,
                     // or indeed any callable references, it *is* empty, so this was done in `rememberClosure`):
                     if (!info.isBoundCallableReference) {
@@ -82,7 +82,7 @@ class PsiInlineCodegen(
                     }
                 }
             }
-            performInline(resolvedCall?.typeArguments?.keys?.toList(), callDefault, callDefault, codegen.typeSystem, registerLineNumber)
+            performInline(registerLineNumber, functionDescriptor.isInlineOnly())
         } finally {
             state.globalInlineContext.exitFromInlining()
         }
@@ -97,7 +97,8 @@ class PsiInlineCodegen(
     private val hiddenParameters = mutableListOf<Pair<ParameterInfo, Int>>()
 
     override fun processHiddenParameters() {
-        if (getMethodAsmFlags(functionDescriptor, sourceCompiler.contextKind, state) and Opcodes.ACC_STATIC == 0) {
+        val contextKind = (sourceCompiler as PsiSourceCompilerForInline).context.contextKind
+        if (getMethodAsmFlags(functionDescriptor, contextKind, state) and Opcodes.ACC_STATIC == 0) {
             hiddenParameters += invocationParamBuilder.addNextParameter(methodOwner, false, actualDispatchReceiver) to
                     codegen.frameMap.enterTemp(methodOwner)
         }
@@ -167,9 +168,7 @@ class PsiInlineCodegen(
             JvmCodegenUtil.getBoundCallableReferenceReceiver(resolvedCall)
         } else null
 
-        val lambda = PsiExpressionLambda(
-            ktLambda!!, state.typeMapper, state.languageVersionSettings, parameter.isCrossinline, boundReceiver != null
-        )
+        val lambda = PsiExpressionLambda(ktLambda!!, state, parameter.isCrossinline, boundReceiver != null)
         rememberClosure(type, parameter.index, lambda)
         if (boundReceiver != null) {
             // Has to be done immediately to preserve evaluation order.
@@ -194,30 +193,18 @@ class PsiInlineCodegen(
         activeLambda = null
     }
 
-    override fun putValueIfNeeded(parameterType: JvmKotlinType, value: StackValue, kind: ValueKind, parameterIndex: Int) {
-        if (processDefaultMaskOrMethodHandler(value, kind)) return
+    override fun putValueIfNeeded(parameterType: JvmKotlinType, value: StackValue, kind: ValueKind, parameterIndex: Int) =
+        putArgumentToLocalVal(parameterType, value, parameterIndex, kind)
 
-        assert(maskValues.isEmpty()) { "Additional default call arguments should be last ones, but $value" }
-
-        putArgumentOrCapturedToLocalVal(parameterType, value, null, parameterIndex, kind)
-    }
-
-    override fun putCapturedValueOnStack(stackValue: StackValue, valueType: Type, paramIndex: Int) {
-        val param = activeLambda!!.capturedVars[paramIndex]
-        putArgumentOrCapturedToLocalVal(
-            JvmKotlinType(stackValue.type, stackValue.kotlinType), stackValue, param, paramIndex, ValueKind.CAPTURED
-        )
-    }
+    override fun putCapturedValueOnStack(stackValue: StackValue, valueType: Type, paramIndex: Int) =
+        putCapturedToLocalVal(stackValue, activeLambda!!.capturedVars[paramIndex], stackValue.kotlinType)
 
     override fun reorderArgumentsIfNeeded(actualArgsWithDeclIndex: List<ArgumentAndDeclIndex>, valueParameterTypes: List<Type>) = Unit
 
-    override fun extractDefaultLambdas(node: MethodNode): List<DefaultLambda> {
-        return expandMaskConditionsAndUpdateVariableNodes(
-            node, maskStartIndex, maskValues, methodHandleInDefaultMethodIndex,
-            extractDefaultLambdaOffsetAndDescriptor(jvmSignature, functionDescriptor),
-            ::PsiDefaultLambda
-        )
-    }
+    override fun extractDefaultLambdas(node: MethodNode): List<DefaultLambda> =
+        extractDefaultLambdas(node, extractDefaultLambdaOffsetAndDescriptor(jvmSignature, functionDescriptor)) { parameter ->
+            PsiDefaultLambda(type, capturedArgs, parameter, offset, needReification, sourceCompiler)
+        }
 }
 
 private val FunctionDescriptor.explicitParameters
@@ -225,8 +212,7 @@ private val FunctionDescriptor.explicitParameters
 
 class PsiExpressionLambda(
     expression: KtExpression,
-    private val typeMapper: KotlinTypeMapper,
-    private val languageVersionSettings: LanguageVersionSettings,
+    private val state: GenerationState,
     isCrossInline: Boolean,
     override val isBoundCallableReference: Boolean
 ) : ExpressionLambda(isCrossInline) {
@@ -239,9 +225,7 @@ class PsiExpressionLambda(
     override val invokeMethodParameters: List<KotlinType?>
         get() {
             val actualInvokeDescriptor = if (isSuspend)
-                getOrCreateJvmSuspendFunctionView(
-                    invokeMethodDescriptor, languageVersionSettings.isReleaseCoroutines(), typeMapper.bindingContext
-                )
+                getOrCreateJvmSuspendFunctionView(invokeMethodDescriptor, state)
             else
                 invokeMethodDescriptor
             return actualInvokeDescriptor.explicitParameters.map { it.returnType }
@@ -263,7 +247,7 @@ class PsiExpressionLambda(
     val closure: CalculatedClosure
 
     init {
-        val bindingContext = typeMapper.bindingContext
+        val bindingContext = state.bindingContext
         val function = bindingContext.get(BindingContext.FUNCTION, functionWithBodyOrCallableReference)
         if (function == null && expression is KtCallableReferenceExpression) {
             val variableDescriptor =
@@ -271,7 +255,7 @@ class PsiExpressionLambda(
                     ?: throw AssertionError("Reference expression not resolved to variable descriptor with accessors: ${expression.getText()}")
             classDescriptor = bindingContext.get(CodegenBinding.CLASS_FOR_CALLABLE, variableDescriptor)
                 ?: throw IllegalStateException("Class for callable not found: $variableDescriptor\n${expression.text}")
-            lambdaClassType = typeMapper.mapClass(classDescriptor)
+            lambdaClassType = state.typeMapper.mapClass(classDescriptor)
             val getFunction = PropertyReferenceCodegen.findGetFunction(variableDescriptor)
             invokeMethodDescriptor = PropertyReferenceCodegen.createFakeOpenDescriptor(getFunction, classDescriptor)
             val resolvedCall = expression.callableReference.getResolvedCallWithAssert(bindingContext)
@@ -287,7 +271,7 @@ class PsiExpressionLambda(
         closure = bindingContext.get(CodegenBinding.CLOSURE, classDescriptor)
             ?: throw AssertionError("null closure for lambda ${expression.text}")
         returnLabels = getDeclarationLabels(expression, invokeMethodDescriptor).associateWith { null }
-        invokeMethod = typeMapper.mapAsmMethod(invokeMethodDescriptor)
+        invokeMethod = state.typeMapper.mapAsmMethod(invokeMethodDescriptor)
         isSuspend = invokeMethodDescriptor.isSuspend
     }
 
@@ -296,15 +280,16 @@ class PsiExpressionLambda(
         arrayListOf<CapturedParamDesc>().apply {
             val captureThis = closure.capturedOuterClassDescriptor
             if (captureThis != null) {
-                add(capturedParamDesc(AsmUtil.CAPTURED_THIS_FIELD, typeMapper.mapType(captureThis.defaultType), isSuspend = false))
+                add(capturedParamDesc(AsmUtil.CAPTURED_THIS_FIELD, state.typeMapper.mapType(captureThis.defaultType), isSuspend = false))
             }
 
             val capturedReceiver = closure.capturedReceiverFromOuterContext
             if (capturedReceiver != null) {
-                val fieldName = closure.getCapturedReceiverFieldName(typeMapper.bindingContext, languageVersionSettings)
-                val type = typeMapper.mapType(capturedReceiver).let {
-                    if (isBoundCallableReference) AsmUtil.boxType(it) else it
-                }
+                val fieldName = closure.getCapturedReceiverFieldName(state.typeMapper.bindingContext, state.languageVersionSettings)
+                val type = if (isBoundCallableReference)
+                    state.typeMapper.mapType(capturedReceiver, null, TypeMappingMode.GENERIC_ARGUMENT)
+                else
+                    state.typeMapper.mapType(capturedReceiver)
                 add(capturedParamDesc(fieldName, type, isSuspend = false))
             }
 
@@ -320,13 +305,14 @@ class PsiExpressionLambda(
 }
 
 class PsiDefaultLambda(
-    override val lambdaClassType: Type,
+    lambdaClassType: Type,
     capturedArgs: Array<Type>,
-    private val parameterDescriptor: ValueParameterDescriptor,
+    parameterDescriptor: ValueParameterDescriptor,
     offset: Int,
-    needReification: Boolean
-) : DefaultLambda(capturedArgs, parameterDescriptor.isCrossinline, offset, needReification) {
-    private lateinit var invokeMethodDescriptor: FunctionDescriptor
+    needReification: Boolean,
+    sourceCompiler: SourceCompilerForInline
+) : DefaultLambda(lambdaClassType, capturedArgs, parameterDescriptor.isCrossinline, offset, needReification, sourceCompiler) {
+    private val invokeMethodDescriptor: FunctionDescriptor
 
     override val invokeMethodParameters: List<KotlinType?>
         get() = invokeMethodDescriptor.explicitParameters.map { it.returnType }
@@ -334,24 +320,15 @@ class PsiDefaultLambda(
     override val invokeMethodReturnType: KotlinType?
         get() = invokeMethodDescriptor.returnType
 
-    override fun mapAsmMethod(sourceCompiler: SourceCompilerForInline, isPropertyReference: Boolean): Method {
-        val substitutedDescriptor = parameterDescriptor.type.memberScope
+    init {
+        val name = if (isPropertyReference) OperatorNameConventions.GET else OperatorNameConventions.INVOKE
+        val descriptor = parameterDescriptor.type.memberScope
             .getContributedFunctions(OperatorNameConventions.INVOKE, NoLookupLocation.FROM_BACKEND)
             .single()
-        invokeMethodDescriptor = when {
-            // Property references: `(A) -> B` => `get(Any?): Any?`
-            isPropertyReference -> substitutedDescriptor.original
-            // Suspend function references: `suspend (A) -> B` => `invoke(A, Continuation<B>): Any?`
-            // TODO: default suspend lambdas are currently uninlinable
-            parameterDescriptor.type.isSuspendFunctionType ->
-                getOrCreateJvmSuspendFunctionView(
-                    substitutedDescriptor,
-                    sourceCompiler.state.languageVersionSettings.isReleaseCoroutines(),
-                    sourceCompiler.state.bindingContext
-                )
-            // Non-suspend function references and lambdas: `(A) -> B` => `invoke(A): B`
-            else -> substitutedDescriptor
-        }
-        return sourceCompiler.state.typeMapper.mapSignatureSkipGeneric(invokeMethodDescriptor).asmMethod
+            .let { if (parameterDescriptor.type.isSuspendFunctionType) getOrCreateJvmSuspendFunctionView(it, sourceCompiler.state) else it }
+        // This is technically wrong as it always uses `invoke`, but `loadInvoke` will fall back to `get` which is never mangled...
+        val asmMethod = sourceCompiler.state.typeMapper.mapAsmMethod(descriptor)
+        val invokeIsErased = loadInvoke(sourceCompiler, name.asString(), asmMethod)
+        invokeMethodDescriptor = if (invokeIsErased) descriptor.original else descriptor
     }
 }

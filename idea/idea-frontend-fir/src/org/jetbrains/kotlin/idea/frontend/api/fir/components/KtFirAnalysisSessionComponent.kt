@@ -13,18 +13,25 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
 import org.jetbrains.kotlin.fir.analysis.diagnostics.toFirDiagnostics
 import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
 import org.jetbrains.kotlin.fir.typeContext
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.idea.frontend.api.KtStarProjectionTypeArgument
+import org.jetbrains.kotlin.idea.frontend.api.KtTypeArgument
+import org.jetbrains.kotlin.idea.frontend.api.KtTypeArgumentWithVariance
 import org.jetbrains.kotlin.fir.types.ConeTypeCheckerContext
 import org.jetbrains.kotlin.idea.asJava.asPsiType
 import org.jetbrains.kotlin.idea.frontend.api.diagnostics.KtDiagnosticWithPsi
 import org.jetbrains.kotlin.idea.frontend.api.fir.KtFirAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.fir.diagnostics.KT_DIAGNOSTIC_CONVERTER
 import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
+import org.jetbrains.kotlin.idea.frontend.api.fir.types.KtFirType
+import org.jetbrains.kotlin.idea.frontend.api.types.KtType
+import org.jetbrains.kotlin.types.model.convertVariance
 
 internal interface KtFirAnalysisSessionComponent {
     val analysisSession: KtFirAnalysisSession
 
     val rootModuleSession: FirSession get() = analysisSession.firResolveState.rootModuleSession
+    val typeContext: ConeInferenceContext get() = rootModuleSession.typeContext
     val firSymbolBuilder get() = analysisSession.firSymbolBuilder
     val firResolveState get() = analysisSession.firResolveState
 
@@ -41,6 +48,20 @@ internal interface KtFirAnalysisSessionComponent {
         check(firDiagnostic is FirPsiDiagnostic<*>)
         return firDiagnostic.asKtDiagnostic()
     }
+
+    val KtType.coneType: ConeKotlinType
+        get() {
+            require(this is KtFirType)
+            return coneType
+        }
+
+    val KtTypeArgument.coneTypeProjection: ConeTypeProjection
+        get() = when (this) {
+            is KtStarProjectionTypeArgument -> ConeStarProjection
+            is KtTypeArgumentWithVariance -> {
+                typeContext.createTypeArgument(type.coneType, variance.convertVariance()) as ConeTypeProjection
+            }
+        }
 
     fun createTypeCheckerContext() = ConeTypeCheckerContext(
         isErrorTypeEqualsToAnything = true,

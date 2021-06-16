@@ -9,10 +9,9 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
-import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.realPsi
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
 import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
 import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
@@ -29,11 +28,10 @@ import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.FirLazyDeclarati
 import org.jetbrains.kotlin.idea.fir.low.level.api.providers.firIdeProvider
 import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.FirIdeSessionProvider
 import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.FirIdeSourcesSession
-import org.jetbrains.kotlin.idea.fir.low.level.api.util.FirElementFinder
+import org.jetbrains.kotlin.idea.fir.low.level.api.util.*
 import org.jetbrains.kotlin.idea.fir.low.level.api.util.findSourceNonLocalFirDeclaration
 import org.jetbrains.kotlin.idea.util.getElementTextInContext
 import org.jetbrains.kotlin.psi.*
-import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal class FirModuleResolveStateImpl(
     override val project: Project,
@@ -85,6 +83,10 @@ internal class FirModuleResolveStateImpl(
      * [ktDeclaration] should be either [KtDeclaration] or [KtLambdaExpression]
      */
     private fun findSourceFirDeclarationByExpression(ktDeclaration: KtExpression): FirDeclaration {
+        require(ktDeclaration.getModuleInfo() is ModuleSourceInfo) {
+            "Declaration should have ModuleSourceInfo, instead it had ${ktDeclaration.getModuleInfo()}"
+        }
+
         val nonLocalNamedDeclaration = ktDeclaration.getNonLocalContainingOrThisDeclaration()
             ?: error("Declaration should have non-local container${ktDeclaration.getElementTextInContext()}")
 
@@ -114,6 +116,24 @@ internal class FirModuleResolveStateImpl(
         }
         return firDeclaration
             ?: error("FirDeclaration was not found for\n${ktDeclaration.getElementTextInContext()}")
+    }
+
+    @OptIn(InternalForInline::class)
+    override fun findSourceFirCompiledDeclaration(ktDeclaration: KtDeclaration): FirDeclaration {
+        require(ktDeclaration.containingKtFile.isCompiled) {
+            "This method will only work on compiled declarations, but this declaration is not compiled: ${ktDeclaration.getElementTextInContext()}"
+        }
+
+        val searcher = FirDeclarationForCompiledElementSearcher(rootModuleSession.symbolProvider)
+
+        return when (ktDeclaration) {
+            is KtClassOrObject -> searcher.findNonLocalClass(ktDeclaration)
+            is KtConstructor<*> -> searcher.findConstructorOfNonLocalClass(ktDeclaration)
+            is KtNamedFunction -> searcher.findNonLocalFunction(ktDeclaration)
+            is KtProperty -> searcher.findNonLocalProperty(ktDeclaration)
+
+            else -> error("Unsupported compiled declaration of type ${ktDeclaration::class}: ${ktDeclaration.getElementTextInContext()}")
+        }
     }
 
     override fun <D : FirDeclaration> resolveFirToPhase(declaration: D, toPhase: FirResolvePhase): D {

@@ -1159,18 +1159,17 @@ class ExpressionCodegen(
             val afterStore = markNewLabel()
 
             val catchBody = clause.result
-            val catchResult = catchBody.accept(this, data)
+            var catchBlockInfo = BlockInfo(data)
+            catchBlockInfo.variables.add(VariableInfo(parameter, index, descriptorType, afterStore))
+
+            val catchResult = catchBody.accept(this, catchBlockInfo)
             if (savedValue != null) {
                 catchResult.materializeAt(tryAsmType, aTry.type, true)
                 mv.store(savedValue, tryAsmType)
             } else {
                 catchResult.discard()
             }
-
-            frameMap.leave(clause.catchParameter)
-
-            val clauseEnd = markNewLabel()
-            mv.visitLocalVariable(parameter.name.asString(), descriptorType.descriptor, null, afterStore, clauseEnd, index)
+            writeLocalVariablesInTable(catchBlockInfo, markNewLabel())
 
             if (tryInfo is TryWithFinallyInfo) {
                 data.handleBlock { genFinallyBlock(tryInfo, tryCatchBlockEnd, null, data) }
@@ -1343,10 +1342,10 @@ class ExpressionCodegen(
             val classType = classReference.classType
             val classifier = classType.classifierOrNull
             if (classifier is IrTypeParameterSymbol) {
-                assert(classifier.owner.isReified) {
-                    "Non-reified type parameter under ::class should be rejected by type checker: ${classifier.owner.dump()}"
+                val success = putReifiedOperationMarkerIfTypeIsReifiedParameter(classType, ReifiedTypeInliner.OperationKind.JAVA_CLASS)
+                assert(success) {
+                    "Non-reified type parameter under ::class should be rejected by type checker: ${classType.render()}"
                 }
-                putReifiedOperationMarkerIfTypeIsReifiedParameter(classType, ReifiedTypeInliner.OperationKind.JAVA_CLASS)
             }
 
             generateClassInstance(mv, classType, typeMapper)

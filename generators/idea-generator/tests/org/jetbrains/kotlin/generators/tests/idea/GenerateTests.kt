@@ -241,13 +241,23 @@ fun main(args: Array<String>) {
             }
 
             testClass<AbstractKotlinEvaluateExpressionTest> {
-                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest")
-                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest")
+                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest", targetBackend = TargetBackend.JVM_WITH_OLD_EVALUATOR)
+                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest", targetBackend = TargetBackend.JVM_WITH_OLD_EVALUATOR)
             }
 
             testClass<AbstractIrKotlinEvaluateExpressionTest> {
-                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest", targetBackend = TargetBackend.JVM_IR)
-                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest", targetBackend = TargetBackend.JVM_IR)
+                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest", targetBackend = TargetBackend.JVM_IR_WITH_OLD_EVALUATOR)
+                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest", targetBackend = TargetBackend.JVM_IR_WITH_OLD_EVALUATOR)
+            }
+
+            testClass<AbstractKotlinEvaluateExpressionWithIRFragmentCompilerTest> {
+                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest", targetBackend = TargetBackend.JVM_WITH_IR_EVALUATOR)
+                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest", targetBackend = TargetBackend.JVM_WITH_IR_EVALUATOR)
+            }
+
+            testClass<AbstractIrKotlinEvaluateExpressionWithIRFragmentCompilerTest> {
+                model("evaluation/singleBreakpoint", testMethod = "doSingleBreakpointTest", targetBackend = TargetBackend.JVM_IR_WITH_IR_EVALUATOR)
+                model("evaluation/multipleBreakpoints", testMethod = "doMultipleBreakpointsTest", targetBackend = TargetBackend.JVM_IR_WITH_IR_EVALUATOR)
             }
 
             testClass<AbstractSelectExpressionForDebuggerTest> {
@@ -1062,6 +1072,9 @@ fun main(args: Array<String>) {
             testClass<AbstractFirLazyDeclarationResolveTest> {
                 model("lazyResolve")
             }
+            testClass<AbstractFirLibraryModuleDeclarationResolveTest> {
+                model("libraryModuleResolve", recursive = false)
+            }
             testClass<AbstractProjectWideOutOfBlockKotlinModificationTrackerTest> {
                 model("outOfBlockProjectWide")
             }
@@ -1171,7 +1184,7 @@ fun main(args: Array<String>) {
                 model("quickfix/expressions", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/lateinit", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/modifiers", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
-                model("quickfix/nullables/unsafeInfixCall", pattern = pattern, filenameStartsLowerCase = true)
+                model("quickfix/nullables", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/override", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/override/typeMismatchOnOverride", pattern = pattern, filenameStartsLowerCase = true, recursive = false)
                 model("quickfix/replaceInfixOrOperatorCall", pattern = pattern, filenameStartsLowerCase = true)
@@ -1183,6 +1196,7 @@ fun main(args: Array<String>) {
                 model("quickfix/wrapWithSafeLetCall", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/typeMismatch/componentFunctionReturnTypeMismatch", pattern = pattern, filenameStartsLowerCase = true)
                 model("quickfix/typeMismatch/typeMismatchOnReturnedExpression", pattern = pattern, filenameStartsLowerCase = true)
+                model("quickfix/toString", pattern = pattern, filenameStartsLowerCase = true)
             }
 
             testClass<AbstractHighLevelQuickFixMultiFileTest> {
