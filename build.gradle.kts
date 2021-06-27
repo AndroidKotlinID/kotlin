@@ -333,6 +333,11 @@ extra["compilerArtifactsForIde"] = listOf(
     ":prepare:ide-plugin-dependencies:lombok-compiler-plugin-for-ide",
     ":prepare:ide-plugin-dependencies:kotlin-compiler-tests-for-ide",
     ":prepare:ide-plugin-dependencies:kotlin-compiler-testdata-for-ide",
+    ":prepare:ide-plugin-dependencies:kotlin-stdlib-minimal-for-test-for-ide",
+    ":prepare:ide-plugin-dependencies:low-level-api-fir-for-ide",
+    ":prepare:ide-plugin-dependencies:high-level-api-for-ide",
+    ":prepare:ide-plugin-dependencies:high-level-api-fir-for-ide",
+    ":prepare:ide-plugin-dependencies:high-level-api-fir-tests-for-ide",
     ":kotlin-script-runtime",
     ":kotlin-script-util",
     ":kotlin-scripting-common",
@@ -770,8 +775,14 @@ tasks {
         dependsOn(":kotlin-scripting-jsr223-test:embeddableTest")
         dependsOn(":kotlin-main-kts-test:test")
         dependsOn(":kotlin-main-kts-test:testWithIr")
-        dependsOn(":kotlin-scripting-ide-services-test:test")
-        dependsOn(":kotlin-scripting-ide-services-test:embeddableTest")
+
+        if (kotlinBuildProperties.getOrNull("attachedIntellijVersion") == null &&
+            !kotlinBuildProperties.getBoolean("disableKotlinPluginModules", false)
+        ) {
+            dependsOn(":kotlin-scripting-ide-services-test:test")
+            dependsOn(":kotlin-scripting-ide-services-test:embeddableTest")
+        }
+
         dependsOn(":kotlin-scripting-js-test:test")
     }
 
@@ -815,6 +826,7 @@ tasks {
 
     register("distTest") {
         dependsOn("compilerTest")
+        dependsOn("frontendApiTests")
         dependsOn("toolsTest")
         dependsOn("gradlePluginTest")
         dependsOn("examplesTest")
@@ -876,13 +888,22 @@ tasks {
         dependsOn("dist")
         dependsOn(
             ":idea:idea-fir:test",
-            ":idea:idea-frontend-api:test",
-            ":idea:idea-frontend-fir:test",
-            ":idea:idea-frontend-fir:idea-fir-low-level-api:test",
+            ":idea:idea-frontend-fir:fir-low-level-api-ide-impl:test",
             ":plugins:uast-kotlin-fir:test",
             ":idea:idea-fir-fe10-binding:test"
         )
     }
+
+    register("frontendApiTests") {
+        dependsOn("dist")
+        dependsOn(
+            ":idea-frontend-api:test",
+            ":idea-frontend-fir:test",
+            ":idea-frontend-fir:idea-fir-low-level-api:test"
+        )
+    }
+    
+    
 
     register("android-ide-tests") {
         dependsOn("dist")

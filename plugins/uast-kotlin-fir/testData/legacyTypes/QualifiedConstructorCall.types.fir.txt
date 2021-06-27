@@ -5,5 +5,11 @@ UFile (package = A.B.C) [package A.B.C...]
         UMethod (name = Bar) [public fun Bar() = UastEmptyExpression]
         UMethod (name = getFoo) [public final fun getFoo() : A.B.C.Foo {...}]
             UBlockExpression [{...}] : PsiType:Void
-                UReturnExpression [return [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] : PsiType:Void
-                    [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)]
+                UReturnExpression [return A.B.C.[!] UnknownKotlinExpression (CALL_EXPRESSION)] : PsiType:Void
+                    UQualifiedReferenceExpression [A.B.C.[!] UnknownKotlinExpression (CALL_EXPRESSION)] : PsiType:Foo
+                        UQualifiedReferenceExpression [A.B.C] : PsiType:Unit
+                            UQualifiedReferenceExpression [A.B] : PsiType:Unit
+                                USimpleNameReferenceExpression (identifier = A) [A] : PsiType:Unit
+                                USimpleNameReferenceExpression (identifier = B) [B] : PsiType:Unit
+                            USimpleNameReferenceExpression (identifier = C) [C] : PsiType:Unit
+                        [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)]

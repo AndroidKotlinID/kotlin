@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir
 
+import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
@@ -314,50 +315,52 @@ class FirRenderer(builder: StringBuilder, private val mode: RenderMode = RenderM
         if (memberDeclaration.isExternal) {
             print("external ")
         }
-        if (memberDeclaration is FirCallableMemberDeclaration<*>) {
-            if (memberDeclaration.isOverride) {
-                print("override ")
-            }
-            if (memberDeclaration.isStatic) {
-                print("static ")
-            }
+        if (memberDeclaration.isOverride) {
+            print("override ")
         }
-        if (memberDeclaration is FirRegularClass) {
-            if (memberDeclaration.isInner) {
-                print("inner ")
-            }
-            if (memberDeclaration.isCompanion) {
-                print("companion ")
-            }
-            if (memberDeclaration.isData) {
-                print("data ")
-            }
-            if (memberDeclaration.isInline) {
-                print("inline ")
-            }
-        } else if (memberDeclaration is FirSimpleFunction) {
-            if (memberDeclaration.isOperator) {
-                print("operator ")
-            }
-            if (memberDeclaration.isInfix) {
-                print("infix ")
-            }
-            if (memberDeclaration.isInline) {
-                print("inline ")
-            }
-            if (memberDeclaration.isTailRec) {
-                print("tailrec ")
-            }
-            if (memberDeclaration.isSuspend) {
-                print("suspend ")
-            }
-        } else if (memberDeclaration is FirProperty) {
-            if (memberDeclaration.isConst) {
-                print("const ")
-            }
-            if (memberDeclaration.isLateInit) {
-                print("lateinit ")
-            }
+        if (memberDeclaration.isStatic) {
+            print("static ")
+        }
+        if (memberDeclaration.isInner) {
+            print("inner ")
+        }
+
+        // `companion/data/fun` modifiers are only valid for FirRegularClass, but we render them to make sure they are not
+        // incorrectly loaded for other declarations during deserialization.
+        if (memberDeclaration.status.isCompanion) {
+            print("companion ")
+        }
+        if (memberDeclaration.status.isData) {
+            print("data ")
+        }
+        // All Java interfaces are considered `fun` (functional interfaces) for resolution purposes
+        // (see JavaSymbolProvider.createFirJavaClass). Don't render `fun` for Java interfaces; it's not a modifier in Java.
+        val isJavaInterface =
+            memberDeclaration is FirRegularClass && memberDeclaration.classKind == ClassKind.INTERFACE && memberDeclaration.isJava
+        if (memberDeclaration.status.isFun && !isJavaInterface) {
+            print("fun ")
+        }
+
+        if (memberDeclaration.isInline) {
+            print("inline ")
+        }
+        if (memberDeclaration.isOperator) {
+            print("operator ")
+        }
+        if (memberDeclaration.isInfix) {
+            print("infix ")
+        }
+        if (memberDeclaration.isTailRec) {
+            print("tailrec ")
+        }
+        if (memberDeclaration.isSuspend) {
+            print("suspend ")
+        }
+        if (memberDeclaration.isConst) {
+            print("const ")
+        }
+        if (memberDeclaration.isLateInit) {
+            print("lateinit ")
         }
 
         visitDeclaration(memberDeclaration)

@@ -5,8 +5,8 @@ UFile (package = ) [public final class ParametersDisorderKt {...]
             UParameter (name = b) [var b: float]
             UBlockExpression [{...}] = Undetermined
         UMethod (name = withDefault) [public static final fun withDefault(c: int, d: java.lang.String) : void {...}]
-            UParameter (name = c) [var c: int = "not-yet-compile-time-constant"]
-                ULiteralExpression (value = "not-yet-compile-time-constant") ["not-yet-compile-time-constant"] = "not-yet-compile-time-constant"
+            UParameter (name = c) [var c: int = 1]
+                ULiteralExpression (value = 1) [1] = (long)1
             UParameter (name = d) [var d: java.lang.String = "aaa"]
                 ULiteralExpression (value = "aaa") ["aaa"] = "aaa"
             UBlockExpression [{...}] = Undetermined
@@ -19,13 +19,41 @@ UFile (package = ) [public final class ParametersDisorderKt {...]
             UBlockExpression [{...}] = Undetermined
                 [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
                 [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression ["abc".[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    ULiteralExpression (value = "abc") ["abc"] = "abc"
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression [Math.[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    USimpleNameReferenceExpression (identifier = Math) [Math] = external Math()
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
                 [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
-                [!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION) [[!] UnknownKotlinExpression (DOT_QUALIFIED_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression [java.lang.String.[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    UQualifiedReferenceExpression [java.lang.String] = external String()
+                        UQualifiedReferenceExpression [java.lang] = external lang()
+                            USimpleNameReferenceExpression (identifier = java) [java] = external java()
+                            USimpleNameReferenceExpression (identifier = lang) [lang] = external lang()
+                        USimpleNameReferenceExpression (identifier = String) [String] = external String()
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression [java.lang.String.[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    UQualifiedReferenceExpression [java.lang.String] = external String()
+                        UQualifiedReferenceExpression [java.lang] = external lang()
+                            USimpleNameReferenceExpression (identifier = java) [java] = external java()
+                            USimpleNameReferenceExpression (identifier = lang) [lang] = external lang()
+                        USimpleNameReferenceExpression (identifier = String) [String] = external String()
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression [java.lang.String.[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    UQualifiedReferenceExpression [java.lang.String] = external String()
+                        UQualifiedReferenceExpression [java.lang] = external lang()
+                            USimpleNameReferenceExpression (identifier = java) [java] = external java()
+                            USimpleNameReferenceExpression (identifier = lang) [lang] = external lang()
+                        USimpleNameReferenceExpression (identifier = String) [String] = external String()
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                UQualifiedReferenceExpression [java.lang.String.[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
+                    UQualifiedReferenceExpression [java.lang.String] = external String()
+                        UQualifiedReferenceExpression [java.lang] = external lang()
+                            USimpleNameReferenceExpression (identifier = java) [java] = external java()
+                            USimpleNameReferenceExpression (identifier = lang) [lang] = external lang()
+                        USimpleNameReferenceExpression (identifier = String) [String] = external String()
+                    [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
                 [!] UnknownKotlinExpression (CALL_EXPRESSION) [[!] UnknownKotlinExpression (CALL_EXPRESSION)] = Undetermined
         UMethod (name = objectLiteral) [public static final fun objectLiteral() : void {...}]
             UBlockExpression [{...}] = Undetermined

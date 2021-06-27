@@ -19,8 +19,14 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.uast.*
 import org.jetbrains.uast.expressions.UInjectionHost
+import org.jetbrains.uast.kotlin.declarations.FirKotlinUAnnotation
 
 internal object FirKotlinConverter : BaseKotlinConverter {
+    override fun convertAnnotation(annotationEntry: KtAnnotationEntry, givenParent: UElement?): UAnnotation {
+        // TODO: need to polish/implement annotations more
+        return FirKotlinUAnnotation(annotationEntry, givenParent)
+    }
+
     internal fun convertDeclarationOrElement(
         element: PsiElement,
         givenParent: UElement?,
@@ -34,7 +40,7 @@ internal object FirKotlinConverter : BaseKotlinConverter {
             ?: convertPsiElement(element, givenParent, requiredTypes)
     }
 
-    internal fun convertDeclaration(
+    override fun convertDeclaration(
         element: PsiElement,
         givenParent: UElement?,
         requiredTypes: Array<out Class<out UElement>>
@@ -67,7 +73,7 @@ internal object FirKotlinConverter : BaseKotlinConverter {
 
                 is KtLightClass -> {
                     // TODO: differentiate enum entry
-                    el<UClass> { AbstractFirKotlinUClass.create(original, givenParent) }
+                    el<UClass> { FirKotlinUClass.create(original, givenParent) }
                 }
                 is KtClassOrObject -> {
                     convertClassOrObject(original, givenParent, requiredTypes).firstOrNull()
@@ -104,6 +110,10 @@ internal object FirKotlinConverter : BaseKotlinConverter {
                 // TODO: KtAnnotationEntry
                 // TODO: KtCallExpression (for nested annotation)
 
+                is KtDelegatedSuperTypeEntry -> el<KotlinSupertypeDelegationUExpression> {
+                    KotlinSupertypeDelegationUExpression(original, givenParent)
+                }
+
                 else -> null
             }
         }
@@ -118,7 +128,7 @@ internal object FirKotlinConverter : BaseKotlinConverter {
             // File
             alternative { KotlinUFile(element, firKotlinUastPlugin) },
             // Facade
-            alternative { element.findFacadeClass()?.let { AbstractFirKotlinUClass.create(it, givenParent) } }
+            alternative { element.findFacadeClass()?.let { FirKotlinUClass.create(it, givenParent) } }
         )
     }
 
@@ -128,7 +138,7 @@ internal object FirKotlinConverter : BaseKotlinConverter {
         requiredTypes: Array<out Class<out UElement>>
     ): Sequence<UElement> {
         val ktLightClass = element.toLightClass() ?: return emptySequence()
-        val uClass = AbstractFirKotlinUClass.create(ktLightClass, givenParent)
+        val uClass = FirKotlinUClass.create(ktLightClass, givenParent)
         return requiredTypes.accommodate(
             // Class
             alternative { uClass },
@@ -190,6 +200,9 @@ internal object FirKotlinConverter : BaseKotlinConverter {
 
         return with(requiredTypes) {
             when (element) {
+                is KtClassBody -> {
+                    el<UExpressionList>(build(KotlinUExpressionList.Companion::createClassBody))
+                }
                 is KtExpression -> {
                     convertExpression(element, givenParent, requiredTypes)
                 }
@@ -295,6 +308,14 @@ internal object FirKotlinConverter : BaseKotlinConverter {
                 is KtIsExpression -> expr<UBinaryExpressionWithType>(build(::KotlinUTypeCheckExpression))
 
                 is KtArrayAccessExpression -> expr<UArrayAccessExpression>(build(::FirKotlinUArrayAccessExpression))
+
+                is KtThisExpression -> expr<UThisExpression>(build(::KotlinUThisExpression))
+                is KtSuperExpression -> expr<USuperExpression>(build(::KotlinUSuperExpression))
+                is KtCallableReferenceExpression -> expr<UCallableReferenceExpression>(build(::KotlinUCallableReferenceExpression))
+                is KtClassLiteralExpression -> expr<UClassLiteralExpression>(build(::KotlinUClassLiteralExpression))
+                is KtDotQualifiedExpression -> expr<UQualifiedReferenceExpression>(build(::KotlinUQualifiedReferenceExpression))
+                is KtSafeQualifiedExpression -> expr<UQualifiedReferenceExpression>(build(::KotlinUSafeQualifiedExpression))
+                is KtSimpleNameExpression -> expr<USimpleNameReferenceExpression>(build(::FirKotlinUSimpleReferenceExpression))
 
                 else -> expr<UExpression>(build(::UnknownKotlinExpression))
             }

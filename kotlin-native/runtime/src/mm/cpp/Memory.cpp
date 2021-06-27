@@ -82,7 +82,8 @@ void ObjHeader::destroyMetaObject(ObjHeader* object) {
 }
 
 ALWAYS_INLINE bool isPermanentOrFrozen(const ObjHeader* obj) {
-    return mm::IsFrozen(obj);
+    // TODO: Freeze TF_IMMUTABLE objects upon creation.
+    return mm::IsFrozen(obj) || ((obj->type_info()->flags_ & TF_IMMUTABLE) != 0);
 }
 
 ALWAYS_INLINE bool isShareable(const ObjHeader* obj) {
@@ -95,8 +96,13 @@ extern "C" MemoryState* InitMemory(bool firstRuntime) {
 }
 
 extern "C" void DeinitMemory(MemoryState* state, bool destroyRuntime) {
+    // We need the native state to avoid a deadlock on unregistering the thread.
+    // The deadlock is possible if we are in the runnable state and the GC already locked
+    // the thread registery and waits for threads to suspend or go to the native state.
+    AssertThreadState(state, ThreadState::kNative);
     auto* node = mm::FromMemoryState(state);
     if (destroyRuntime) {
+        ThreadStateGuard guard(state, ThreadState::kRunnable);
         node->Get()->gc().PerformFullGC();
         // TODO: Also make sure that finalizers are run.
     }

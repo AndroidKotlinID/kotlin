@@ -23,7 +23,8 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
             FirConflictsChecker,
             FirProjectionRelationChecker,
             FirTypeConstraintsChecker,
-            FirReservedUnderscoreDeclarationChecker
+            FirReservedUnderscoreDeclarationChecker,
+            FirUpperBoundViolatedDeclarationChecker
         )
 
     override val memberDeclarationCheckers: Set<FirMemberDeclarationChecker>

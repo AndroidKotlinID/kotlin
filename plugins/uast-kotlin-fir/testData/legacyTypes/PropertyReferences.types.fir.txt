@@ -17,11 +17,14 @@ UFile (package = ) [public final class PropertyReferencesKt {...]
                 [!] UnknownKotlinExpression (PREFIX_EXPRESSION) [[!] UnknownKotlinExpression (PREFIX_EXPRESSION)]
                 [!] UnknownKotlinExpression (POSTFIX_EXPRESSION) [[!] UnknownKotlinExpression (POSTFIX_EXPRESSION)]
     UClass (name = A) [public final class A {...}]
-        UField (name = privateProp) [private var privateProp: int = "not-yet-compile-time-constant"]
-            ULiteralExpression (value = "not-yet-compile-time-constant") ["not-yet-compile-time-constant"] : PsiType:int
+        UField (name = privateProp) [private var privateProp: int = 0]
+            ULiteralExpression (value = 0) [0] : PsiType:int
         UField (name = mutableProp) [private var mutableProp: int]
-        UMethod (name = A) [public fun A(init: int) = UastEmptyExpression]
+        UMethod (name = A) [public fun A(init: int) {...}]
             UParameter (name = init) [var init: int]
+            UBlockExpression [{...}]
+                UBlockExpression [{...}] : PsiType:Unit
+                    [!] UnknownKotlinExpression (BINARY_EXPRESSION) [[!] UnknownKotlinExpression (BINARY_EXPRESSION)]
         UMethod (name = getMutableProp) [public final fun getMutableProp() : int = UastEmptyExpression]
         UMethod (name = setMutableProp) [public final fun setMutableProp(value: int) : void = UastEmptyExpression]
             UParameter (name = value) [var value: int]
@@ -30,5 +33,5 @@ UFile (package = ) [public final class PropertyReferencesKt {...]
             UBlockExpression [{...}] : PsiType:Void
                 [!] UnknownKotlinExpression (PROPERTY) [[!] UnknownKotlinExpression (PROPERTY)]
                 [!] UnknownKotlinExpression (BINARY_EXPRESSION) [[!] UnknownKotlinExpression (BINARY_EXPRESSION)]
-                UReturnExpression [return [!] UnknownKotlinExpression (REFERENCE_EXPRESSION)] : PsiType:Void
-                    [!] UnknownKotlinExpression (REFERENCE_EXPRESSION) [[!] UnknownKotlinExpression (REFERENCE_EXPRESSION)]
+                UReturnExpression [return privateProp] : PsiType:Void
+                    USimpleNameReferenceExpression (identifier = privateProp) [privateProp] : PsiType:int

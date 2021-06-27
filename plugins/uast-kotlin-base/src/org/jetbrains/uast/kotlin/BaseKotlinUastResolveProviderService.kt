@@ -7,6 +7,7 @@ package org.jetbrains.uast.kotlin
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiType
+import org.jetbrains.kotlin.psi.KtDoubleColonExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.uast.UElement
@@ -19,9 +20,13 @@ interface BaseKotlinUastResolveProviderService {
 
     fun convertParent(uElement: UElement): UElement?
 
+    fun getReferenceVariants(ktExpression: KtExpression, nameHint: String): Sequence<PsiElement>
+
     fun resolveToDeclaration(ktExpression: KtExpression): PsiElement?
 
     fun resolveToType(ktTypeReference: KtTypeReference, source: UElement): PsiType?
+
+    fun getDoubleColonReceiverType(ktDoubleColonExpression: KtDoubleColonExpression, source: UElement): PsiType?
 
     fun getExpressionType(uExpression: UExpression): PsiType?
 

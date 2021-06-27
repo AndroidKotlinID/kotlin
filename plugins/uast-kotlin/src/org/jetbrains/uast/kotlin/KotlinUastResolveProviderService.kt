@@ -9,10 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiType
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.config.LanguageVersionSettings
-import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
-import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.constants.UnsignedErrorValueTypeConstant
 import org.jetbrains.kotlin.types.TypeUtils
@@ -23,7 +20,6 @@ interface KotlinUastResolveProviderService : BaseKotlinUastResolveProviderServic
     fun getBindingContext(element: KtElement): BindingContext
     fun getTypeMapper(element: KtElement): KotlinTypeMapper?
     fun getLanguageVersionSettings(element: KtElement): LanguageVersionSettings
-    fun getReferenceVariants(ktElement: KtElement, nameHint: String): Sequence<DeclarationDescriptor>
 
     override val baseKotlinConverter: BaseKotlinConverter
         get() = KotlinConverter
@@ -33,11 +29,21 @@ interface KotlinUastResolveProviderService : BaseKotlinUastResolveProviderServic
     }
 
     override fun resolveToDeclaration(ktExpression: KtExpression): PsiElement? {
+        if (ktExpression is KtExpressionWithLabel) {
+            return ktExpression.analyze()[BindingContext.LABEL_TARGET, ktExpression.getTargetLabel()]
+        }
         return resolveToDeclarationImpl(ktExpression)
     }
 
     override fun resolveToType(ktTypeReference: KtTypeReference, source: UElement): PsiType? {
         return ktTypeReference.toPsiType(source)
+    }
+
+    override fun getDoubleColonReceiverType(ktDoubleColonExpression: KtDoubleColonExpression, source: UElement): PsiType? {
+        val ktType =
+            ktDoubleColonExpression.analyze()[BindingContext.DOUBLE_COLON_LHS, ktDoubleColonExpression.receiverExpression]?.type
+                ?: return null
+        return ktType.toPsiType(source, ktDoubleColonExpression, boxed = true)
     }
 
     override fun getExpressionType(uExpression: UExpression): PsiType? {
