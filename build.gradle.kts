@@ -252,6 +252,7 @@ extra["compilerModules"] = arrayOf(
     ":compiler:incremental-compilation-impl",
     ":compiler:compiler.version",
     ":js:js.ast",
+    ":js:js.sourcemap",
     ":js:js.serializer",
     ":js:js.parser",
     ":js:js.config",
@@ -1229,5 +1230,11 @@ if (disableVerificationTasks) {
                 it.enabled = false
             }
         }
+    }
+}
+
+plugins.withType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin::class) {
+    extensions.configure(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension::class.java) {
+        nodeVersion = "16.2.0"
     }
 }

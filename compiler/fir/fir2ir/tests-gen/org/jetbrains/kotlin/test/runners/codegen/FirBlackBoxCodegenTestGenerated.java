@@ -5483,6 +5483,18 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
         }
 
         @Test
+        @TestMetadata("kt47120.kt")
+        public void testKt47120() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/kt47120.kt");
+        }
+
+        @Test
+        @TestMetadata("kt47120a.kt")
+        public void testKt47120a() throws Exception {
+            runTest("compiler/testData/codegen/box/closures/kt47120a.kt");
+        }
+
+        @Test
         @TestMetadata("kt5589.kt")
         public void testKt5589() throws Exception {
             runTest("compiler/testData/codegen/box/closures/kt5589.kt");
@@ -21432,6 +21444,12 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
             }
 
             @Test
+            @TestMetadata("kt47510.kt")
+            public void testKt47510() throws Exception {
+                runTest("compiler/testData/codegen/box/invokedynamic/sam/kt47510.kt");
+            }
+
+            @Test
             @TestMetadata("nullabilityAssertions.kt")
             public void testNullabilityAssertions() throws Exception {
                 runTest("compiler/testData/codegen/box/invokedynamic/sam/nullabilityAssertions.kt");
@@ -29692,6 +29710,24 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
         @TestMetadata("kt37370a.kt")
         public void testKt37370a() throws Exception {
             runTest("compiler/testData/codegen/box/ranges/kt37370a.kt");
+        }
+
+        @Test
+        @TestMetadata("kt47492.kt")
+        public void testKt47492() throws Exception {
+            runTest("compiler/testData/codegen/box/ranges/kt47492.kt");
+        }
+
+        @Test
+        @TestMetadata("kt47492a.kt")
+        public void testKt47492a() throws Exception {
+            runTest("compiler/testData/codegen/box/ranges/kt47492a.kt");
+        }
+
+        @Test
+        @TestMetadata("kt47492b.kt")
+        public void testKt47492b() throws Exception {
+            runTest("compiler/testData/codegen/box/ranges/kt47492b.kt");
         }
 
         @Test
